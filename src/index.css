@@ -15,7 +15,7 @@
     --popover: 220 25% 10%;
     --popover-foreground: 40 20% 95%;
 
-    --primary: 42 76% 55%;
+    --primary: 24 95% 53%;
     --primary-foreground: 220 30% 6%;
 
     --secondary: 215 50% 18%;
@@ -24,7 +24,7 @@
     --muted: 220 20% 14%;
     --muted-foreground: 220 10% 55%;
 
-    --accent: 42 76% 55%;
+    --accent: 24 95% 53%;
     --accent-foreground: 220 30% 6%;
 
     --destructive: 0 84.2% 60.2%;
@@ -32,21 +32,21 @@
 
     --border: 220 20% 18%;
     --input: 220 20% 18%;
-    --ring: 42 76% 55%;
+    --ring: 24 95% 53%;
 
     --radius: 0.5rem;
 
     --sidebar-background: 220 25% 10%;
     --sidebar-foreground: 40 20% 95%;
-    --sidebar-primary: 42 76% 55%;
+    --sidebar-primary: 24 95% 53%;
     --sidebar-primary-foreground: 220 30% 6%;
     --sidebar-accent: 220 20% 14%;
     --sidebar-accent-foreground: 40 20% 95%;
     --sidebar-border: 220 20% 18%;
-    --sidebar-ring: 42 76% 55%;
+    --sidebar-ring: 24 95% 53%;
 
-    --gold: 42 76% 55%;
-    --gold-light: 42 80% 70%;
+    --gold: 24 95% 53%;
+    --gold-light: 24 90% 65%;
     --navy: 220 50% 15%;
     --navy-deep: 220 30% 6%;
   }
@@ -69,17 +69,17 @@
 
 @layer utilities {
   .text-gradient-gold {
-    background: linear-gradient(135deg, hsl(42 76% 55%), hsl(42 80% 70%));
+    background: linear-gradient(135deg, hsl(24 95% 53%), hsl(24 90% 65%));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
   .bg-gradient-gold {
-    background: linear-gradient(135deg, hsl(42 76% 55%), hsl(42 80% 70%));
+    background: linear-gradient(135deg, hsl(24 95% 53%), hsl(24 90% 65%));
   }
 
   .border-gold {
-    border-color: hsl(42 76% 55% / 0.3);
+    border-color: hsl(24 95% 53% / 0.3);
   }
 }
