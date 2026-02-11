@@ -14,16 +14,190 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      checklist_answers: {
+        Row: {
+          checked: boolean
+          created_at: string
+          id: string
+          photo_url: string | null
+          question_id: string
+          submission_id: string
+        }
+        Insert: {
+          checked?: boolean
+          created_at?: string
+          id?: string
+          photo_url?: string | null
+          question_id: string
+          submission_id: string
+        }
+        Update: {
+          checked?: boolean
+          created_at?: string
+          id?: string
+          photo_url?: string | null
+          question_id?: string
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklist_answers_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checklist_questions: {
+        Row: {
+          created_at: string
+          department_id: string
+          id: string
+          points: number
+          requires_photo: boolean
+          sort_order: number
+          text: string
+        }
+        Insert: {
+          created_at?: string
+          department_id: string
+          id?: string
+          points?: number
+          requires_photo?: boolean
+          sort_order?: number
+          text: string
+        }
+        Update: {
+          created_at?: string
+          department_id?: string
+          id?: string
+          points?: number
+          requires_photo?: boolean
+          sort_order?: number
+          text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_questions_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checklist_submissions: {
+        Row: {
+          completed_at: string
+          department_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          department_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          department_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_submissions_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      departments: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          full_name: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +324,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const

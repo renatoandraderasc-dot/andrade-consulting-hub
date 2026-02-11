@@ -8,7 +8,7 @@ const links = [
   { href: "#servicos", label: "Serviços", isRoute: false },
   { href: "#sobre", label: "Sobre", isRoute: false },
   { href: "#contato", label: "Contato", isRoute: false },
-  { href: "/checklist", label: "Clientes", isRoute: true },
+  { href: "/login", label: "Clientes", isRoute: true },
 ];
 
 const Navbar = () => {
