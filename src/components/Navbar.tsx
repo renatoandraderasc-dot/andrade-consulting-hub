@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
+import { Link } from "react-router-dom";
 import andradeLogo from "@/assets/andrade-logo.png";
 
 const links = [
-  { href: "#servicos", label: "Serviços" },
-  { href: "#sobre", label: "Sobre" },
-  { href: "#contato", label: "Contato" },
+  { href: "#servicos", label: "Serviços", isRoute: false },
+  { href: "#sobre", label: "Sobre", isRoute: false },
+  { href: "#contato", label: "Contato", isRoute: false },
+  { href: "/checklist", label: "Clientes", isRoute: true },
 ];
 
 const Navbar = () => {
@@ -20,15 +22,25 @@ const Navbar = () => {
         </a>
 
         <div className="hidden md:flex items-center gap-8">
-          {links.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              className="text-muted-foreground hover:text-foreground font-body text-sm transition-colors"
-            >
-              {link.label}
-            </a>
-          ))}
+          {links.map((link) =>
+            link.isRoute ? (
+              <Link
+                key={link.href}
+                to={link.href}
+                className="text-muted-foreground hover:text-foreground font-body text-sm transition-colors"
+              >
+                {link.label}
+              </Link>
+            ) : (
+              <a
+                key={link.href}
+                href={link.href}
+                className="text-muted-foreground hover:text-foreground font-body text-sm transition-colors"
+              >
+                {link.label}
+              </a>
+            )
+          )}
           <a
             href="#contato"
             className="bg-gradient-gold text-primary-foreground font-body font-semibold px-5 py-2 rounded-lg text-sm hover:opacity-90 transition-opacity"
@@ -54,16 +66,27 @@ const Navbar = () => {
             className="md:hidden bg-background border-b border-border overflow-hidden"
           >
             <div className="container mx-auto px-6 py-4 flex flex-col gap-4">
-              {links.map((link) => (
-                <a
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setOpen(false)}
-                  className="text-muted-foreground hover:text-foreground font-body text-sm"
-                >
-                  {link.label}
-                </a>
-              ))}
+              {links.map((link) =>
+                link.isRoute ? (
+                  <Link
+                    key={link.href}
+                    to={link.href}
+                    onClick={() => setOpen(false)}
+                    className="text-muted-foreground hover:text-foreground font-body text-sm"
+                  >
+                    {link.label}
+                  </Link>
+                ) : (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setOpen(false)}
+                    className="text-muted-foreground hover:text-foreground font-body text-sm"
+                  >
+                    {link.label}
+                  </a>
+                )
+              )}
               <a
                 href="#contato"
                 onClick={() => setOpen(false)}
