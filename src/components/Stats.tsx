@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 
 const stats = [
-  { value: "150+", label: "Empresas Atendidas" },
+  { value: "70", label: "Empresas Atendidas" },
   { value: "98%", label: "Satisfação dos Clientes" },
   { value: "12", label: "Anos de Experiência" },
   { value: "R$50M+", label: "Em Resultados Gerados" },
