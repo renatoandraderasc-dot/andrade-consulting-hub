@@ -27,8 +27,8 @@ const Contact = () => {
 
           <div className="grid sm:grid-cols-3 gap-6 mb-12">
             {[
-              { icon: Phone, label: "(11) 99999-0000" },
-              { icon: Mail, label: "contato@andrade.com" },
+              { icon: Phone, label: "(11) 96602-1224" },
+              { icon: Mail, label: "renatoandrade@hotmail.com" },
               { icon: MapPin, label: "São Paulo, SP" },
             ].map((item, index) => (
               <motion.div
@@ -47,14 +47,14 @@ const Contact = () => {
             ))}
           </div>
 
-          <a
-            href="https://wa.me/5511999990000"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block bg-gradient-gold text-primary-foreground font-body font-semibold px-10 py-4 rounded-lg hover:opacity-90 transition-opacity text-lg"
-          >
-            Fale Conosco pelo WhatsApp
-          </a>
+           <a
+             href="https://wa.me/5511966021224"
+             target="_blank"
+             rel="noopener noreferrer"
+             className="inline-block bg-gradient-gold text-primary-foreground font-body font-semibold px-10 py-4 rounded-lg hover:opacity-90 transition-opacity text-lg"
+           >
+             Fale Conosco pelo WhatsApp
+           </a>
         </motion.div>
       </div>
     </section>
