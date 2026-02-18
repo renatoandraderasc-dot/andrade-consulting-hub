@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Plus, Trash2, Camera, Save } from "lucide-react";
-import andradeLogo from "@/assets/andrade-logo.png";
+import { Plus, Trash2, Camera } from "lucide-react";
+import ClientLayout from "@/components/ClientLayout";
 
 interface Department {
   id: string;
@@ -93,18 +93,7 @@ const AdminQuestions = () => {
   const filteredQuestions = questions.filter((q) => q.department_id === selectedDept);
 
   return (
-    <div className="min-h-screen bg-background">
-      <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-          <Link to="/checklist" className="flex items-center gap-2">
-            <img src={andradeLogo} alt="Logo" className="h-10" />
-          </Link>
-          <Link to="/checklist" className="flex items-center gap-2 text-muted-foreground hover:text-foreground font-body text-sm transition-colors">
-            <ArrowLeft className="w-4 h-4" /> Voltar ao Checklist
-          </Link>
-        </div>
-      </nav>
-
+    <ClientLayout>
       <div className="container mx-auto px-6 py-10 max-w-4xl">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
           <h1 className="font-display text-3xl font-bold mb-2">
@@ -113,7 +102,6 @@ const AdminQuestions = () => {
           <p className="text-muted-foreground font-body">Adicione, edite ou remova perguntas do checklist.</p>
         </motion.div>
 
-        {/* Department tabs */}
         <div className="flex gap-2 mb-6 flex-wrap">
           {departments.map((dept) => (
             <button
@@ -130,7 +118,6 @@ const AdminQuestions = () => {
           ))}
         </div>
 
-        {/* Add question form */}
         <div className="bg-card border border-border rounded-2xl p-6 mb-6">
           <h2 className="font-display text-lg font-semibold mb-4">Nova Pergunta</h2>
           <div className="space-y-4">
@@ -158,7 +145,6 @@ const AdminQuestions = () => {
           </div>
         </div>
 
-        {/* Questions list */}
         <div className="space-y-3">
           {loading ? (
             <p className="text-muted-foreground font-body text-center py-8">Carregando...</p>
@@ -207,7 +193,7 @@ const AdminQuestions = () => {
           )}
         </div>
       </div>
-    </div>
+    </ClientLayout>
   );
 };
 
