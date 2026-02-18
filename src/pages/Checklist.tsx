@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { CheckSquare, ArrowLeft, RotateCcw, Camera, LogOut, Settings, Send, Users, BarChart3 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { CheckSquare, RotateCcw, Camera, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import andradeLogo from "@/assets/andrade-logo.png";
+import ClientLayout from "@/components/ClientLayout";
 
 interface Department {
   id: string;
@@ -23,12 +23,6 @@ interface Question {
 
 interface CheckState {
   [questionId: string]: { checked: boolean; photoUrl?: string };
-}
-
-interface StoreAccess {
-  store_id: string;
-  approved: boolean;
-  stores: { id: string; name: string } | null;
 }
 
 const getScoreColor = (pct: number) => {
@@ -67,7 +61,6 @@ const Checklist = () => {
   }, [user]);
 
   const fetchData = async () => {
-    // Fetch store access
     const { data: access } = await supabase
       .from("user_store_access")
       .select("store_id, approved, stores(id, name)")
@@ -121,7 +114,6 @@ const Checklist = () => {
     setSubmitting(true);
 
     try {
-      // Create submission
       const { data: submission, error: subError } = await supabase
         .from("checklist_submissions")
         .insert({
@@ -134,7 +126,6 @@ const Checklist = () => {
 
       if (subError || !submission) throw subError;
 
-      // Insert answers
       const deptQs = questions.filter((q) => q.department_id === selectedDept);
       const answers = deptQs.map((q) => ({
         submission_id: submission.id,
@@ -146,7 +137,6 @@ const Checklist = () => {
       const { error: ansError } = await supabase.from("checklist_answers").insert(answers);
       if (ansError) throw ansError;
 
-      // Call edge function to send email
       try {
         await supabase.functions.invoke("send-checklist-email", {
           body: { submission_id: submission.id },
@@ -160,7 +150,6 @@ const Checklist = () => {
         description: `Departamento ${departments.find((d) => d.id === selectedDept)?.name} salvo com sucesso.`,
       });
 
-      // Reset state for this department
       const resetKeys = deptQs.map((q) => q.id);
       setCheckState((prev) => {
         const next = { ...prev };
@@ -188,7 +177,6 @@ const Checklist = () => {
     );
   }
 
-  // Check if user has no store access or is pending
   if (!isAdmin && accessApproved === null) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
@@ -218,36 +206,7 @@ const Checklist = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <img src={andradeLogo} alt="Logo" className="h-10" />
-          </Link>
-          <div className="flex items-center gap-4">
-            {isAdmin && (
-              <>
-                <Link to="/admin/questions" className="flex items-center gap-1 text-primary font-body text-sm hover:opacity-80 transition-opacity">
-                  <Settings className="w-4 h-4" /> Gerenciar
-                </Link>
-                <Link to="/admin/users" className="flex items-center gap-1 text-primary font-body text-sm hover:opacity-80 transition-opacity">
-                  <Users className="w-4 h-4" /> Usuários
-                </Link>
-              </>
-            )}
-            <Link to="/dashboard" className="flex items-center gap-2 text-muted-foreground hover:text-foreground font-body text-sm transition-colors">
-              <BarChart3 className="w-4 h-4" /> Dashboard
-            </Link>
-            <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground font-body text-sm transition-colors">
-              <ArrowLeft className="w-4 h-4" /> Site
-            </Link>
-            <button onClick={signOut} className="flex items-center gap-1 text-muted-foreground hover:text-foreground font-body text-sm transition-colors">
-              <LogOut className="w-4 h-4" /> Sair
-            </button>
-          </div>
-        </div>
-      </nav>
-
+    <ClientLayout storeName={storeName}>
       <div className="container mx-auto px-6 py-10 max-w-4xl">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-3">
@@ -351,7 +310,7 @@ const Checklist = () => {
           </div>
         )}
       </div>
-    </div>
+    </ClientLayout>
   );
 };
 

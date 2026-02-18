@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, CheckCircle, XCircle, Clock, Users } from "lucide-react";
-import andradeLogo from "@/assets/andrade-logo.png";
+import { CheckCircle, XCircle, Clock, Users } from "lucide-react";
+import ClientLayout from "@/components/ClientLayout";
 
 interface UserAccess {
   id: string;
@@ -42,7 +42,6 @@ const AdminUsers = () => {
 
     if (!data) { setAccesses([]); setLoading(false); return; }
 
-    // Fetch profiles for all user_ids
     const userIds = [...new Set(data.map((a: any) => a.user_id))];
     const { data: profiles } = await supabase
       .from("profiles")
@@ -82,18 +81,7 @@ const AdminUsers = () => {
   const approved = accesses.filter((a) => a.approved);
 
   return (
-    <div className="min-h-screen bg-background">
-      <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <img src={andradeLogo} alt="Logo" className="h-10" />
-          </Link>
-          <Link to="/checklist" className="flex items-center gap-2 text-muted-foreground hover:text-foreground font-body text-sm transition-colors">
-            <ArrowLeft className="w-4 h-4" /> Voltar
-          </Link>
-        </div>
-      </nav>
-
+    <ClientLayout>
       <div className="container mx-auto px-6 py-10 max-w-4xl">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-3">
@@ -103,7 +91,6 @@ const AdminUsers = () => {
           <p className="text-muted-foreground font-body">Aprove ou rejeite o acesso dos clientes às lojas.</p>
         </motion.div>
 
-        {/* Pending */}
         <div className="mb-8">
           <h2 className="font-display text-lg font-semibold mb-4 flex items-center gap-2">
             <Clock className="w-5 h-5 text-yellow-400" /> Pendentes ({pending.length})
@@ -132,7 +119,6 @@ const AdminUsers = () => {
           )}
         </div>
 
-        {/* Approved */}
         <div>
           <h2 className="font-display text-lg font-semibold mb-4 flex items-center gap-2">
             <CheckCircle className="w-5 h-5 text-green-400" /> Aprovados ({approved.length})
@@ -156,7 +142,7 @@ const AdminUsers = () => {
           )}
         </div>
       </div>
-    </div>
+    </ClientLayout>
   );
 };
 

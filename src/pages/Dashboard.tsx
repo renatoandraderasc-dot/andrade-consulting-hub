@@ -1,8 +1,11 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { ArrowLeft, TrendingUp, Target, ShoppingCart, Users, AlertTriangle, BarChart3 } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, ComposedChart, Cell, PieChart, Pie } from "recharts";
-import andradeLogo from "@/assets/andrade-logo.png";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ComposedChart, Cell, Line } from "recharts";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import ClientLayout from "@/components/ClientLayout";
 
 const faturamentoMargem = [
   { mes: "Jan", faturamento: 320000, margem: 89600 },
@@ -56,26 +59,46 @@ const fatPromocao = [
 const COLORS = ["hsl(45,93%,47%)", "hsl(45,93%,60%)", "hsl(45,93%,35%)"];
 
 const Dashboard = () => {
+  const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
+  const [storeName, setStoreName] = useState("");
   const metaAtingimento = 78;
 
-  return (
-    <div className="min-h-screen bg-background">
-      <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <img src={andradeLogo} alt="Logo" className="h-10" />
-          </Link>
-          <Link to="/checklist" className="flex items-center gap-2 text-muted-foreground hover:text-foreground font-body text-sm transition-colors">
-            <ArrowLeft className="w-4 h-4" /> Checklist
-          </Link>
-        </div>
-      </nav>
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/login");
+      return;
+    }
+    if (user) fetchStoreName();
+  }, [user, authLoading]);
 
+  const fetchStoreName = async () => {
+    const { data } = await supabase
+      .from("user_store_access")
+      .select("stores(name)")
+      .eq("user_id", user!.id)
+      .eq("approved", true)
+      .limit(1);
+    if (data && data.length > 0) {
+      setStoreName((data[0] as any).stores?.name || "");
+    }
+  };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground font-body">Carregando...</p>
+      </div>
+    );
+  }
+
+  return (
+    <ClientLayout storeName={storeName}>
       <div className="container mx-auto px-6 py-10 max-w-7xl">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-10">
           <div className="flex items-center justify-center gap-3 mb-3">
             <BarChart3 className="w-8 h-8 text-primary" />
-            <h1 className="font-display text-3xl md:text-4xl font-bold">Dashboard <span className="text-gradient-gold">Comercial</span></h1>
+            <h1 className="font-display text-3xl md:text-4xl font-bold">Dashboard <span className="text-gradient-gold">{storeName || "Comercial"}</span></h1>
           </div>
           <p className="text-muted-foreground font-body">Indicadores comerciais com dados de exemplo</p>
         </motion.div>
@@ -111,7 +134,6 @@ const Dashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Faturamento x Margem */}
           <div className="bg-card border border-border rounded-2xl p-6">
             <h3 className="font-display text-lg font-semibold mb-4">Faturamento x Margem</h3>
             <ResponsiveContainer width="100%" height={250}>
@@ -126,7 +148,6 @@ const Dashboard = () => {
             </ResponsiveContainer>
           </div>
 
-          {/* Faturamento por Departamento */}
           <div className="bg-card border border-border rounded-2xl p-6">
             <h3 className="font-display text-lg font-semibold mb-4">Faturamento por Departamento</h3>
             <ResponsiveContainer width="100%" height={250}>
@@ -142,7 +163,6 @@ const Dashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Produtos mais vendidos */}
           <div className="bg-card border border-border rounded-2xl p-6">
             <h3 className="font-display text-lg font-semibold mb-4 flex items-center gap-2"><ShoppingCart className="w-5 h-5 text-primary" /> Produtos Mais Vendidos</h3>
             <div className="space-y-3">
@@ -158,7 +178,6 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Produtos menor margem */}
           <div className="bg-card border border-border rounded-2xl p-6">
             <h3 className="font-display text-lg font-semibold mb-4 flex items-center gap-2"><AlertTriangle className="w-5 h-5 text-red-400" /> Produtos com Menor Margem</h3>
             <div className="space-y-3">
@@ -173,7 +192,6 @@ const Dashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Curva ABC */}
           <div className="bg-card border border-border rounded-2xl p-6">
             <h3 className="font-display text-lg font-semibold mb-4">Curva ABC por Categoria</h3>
             <ResponsiveContainer width="100%" height={250}>
@@ -190,7 +208,6 @@ const Dashboard = () => {
             </ResponsiveContainer>
           </div>
 
-          {/* Faturamento Promoção */}
           <div className="bg-card border border-border rounded-2xl p-6">
             <h3 className="font-display text-lg font-semibold mb-4">Faturamento Promoção por Dept.</h3>
             <ResponsiveContainer width="100%" height={250}>
@@ -205,7 +222,7 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
-    </div>
+    </ClientLayout>
   );
 };
 

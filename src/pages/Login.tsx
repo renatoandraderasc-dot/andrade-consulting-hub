@@ -66,7 +66,7 @@ const Login = () => {
       if (signInError) {
         setError(signInError.message);
       } else {
-        navigate("/checklist");
+        navigate("/dashboard");
       }
     }
     setLoading(false);
