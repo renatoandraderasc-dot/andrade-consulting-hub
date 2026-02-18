@@ -10,7 +10,6 @@ interface ClientLayoutProps {
 }
 
 const navItems = [
-  { path: "/dashboard", label: "Dashboard", icon: BarChart3 },
   { path: "/checklist", label: "Checklist", icon: CheckSquare },
 ];
 
