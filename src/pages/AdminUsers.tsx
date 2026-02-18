@@ -37,9 +37,26 @@ const AdminUsers = () => {
   const fetchAccesses = async () => {
     const { data } = await supabase
       .from("user_store_access")
-      .select("*, profiles:user_id(full_name), stores(name)")
+      .select("*, stores(name)")
       .order("created_at", { ascending: false });
-    setAccesses((data as any) || []);
+
+    if (!data) { setAccesses([]); setLoading(false); return; }
+
+    // Fetch profiles for all user_ids
+    const userIds = [...new Set(data.map((a: any) => a.user_id))];
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("user_id, full_name")
+      .in("user_id", userIds);
+
+    const profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p.full_name]));
+
+    const enriched = data.map((a: any) => ({
+      ...a,
+      profiles: { full_name: profileMap.get(a.user_id) || null },
+    }));
+
+    setAccesses(enriched);
     setLoading(false);
   };
 
