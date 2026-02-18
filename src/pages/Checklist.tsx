@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { CheckSquare, ArrowLeft, RotateCcw, Camera, LogOut, Settings, Send } from "lucide-react";
+import { CheckSquare, ArrowLeft, RotateCcw, Camera, LogOut, Settings, Send, Users, BarChart3 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -226,10 +226,18 @@ const Checklist = () => {
           </Link>
           <div className="flex items-center gap-4">
             {isAdmin && (
-              <Link to="/admin/questions" className="flex items-center gap-1 text-primary font-body text-sm hover:opacity-80 transition-opacity">
-                <Settings className="w-4 h-4" /> Gerenciar
-              </Link>
+              <>
+                <Link to="/admin/questions" className="flex items-center gap-1 text-primary font-body text-sm hover:opacity-80 transition-opacity">
+                  <Settings className="w-4 h-4" /> Gerenciar
+                </Link>
+                <Link to="/admin/users" className="flex items-center gap-1 text-primary font-body text-sm hover:opacity-80 transition-opacity">
+                  <Users className="w-4 h-4" /> Usuários
+                </Link>
+              </>
             )}
+            <Link to="/dashboard" className="flex items-center gap-2 text-muted-foreground hover:text-foreground font-body text-sm transition-colors">
+              <BarChart3 className="w-4 h-4" /> Dashboard
+            </Link>
             <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground font-body text-sm transition-colors">
               <ArrowLeft className="w-4 h-4" /> Site
             </Link>
