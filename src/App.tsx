@@ -8,7 +8,9 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import AdminSetup from "./pages/AdminSetup";
 import AdminQuestions from "./pages/AdminQuestions";
+import AdminUsers from "./pages/AdminUsers";
 import Checklist from "./pages/Checklist";
+import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,7 +27,9 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/admin/setup" element={<AdminSetup />} />
             <Route path="/admin/questions" element={<AdminQuestions />} />
+            <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/checklist" element={<Checklist />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
