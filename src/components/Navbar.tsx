@@ -8,6 +8,7 @@ const links = [
   { href: "#servicos", label: "Serviços", isRoute: false },
   { href: "#sobre", label: "Sobre", isRoute: false },
   { href: "#contato", label: "Contato", isRoute: false },
+  { href: "/dashboard", label: "Dashboard", isRoute: true },
   { href: "/login", label: "Clientes", isRoute: true },
 ];
 
