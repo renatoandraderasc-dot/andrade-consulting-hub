@@ -1,1 +1,4 @@
 project_id = "pfflraftymstgtslofno"
+
+[functions.send-checklist-email]
+verify_jwt = false

@@ -99,18 +99,21 @@ export type Database = {
           completed_at: string
           department_id: string
           id: string
+          store_id: string | null
           user_id: string
         }
         Insert: {
           completed_at?: string
           department_id: string
           id?: string
+          store_id?: string | null
           user_id: string
         }
         Update: {
           completed_at?: string
           department_id?: string
           id?: string
+          store_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -119,6 +122,13 @@ export type Database = {
             columns: ["department_id"]
             isOneToOne: false
             referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklist_submissions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
         ]
@@ -165,6 +175,24 @@ export type Database = {
         }
         Relationships: []
       }
+      stores: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -182,6 +210,38 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_store_access: {
+        Row: {
+          approved: boolean
+          created_at: string
+          id: string
+          store_id: string
+          user_id: string
+        }
+        Insert: {
+          approved?: boolean
+          created_at?: string
+          id?: string
+          store_id: string
+          user_id: string
+        }
+        Update: {
+          approved?: boolean
+          created_at?: string
+          id?: string
+          store_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_store_access_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
