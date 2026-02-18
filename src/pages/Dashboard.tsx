@@ -73,14 +73,24 @@ const Dashboard = () => {
   }, [user, authLoading]);
 
   const fetchStoreName = async () => {
-    const { data } = await supabase
-      .from("user_store_access")
-      .select("stores(name)")
-      .eq("user_id", user!.id)
-      .eq("approved", true)
-      .limit(1);
-    if (data && data.length > 0) {
-      setStoreName((data[0] as any).stores?.name || "");
+    const storeId = sessionStorage.getItem("selectedStoreId");
+    if (storeId) {
+      const { data } = await supabase
+        .from("stores")
+        .select("name")
+        .eq("id", storeId)
+        .single();
+      if (data) setStoreName(data.name);
+    } else {
+      const { data } = await supabase
+        .from("user_store_access")
+        .select("stores(name)")
+        .eq("user_id", user!.id)
+        .eq("approved", true)
+        .limit(1);
+      if (data && data.length > 0) {
+        setStoreName((data[0] as any).stores?.name || "");
+      }
     }
   };
 

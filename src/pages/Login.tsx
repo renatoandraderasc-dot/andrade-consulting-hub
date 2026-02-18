@@ -53,7 +53,6 @@ const Login = () => {
       if (signUpError) {
         setError(signUpError.message);
       } else if (signUpData.user) {
-        // Create store access request (pending approval)
         await supabase.from("user_store_access").insert({
           user_id: signUpData.user.id,
           store_id: selectedStore,
@@ -62,11 +61,31 @@ const Login = () => {
         setSuccess("Cadastro realizado! Aguarde a aprovação do administrador para acessar o sistema.");
       }
     } else {
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (!selectedStore) {
+        setError("Selecione uma loja.");
+        setLoading(false);
+        return;
+      }
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
       if (signInError) {
         setError(signInError.message);
-      } else {
-        navigate("/dashboard");
+      } else if (signInData.user) {
+        // Check if user has approved access to the selected store
+        const { data: access } = await supabase
+          .from("user_store_access")
+          .select("id")
+          .eq("user_id", signInData.user.id)
+          .eq("store_id", selectedStore)
+          .eq("approved", true)
+          .limit(1);
+        if (!access || access.length === 0) {
+          await supabase.auth.signOut();
+          setError("Você não tem acesso aprovado a esta loja. Aguarde a aprovação do administrador.");
+        } else {
+          // Store selected store in sessionStorage for the session
+          sessionStorage.setItem("selectedStoreId", selectedStore);
+          navigate("/dashboard");
+        }
       }
     }
     setLoading(false);
@@ -106,28 +125,26 @@ const Login = () => {
             <>
               <form onSubmit={handleSubmit} className="space-y-4">
                 {isSignup && (
-                  <>
-                    <div className="space-y-2">
-                      <Label htmlFor="name" className="font-body">Nome completo</Label>
-                      <Input id="name" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Seu nome" required />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="store" className="font-body">Loja</Label>
-                      <select
-                        id="store"
-                        value={selectedStore}
-                        onChange={(e) => setSelectedStore(e.target.value)}
-                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm font-body text-foreground"
-                        required
-                      >
-                        <option value="">Selecione sua loja</option>
-                        {stores.map((s) => (
-                          <option key={s.id} value={s.id}>{s.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </>
+                  <div className="space-y-2">
+                    <Label htmlFor="name" className="font-body">Nome completo</Label>
+                    <Input id="name" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Seu nome" required />
+                  </div>
                 )}
+                <div className="space-y-2">
+                  <Label htmlFor="store" className="font-body">Loja</Label>
+                  <select
+                    id="store"
+                    value={selectedStore}
+                    onChange={(e) => setSelectedStore(e.target.value)}
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm font-body text-foreground"
+                    required
+                  >
+                    <option value="">Selecione sua loja</option>
+                    {stores.map((s) => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="email" className="font-body">Email</Label>
                   <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" required />
