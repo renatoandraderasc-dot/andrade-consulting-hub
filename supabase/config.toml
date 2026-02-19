@@ -2,3 +2,6 @@ project_id = "pfflraftymstgtslofno"
 
 [functions.send-checklist-email]
 verify_jwt = false
+
+[functions.validate-admin-secret]
+verify_jwt = false

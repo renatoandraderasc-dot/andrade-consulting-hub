@@ -7,8 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Shield } from "lucide-react";
 import andradeLogo from "@/assets/andrade-logo.png";
 
-const ADMIN_SECRET = "andrade2024"; // Simple secret code for admin registration
-
 const AdminSetup = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -21,40 +19,34 @@ const AdminSetup = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-
-    if (secretCode !== ADMIN_SECRET) {
-      setError("Código secreto inválido.");
-      return;
-    }
-
     setLoading(true);
 
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName },
-        emailRedirectTo: window.location.origin,
-      },
-    });
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke("validate-admin-secret", {
+        body: { secret_code: secretCode, email, password, full_name: fullName },
+      });
 
-    if (signUpError) {
-      setError(signUpError.message);
-      setLoading(false);
-      return;
-    }
+      if (fnError) {
+        setError(fnError.message || "Erro ao criar conta admin.");
+        setLoading(false);
+        return;
+      }
 
-    if (data.user) {
-      // Add admin role
-      const { error: roleError } = await supabase
-        .from("user_roles")
-        .insert({ user_id: data.user.id, role: "admin" });
+      if (data?.error) {
+        setError(data.error);
+        setLoading(false);
+        return;
+      }
 
-      if (roleError) {
-        setError("Conta criada mas erro ao definir admin: " + roleError.message);
+      // Sign in with the newly created account
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) {
+        setError("Conta criada! Faça login manualmente.");
       } else {
         navigate("/checklist");
       }
+    } catch (err: any) {
+      setError(err.message || "Erro inesperado.");
     }
 
     setLoading(false);
