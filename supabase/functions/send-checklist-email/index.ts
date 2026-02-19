@@ -11,16 +11,42 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { submission_id } = await req.json();
-    if (!submission_id) throw new Error("submission_id required");
+    // Authenticate the caller
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const resendKey = Deno.env.get("RESEND_API_KEY");
 
+    const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const userId = claimsData.claims.sub;
+
+    const { submission_id } = await req.json();
+    if (!submission_id) throw new Error("submission_id required");
+
+    // Use service role client for data fetching after auth
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // Fetch submission with department and store
+    // Fetch submission and verify ownership or admin
     const { data: submission } = await supabase
       .from("checklist_submissions")
       .select("*, departments(name), stores(name)")
@@ -28,6 +54,21 @@ Deno.serve(async (req) => {
       .single();
 
     if (!submission) throw new Error("Submission not found");
+
+    // Check ownership or admin role
+    const { data: roleData } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "admin");
+
+    const isAdmin = roleData && roleData.length > 0;
+    if (submission.user_id !== userId && !isAdmin) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Fetch answers with questions
     const { data: answers } = await supabase
