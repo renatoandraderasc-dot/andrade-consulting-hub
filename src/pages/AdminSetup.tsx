@@ -27,7 +27,9 @@ const AdminSetup = () => {
       });
 
       if (fnError) {
-        setError(fnError.message || "Erro ao criar conta admin.");
+        // Try to extract the error message from the response
+        const errorMsg = data?.error || fnError.message || "Erro ao criar conta admin.";
+        setError(errorMsg);
         setLoading(false);
         return;
       }
