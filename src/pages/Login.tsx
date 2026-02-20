@@ -70,21 +70,33 @@ const Login = () => {
       if (signInError) {
         setError(signInError.message);
       } else if (signInData.user) {
-        // Check if user has approved access to the selected store
-        const { data: access } = await supabase
-          .from("user_store_access")
-          .select("id")
+        // Check if user is admin (admins can access any store)
+        const { data: roles } = await supabase
+          .from("user_roles")
+          .select("role")
           .eq("user_id", signInData.user.id)
-          .eq("store_id", selectedStore)
-          .eq("approved", true)
-          .limit(1);
-        if (!access || access.length === 0) {
-          await supabase.auth.signOut();
-          setError("Você não tem acesso aprovado a esta loja. Aguarde a aprovação do administrador.");
-        } else {
-          // Store selected store in sessionStorage for the session
+          .eq("role", "admin");
+        const isAdmin = roles && roles.length > 0;
+
+        if (isAdmin) {
           sessionStorage.setItem("selectedStoreId", selectedStore);
           navigate("/dashboard");
+        } else {
+          // Regular users need approved access to the selected store
+          const { data: access } = await supabase
+            .from("user_store_access")
+            .select("id")
+            .eq("user_id", signInData.user.id)
+            .eq("store_id", selectedStore)
+            .eq("approved", true)
+            .limit(1);
+          if (!access || access.length === 0) {
+            await supabase.auth.signOut();
+            setError("Você não tem acesso aprovado a esta loja. Aguarde a aprovação do administrador.");
+          } else {
+            sessionStorage.setItem("selectedStoreId", selectedStore);
+            navigate("/dashboard");
+          }
         }
       }
     }
