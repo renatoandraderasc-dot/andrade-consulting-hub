@@ -175,6 +175,100 @@ export type Database = {
         }
         Relationships: []
       }
+      store_department_metrics: {
+        Row: {
+          created_at: string
+          department: string
+          faturamento: number | null
+          faturamento_promocao: number | null
+          id: string
+          margem: number | null
+          month: number
+          store_id: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          department: string
+          faturamento?: number | null
+          faturamento_promocao?: number | null
+          id?: string
+          margem?: number | null
+          month: number
+          store_id: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          department?: string
+          faturamento?: number | null
+          faturamento_promocao?: number | null
+          id?: string
+          margem?: number | null
+          month?: number
+          store_id?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_department_metrics_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      store_metrics: {
+        Row: {
+          clientes: number | null
+          created_at: string
+          faturamento: number | null
+          id: string
+          margem: number | null
+          meta_faturamento: number | null
+          month: number
+          store_id: string
+          ticket_medio: number | null
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          clientes?: number | null
+          created_at?: string
+          faturamento?: number | null
+          id?: string
+          margem?: number | null
+          meta_faturamento?: number | null
+          month: number
+          store_id: string
+          ticket_medio?: number | null
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          clientes?: number | null
+          created_at?: string
+          faturamento?: number | null
+          id?: string
+          margem?: number | null
+          meta_faturamento?: number | null
+          month?: number
+          store_id?: string
+          ticket_medio?: number | null
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_metrics_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stores: {
         Row: {
           created_at: string
