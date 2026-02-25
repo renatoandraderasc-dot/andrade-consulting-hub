@@ -11,6 +11,7 @@ import AdminQuestions from "./pages/AdminQuestions";
 import AdminUsers from "./pages/AdminUsers";
 import Checklist from "./pages/Checklist";
 import Dashboard from "./pages/Dashboard";
+import AdminMetas from "./pages/AdminMetas";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/checklist" element={<Checklist />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/admin/metas" element={<AdminMetas />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
