@@ -1,98 +1,272 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, TrendingUp, Target, ShoppingCart, Users, AlertTriangle, BarChart3 } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ComposedChart, Cell, Line } from "recharts";
+import { BarChart3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import ClientLayout from "@/components/ClientLayout";
+import DashboardKPIs from "@/components/dashboard/DashboardKPIs";
+import DailyMetricsTable, { DailyRow } from "@/components/dashboard/DailyMetricsTable";
+import ProductComparison, { ProductCompRow } from "@/components/dashboard/ProductComparison";
+import CategoryChart, { CategoryChartData } from "@/components/dashboard/CategoryChart";
 
-const faturamentoMargem = [
-  { mes: "Jan", faturamento: 320000, margem: 89600 },
-  { mes: "Fev", faturamento: 280000, margem: 78400 },
-  { mes: "Mar", faturamento: 350000, margem: 98000 },
-  { mes: "Abr", faturamento: 310000, margem: 86800 },
-  { mes: "Mai", faturamento: 370000, margem: 103600 },
-  { mes: "Jun", faturamento: 340000, margem: 95200 },
-];
-
-const faturamentoDept = [
-  { dept: "Mercearia", valor: 145000 },
-  { dept: "Açougue", valor: 98000 },
-  { dept: "Horti", valor: 62000 },
-  { dept: "Padaria", valor: 55000 },
-  { dept: "Bebidas", valor: 48000 },
-  { dept: "Limpeza", valor: 32000 },
-];
-
-const produtosMaisVendidos = [
-  { nome: "Arroz 5kg", qtd: 1200 },
-  { nome: "Feijão Carioca 1kg", qtd: 980 },
-  { nome: "Leite Integral 1L", qtd: 870 },
-  { nome: "Açúcar 5kg", qtd: 750 },
-  { nome: "Óleo de Soja 900ml", qtd: 680 },
-];
-
-const produtosMenorMargem = [
-  { nome: "Cerveja Lata 350ml", margem: 3.2 },
-  { nome: "Refrigerante 2L", margem: 4.5 },
-  { nome: "Água Mineral 500ml", margem: 5.1 },
-  { nome: "Cigarro Maço", margem: 5.8 },
-  { nome: "Leite UHT 1L", margem: 6.2 },
-];
-
-const curvaABC = [
-  { cat: "A", percentual: 70, acumulado: 70 },
-  { cat: "B", percentual: 20, acumulado: 90 },
-  { cat: "C", percentual: 10, acumulado: 100 },
-];
-
-const fatPromocao = [
-  { dept: "Mercearia", valor: 42000 },
-  { dept: "Açougue", valor: 28000 },
-  { dept: "Bebidas", valor: 22000 },
-  { dept: "Horti", valor: 15000 },
-  { dept: "Padaria", valor: 12000 },
-  { dept: "Limpeza", valor: 8000 },
-];
-
-const COLORS = ["hsl(45,93%,47%)", "hsl(45,93%,60%)", "hsl(45,93%,35%)"];
+const MONTHS = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
 const Dashboard = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [storeName, setStoreName] = useState("");
-  const metaAtingimento = 78;
+  const [storeId, setStoreId] = useState("");
+  const [departments, setDepartments] = useState<string[]>([]);
+  const [selectedDept, setSelectedDept] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [dailyData, setDailyData] = useState<DailyRow[]>([]);
+  const [storeMetrics, setStoreMetrics] = useState<any>(null);
+  const [productData, setProductData] = useState<ProductCompRow[]>([]);
+  const [categoryData, setCategoryData] = useState<CategoryChartData[]>([]);
 
   useEffect(() => {
     if (!authLoading && !user) {
       navigate("/login");
       return;
     }
-    if (user) fetchStoreName();
+    if (user) fetchStoreInfo();
   }, [user, authLoading]);
 
-  const fetchStoreName = async () => {
-    const storeId = sessionStorage.getItem("selectedStoreId");
+  useEffect(() => {
     if (storeId) {
-      const { data } = await supabase
-        .from("stores")
-        .select("name")
-        .eq("id", storeId)
-        .single();
-      if (data) setStoreName(data.name);
+      fetchDepartments();
+    }
+  }, [storeId]);
+
+  useEffect(() => {
+    if (storeId && selectedDept) {
+      fetchDailyData();
+    }
+  }, [storeId, selectedDept, selectedMonth, selectedYear]);
+
+  useEffect(() => {
+    if (storeId) {
+      fetchStoreMetrics();
+      fetchProductData();
+      fetchCategoryData();
+    }
+  }, [storeId, selectedMonth, selectedYear]);
+
+  const fetchStoreInfo = async () => {
+    const sid = sessionStorage.getItem("selectedStoreId");
+    if (sid) {
+      const { data } = await supabase.from("stores").select("id, name").eq("id", sid).single();
+      if (data) {
+        setStoreName(data.name);
+        setStoreId(data.id);
+      }
     } else {
       const { data } = await supabase
         .from("user_store_access")
-        .select("stores(name)")
+        .select("stores(id, name)")
         .eq("user_id", user!.id)
         .eq("approved", true)
         .limit(1);
       if (data && data.length > 0) {
-        setStoreName((data[0] as any).stores?.name || "");
+        const store = (data[0] as any).stores;
+        if (store) {
+          setStoreName(store.name);
+          setStoreId(store.id);
+        }
       }
     }
   };
+
+  const fetchDepartments = async () => {
+    const { data } = await supabase
+      .from("store_daily_metrics")
+      .select("department")
+      .eq("store_id", storeId);
+    if (data) {
+      const unique = [...new Set(data.map((d) => d.department))].sort();
+      setDepartments(unique);
+      if (unique.length > 0 && !selectedDept) setSelectedDept(unique[0]);
+    }
+
+    // Also check store_department_metrics for departments
+    if (!data || data.length === 0) {
+      const { data: deptData } = await supabase
+        .from("store_department_metrics")
+        .select("department")
+        .eq("store_id", storeId);
+      if (deptData) {
+        const unique = [...new Set(deptData.map((d) => d.department))].sort();
+        setDepartments(unique);
+        if (unique.length > 0 && !selectedDept) setSelectedDept(unique[0]);
+      }
+    }
+  };
+
+  const fetchDailyData = async () => {
+    const startDate = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}-01`;
+    const endDate = selectedMonth === 12
+      ? `${selectedYear + 1}-01-01`
+      : `${selectedYear}-${String(selectedMonth + 1).padStart(2, "0")}-01`;
+
+    const { data } = await supabase
+      .from("store_daily_metrics")
+      .select("*")
+      .eq("store_id", storeId)
+      .eq("department", selectedDept)
+      .gte("date", startDate)
+      .lt("date", endDate)
+      .order("date");
+
+    if (data) {
+      setDailyData(
+        data.map((d) => ({
+          date: new Date(d.date + "T12:00:00").toLocaleDateString("pt-BR"),
+          tipoDia: d.tipo_dia,
+          metaVendas: Number(d.meta_vendas) || 0,
+          realizadoVendas: Number(d.realizado_vendas) || 0,
+          projecaoVendas: Number(d.projecao_vendas) || 0,
+          metaLucro: Number(d.meta_lucro) || 0,
+          realizadoLucro: Number(d.realizado_lucro) || 0,
+          projecaoLucro: Number(d.projecao_lucro) || 0,
+          metaMargemPct: Number(d.meta_margem_pct) || 0,
+          realizadoMargemPct: Number(d.realizado_margem_pct) || 0,
+          projecaoMargemPct: Number(d.projecao_margem_pct) || 0,
+          metaVolume: Number(d.meta_volume) || 0,
+          realizadoVolume: Number(d.realizado_volume) || 0,
+          projecaoVolume: Number(d.projecao_volume) || 0,
+        }))
+      );
+    } else {
+      setDailyData([]);
+    }
+  };
+
+  const fetchStoreMetrics = async () => {
+    const { data } = await supabase
+      .from("store_metrics")
+      .select("*")
+      .eq("store_id", storeId)
+      .eq("month", selectedMonth)
+      .eq("year", selectedYear)
+      .single();
+    setStoreMetrics(data);
+  };
+
+  const fetchProductData = async () => {
+    const prevMonth = selectedMonth === 1 ? 12 : selectedMonth - 1;
+    const prevMonthYear = selectedMonth === 1 ? selectedYear - 1 : selectedYear;
+
+    const [{ data: current }, { data: prevMo }, { data: prevYr }] = await Promise.all([
+      supabase.from("store_product_metrics").select("*").eq("store_id", storeId).eq("month", selectedMonth).eq("year", selectedYear),
+      supabase.from("store_product_metrics").select("*").eq("store_id", storeId).eq("month", prevMonth).eq("year", prevMonthYear),
+      supabase.from("store_product_metrics").select("*").eq("store_id", storeId).eq("month", selectedMonth).eq("year", selectedYear - 1),
+    ]);
+
+    if (current && current.length > 0) {
+      const prevMoMap = new Map((prevMo || []).map((p) => [p.product_name, p]));
+      const prevYrMap = new Map((prevYr || []).map((p) => [p.product_name, p]));
+
+      setProductData(
+        current.map((p) => ({
+          name: p.product_name,
+          valorAtual: Number(p.vendas_valor) || 0,
+          valorMesAnterior: Number(prevMoMap.get(p.product_name)?.vendas_valor) || 0,
+          valorAnoAnterior: Number(prevYrMap.get(p.product_name)?.vendas_valor) || 0,
+          volumeAtual: Number(p.vendas_volume) || 0,
+          volumeMesAnterior: Number(prevMoMap.get(p.product_name)?.vendas_volume) || 0,
+          volumeAnoAnterior: Number(prevYrMap.get(p.product_name)?.vendas_volume) || 0,
+        }))
+      );
+    } else {
+      setProductData([]);
+    }
+  };
+
+  const fetchCategoryData = async () => {
+    const prevMonth = selectedMonth === 1 ? 12 : selectedMonth - 1;
+    const prevMonthYear = selectedMonth === 1 ? selectedYear - 1 : selectedYear;
+
+    const [{ data: current }, { data: prevMo }, { data: prevYr }] = await Promise.all([
+      supabase.from("store_department_metrics").select("*").eq("store_id", storeId).eq("month", selectedMonth).eq("year", selectedYear),
+      supabase.from("store_department_metrics").select("*").eq("store_id", storeId).eq("month", prevMonth).eq("year", prevMonthYear),
+      supabase.from("store_department_metrics").select("*").eq("store_id", storeId).eq("month", selectedMonth).eq("year", selectedYear - 1),
+    ]);
+
+    if (current && current.length > 0) {
+      const prevMoMap = new Map((prevMo || []).map((d) => [d.department, d]));
+      const prevYrMap = new Map((prevYr || []).map((d) => [d.department, d]));
+
+      setCategoryData(
+        current.map((d) => ({
+          category: d.department,
+          atual: Number(d.faturamento) || 0,
+          mesAnterior: Number(prevMoMap.get(d.department)?.faturamento) || 0,
+          anoAnterior: Number(prevYrMap.get(d.department)?.faturamento) || 0,
+        }))
+      );
+    } else {
+      setCategoryData([]);
+    }
+  };
+
+  const kpiData = useMemo(() => {
+    const m = storeMetrics;
+    const fat = Number(m?.faturamento) || 0;
+    const metaFat = Number(m?.meta_faturamento) || 0;
+    const margem = Number(m?.margem) || 0;
+    const clientes = Number(m?.clientes) || 0;
+    const ticket = Number(m?.ticket_medio) || 0;
+
+    // Calculate accumulated from daily data
+    const metaAcumVendas = dailyData.reduce((s, d) => s + d.metaVendas, 0);
+    const realVendas = dailyData.reduce((s, d) => s + d.realizadoVendas, 0);
+    const projVendas = dailyData.reduce((s, d) => s + d.projecaoVendas, 0);
+    const metaAcumLucro = dailyData.reduce((s, d) => s + d.metaLucro, 0);
+    const realLucro = dailyData.reduce((s, d) => s + d.realizadoLucro, 0);
+    const projLucro = dailyData.reduce((s, d) => s + d.projecaoLucro, 0);
+    const metaAcumVol = dailyData.reduce((s, d) => s + d.metaVolume, 0);
+    const realVol = dailyData.reduce((s, d) => s + d.realizadoVolume, 0);
+    const projVol = dailyData.reduce((s, d) => s + d.projecaoVolume, 0);
+
+    // Average margin percentages
+    const avgMetaMargemPct = dailyData.length > 0 ? dailyData.reduce((s, d) => s + d.metaMargemPct, 0) / dailyData.length : 0;
+    const avgRealMargemPct = dailyData.length > 0 ? dailyData.reduce((s, d) => s + d.realizadoMargemPct, 0) / dailyData.length : 0;
+    const avgProjMargemPct = dailyData.length > 0 ? dailyData.reduce((s, d) => s + d.projecaoMargemPct, 0) / dailyData.length : 0;
+
+    return {
+      vendas: {
+        metaMensal: metaFat || metaAcumVendas,
+        metaAcumulada: metaAcumVendas || fat,
+        realizado: realVendas || fat,
+        realizadoPct: metaAcumVendas > 0 ? (realVendas / metaAcumVendas) * 100 : metaFat > 0 ? (fat / metaFat) * 100 : 0,
+        projecao: projVendas,
+        projecaoPct: metaFat > 0 ? (projVendas / metaFat) * 100 : 0,
+      },
+      lucro: {
+        metaMensal: metaAcumLucro,
+        metaAcumulada: metaAcumLucro,
+        realizado: realLucro,
+        realizadoPct: metaAcumLucro > 0 ? (realLucro / metaAcumLucro) * 100 : 0,
+        projecao: projLucro,
+        projecaoPct: metaAcumLucro > 0 ? (projLucro / metaAcumLucro) * 100 : 0,
+      },
+      margem: {
+        metaPct: avgMetaMargemPct,
+        realizadoPct: avgRealMargemPct,
+        projecaoPct: avgProjMargemPct,
+      },
+      volume: {
+        metaMensal: metaAcumVol,
+        metaAcumulada: metaAcumVol,
+        realizado: realVol,
+        realizadoPct: metaAcumVol > 0 ? (realVol / metaAcumVol) * 100 : 0,
+        projecao: projVol,
+        projecaoPct: metaAcumVol > 0 ? (projVol / metaAcumVol) * 100 : 0,
+      },
+    };
+  }, [dailyData, storeMetrics]);
 
   if (authLoading) {
     return (
@@ -104,132 +278,81 @@ const Dashboard = () => {
 
   return (
     <ClientLayout storeName={storeName}>
-      <div className="container mx-auto px-6 py-10 max-w-7xl">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-10">
-          <div className="flex items-center justify-center gap-3 mb-3">
-            <BarChart3 className="w-8 h-8 text-primary" />
-            <h1 className="font-display text-3xl md:text-4xl font-bold">Dashboard <span className="text-gradient-gold">{storeName || "Comercial"}</span></h1>
+      <div className="container mx-auto px-4 py-6 max-w-[1400px]">
+        {/* Header */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <BarChart3 className="w-7 h-7 text-primary" />
+              <div>
+                <h1 className="font-display text-2xl font-bold">
+                  Dashboard <span className="text-gradient-gold">{storeName}</span>
+                </h1>
+                <p className="text-muted-foreground font-body text-xs">
+                  {MONTHS[selectedMonth]} {selectedYear}
+                  {selectedDept ? ` — ${selectedDept}` : ""}
+                </p>
+              </div>
+            </div>
+
+            {/* Filters */}
+            <div className="flex flex-wrap items-center gap-2">
+              {departments.length > 0 && (
+                <select
+                  value={selectedDept}
+                  onChange={(e) => setSelectedDept(e.target.value)}
+                  className="bg-card border border-border rounded-lg px-3 py-1.5 font-body text-xs"
+                >
+                  {departments.map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+              )}
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(Number(e.target.value))}
+                className="bg-card border border-border rounded-lg px-3 py-1.5 font-body text-xs"
+              >
+                {MONTHS.slice(1).map((m, i) => (
+                  <option key={i + 1} value={i + 1}>{m}</option>
+                ))}
+              </select>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                className="bg-card border border-border rounded-lg px-3 py-1.5 font-body text-xs"
+              >
+                {[2024, 2025, 2026].map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
           </div>
-          <p className="text-muted-foreground font-body">Indicadores comerciais com dados de exemplo</p>
         </motion.div>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-          <div className="bg-card border border-border rounded-2xl p-6">
-            <div className="flex items-center gap-3 mb-2">
-              <Target className="w-5 h-5 text-primary" />
-              <span className="font-body text-sm text-muted-foreground">Atingimento de Meta</span>
-            </div>
-            <p className="font-display text-3xl font-bold">{metaAtingimento}%</p>
-            <div className="w-full bg-muted rounded-full h-2 mt-2">
-              <div className="bg-primary h-2 rounded-full transition-all" style={{ width: `${metaAtingimento}%` }} />
-            </div>
-          </div>
-          <div className="bg-card border border-border rounded-2xl p-6">
-            <div className="flex items-center gap-3 mb-2">
-              <Users className="w-5 h-5 text-primary" />
-              <span className="font-body text-sm text-muted-foreground">Clientes</span>
-            </div>
-            <p className="font-display text-3xl font-bold">4.230</p>
-            <p className="font-body text-xs text-green-400 mt-1">+12% vs mês anterior</p>
-          </div>
-          <div className="bg-card border border-border rounded-2xl p-6">
-            <div className="flex items-center gap-3 mb-2">
-              <TrendingUp className="w-5 h-5 text-primary" />
-              <span className="font-body text-sm text-muted-foreground">Faturamento Mensal</span>
-            </div>
-            <p className="font-display text-3xl font-bold">R$ 340k</p>
-            <p className="font-body text-xs text-green-400 mt-1">+8% vs mês anterior</p>
-          </div>
+        <DashboardKPIs {...kpiData} />
+
+        {/* Daily Metrics Table */}
+        <div className="mb-2">
+          <h2 className="font-display text-sm font-semibold mb-3">
+            Faturamento x Margem por Dia {selectedDept ? `— ${selectedDept}` : ""}
+          </h2>
         </div>
+        <DailyMetricsTable data={dailyData} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <div className="bg-card border border-border rounded-2xl p-6">
-            <h3 className="font-display text-lg font-semibold mb-4">Faturamento x Margem</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={faturamentoMargem}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="mes" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                <Tooltip formatter={(v: number) => `R$ ${v.toLocaleString("pt-BR")}`} contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} />
-                <Bar dataKey="faturamento" fill="hsl(45,93%,47%)" radius={[4, 4, 0, 0]} name="Faturamento" />
-                <Bar dataKey="margem" fill="hsl(45,93%,67%)" radius={[4, 4, 0, 0]} name="Margem" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+        {/* Product Comparison */}
+        <ProductComparison
+          data={productData}
+          title={`Comparativo de Produtos — ${MONTHS[selectedMonth]} ${selectedYear}`}
+        />
 
-          <div className="bg-card border border-border rounded-2xl p-6">
-            <h3 className="font-display text-lg font-semibold mb-4">Faturamento por Departamento</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={faturamentoDept} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                <YAxis dataKey="dept" type="category" stroke="hsl(var(--muted-foreground))" fontSize={12} width={80} />
-                <Tooltip formatter={(v: number) => `R$ ${v.toLocaleString("pt-BR")}`} contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} />
-                <Bar dataKey="valor" fill="hsl(45,93%,47%)" radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <div className="bg-card border border-border rounded-2xl p-6">
-            <h3 className="font-display text-lg font-semibold mb-4 flex items-center gap-2"><ShoppingCart className="w-5 h-5 text-primary" /> Produtos Mais Vendidos</h3>
-            <div className="space-y-3">
-              {produtosMaisVendidos.map((p, i) => (
-                <div key={p.nome} className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <span className="font-display text-sm font-bold text-primary w-6">{i + 1}º</span>
-                    <span className="font-body text-sm">{p.nome}</span>
-                  </div>
-                  <span className="font-body text-xs text-muted-foreground">{p.qtd} un</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="bg-card border border-border rounded-2xl p-6">
-            <h3 className="font-display text-lg font-semibold mb-4 flex items-center gap-2"><AlertTriangle className="w-5 h-5 text-red-400" /> Produtos com Menor Margem</h3>
-            <div className="space-y-3">
-              {produtosMenorMargem.map((p) => (
-                <div key={p.nome} className="flex items-center justify-between">
-                  <span className="font-body text-sm">{p.nome}</span>
-                  <span className="font-body text-xs font-semibold text-red-400">{p.margem}%</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="bg-card border border-border rounded-2xl p-6">
-            <h3 className="font-display text-lg font-semibold mb-4">Curva ABC por Categoria</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <ComposedChart data={curvaABC}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="cat" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} />
-                <Bar dataKey="percentual" name="%" radius={[4, 4, 0, 0]}>
-                  {curvaABC.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                </Bar>
-                <Line type="monotone" dataKey="acumulado" stroke="hsl(var(--foreground))" strokeWidth={2} name="Acumulado %" dot={{ fill: "hsl(var(--foreground))" }} />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="bg-card border border-border rounded-2xl p-6">
-            <h3 className="font-display text-lg font-semibold mb-4">Faturamento Promoção por Dept.</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={fatPromocao}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="dept" stroke="hsl(var(--muted-foreground))" fontSize={11} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                <Tooltip formatter={(v: number) => `R$ ${v.toLocaleString("pt-BR")}`} contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} />
-                <Bar dataKey="valor" fill="hsl(45,93%,55%)" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+        {/* Category Chart */}
+        <div className="mt-6">
+          <CategoryChart
+            data={categoryData}
+            title="Distribuição de Vendas por Categoria (vs Mês Anterior e Ano Anterior)"
+          />
         </div>
       </div>
     </ClientLayout>

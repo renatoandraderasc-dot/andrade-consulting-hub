@@ -175,6 +175,77 @@ export type Database = {
         }
         Relationships: []
       }
+      store_daily_metrics: {
+        Row: {
+          created_at: string
+          date: string
+          department: string
+          id: string
+          meta_lucro: number | null
+          meta_margem_pct: number | null
+          meta_vendas: number | null
+          meta_volume: number | null
+          projecao_lucro: number | null
+          projecao_margem_pct: number | null
+          projecao_vendas: number | null
+          projecao_volume: number | null
+          realizado_lucro: number | null
+          realizado_margem_pct: number | null
+          realizado_vendas: number | null
+          realizado_volume: number | null
+          store_id: string
+          tipo_dia: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          department: string
+          id?: string
+          meta_lucro?: number | null
+          meta_margem_pct?: number | null
+          meta_vendas?: number | null
+          meta_volume?: number | null
+          projecao_lucro?: number | null
+          projecao_margem_pct?: number | null
+          projecao_vendas?: number | null
+          projecao_volume?: number | null
+          realizado_lucro?: number | null
+          realizado_margem_pct?: number | null
+          realizado_vendas?: number | null
+          realizado_volume?: number | null
+          store_id: string
+          tipo_dia?: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          department?: string
+          id?: string
+          meta_lucro?: number | null
+          meta_margem_pct?: number | null
+          meta_vendas?: number | null
+          meta_volume?: number | null
+          projecao_lucro?: number | null
+          projecao_margem_pct?: number | null
+          projecao_vendas?: number | null
+          projecao_volume?: number | null
+          realizado_lucro?: number | null
+          realizado_margem_pct?: number | null
+          realizado_vendas?: number | null
+          realizado_volume?: number | null
+          store_id?: string
+          tipo_dia?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_daily_metrics_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_department_metrics: {
         Row: {
           created_at: string
@@ -262,6 +333,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "store_metrics_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      store_product_metrics: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          month: number
+          product_name: string
+          store_id: string
+          vendas_valor: number | null
+          vendas_volume: number | null
+          year: number
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          month: number
+          product_name: string
+          store_id: string
+          vendas_valor?: number | null
+          vendas_volume?: number | null
+          year: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          month?: number
+          product_name?: string
+          store_id?: string
+          vendas_valor?: number | null
+          vendas_volume?: number | null
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_product_metrics_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
