@@ -100,9 +100,23 @@ Deno.serve(async (req) => {
 
     // Download Excel from OneDrive
     const downloadUrl = convertOneDriveShareLink(ONEDRIVE_SHARE_URL);
-    console.log("Fetching from OneDrive...");
-    const response = await fetch(downloadUrl, { redirect: "follow" });
+    console.log("Original URL:", ONEDRIVE_SHARE_URL);
+    console.log("Download URL:", downloadUrl);
+    
+    // Try direct download first, then converted URL
+    let response = await fetch(downloadUrl, { redirect: "follow" });
+    
     if (!response.ok) {
+      console.log(`Converted URL failed (${response.status}), trying original URL directly...`);
+      await response.text(); // consume body
+      
+      // Try the original URL with redirect follow
+      response = await fetch(ONEDRIVE_SHARE_URL, { redirect: "follow" });
+    }
+    
+    if (!response.ok) {
+      const body = await response.text();
+      console.error("Response body:", body.substring(0, 500));
       throw new Error(`Failed to download file: ${response.status} ${response.statusText}`);
     }
 
