@@ -8,9 +8,22 @@ const corsHeaders = {
 };
 
 function convertOneDriveShareLink(shareUrl: string): string {
-  // Convert OneDrive share link to direct download URL
-  // Method: base64url encode the share URL with "u!" prefix
-  const base64 = btoa(shareUrl)
+  const url = shareUrl.trim();
+  
+  // If it's already a direct download link, use as-is
+  if (url.includes("download=1") || url.includes("/download")) {
+    return url;
+  }
+
+  // Handle OneDrive/SharePoint embed links - convert to download
+  // e.g. https://onedrive.live.com/embed?... → add &download=1
+  if (url.includes("embed?") || url.includes("/embed/")) {
+    return url + (url.includes("?") ? "&" : "?") + "download=1";
+  }
+
+  // Handle 1drv.ms short links or regular share links
+  // Use the Microsoft Graph sharing API
+  const base64 = btoa(url)
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
     .replace(/=+$/, "");
