@@ -1,0 +1,1 @@
+ALTER TABLE public.checklist_answers ADD COLUMN IF NOT EXISTS score integer NOT NULL DEFAULT 0;
