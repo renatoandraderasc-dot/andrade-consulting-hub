@@ -21,6 +21,7 @@ export type Database = {
           id: string
           photo_url: string | null
           question_id: string
+          score: number
           submission_id: string
         }
         Insert: {
@@ -29,6 +30,7 @@ export type Database = {
           id?: string
           photo_url?: string | null
           question_id: string
+          score?: number
           submission_id: string
         }
         Update: {
@@ -37,6 +39,7 @@ export type Database = {
           id?: string
           photo_url?: string | null
           question_id?: string
+          score?: number
           submission_id?: string
         }
         Relationships: [
