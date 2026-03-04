@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Target, Save, Plus, Trash2 } from "lucide-react";
+import { Target, Save, Upload, FileSpreadsheet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import ClientLayout from "@/components/ClientLayout";
@@ -53,6 +53,9 @@ const AdminMetas = () => {
   const [metrics, setMetrics] = useState<StoreMetric | null>(null);
   const [deptMetrics, setDeptMetrics] = useState<DeptMetric[]>([]);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadResult, setUploadResult] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [storeName, setStoreName] = useState("");
 
   useEffect(() => {
@@ -215,6 +218,48 @@ const AdminMetas = () => {
     setMetrics({ ...metrics, [field]: value });
   };
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setUploadResult(null);
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const base64 = btoa(
+            new Uint8Array(event.target!.result as ArrayBuffer)
+              .reduce((data, byte) => data + String.fromCharCode(byte), '')
+          );
+
+          const { data, error } = await supabase.functions.invoke("sync-onedrive-metrics", {
+            body: { fileBase64: base64 },
+          });
+
+          if (error) throw error;
+          if (data?.success) {
+            setUploadResult(`✅ ${data.records_upserted} registros importados para: ${data.stores?.join(", ")}`);
+            toast({ title: "Importação concluída!", description: `${data.records_upserted} registros importados.` });
+            fetchMetrics();
+          } else {
+            throw new Error(data?.error || "Erro desconhecido");
+          }
+        } catch (err: any) {
+          setUploadResult(`❌ Erro: ${err.message}`);
+          toast({ title: "Erro na importação", description: err.message, variant: "destructive" });
+        } finally {
+          setUploading(false);
+          if (fileInputRef.current) fileInputRef.current.value = "";
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    } catch (err: any) {
+      setUploading(false);
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    }
+  };
+
   const updateDeptMetric = (index: number, field: keyof DeptMetric, value: number) => {
     const updated = [...deptMetrics];
     (updated[index] as any)[field] = value;
@@ -243,6 +288,37 @@ const AdminMetas = () => {
             </h1>
           </div>
           <p className="text-muted-foreground font-body">Insira os indicadores mensais por loja</p>
+        </motion.div>
+
+        {/* Excel Upload */}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-card border border-border rounded-2xl p-6 mb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <FileSpreadsheet className="w-5 h-5 text-primary" />
+            <h2 className="font-display text-lg font-semibold">Importar Planilha Excel</h2>
+          </div>
+          <p className="text-muted-foreground font-body text-sm mb-4">
+            Faça upload da planilha Excel com dados diários. A planilha deve conter as colunas: DATA, VENDAS, MARGEM, ARRECADAÇÃO, SM (nome da loja).
+          </p>
+          <div className="flex items-center gap-4">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-xl font-body font-semibold text-sm hover:bg-primary/90 transition-colors disabled:opacity-50"
+            >
+              <Upload className="w-4 h-4" />
+              {uploading ? "Importando..." : "Selecionar Arquivo"}
+            </button>
+            {uploadResult && (
+              <p className="font-body text-sm">{uploadResult}</p>
+            )}
+          </div>
         </motion.div>
 
         {/* Filters */}
