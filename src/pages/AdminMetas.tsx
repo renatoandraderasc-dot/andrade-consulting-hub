@@ -297,7 +297,7 @@ const AdminMetas = () => {
             <h2 className="font-display text-lg font-semibold">Importar Planilha Excel</h2>
           </div>
           <p className="text-muted-foreground font-body text-sm mb-4">
-            Faça upload da planilha Excel com dados diários. A planilha deve conter as colunas: DATA, VENDAS, MARGEM, ARRECADAÇÃO, SM (nome da loja).
+            Faça upload da planilha FMA (Meta de Vendas e Margem) ou planilha com colunas DATA, VENDAS, MARGEM, SM. O sistema detecta automaticamente o formato.
           </p>
           <div className="flex items-center gap-4">
             <input
