@@ -29,7 +29,7 @@ const AdminQuestions = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [selectedDept, setSelectedDept] = useState<string>("");
   const [newText, setNewText] = useState("");
-  const [newPoints, setNewPoints] = useState(5);
+  const [newPoints, setNewPoints] = useState(10);
   const [newRequiresPhoto, setNewRequiresPhoto] = useState(false);
   const [loading, setLoading] = useState(true);
 
