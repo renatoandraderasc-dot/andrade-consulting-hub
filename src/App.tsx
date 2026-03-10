@@ -12,6 +12,7 @@ import AdminUsers from "./pages/AdminUsers";
 import Checklist from "./pages/Checklist";
 import Dashboard from "./pages/Dashboard";
 import AdminMetas from "./pages/AdminMetas";
+import Controladoria from "./pages/Controladoria";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
