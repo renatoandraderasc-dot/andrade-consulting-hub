@@ -116,8 +116,8 @@ const ConcorrenteAnalise = ({ concorrente, onBack }: Props) => {
   };
 
   const statusBadge = (s: ProdutoConcorrente["status"]) => {
-    if (s === "mais_barato") return <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-500/20 gap-1 text-[11px]"><TrendingDown className="w-3 h-3" /> Mais Barato</Badge>;
-    if (s === "mais_caro") return <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 gap-1 text-[11px]"><TrendingUp className="w-3 h-3" /> Mais Caro</Badge>;
+    if (s === "mais_barato") return <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-500/20 gap-1 text-[11px]"><TrendingDown className="w-3 h-3" /> Eu Mais Barato</Badge>;
+    if (s === "mais_caro") return <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 gap-1 text-[11px]"><TrendingUp className="w-3 h-3" /> Eu Mais Caro</Badge>;
     if (s === "igual") return <Badge variant="outline" className="bg-muted text-muted-foreground border-border gap-1 text-[11px]"><Minus className="w-3 h-3" /> Igual</Badge>;
     return <Badge variant="outline" className="bg-amber-500/10 text-amber-700 border-amber-500/20 text-[11px]">Sem Match</Badge>;
   };
