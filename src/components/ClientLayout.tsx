@@ -12,6 +12,7 @@ interface ClientLayoutProps {
 const navItems = [
   { path: "/dashboard", label: "Dashboard", icon: BarChart3 },
   { path: "/controladoria", label: "Controladoria", icon: ClipboardList },
+  { path: "/repricing", label: "Re-PRICING", icon: DollarSign },
   { path: "/checklist", label: "Checklist", icon: CheckSquare },
 ];
 

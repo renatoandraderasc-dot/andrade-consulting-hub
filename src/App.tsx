@@ -35,6 +35,7 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/admin/metas" element={<AdminMetas />} />
             <Route path="/controladoria" element={<Controladoria />} />
+            <Route path="/repricing" element={<Repricing />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
