@@ -13,6 +13,7 @@ import {
   XCircle, Clock, Store, Link2, Search, Download, Settings2, Eye
 } from "lucide-react";
 import ConcorrenteAnalise from "./ConcorrenteAnalise";
+import { firecrawlApi, type ScrapedProduct } from "@/lib/api/firecrawl";
 
 interface Concorrente {
   id: string;
