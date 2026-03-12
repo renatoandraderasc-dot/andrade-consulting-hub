@@ -57,8 +57,12 @@ function extractProductsFromMarkdown(markdown: string, sourceUrl: string): Scrap
           const prevLine = lines[j].trim();
           // Skip empty lines, image links, and very short lines
           if (prevLine && prevLine.length > 3 && !prevLine.startsWith('![') && !prevLine.startsWith('http')) {
-            // Remove markdown formatting
-            productName = prevLine.replace(/[#*_\[\]]/g, '').trim();
+            // Remove markdown formatting and URLs in parentheses
+            productName = prevLine
+              .replace(/\(https?:\/\/[^)]+\)/g, '') // Remove (url) patterns
+              .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // [text](url) → text
+              .replace(/[#*_\[\]]/g, '')
+              .trim();
           }
         }
         
