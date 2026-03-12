@@ -66,7 +66,7 @@ function extractProductsFromMarkdown(markdown: string, sourceUrl: string): Scrap
           }
         }
         
-        if (productName && productName.length > 2 && productName.length < 200) {
+        if (productName && productName.length > 5 && productName.length < 200 && !/^\d+%\s*(OFF|off|desconto)/i.test(productName)) {
           // Try to extract brand from product name
           const brandMatch = productName.match(/\b(Camil|Kicaldo|Coca-Cola|Brahma|Dove|Ypê|Sadia|Italac|União|Liza|Del Valle|Neve|Seara|Qboa|Gallo|Vitarella|Nestlé|Omo|Comfort|Colgate|Palmolive|Nescafé|Nescau|Leite Moça|Maizena|Tang|Hellmanns|Knorr|Kibon|Vigor|Danone|Parmalat|Piracanjuba|Aurora|Perdigão|Friboi|Minerva|Marfrig)\b/i);
           
