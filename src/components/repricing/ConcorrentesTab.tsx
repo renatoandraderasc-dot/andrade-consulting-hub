@@ -141,6 +141,15 @@ const ConcorrentesTab = () => {
   const totalProdutos = concorrentes.reduce((s, c) => s + c.totalProdutos, 0);
   const mediaMatch = concorrentes.length ? Math.round(concorrentes.reduce((s, c) => s + c.matchRate, 0) / concorrentes.length) : 0;
 
+  if (selectedConcorrente) {
+    return (
+      <ConcorrenteAnalise
+        concorrente={{ id: selectedConcorrente.id, nome: selectedConcorrente.nome, url: selectedConcorrente.url, plataforma: selectedConcorrente.plataforma }}
+        onBack={() => setSelectedConcorrente(null)}
+      />
+    );
+  }
+
   return (
     <div className="space-y-5">
       {/* KPIs */}
