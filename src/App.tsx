@@ -13,6 +13,7 @@ import Checklist from "./pages/Checklist";
 import Dashboard from "./pages/Dashboard";
 import AdminMetas from "./pages/AdminMetas";
 import Controladoria from "./pages/Controladoria";
+import Repricing from "./pages/Repricing";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
