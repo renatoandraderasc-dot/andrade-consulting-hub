@@ -38,10 +38,10 @@ interface ColetaLog {
 }
 
 const mockConcorrentes: Concorrente[] = [
-  { id: "1", nome: "Santo Antônio em Casa", url: "https://www.santoantonioemcasa.com.br", plataforma: "vtex", status: "ativo", ultimaColeta: "2026-03-12 08:30", totalProdutos: 1842, matchRate: 72 },
-  { id: "2", nome: "Supermercado Extra", url: "https://www.clubeextra.com.br", plataforma: "vtex", status: "ativo", ultimaColeta: "2026-03-11 22:00", totalProdutos: 3210, matchRate: 65 },
-  { id: "3", nome: "Atacadão Online", url: "https://www.atacadao.com.br", plataforma: "vtex", status: "inativo", ultimaColeta: "2026-03-10 14:15", totalProdutos: 2500, matchRate: 58 },
-  { id: "4", nome: "Mercado Regional", url: "https://www.mercadoregional.com.br", plataforma: "woocommerce", status: "erro", ultimaColeta: "2026-03-09 10:00", totalProdutos: 890, matchRate: 45 },
+  { id: "1", nome: "Santo Antônio em Casa", url: "https://www.santoantonioemcasa.com.br", plataforma: "vtex", status: "ativo", ultimaColeta: "2026-03-12 08:30", totalProdutos: 18, matchRate: 89 },
+  { id: "2", nome: "Supermercado Extra", url: "https://www.clubeextra.com.br", plataforma: "vtex", status: "ativo", ultimaColeta: "2026-03-11 22:00", totalProdutos: 22, matchRate: 82 },
+  { id: "3", nome: "Atacadão Online", url: "https://www.atacadao.com.br", plataforma: "vtex", status: "inativo", ultimaColeta: "2026-03-10 14:15", totalProdutos: 15, matchRate: 73 },
+  { id: "4", nome: "Mercado Regional", url: "https://www.mercadoregional.com.br", plataforma: "woocommerce", status: "erro", ultimaColeta: "2026-03-09 10:00", totalProdutos: 0, matchRate: 0 },
 ];
 
 const mockLogs: ColetaLog[] = [
