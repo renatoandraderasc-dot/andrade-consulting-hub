@@ -6,8 +6,11 @@ import RepricingKPIs from "@/components/repricing/RepricingKPIs";
 import RepricingFilters from "@/components/repricing/RepricingFilters";
 import RepricingTable from "@/components/repricing/RepricingTable";
 import SimulacaoPanel from "@/components/repricing/SimulacaoPanel";
+import ConcorrentesTab from "@/components/repricing/ConcorrentesTab";
 import { mockProducts, allCategorias, type Product } from "@/components/repricing/mockData";
 import { supabase } from "@/integrations/supabase/client";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ShoppingCart, Store } from "lucide-react";
 
 const Repricing = () => {
   const [searchParams] = useSearchParams();
@@ -79,31 +82,44 @@ const Repricing = () => {
           </p>
         </div>
 
-        <RepricingKPIs products={filtered} />
+        <Tabs defaultValue="produtos" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="produtos" className="gap-1.5"><ShoppingCart className="w-4 h-4" /> Produtos</TabsTrigger>
+            <TabsTrigger value="concorrentes" className="gap-1.5"><Store className="w-4 h-4" /> Concorrentes</TabsTrigger>
+          </TabsList>
 
-        <RepricingFilters
-          search={search} onSearchChange={setSearch}
-          categoria={categoria} onCategoriaChange={setCategoria}
-          status={status} onStatusChange={setStatus}
-          margemRange={margemRange} onMargemRangeChange={setMargemRange}
-          categorias={allCategorias}
-          onImport={handleImport}
-          onExport={handleExport}
-          onRefresh={handleRefresh}
-        />
+          <TabsContent value="produtos" className="space-y-5">
+            <RepricingKPIs products={filtered} />
 
-        {selectedProduct && (
-          <SimulacaoPanel
-            product={selectedProduct}
-            onClose={() => setSelectedProduct(null)}
-          />
-        )}
+            <RepricingFilters
+              search={search} onSearchChange={setSearch}
+              categoria={categoria} onCategoriaChange={setCategoria}
+              status={status} onStatusChange={setStatus}
+              margemRange={margemRange} onMargemRangeChange={setMargemRange}
+              categorias={allCategorias}
+              onImport={handleImport}
+              onExport={handleExport}
+              onRefresh={handleRefresh}
+            />
 
-        <RepricingTable
-          products={filtered}
-          onSimulacaoChange={handleSimulacaoChange}
-          onSelectProduct={setSelectedProduct}
-        />
+            {selectedProduct && (
+              <SimulacaoPanel
+                product={selectedProduct}
+                onClose={() => setSelectedProduct(null)}
+              />
+            )}
+
+            <RepricingTable
+              products={filtered}
+              onSimulacaoChange={handleSimulacaoChange}
+              onSelectProduct={setSelectedProduct}
+            />
+          </TabsContent>
+
+          <TabsContent value="concorrentes">
+            <ConcorrentesTab />
+          </TabsContent>
+        </Tabs>
       </div>
     </ClientLayout>
   );
