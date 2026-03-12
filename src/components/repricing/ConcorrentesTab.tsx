@@ -210,6 +210,7 @@ const ConcorrentesTab = () => {
     return (
       <ConcorrenteAnalise
         concorrente={{ id: selectedConcorrente.id, nome: selectedConcorrente.nome, url: selectedConcorrente.url, plataforma: selectedConcorrente.plataforma }}
+        scrapedProducts={lastScrapedProducts}
         onBack={() => setSelectedConcorrente(null)}
       />
     );
