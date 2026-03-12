@@ -6,9 +6,13 @@ const corsHeaders = {
 interface ScrapedProduct {
   name: string;
   price: number;
+  originalPrice: number | null;
+  isPromotion: boolean;
   category: string | null;
   brand: string | null;
   unit: string | null;
+  barcode: string | null;
+  sku: string | null;
   imageUrl: string | null;
   sourceUrl: string;
 }
@@ -16,146 +20,62 @@ interface ScrapedProduct {
 function parseLocalizedNumber(value: string): number {
   if (!value || value === "") return 0;
   let str = String(value).trim();
-  // Remove currency symbols and spaces
   str = str.replace(/[R$\s]/g, "");
-  // Auto-detect format
   const lastComma = str.lastIndexOf(",");
   const lastDot = str.lastIndexOf(".");
   const isCommaDecimal = lastComma > lastDot;
   if (isCommaDecimal) {
-    str = str.replace(/\./g, ""); // Remove thousand separators
-    str = str.replace(",", "."); // Convert decimal separator
+    str = str.replace(/\./g, "");
+    str = str.replace(",", ".");
   } else {
-    str = str.replace(/,/g, ""); // Remove thousand separators
+    str = str.replace(/,/g, "");
   }
   const parsed = parseFloat(str);
   return isNaN(parsed) ? 0 : parsed;
 }
 
-function extractProductsFromMarkdown(markdown: string, sourceUrl: string): ScrapedProduct[] {
-  const products: ScrapedProduct[] = [];
-  
-  // Pattern 1: Look for price patterns like "R$ XX,XX" or "R$XX.XX"
-  const pricePattern = /R\$\s*[\d.,]+/g;
-  const lines = markdown.split('\n');
-  
-  let currentProduct: Partial<ScrapedProduct> | null = null;
-  
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-    
-    // Check if line has a price
-    const priceMatch = line.match(/R\$\s*([\d.,]+)/);
-    
-    if (priceMatch) {
-      const price = parseLocalizedNumber(priceMatch[1]);
-      if (price > 0 && price < 10000) { // sanity check
-        // Look backwards for product name (usually 1-3 lines before price)
-        let productName = '';
-        for (let j = Math.max(0, i - 5); j < i; j++) {
-          const prevLine = lines[j].trim();
-          // Skip empty lines, image links, and very short lines
-          if (prevLine && prevLine.length > 3 && !prevLine.startsWith('![') && !prevLine.startsWith('http')) {
-            // Remove markdown formatting and URLs in parentheses
-            productName = prevLine
-              .replace(/\(https?:\/\/[^)]+\)/g, '') // Remove (url) patterns
-              .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // [text](url) → text
-              .replace(/[#*_\[\]]/g, '')
-              .trim();
-          }
-        }
-        
-        const junkPatterns = /^\d+%\s*(OFF|off|desconto)|^Compartilhar|^Adicionar|^Ver mais|^Comprar|^Voltar|^Menu|^Carrinho|^Buscar|^Home|^Login|^Cadastr/i;
-        if (productName && productName.length > 5 && productName.length < 200 && !junkPatterns.test(productName)) {
-          // Try to extract brand from product name
-          const brandMatch = productName.match(/\b(Camil|Kicaldo|Coca-Cola|Brahma|Dove|Ypê|Sadia|Italac|União|Liza|Del Valle|Neve|Seara|Qboa|Gallo|Vitarella|Nestlé|Omo|Comfort|Colgate|Palmolive|Nescafé|Nescau|Leite Moça|Maizena|Tang|Hellmanns|Knorr|Kibon|Vigor|Danone|Parmalat|Piracanjuba|Aurora|Perdigão|Friboi|Minerva|Marfrig)\b/i);
-          
-          // Try to extract unit/weight
-          const unitMatch = productName.match(/(\d+\s*(?:kg|g|ml|l|L|un|und|pct|cx|caixa|lata|garrafa|pet|fardo|pack|rolos?))\b/i);
-          
-          // Avoid duplicates
-          const exists = products.some(p => 
-            p.name.toLowerCase() === productName.toLowerCase() || 
-            (p.price === price && p.name.substring(0, 10) === productName.substring(0, 10))
-          );
-          
-          if (!exists) {
-            products.push({
-              name: productName,
-              price,
-              category: null,
-              brand: brandMatch ? brandMatch[1] : null,
-              unit: unitMatch ? unitMatch[1] : null,
-              imageUrl: null,
-              sourceUrl,
-            });
-          }
-        }
-      }
-    }
-  }
-  
-  return products;
-}
-
 function extractProductsFromHtml(html: string, sourceUrl: string): ScrapedProduct[] {
   const products: ScrapedProduct[] = [];
   
-  // VTEX pattern: look for product shelf items with structured data
-  // Pattern for JSON-LD structured data
+  // JSON-LD structured data
   const jsonLdPattern = /<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi;
   let jsonLdMatch;
   
   while ((jsonLdMatch = jsonLdPattern.exec(html)) !== null) {
     try {
       const data = JSON.parse(jsonLdMatch[1]);
-      if (data['@type'] === 'Product' || (Array.isArray(data) && data[0]?.['@type'] === 'Product')) {
-        const items = Array.isArray(data) ? data : [data];
-        for (const item of items) {
-          if (item['@type'] === 'Product' && item.name) {
-            const price = item.offers?.price || item.offers?.lowPrice || 
-                         item.offers?.[0]?.price || 0;
-            if (price > 0) {
-              products.push({
-                name: item.name,
-                price: typeof price === 'string' ? parseLocalizedNumber(price) : price,
-                category: item.category || null,
-                brand: item.brand?.name || item.brand || null,
-                unit: null,
-                imageUrl: item.image?.[0] || item.image || null,
-                sourceUrl,
-              });
-            }
-          }
+      const items = data['@type'] === 'Product' ? [data] : 
+                    Array.isArray(data) ? data.filter((d: any) => d['@type'] === 'Product') :
+                    data['@type'] === 'ItemList' ? (data.itemListElement || []).map((e: any) => e.item || e) : [];
+      
+      for (const item of items) {
+        if (!item?.name) continue;
+        const offers = item.offers || {};
+        const price = offers.price || offers.lowPrice || offers[0]?.price || 0;
+        const originalPrice = offers.highPrice || null;
+        const parsedPrice = typeof price === 'string' ? parseLocalizedNumber(price) : price;
+        const parsedOriginal = originalPrice ? (typeof originalPrice === 'string' ? parseLocalizedNumber(originalPrice) : originalPrice) : null;
+        
+        if (parsedPrice > 0) {
+          products.push({
+            name: item.name,
+            price: parsedPrice,
+            originalPrice: parsedOriginal && parsedOriginal > parsedPrice ? parsedOriginal : null,
+            isPromotion: !!(parsedOriginal && parsedOriginal > parsedPrice),
+            category: item.category || null,
+            brand: item.brand?.name || item.brand || null,
+            unit: null,
+            barcode: item.gtin13 || item.gtin || item.sku || null,
+            sku: item.sku || item.productID || offers.sku || null,
+            imageUrl: Array.isArray(item.image) ? item.image[0] : item.image || null,
+            sourceUrl,
+          });
         }
       }
-      // ItemList with products
-      if (data['@type'] === 'ItemList' && data.itemListElement) {
-        for (const element of data.itemListElement) {
-          const item = element.item || element;
-          if (item.name && item.offers) {
-            const price = item.offers.price || item.offers.lowPrice || 0;
-            if (price > 0) {
-              products.push({
-                name: item.name,
-                price: typeof price === 'string' ? parseLocalizedNumber(price) : price,
-                category: item.category || null,
-                brand: item.brand?.name || null,
-                unit: null,
-                imageUrl: item.image?.[0] || item.image || null,
-                sourceUrl,
-              });
-            }
-          }
-        }
-      }
-    } catch (e) {
-      // Ignore invalid JSON-LD
-    }
+    } catch (_e) { /* ignore */ }
   }
-  
-  // VTEX-specific: look for __STATE__ or product data in scripts
+
+  // VTEX __STATE__
   const vtexStatePattern = /window\.__STATE__\s*=\s*(\{[\s\S]*?\});?\s*<\/script>/;
   const stateMatch = html.match(vtexStatePattern);
   if (stateMatch) {
@@ -164,23 +84,145 @@ function extractProductsFromHtml(html: string, sourceUrl: string): ScrapedProduc
       for (const key of Object.keys(state)) {
         const val = state[key];
         if (val?.productName && val?.priceRange) {
-          const price = val.priceRange?.sellingPrice?.lowPrice || 
-                       val.priceRange?.listPrice?.lowPrice || 0;
-          if (price > 0) {
+          const sellingPrice = val.priceRange?.sellingPrice?.lowPrice || 0;
+          const listPrice = val.priceRange?.listPrice?.lowPrice || 0;
+          if (sellingPrice > 0) {
+            const isPromo = listPrice > sellingPrice;
             products.push({
               name: val.productName,
-              price,
-              category: val.categoryTree?.[0]?.name || null,
+              price: sellingPrice,
+              originalPrice: isPromo ? listPrice : null,
+              isPromotion: isPromo,
+              category: val.categoryTree?.map((c: any) => c.name).join(' > ') || null,
               brand: val.brand || null,
               unit: null,
+              barcode: val.items?.[0]?.ean || null,
+              sku: val.items?.[0]?.itemId || val.productId || null,
               imageUrl: val.items?.[0]?.images?.[0]?.imageUrl || null,
               sourceUrl,
             });
           }
         }
       }
-    } catch (e) {
-      // Ignore parse errors
+    } catch (_e) { /* ignore */ }
+  }
+
+  // Extract additional product data from common HTML patterns
+  // Pattern: data-product-id, data-sku, data-ean attributes  
+  const productCardPattern = /data-product[_-]?id=["']([^"']+)["'][^>]*>[\s\S]*?(?:data-ean=["']([^"']+)["'])?/gi;
+  let cardMatch;
+  while ((cardMatch = productCardPattern.exec(html)) !== null) {
+    // Just enrich existing products with barcode if found
+    const ean = cardMatch[2];
+    if (ean && ean.length >= 8) {
+      for (const p of products) {
+        if (!p.barcode) p.barcode = ean;
+      }
+    }
+  }
+
+  return products;
+}
+
+function extractProductsFromMarkdown(markdown: string, sourceUrl: string): ScrapedProduct[] {
+  const products: ScrapedProduct[] = [];
+  const lines = markdown.split('\n');
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    
+    const priceMatch = line.match(/R\$\s*([\d.,]+)/);
+    if (!priceMatch) continue;
+    
+    const price = parseLocalizedNumber(priceMatch[1]);
+    if (price <= 0 || price >= 10000) continue;
+    
+    // Check for original/crossed price (promotion)
+    let originalPrice: number | null = null;
+    let isPromotion = false;
+    
+    // Look for "de R$ XX,XX por R$ YY,YY" pattern
+    const promoMatch = line.match(/(?:de|antes|era)\s*R\$\s*([\d.,]+)/i);
+    if (promoMatch) {
+      const origPrice = parseLocalizedNumber(promoMatch[1]);
+      if (origPrice > price) {
+        originalPrice = origPrice;
+        isPromotion = true;
+      }
+    }
+    
+    // Also check surrounding lines for promo indicators
+    const contextLines = lines.slice(Math.max(0, i - 3), i + 3).join(' ');
+    if (!isPromotion && /promoção|oferta|desconto|\d+%\s*off/i.test(contextLines)) {
+      isPromotion = true;
+      // Look for a second price in context
+      const allPrices = contextLines.match(/R\$\s*([\d.,]+)/g);
+      if (allPrices && allPrices.length >= 2) {
+        const prices = allPrices.map(p => parseLocalizedNumber(p.replace(/R\$\s*/, '')))
+          .filter(p => p > 0 && p < 10000)
+          .sort((a, b) => b - a);
+        if (prices.length >= 2 && prices[0] > price) {
+          originalPrice = prices[0];
+        }
+      }
+    }
+    
+    // Look backwards for product name
+    let productName = '';
+    for (let j = Math.max(0, i - 5); j < i; j++) {
+      const prevLine = lines[j].trim();
+      if (prevLine && prevLine.length > 3 && !prevLine.startsWith('![') && !prevLine.startsWith('http')) {
+        productName = prevLine
+          .replace(/\(https?:\/\/[^)]+\)/g, '')
+          .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+          .replace(/[#*_\[\]]/g, '')
+          .trim();
+      }
+    }
+    
+    const junkPatterns = /^\d+%\s*(OFF|off|desconto)|^Compartilhar|^Adicionar|^Ver mais|^Comprar|^Voltar|^Menu|^Carrinho|^Buscar|^Home|^Login|^Cadastr/i;
+    if (!productName || productName.length <= 5 || productName.length >= 200 || junkPatterns.test(productName)) continue;
+    
+    // Extract barcode (EAN-13 pattern)
+    const barcodeMatch = contextLines.match(/\b(\d{13})\b/) || contextLines.match(/(?:ean|barcode|cod\.?\s*barras?)[:\s]*(\d{8,14})/i);
+    
+    // Extract brand
+    const brandMatch = productName.match(/\b(Camil|Kicaldo|Coca-Cola|Brahma|Dove|Ypê|Sadia|Italac|União|Liza|Del Valle|Neve|Seara|Qboa|Gallo|Vitarella|Nestlé|Omo|Comfort|Colgate|Palmolive|Nescafé|Nescau|Leite Moça|Maizena|Tang|Hellmanns|Knorr|Kibon|Vigor|Danone|Parmalat|Piracanjuba|Aurora|Perdigão|Friboi|Minerva|Marfrig|Tio João|Prato Fino|Kero Coco|Guaraná Antarctica|Skol|Heineken|Ambev|Bunge|Cargill|BRF|JBS|Bauducco|Renata|Adria|Barilla|Isabela|Parati|São Braz|Fortaleza|Três Corações|Melitta|Pilão|Café Bom Dia|Ypê|Limpol|Brilhante|Ariel|Vanish|Veja|Mr Músculo|Pinho Sol)\b/i);
+    
+    // Extract unit/weight
+    const unitMatch = productName.match(/(\d+\s*(?:kg|g|mg|ml|l|L|lt|un|und|pct|cx|caixa|lata|garrafa|pet|fardo|pack|rolos?|folhas?|sachê|envelope)s?)\b/i);
+    
+    // Extract category from URL or context
+    let category = null;
+    const catFromUrl = sourceUrl.match(/(?:departamento|categoria|c)\/([^/?]+)/i);
+    if (catFromUrl) {
+      category = decodeURIComponent(catFromUrl[1]).replace(/-/g, ' ');
+      category = category.charAt(0).toUpperCase() + category.slice(1);
+    }
+    
+    // SKU from context
+    const skuMatch = contextLines.match(/(?:cod|código|sku|ref)[.:\s]*(\w{4,20})/i);
+    
+    const exists = products.some(p =>
+      p.name.toLowerCase() === productName.toLowerCase() ||
+      (p.price === price && p.name.substring(0, 10) === productName.substring(0, 10))
+    );
+    
+    if (!exists) {
+      products.push({
+        name: productName,
+        price,
+        originalPrice,
+        isPromotion,
+        category,
+        brand: brandMatch ? brandMatch[1] : null,
+        unit: unitMatch ? unitMatch[1] : null,
+        barcode: barcodeMatch ? barcodeMatch[1] : null,
+        sku: skuMatch ? skuMatch[1] : null,
+        imageUrl: null,
+        sourceUrl,
+      });
     }
   }
   
@@ -215,10 +257,10 @@ Deno.serve(async (req) => {
       formattedUrl = `https://${formattedUrl}`;
     }
 
-    const pageLimit = Math.min(maxPages || 50, 100);
+    const pageLimit = Math.min(maxPages || 200, 500);
 
-    // Step 1: Use Firecrawl MAP to discover all product URLs on the site
-    console.log('Step 1: Mapping site URLs:', formattedUrl);
+    // Step 1: Use Firecrawl MAP to discover ALL URLs
+    console.log('Step 1: Mapping ALL site URLs:', formattedUrl);
     const mapResponse = await fetch('https://api.firecrawl.dev/v1/map', {
       method: 'POST',
       headers: {
@@ -227,7 +269,6 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         url: formattedUrl,
-        search: 'produto',
         limit: 5000,
         includeSubdomains: false,
       }),
@@ -245,37 +286,51 @@ Deno.serve(async (req) => {
     const allLinks: string[] = mapData.links || [];
     console.log(`Map found ${allLinks.length} URLs total`);
 
-    // Filter for product/category pages (common patterns for e-commerce)
-    const productPatterns = ['/produto/', '/product/', '/p/', '/departamento/', '/categoria/', '/c/'];
-    const categoryLinks = allLinks.filter(link => 
-      productPatterns.some(pattern => link.toLowerCase().includes(pattern))
-    );
-
-    // Also include category/department listing pages that contain multiple products
-    const listingLinks = allLinks.filter(link => {
-      const lower = link.toLowerCase();
-      return (lower.includes('/departamento/') || lower.includes('/categoria/') || lower.includes('/c/')) 
-        && !categoryLinks.includes(link);
-    });
-
-    // Combine: prefer category listing pages (have many products each), then individual product pages
-    let urlsToScrape = [...new Set([...listingLinks, ...categoryLinks])];
+    // Categorize URLs: listing/category pages first (many products each), then individual product pages
+    const productPatterns = ['/produto/', '/product/', '/p/', '/item/', '/prod/'];
+    const listingPatterns = ['/departamento/', '/categoria/', '/c/', '/department/', '/category/', '/busca/', '/search/', '/ofertas/', '/promocoes/', '/promocao/'];
     
-    // If no product-specific URLs found, fall back to main pages
-    if (urlsToScrape.length === 0) {
-      urlsToScrape = allLinks.slice(0, pageLimit);
-    } else {
-      urlsToScrape = urlsToScrape.slice(0, pageLimit);
+    const listingLinks: string[] = [];
+    const productLinks: string[] = [];
+    const otherLinks: string[] = [];
+    
+    for (const link of allLinks) {
+      const lower = link.toLowerCase();
+      // Skip non-content pages
+      if (/\/(login|cadastro|carrinho|checkout|minha-conta|politica|termos|faq|contato|sobre|quem-somos)\b/i.test(lower)) continue;
+      if (/\.(jpg|png|gif|svg|css|js|pdf|ico)$/i.test(lower)) continue;
+      
+      if (listingPatterns.some(p => lower.includes(p))) {
+        listingLinks.push(link);
+      } else if (productPatterns.some(p => lower.includes(p))) {
+        productLinks.push(link);
+      } else if (link !== formattedUrl && link !== formattedUrl + '/') {
+        otherLinks.push(link);
+      }
     }
 
-    console.log(`Selected ${urlsToScrape.length} URLs to scrape (${listingLinks.length} listings, ${categoryLinks.length} product pages)`);
+    // Prioritize: listing pages first (more products per page), then product pages, then other pages
+    let urlsToScrape = [...listingLinks, ...productLinks];
+    
+    // If few URLs found, include other pages too
+    if (urlsToScrape.length < 20) {
+      urlsToScrape = [...urlsToScrape, ...otherLinks];
+    }
+    
+    // Always include the homepage
+    if (!urlsToScrape.includes(formattedUrl)) {
+      urlsToScrape.unshift(formattedUrl);
+    }
+    
+    urlsToScrape = urlsToScrape.slice(0, pageLimit);
+    
+    console.log(`Selected ${urlsToScrape.length} URLs to scrape (${listingLinks.length} listings, ${productLinks.length} products, ${otherLinks.length} other)`);
 
-    // Step 2: Scrape each URL for products
+    // Step 2: Scrape in parallel batches
     let allProducts: ScrapedProduct[] = [];
     let pagesScraped = 0;
+    const batchSize = 10;
 
-    // Scrape in batches of 5 for efficiency
-    const batchSize = 5;
     for (let i = 0; i < urlsToScrape.length; i += batchSize) {
       const batch = urlsToScrape.slice(i, i + batchSize);
       
@@ -290,7 +345,7 @@ Deno.serve(async (req) => {
             body: JSON.stringify({
               url: pageUrl,
               formats: ['markdown', 'html'],
-              waitFor: 5000,
+              waitFor: 3000,
               onlyMainContent: false,
             }),
           });
@@ -331,15 +386,35 @@ Deno.serve(async (req) => {
       const batchResults = await Promise.all(batchPromises);
       for (const products of batchResults) {
         for (const p of products) {
-          // Deduplicate by name
-          if (!allProducts.some(existing => existing.name.toLowerCase() === p.name.toLowerCase())) {
+          // Deduplicate by name (case insensitive)
+          const existing = allProducts.find(e => e.name.toLowerCase() === p.name.toLowerCase());
+          if (!existing) {
             allProducts.push(p);
+          } else {
+            // Enrich existing product with any new data
+            if (!existing.barcode && p.barcode) existing.barcode = p.barcode;
+            if (!existing.sku && p.sku) existing.sku = p.sku;
+            if (!existing.brand && p.brand) existing.brand = p.brand;
+            if (!existing.category && p.category) existing.category = p.category;
+            if (!existing.imageUrl && p.imageUrl) existing.imageUrl = p.imageUrl;
+            if (!existing.originalPrice && p.originalPrice) {
+              existing.originalPrice = p.originalPrice;
+              existing.isPromotion = true;
+            }
           }
         }
       }
 
       console.log(`After batch: ${allProducts.length} unique products total`);
     }
+
+    // Sort products by category then name
+    allProducts.sort((a, b) => {
+      const catA = a.category || 'zzz';
+      const catB = b.category || 'zzz';
+      if (catA !== catB) return catA.localeCompare(catB);
+      return a.name.localeCompare(b.name);
+    });
 
     console.log(`Final: ${allProducts.length} unique products from ${pagesScraped} pages`);
 
