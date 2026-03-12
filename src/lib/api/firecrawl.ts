@@ -16,17 +16,17 @@ export interface ScrapeResult {
   data?: {
     products: ScrapedProduct[];
     totalFound: number;
+    pagesScraped: number;
+    totalUrlsFound: number;
     scrapedUrl: string;
     scrapedAt: string;
-    markdownLength: number;
-    htmlLength: number;
   };
 }
 
 export const firecrawlApi = {
-  async scrapeCompetitorPrices(url: string, searchTerm?: string): Promise<ScrapeResult> {
+  async scrapeCompetitorPrices(url: string, maxPages?: number): Promise<ScrapeResult> {
     const { data, error } = await supabase.functions.invoke('scrape-competitor-prices', {
-      body: { url, searchTerm },
+      body: { url, maxPages: maxPages || 50 },
     });
 
     if (error) {
