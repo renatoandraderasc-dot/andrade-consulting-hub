@@ -10,8 +10,9 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import {
   Plus, Globe, RefreshCw, Trash2, Play, Loader2, CheckCircle2,
-  XCircle, Clock, Store, Link2, Search, Download, Settings2
+  XCircle, Clock, Store, Link2, Search, Download, Settings2, Eye
 } from "lucide-react";
+import ConcorrenteAnalise from "./ConcorrenteAnalise";
 
 interface Concorrente {
   id: string;
@@ -79,6 +80,7 @@ const ConcorrentesTab = () => {
   const [form, setForm] = useState({ nome: "", url: "", plataforma: "vtex" as Concorrente["plataforma"] });
   const [coletando, setColetando] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [selectedConcorrente, setSelectedConcorrente] = useState<Concorrente | null>(null);
 
   const openNew = () => { setEditId(null); setForm({ nome: "", url: "", plataforma: "vtex" }); setShowModal(true); };
   const openEdit = (c: Concorrente) => { setEditId(c.id); setForm({ nome: c.nome, url: c.url, plataforma: c.plataforma }); setShowModal(true); };
@@ -138,6 +140,15 @@ const ConcorrentesTab = () => {
   const totalAtivos = concorrentes.filter(c => c.status === "ativo").length;
   const totalProdutos = concorrentes.reduce((s, c) => s + c.totalProdutos, 0);
   const mediaMatch = concorrentes.length ? Math.round(concorrentes.reduce((s, c) => s + c.matchRate, 0) / concorrentes.length) : 0;
+
+  if (selectedConcorrente) {
+    return (
+      <ConcorrenteAnalise
+        concorrente={{ id: selectedConcorrente.id, nome: selectedConcorrente.nome, url: selectedConcorrente.url, plataforma: selectedConcorrente.plataforma }}
+        onBack={() => setSelectedConcorrente(null)}
+      />
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -209,6 +220,9 @@ const ConcorrentesTab = () => {
                     <TableCell className="text-right text-sm tabular-nums font-medium">{c.matchRate}%</TableCell>
                     <TableCell>
                       <div className="flex items-center justify-center gap-1">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" title="Analisar" onClick={() => setSelectedConcorrente(c)}>
+                          <Eye className="w-3.5 h-3.5" />
+                        </Button>
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleColetar(c.id)} disabled={coletando === c.id}>
                           {coletando === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
                         </Button>
