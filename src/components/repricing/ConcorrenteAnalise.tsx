@@ -176,7 +176,7 @@ const ConcorrenteAnalise = ({ concorrente, onBack }: Props) => {
           <p className="text-2xl font-bold text-green-600">{maisBaratos}</p>
         </CardContent></Card>
         <Card><CardContent className="p-4">
-          <p className="text-xs text-muted-foreground flex items-center gap-1"><ArrowUpCircle className="w-3 h-3 text-destructive" /> Mais Caros</p>
+          <p className="text-xs text-muted-foreground flex items-center gap-1"><ArrowUpCircle className="w-3 h-3 text-destructive" /> Eu Mais Caro</p>
           <p className="text-2xl font-bold text-destructive">{maisCaros}</p>
         </CardContent></Card>
         <Card><CardContent className="p-4">
