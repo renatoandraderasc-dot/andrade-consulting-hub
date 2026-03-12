@@ -19,14 +19,11 @@ interface ScrapedProduct {
 
 function parseLocalizedNumber(value: string): number {
   if (!value || value === "") return 0;
-  let str = String(value).trim();
-  str = str.replace(/[R$\s]/g, "");
+  let str = String(value).trim().replace(/[R$\s]/g, "");
   const lastComma = str.lastIndexOf(",");
   const lastDot = str.lastIndexOf(".");
-  const isCommaDecimal = lastComma > lastDot;
-  if (isCommaDecimal) {
-    str = str.replace(/\./g, "");
-    str = str.replace(",", ".");
+  if (lastComma > lastDot) {
+    str = str.replace(/\./g, "").replace(",", ".");
   } else {
     str = str.replace(/,/g, "");
   }
@@ -34,13 +31,355 @@ function parseLocalizedNumber(value: string): number {
   return isNaN(parsed) ? 0 : parsed;
 }
 
+// ========== STRATEGY 1: VTEX Search API (gets ALL products via pagination) ==========
+async function tryVtexApi(baseUrl: string): Promise<ScrapedProduct[]> {
+  const products: ScrapedProduct[] = [];
+  const seenNames = new Set<string>();
+  
+  // VTEX search API returns 50 products per page, supports _from/_to pagination
+  // Max range per request: 50 items. API supports up to 2500 items total.
+  const batchSize = 50;
+  const maxProducts = 2500;
+  let emptyPages = 0;
+  
+  for (let from = 0; from < maxProducts; from += batchSize) {
+    const to = from + batchSize - 1;
+    const apiUrl = `${baseUrl}/api/catalog_system/pub/products/search/?_from=${from}&_to=${to}`;
+    
+    try {
+      const response = await fetch(apiUrl, {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        },
+      });
+      
+      if (!response.ok) {
+        console.log(`VTEX API returned ${response.status} at offset ${from}`);
+        if (response.status === 404 || response.status === 403) break;
+        emptyPages++;
+        if (emptyPages >= 2) break;
+        continue;
+      }
+      
+      const data = await response.json();
+      if (!Array.isArray(data) || data.length === 0) {
+        console.log(`VTEX API: no more products at offset ${from}`);
+        break;
+      }
+      
+      for (const item of data) {
+        const name = item.productName || item.nameComplete || '';
+        if (!name || seenNames.has(name.toLowerCase())) continue;
+        seenNames.add(name.toLowerCase());
+        
+        // Get best SKU info
+        const sku = item.items?.[0];
+        const seller = sku?.sellers?.[0];
+        const price = seller?.commertialOffer?.Price || 0;
+        const listPrice = seller?.commertialOffer?.ListPrice || 0;
+        
+        if (price <= 0) continue;
+        
+        const isPromo = listPrice > price;
+        const categories = Object.values(item.categories || {}) as string[];
+        const categoryPath = categories[0] || item.categoryName || null;
+        
+        products.push({
+          name,
+          price,
+          originalPrice: isPromo ? listPrice : null,
+          isPromotion: isPromo,
+          category: categoryPath ? String(categoryPath).replace(/^\//,'').replace(/\/$/,'') : null,
+          brand: item.brand || null,
+          unit: sku?.measurementUnit || sku?.unitMultiplier ? `${sku.unitMultiplier || 1} ${sku.measurementUnit || 'un'}` : null,
+          barcode: sku?.ean || null,
+          sku: sku?.itemId || item.productId || null,
+          imageUrl: sku?.images?.[0]?.imageUrl || item.items?.[0]?.images?.[0]?.imageUrl || null,
+          sourceUrl: item.link || `${baseUrl}/produto/${item.productId}`,
+        });
+      }
+      
+      console.log(`VTEX API page ${from}-${to}: ${data.length} items, ${products.length} total unique`);
+      emptyPages = 0;
+      
+      // If we got fewer than batchSize, we've reached the end
+      if (data.length < batchSize) break;
+      
+    } catch (e) {
+      console.warn(`VTEX API error at offset ${from}:`, e);
+      emptyPages++;
+      if (emptyPages >= 2) break;
+    }
+  }
+  
+  return products;
+}
+
+// ========== STRATEGY 2: VTEX Category Tree + Search ==========
+async function tryVtexCategorySearch(baseUrl: string): Promise<ScrapedProduct[]> {
+  const products: ScrapedProduct[] = [];
+  const seenNames = new Set<string>();
+  
+  // First get category tree
+  try {
+    const catResponse = await fetch(`${baseUrl}/api/catalog_system/pub/category/tree/3`, {
+      headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0' },
+    });
+    
+    if (!catResponse.ok) return products;
+    
+    const categories = await catResponse.json();
+    const categoryIds: { id: number; name: string }[] = [];
+    
+    function extractCats(cats: any[]) {
+      for (const cat of cats) {
+        if (cat.id) categoryIds.push({ id: cat.id, name: cat.name });
+        if (cat.children?.length) extractCats(cat.children);
+      }
+    }
+    extractCats(categories);
+    
+    console.log(`Found ${categoryIds.length} categories via VTEX tree`);
+    
+    // Search products in each category
+    for (const cat of categoryIds) {
+      for (let from = 0; from < 500; from += 50) {
+        try {
+          const resp = await fetch(
+            `${baseUrl}/api/catalog_system/pub/products/search/?fq=C:/${cat.id}/&_from=${from}&_to=${from + 49}`,
+            { headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0' } }
+          );
+          
+          if (!resp.ok) break;
+          const data = await resp.json();
+          if (!Array.isArray(data) || data.length === 0) break;
+          
+          for (const item of data) {
+            const name = item.productName || item.nameComplete || '';
+            if (!name || seenNames.has(name.toLowerCase())) continue;
+            seenNames.add(name.toLowerCase());
+            
+            const sku = item.items?.[0];
+            const seller = sku?.sellers?.[0];
+            const price = seller?.commertialOffer?.Price || 0;
+            const listPrice = seller?.commertialOffer?.ListPrice || 0;
+            if (price <= 0) continue;
+            
+            const isPromo = listPrice > price;
+            products.push({
+              name,
+              price,
+              originalPrice: isPromo ? listPrice : null,
+              isPromotion: isPromo,
+              category: cat.name,
+              brand: item.brand || null,
+              unit: sku?.measurementUnit || null,
+              barcode: sku?.ean || null,
+              sku: sku?.itemId || item.productId || null,
+              imageUrl: sku?.images?.[0]?.imageUrl || null,
+              sourceUrl: item.link || `${baseUrl}/produto/${item.productId}`,
+            });
+          }
+          
+          if (data.length < 50) break;
+        } catch (_e) { break; }
+      }
+      console.log(`Category "${cat.name}": ${products.length} total unique products`);
+    }
+  } catch (e) {
+    console.warn('VTEX category tree error:', e);
+  }
+  
+  return products;
+}
+
+// ========== STRATEGY 3: Sitemap discovery + Firecrawl scrape ==========
+async function trySitemapDiscovery(baseUrl: string, apiKey: string, maxPages: number): Promise<{ products: ScrapedProduct[], pagesScraped: number }> {
+  const products: ScrapedProduct[] = [];
+  const seenNames = new Set<string>();
+  let pagesScraped = 0;
+  const productUrls: string[] = [];
+  
+  // Try to fetch sitemap
+  const sitemapUrls = [
+    `${baseUrl}/sitemap.xml`,
+    `${baseUrl}/sitemap_products.xml`,
+    `${baseUrl}/sitemap/products.xml`,
+    `${baseUrl}/sitemap-products.xml`,
+  ];
+  
+  for (const sitemapUrl of sitemapUrls) {
+    try {
+      const resp = await fetch(sitemapUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+      if (!resp.ok) continue;
+      const text = await resp.text();
+      
+      // Extract URLs from sitemap XML
+      const urlMatches = text.match(/<loc>([^<]+)<\/loc>/gi) || [];
+      for (const m of urlMatches) {
+        const url = m.replace(/<\/?loc>/gi, '').trim();
+        if (/\/produto\/|\/p\/|\/product\//i.test(url)) {
+          productUrls.push(url);
+        }
+        // Also check for sub-sitemaps
+        if (/sitemap.*\.xml/i.test(url) && !sitemapUrls.includes(url)) {
+          try {
+            const subResp = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+            if (subResp.ok) {
+              const subText = await subResp.text();
+              const subUrls = subText.match(/<loc>([^<]+)<\/loc>/gi) || [];
+              for (const sm of subUrls) {
+                const subUrl = sm.replace(/<\/?loc>/gi, '').trim();
+                if (/\/produto\/|\/p\/|\/product\//i.test(subUrl)) {
+                  productUrls.push(subUrl);
+                }
+              }
+            }
+          } catch (_e) { /* ignore */ }
+        }
+      }
+      
+      if (productUrls.length > 0) {
+        console.log(`Sitemap ${sitemapUrl}: found ${productUrls.length} product URLs`);
+        break;
+      }
+    } catch (_e) { continue; }
+  }
+  
+  // Also use Firecrawl Map to discover additional URLs
+  try {
+    const mapResponse = await fetch('https://api.firecrawl.dev/v1/map', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ url: baseUrl, limit: 5000, includeSubdomains: false }),
+    });
+    
+    if (mapResponse.ok) {
+      const mapData = await mapResponse.json();
+      const mapLinks: string[] = mapData.links || [];
+      console.log(`Firecrawl Map found ${mapLinks.length} URLs`);
+      
+      for (const link of mapLinks) {
+        if (/\/produto\/|\/p\/|\/product\/|\/item\//i.test(link)) {
+          if (!productUrls.includes(link)) productUrls.push(link);
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Firecrawl map error:', e);
+  }
+  
+  // Deduplicate URLs
+  const uniqueUrls = [...new Set(productUrls)].slice(0, maxPages);
+  console.log(`Total unique product URLs to scrape: ${uniqueUrls.length}`);
+  
+  if (uniqueUrls.length === 0) {
+    // Fallback: scrape listing/category pages + homepage
+    const fallbackUrls = [baseUrl];
+    const listingPatterns = ['/departamento/', '/categoria/', '/c/', '/ofertas/', '/promocoes/'];
+    
+    try {
+      const mapResponse = await fetch('https://api.firecrawl.dev/v1/map', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: baseUrl, limit: 5000, includeSubdomains: false }),
+      });
+      if (mapResponse.ok) {
+        const mapData = await mapResponse.json();
+        for (const link of (mapData.links || [])) {
+          if (listingPatterns.some(p => link.toLowerCase().includes(p))) {
+            fallbackUrls.push(link);
+          }
+        }
+      }
+    } catch (_e) { /* ignore */ }
+    
+    for (const url of fallbackUrls.slice(0, 30)) {
+      const pageProducts = await scrapePageWithFirecrawl(url, apiKey);
+      pagesScraped++;
+      for (const p of pageProducts) {
+        if (!seenNames.has(p.name.toLowerCase())) {
+          seenNames.add(p.name.toLowerCase());
+          products.push(p);
+        }
+      }
+    }
+    return { products, pagesScraped };
+  }
+  
+  // Scrape product URLs in batches
+  const batchSize = 10;
+  for (let i = 0; i < uniqueUrls.length; i += batchSize) {
+    const batch = uniqueUrls.slice(i, i + batchSize);
+    const results = await Promise.all(
+      batch.map(url => scrapePageWithFirecrawl(url, apiKey))
+    );
+    
+    for (const pageProducts of results) {
+      pagesScraped++;
+      for (const p of pageProducts) {
+        if (!seenNames.has(p.name.toLowerCase())) {
+          seenNames.add(p.name.toLowerCase());
+          products.push(p);
+        } else {
+          // Enrich existing
+          const existing = products.find(e => e.name.toLowerCase() === p.name.toLowerCase());
+          if (existing) {
+            if (!existing.barcode && p.barcode) existing.barcode = p.barcode;
+            if (!existing.sku && p.sku) existing.sku = p.sku;
+            if (!existing.brand && p.brand) existing.brand = p.brand;
+            if (!existing.category && p.category) existing.category = p.category;
+            if (!existing.imageUrl && p.imageUrl) existing.imageUrl = p.imageUrl;
+          }
+        }
+      }
+    }
+    
+    console.log(`Scraped batch ${Math.floor(i/batchSize)+1}: ${products.length} total products`);
+  }
+  
+  return { products, pagesScraped };
+}
+
+async function scrapePageWithFirecrawl(url: string, apiKey: string): Promise<ScrapedProduct[]> {
+  try {
+    const response = await fetch('https://api.firecrawl.dev/v1/scrape', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, formats: ['markdown', 'html'], waitFor: 3000, onlyMainContent: false }),
+    });
+    
+    if (!response.ok) return [];
+    const data = await response.json();
+    
+    const html = data.data?.html || data.html || '';
+    const markdown = data.data?.markdown || data.markdown || '';
+    
+    let products = extractProductsFromHtml(html, url);
+    if (products.length < 2 && markdown) {
+      const mdProducts = extractProductsFromMarkdown(markdown, url);
+      for (const mp of mdProducts) {
+        if (!products.some(p => p.name.toLowerCase() === mp.name.toLowerCase())) {
+          products.push(mp);
+        }
+      }
+    }
+    return products;
+  } catch (_e) {
+    return [];
+  }
+}
+
 function extractProductsFromHtml(html: string, sourceUrl: string): ScrapedProduct[] {
   const products: ScrapedProduct[] = [];
   
-  // JSON-LD structured data
+  // JSON-LD
   const jsonLdPattern = /<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi;
   let jsonLdMatch;
-  
   while ((jsonLdMatch = jsonLdPattern.exec(html)) !== null) {
     try {
       const data = JSON.parse(jsonLdMatch[1]);
@@ -107,20 +446,6 @@ function extractProductsFromHtml(html: string, sourceUrl: string): ScrapedProduc
     } catch (_e) { /* ignore */ }
   }
 
-  // Extract additional product data from common HTML patterns
-  // Pattern: data-product-id, data-sku, data-ean attributes  
-  const productCardPattern = /data-product[_-]?id=["']([^"']+)["'][^>]*>[\s\S]*?(?:data-ean=["']([^"']+)["'])?/gi;
-  let cardMatch;
-  while ((cardMatch = productCardPattern.exec(html)) !== null) {
-    // Just enrich existing products with barcode if found
-    const ean = cardMatch[2];
-    if (ean && ean.length >= 8) {
-      for (const p of products) {
-        if (!p.barcode) p.barcode = ean;
-      }
-    }
-  }
-
   return products;
 }
 
@@ -138,62 +463,40 @@ function extractProductsFromMarkdown(markdown: string, sourceUrl: string): Scrap
     const price = parseLocalizedNumber(priceMatch[1]);
     if (price <= 0 || price >= 10000) continue;
     
-    // Check for original/crossed price (promotion)
     let originalPrice: number | null = null;
     let isPromotion = false;
     
-    // Look for "de R$ XX,XX por R$ YY,YY" pattern
     const promoMatch = line.match(/(?:de|antes|era)\s*R\$\s*([\d.,]+)/i);
     if (promoMatch) {
       const origPrice = parseLocalizedNumber(promoMatch[1]);
-      if (origPrice > price) {
-        originalPrice = origPrice;
-        isPromotion = true;
-      }
+      if (origPrice > price) { originalPrice = origPrice; isPromotion = true; }
     }
     
-    // Also check surrounding lines for promo indicators
     const contextLines = lines.slice(Math.max(0, i - 3), i + 3).join(' ');
     if (!isPromotion && /promoção|oferta|desconto|\d+%\s*off/i.test(contextLines)) {
       isPromotion = true;
-      // Look for a second price in context
       const allPrices = contextLines.match(/R\$\s*([\d.,]+)/g);
       if (allPrices && allPrices.length >= 2) {
         const prices = allPrices.map(p => parseLocalizedNumber(p.replace(/R\$\s*/, '')))
-          .filter(p => p > 0 && p < 10000)
-          .sort((a, b) => b - a);
-        if (prices.length >= 2 && prices[0] > price) {
-          originalPrice = prices[0];
-        }
+          .filter(p => p > 0 && p < 10000).sort((a, b) => b - a);
+        if (prices.length >= 2 && prices[0] > price) originalPrice = prices[0];
       }
     }
     
-    // Look backwards for product name
     let productName = '';
     for (let j = Math.max(0, i - 5); j < i; j++) {
       const prevLine = lines[j].trim();
       if (prevLine && prevLine.length > 3 && !prevLine.startsWith('![') && !prevLine.startsWith('http')) {
-        productName = prevLine
-          .replace(/\(https?:\/\/[^)]+\)/g, '')
-          .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-          .replace(/[#*_\[\]]/g, '')
-          .trim();
+        productName = prevLine.replace(/\(https?:\/\/[^)]+\)/g, '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/[#*_\[\]]/g, '').trim();
       }
     }
     
     const junkPatterns = /^\d+%\s*(OFF|off|desconto)|^Compartilhar|^Adicionar|^Ver mais|^Comprar|^Voltar|^Menu|^Carrinho|^Buscar|^Home|^Login|^Cadastr/i;
     if (!productName || productName.length <= 5 || productName.length >= 200 || junkPatterns.test(productName)) continue;
     
-    // Extract barcode (EAN-13 pattern)
     const barcodeMatch = contextLines.match(/\b(\d{13})\b/) || contextLines.match(/(?:ean|barcode|cod\.?\s*barras?)[:\s]*(\d{8,14})/i);
-    
-    // Extract brand
-    const brandMatch = productName.match(/\b(Camil|Kicaldo|Coca-Cola|Brahma|Dove|Ypê|Sadia|Italac|União|Liza|Del Valle|Neve|Seara|Qboa|Gallo|Vitarella|Nestlé|Omo|Comfort|Colgate|Palmolive|Nescafé|Nescau|Leite Moça|Maizena|Tang|Hellmanns|Knorr|Kibon|Vigor|Danone|Parmalat|Piracanjuba|Aurora|Perdigão|Friboi|Minerva|Marfrig|Tio João|Prato Fino|Kero Coco|Guaraná Antarctica|Skol|Heineken|Ambev|Bunge|Cargill|BRF|JBS|Bauducco|Renata|Adria|Barilla|Isabela|Parati|São Braz|Fortaleza|Três Corações|Melitta|Pilão|Café Bom Dia|Ypê|Limpol|Brilhante|Ariel|Vanish|Veja|Mr Músculo|Pinho Sol)\b/i);
-    
-    // Extract unit/weight
     const unitMatch = productName.match(/(\d+\s*(?:kg|g|mg|ml|l|L|lt|un|und|pct|cx|caixa|lata|garrafa|pet|fardo|pack|rolos?|folhas?|sachê|envelope)s?)\b/i);
     
-    // Extract category from URL or context
     let category = null;
     const catFromUrl = sourceUrl.match(/(?:departamento|categoria|c)\/([^/?]+)/i);
     if (catFromUrl) {
@@ -201,27 +504,13 @@ function extractProductsFromMarkdown(markdown: string, sourceUrl: string): Scrap
       category = category.charAt(0).toUpperCase() + category.slice(1);
     }
     
-    // SKU from context
-    const skuMatch = contextLines.match(/(?:cod|código|sku|ref)[.:\s]*(\w{4,20})/i);
-    
-    const exists = products.some(p =>
-      p.name.toLowerCase() === productName.toLowerCase() ||
-      (p.price === price && p.name.substring(0, 10) === productName.substring(0, 10))
-    );
-    
+    const exists = products.some(p => p.name.toLowerCase() === productName.toLowerCase());
     if (!exists) {
       products.push({
-        name: productName,
-        price,
-        originalPrice,
-        isPromotion,
-        category,
-        brand: brandMatch ? brandMatch[1] : null,
-        unit: unitMatch ? unitMatch[1] : null,
+        name: productName, price, originalPrice, isPromotion, category,
+        brand: null, unit: unitMatch ? unitMatch[1] : null,
         barcode: barcodeMatch ? barcodeMatch[1] : null,
-        sku: skuMatch ? skuMatch[1] : null,
-        imageUrl: null,
-        sourceUrl,
+        sku: null, imageUrl: null, sourceUrl,
       });
     }
   }
@@ -256,159 +545,54 @@ Deno.serve(async (req) => {
     if (!formattedUrl.startsWith('http://') && !formattedUrl.startsWith('https://')) {
       formattedUrl = `https://${formattedUrl}`;
     }
+    // Remove trailing slash
+    formattedUrl = formattedUrl.replace(/\/+$/, '');
 
-    const pageLimit = Math.min(maxPages || 200, 500);
-
-    // Step 1: Use Firecrawl MAP to discover ALL URLs
-    console.log('Step 1: Mapping ALL site URLs:', formattedUrl);
-    const mapResponse = await fetch('https://api.firecrawl.dev/v1/map', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        url: formattedUrl,
-        limit: 5000,
-        includeSubdomains: false,
-      }),
-    });
-
-    const mapData = await mapResponse.json();
-    if (!mapResponse.ok) {
-      console.error('Firecrawl map error:', mapData);
-      return new Response(
-        JSON.stringify({ success: false, error: mapData.error || `Erro ao mapear site (${mapResponse.status})` }),
-        { status: mapResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const allLinks: string[] = mapData.links || [];
-    console.log(`Map found ${allLinks.length} URLs total`);
-
-    // Categorize URLs: listing/category pages first (many products each), then individual product pages
-    const productPatterns = ['/produto/', '/product/', '/p/', '/item/', '/prod/'];
-    const listingPatterns = ['/departamento/', '/categoria/', '/c/', '/department/', '/category/', '/busca/', '/search/', '/ofertas/', '/promocoes/', '/promocao/'];
-    
-    const listingLinks: string[] = [];
-    const productLinks: string[] = [];
-    const otherLinks: string[] = [];
-    
-    for (const link of allLinks) {
-      const lower = link.toLowerCase();
-      // Skip non-content pages
-      if (/\/(login|cadastro|carrinho|checkout|minha-conta|politica|termos|faq|contato|sobre|quem-somos)\b/i.test(lower)) continue;
-      if (/\.(jpg|png|gif|svg|css|js|pdf|ico)$/i.test(lower)) continue;
-      
-      if (listingPatterns.some(p => lower.includes(p))) {
-        listingLinks.push(link);
-      } else if (productPatterns.some(p => lower.includes(p))) {
-        productLinks.push(link);
-      } else if (link !== formattedUrl && link !== formattedUrl + '/') {
-        otherLinks.push(link);
-      }
-    }
-
-    // Prioritize: listing pages first (more products per page), then product pages, then other pages
-    let urlsToScrape = [...listingLinks, ...productLinks];
-    
-    // If few URLs found, include other pages too
-    if (urlsToScrape.length < 20) {
-      urlsToScrape = [...urlsToScrape, ...otherLinks];
-    }
-    
-    // Always include the homepage
-    if (!urlsToScrape.includes(formattedUrl)) {
-      urlsToScrape.unshift(formattedUrl);
-    }
-    
-    urlsToScrape = urlsToScrape.slice(0, pageLimit);
-    
-    console.log(`Selected ${urlsToScrape.length} URLs to scrape (${listingLinks.length} listings, ${productLinks.length} products, ${otherLinks.length} other)`);
-
-    // Step 2: Scrape in parallel batches
+    const pageLimit = Math.min(maxPages || 500, 500);
     let allProducts: ScrapedProduct[] = [];
     let pagesScraped = 0;
-    const batchSize = 10;
+    const seenNames = new Set<string>();
 
-    for (let i = 0; i < urlsToScrape.length; i += batchSize) {
-      const batch = urlsToScrape.slice(i, i + batchSize);
-      
-      const batchPromises = batch.map(async (pageUrl) => {
-        try {
-          const scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${apiKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              url: pageUrl,
-              formats: ['markdown', 'html'],
-              waitFor: 3000,
-              onlyMainContent: false,
-            }),
-          });
-
-          const scrapeData = await scrapeResponse.json();
-          if (!scrapeResponse.ok) {
-            console.warn(`Failed to scrape ${pageUrl}: ${scrapeResponse.status}`);
-            return [];
-          }
-
-          const markdown = scrapeData.data?.markdown || scrapeData.markdown || '';
-          const html = scrapeData.data?.html || scrapeData.html || '';
-
-          let products: ScrapedProduct[] = [];
-          
-          if (html) {
-            products = extractProductsFromHtml(html, pageUrl);
-          }
-          
-          if (products.length < 2 && markdown) {
-            const mdProducts = extractProductsFromMarkdown(markdown, pageUrl);
-            for (const mp of mdProducts) {
-              if (!products.some(p => p.name.toLowerCase() === mp.name.toLowerCase())) {
-                products.push(mp);
-              }
-            }
-          }
-
-          pagesScraped++;
-          console.log(`Page ${pagesScraped}/${urlsToScrape.length}: ${pageUrl} → ${products.length} products`);
-          return products;
-        } catch (e) {
-          console.warn(`Error scraping ${pageUrl}:`, e);
-          return [];
-        }
-      });
-
-      const batchResults = await Promise.all(batchPromises);
-      for (const products of batchResults) {
-        for (const p of products) {
-          // Deduplicate by name (case insensitive)
-          const existing = allProducts.find(e => e.name.toLowerCase() === p.name.toLowerCase());
-          if (!existing) {
-            allProducts.push(p);
-          } else {
-            // Enrich existing product with any new data
-            if (!existing.barcode && p.barcode) existing.barcode = p.barcode;
-            if (!existing.sku && p.sku) existing.sku = p.sku;
-            if (!existing.brand && p.brand) existing.brand = p.brand;
-            if (!existing.category && p.category) existing.category = p.category;
-            if (!existing.imageUrl && p.imageUrl) existing.imageUrl = p.imageUrl;
-            if (!existing.originalPrice && p.originalPrice) {
-              existing.originalPrice = p.originalPrice;
-              existing.isPromotion = true;
-            }
-          }
-        }
+    // ===== STRATEGY 1: Try VTEX Search API (fastest, most complete) =====
+    console.log('Strategy 1: Trying VTEX Search API...');
+    const vtexProducts = await tryVtexApi(formattedUrl);
+    
+    if (vtexProducts.length > 0) {
+      console.log(`VTEX API found ${vtexProducts.length} products directly!`);
+      for (const p of vtexProducts) {
+        seenNames.add(p.name.toLowerCase());
+        allProducts.push(p);
       }
-
-      console.log(`After batch: ${allProducts.length} unique products total`);
     }
 
-    // Sort products by category then name
+    // ===== STRATEGY 2: Try VTEX Category Tree Search (finds products VTEX search might miss) =====
+    if (allProducts.length < 50) {
+      console.log('Strategy 2: Trying VTEX Category Tree Search...');
+      const catProducts = await tryVtexCategorySearch(formattedUrl);
+      for (const p of catProducts) {
+        if (!seenNames.has(p.name.toLowerCase())) {
+          seenNames.add(p.name.toLowerCase());
+          allProducts.push(p);
+        }
+      }
+      console.log(`After category search: ${allProducts.length} total products`);
+    }
+
+    // ===== STRATEGY 3: Sitemap + Firecrawl scrape (for non-VTEX sites or to supplement) =====
+    if (allProducts.length < 50) {
+      console.log('Strategy 3: Sitemap + Firecrawl scraping...');
+      const { products: scrapedProducts, pagesScraped: scraped } = await trySitemapDiscovery(formattedUrl, apiKey, pageLimit);
+      pagesScraped = scraped;
+      for (const p of scrapedProducts) {
+        if (!seenNames.has(p.name.toLowerCase())) {
+          seenNames.add(p.name.toLowerCase());
+          allProducts.push(p);
+        }
+      }
+      console.log(`After scraping: ${allProducts.length} total products`);
+    }
+
+    // Sort by category then name
     allProducts.sort((a, b) => {
       const catA = a.category || 'zzz';
       const catB = b.category || 'zzz';
@@ -416,7 +600,7 @@ Deno.serve(async (req) => {
       return a.name.localeCompare(b.name);
     });
 
-    console.log(`Final: ${allProducts.length} unique products from ${pagesScraped} pages`);
+    console.log(`FINAL: ${allProducts.length} unique products`);
 
     return new Response(
       JSON.stringify({
@@ -424,8 +608,8 @@ Deno.serve(async (req) => {
         data: {
           products: allProducts,
           totalFound: allProducts.length,
-          pagesScraped,
-          totalUrlsFound: allLinks.length,
+          pagesScraped: pagesScraped || allProducts.length,
+          totalUrlsFound: allProducts.length,
           scrapedUrl: formattedUrl,
           scrapedAt: new Date().toISOString(),
         }
