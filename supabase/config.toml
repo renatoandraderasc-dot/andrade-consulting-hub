@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.sync-onedrive-metrics]
 verify_jwt = false
+
+[functions.scrape-competitor-prices]
+verify_jwt = false
