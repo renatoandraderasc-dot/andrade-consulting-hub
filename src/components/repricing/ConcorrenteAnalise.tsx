@@ -95,10 +95,10 @@ const ConcorrenteAnalise = ({ concorrente, onBack }: Props) => {
     return list;
   }, [produtos, search, categoriaFilter, statusFilter, sortBy, sortDir]);
 
-  // KPIs
+  // KPIs - from MY store perspective
   const matched = produtos.filter(p => p.status !== "sem_match");
-  const maisBaratos = produtos.filter(p => p.status === "mais_barato").length;
-  const maisCaros = produtos.filter(p => p.status === "mais_caro").length;
+  const maisBaratos = produtos.filter(p => p.status === "mais_barato").length; // EU sou mais barato
+  const maisCaros = produtos.filter(p => p.status === "mais_caro").length; // EU sou mais caro
   const iguais = produtos.filter(p => p.status === "igual").length;
   const semMatch = produtos.filter(p => p.status === "sem_match").length;
   const diffMedia = matched.length
