@@ -220,6 +220,9 @@ const ConcorrentesTab = () => {
                     <TableCell className="text-right text-sm tabular-nums font-medium">{c.matchRate}%</TableCell>
                     <TableCell>
                       <div className="flex items-center justify-center gap-1">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" title="Analisar" onClick={() => setSelectedConcorrente(c)}>
+                          <Eye className="w-3.5 h-3.5" />
+                        </Button>
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleColetar(c.id)} disabled={coletando === c.id}>
                           {coletando === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
                         </Button>
