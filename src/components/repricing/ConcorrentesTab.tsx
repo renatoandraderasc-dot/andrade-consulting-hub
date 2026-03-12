@@ -10,8 +10,9 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import {
   Plus, Globe, RefreshCw, Trash2, Play, Loader2, CheckCircle2,
-  XCircle, Clock, Store, Link2, Search, Download, Settings2
+  XCircle, Clock, Store, Link2, Search, Download, Settings2, Eye
 } from "lucide-react";
+import ConcorrenteAnalise from "./ConcorrenteAnalise";
 
 interface Concorrente {
   id: string;
