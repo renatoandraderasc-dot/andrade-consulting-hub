@@ -80,6 +80,7 @@ const ConcorrentesTab = () => {
   const [form, setForm] = useState({ nome: "", url: "", plataforma: "vtex" as Concorrente["plataforma"] });
   const [coletando, setColetando] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [selectedConcorrente, setSelectedConcorrente] = useState<Concorrente | null>(null);
 
   const openNew = () => { setEditId(null); setForm({ nome: "", url: "", plataforma: "vtex" }); setShowModal(true); };
   const openEdit = (c: Concorrente) => { setEditId(c.id); setForm({ nome: c.nome, url: c.url, plataforma: c.plataforma }); setShowModal(true); };
