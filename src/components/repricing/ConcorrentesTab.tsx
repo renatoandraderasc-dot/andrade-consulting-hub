@@ -75,13 +75,14 @@ const logStatusBadge = (s: ColetaLog["status"]) => {
 
 const ConcorrentesTab = () => {
   const [concorrentes, setConcorrentes] = useState(mockConcorrentes);
-  const [logs] = useState(mockLogs);
+  const [logs, setLogs] = useState(mockLogs);
   const [showModal, setShowModal] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({ nome: "", url: "", plataforma: "vtex" as Concorrente["plataforma"] });
   const [coletando, setColetando] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [selectedConcorrente, setSelectedConcorrente] = useState<Concorrente | null>(null);
+  const [lastScrapedProducts, setLastScrapedProducts] = useState<ScrapedProduct[]>([]);
 
   const openNew = () => { setEditId(null); setForm({ nome: "", url: "", plataforma: "vtex" }); setShowModal(true); };
   const openEdit = (c: Concorrente) => { setEditId(c.id); setForm({ nome: c.nome, url: c.url, plataforma: c.plataforma }); setShowModal(true); };
