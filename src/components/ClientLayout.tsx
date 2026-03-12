@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { BarChart3, CheckSquare, Settings, Users, LogOut, Menu, X, ArrowLeft, Target, ClipboardList } from "lucide-react";
+import { BarChart3, CheckSquare, Settings, Users, LogOut, Menu, X, ArrowLeft, Target, ClipboardList, DollarSign } from "lucide-react";
 import andradeLogo from "@/assets/andrade-logo.png";
 
 interface ClientLayoutProps {
@@ -12,6 +12,7 @@ interface ClientLayoutProps {
 const navItems = [
   { path: "/dashboard", label: "Dashboard", icon: BarChart3 },
   { path: "/controladoria", label: "Controladoria", icon: ClipboardList },
+  { path: "/repricing", label: "Re-PRICING", icon: DollarSign },
   { path: "/checklist", label: "Checklist", icon: CheckSquare },
 ];
 
