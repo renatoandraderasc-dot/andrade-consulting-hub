@@ -192,7 +192,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { url, searchTerm, maxPages } = await req.json();
+    const { url, maxPages } = await req.json();
 
     if (!url) {
       return new Response(
@@ -203,9 +203,8 @@ Deno.serve(async (req) => {
 
     const apiKey = Deno.env.get('FIRECRAWL_API_KEY');
     if (!apiKey) {
-      console.error('FIRECRAWL_API_KEY not configured');
       return new Response(
-        JSON.stringify({ success: false, error: 'Firecrawl não está configurado. Conecte o Firecrawl nas configurações.' }),
+        JSON.stringify({ success: false, error: 'Firecrawl não está configurado.' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -215,80 +214,144 @@ Deno.serve(async (req) => {
       formattedUrl = `https://${formattedUrl}`;
     }
 
-    // If there's a search term, try to navigate to search page
-    const searchUrl = searchTerm 
-      ? `${formattedUrl}/${encodeURIComponent(searchTerm)}?_q=${encodeURIComponent(searchTerm)}&map=ft`
-      : formattedUrl;
+    const pageLimit = Math.min(maxPages || 50, 100);
 
-    console.log('Scraping competitor URL:', searchUrl);
-
-    // Use Firecrawl to scrape the page with JS rendering
-    const scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
+    // Step 1: Use Firecrawl MAP to discover all product URLs on the site
+    console.log('Step 1: Mapping site URLs:', formattedUrl);
+    const mapResponse = await fetch('https://api.firecrawl.dev/v1/map', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        url: searchUrl,
-        formats: ['markdown', 'html'],
-        waitFor: 8000, // Wait for JS to render
-        onlyMainContent: false,
+        url: formattedUrl,
+        search: 'produto',
+        limit: 5000,
+        includeSubdomains: false,
       }),
     });
 
-    const scrapeData = await scrapeResponse.json();
-
-    if (!scrapeResponse.ok) {
-      console.error('Firecrawl scrape error:', scrapeData);
+    const mapData = await mapResponse.json();
+    if (!mapResponse.ok) {
+      console.error('Firecrawl map error:', mapData);
       return new Response(
-        JSON.stringify({ success: false, error: scrapeData.error || `Erro ao acessar o site (${scrapeResponse.status})` }),
-        { status: scrapeResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, error: mapData.error || `Erro ao mapear site (${mapResponse.status})` }),
+        { status: mapResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const markdown = scrapeData.data?.markdown || scrapeData.markdown || '';
-    const html = scrapeData.data?.html || scrapeData.html || '';
-    
-    console.log(`Received markdown: ${markdown.length} chars, html: ${html.length} chars`);
+    const allLinks: string[] = mapData.links || [];
+    console.log(`Map found ${allLinks.length} URLs total`);
 
-    // Extract products from both formats
-    let products: ScrapedProduct[] = [];
+    // Filter for product/category pages (common patterns for e-commerce)
+    const productPatterns = ['/produto/', '/product/', '/p/', '/departamento/', '/categoria/', '/c/'];
+    const categoryLinks = allLinks.filter(link => 
+      productPatterns.some(pattern => link.toLowerCase().includes(pattern))
+    );
+
+    // Also include category/department listing pages that contain multiple products
+    const listingLinks = allLinks.filter(link => {
+      const lower = link.toLowerCase();
+      return (lower.includes('/departamento/') || lower.includes('/categoria/') || lower.includes('/c/')) 
+        && !categoryLinks.includes(link);
+    });
+
+    // Combine: prefer category listing pages (have many products each), then individual product pages
+    let urlsToScrape = [...new Set([...listingLinks, ...categoryLinks])];
     
-    // Try HTML first (more structured)
-    if (html) {
-      products = extractProductsFromHtml(html, formattedUrl);
-      console.log(`Extracted ${products.length} products from HTML`);
+    // If no product-specific URLs found, fall back to main pages
+    if (urlsToScrape.length === 0) {
+      urlsToScrape = allLinks.slice(0, pageLimit);
+    } else {
+      urlsToScrape = urlsToScrape.slice(0, pageLimit);
     }
-    
-    // If HTML extraction didn't find enough, try markdown
-    if (products.length < 3 && markdown) {
-      const markdownProducts = extractProductsFromMarkdown(markdown, formattedUrl);
-      console.log(`Extracted ${markdownProducts.length} products from markdown`);
+
+    console.log(`Selected ${urlsToScrape.length} URLs to scrape (${listingLinks.length} listings, ${categoryLinks.length} product pages)`);
+
+    // Step 2: Scrape each URL for products
+    let allProducts: ScrapedProduct[] = [];
+    let pagesScraped = 0;
+
+    // Scrape in batches of 5 for efficiency
+    const batchSize = 5;
+    for (let i = 0; i < urlsToScrape.length; i += batchSize) {
+      const batch = urlsToScrape.slice(i, i + batchSize);
       
-      // Merge, avoiding duplicates
-      for (const mp of markdownProducts) {
-        const exists = products.some(p => 
-          p.name.toLowerCase() === mp.name.toLowerCase()
-        );
-        if (!exists) {
-          products.push(mp);
+      const batchPromises = batch.map(async (pageUrl) => {
+        try {
+          const scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              url: pageUrl,
+              formats: ['markdown', 'html'],
+              waitFor: 5000,
+              onlyMainContent: false,
+            }),
+          });
+
+          const scrapeData = await scrapeResponse.json();
+          if (!scrapeResponse.ok) {
+            console.warn(`Failed to scrape ${pageUrl}: ${scrapeResponse.status}`);
+            return [];
+          }
+
+          const markdown = scrapeData.data?.markdown || scrapeData.markdown || '';
+          const html = scrapeData.data?.html || scrapeData.html || '';
+
+          let products: ScrapedProduct[] = [];
+          
+          if (html) {
+            products = extractProductsFromHtml(html, pageUrl);
+          }
+          
+          if (products.length < 2 && markdown) {
+            const mdProducts = extractProductsFromMarkdown(markdown, pageUrl);
+            for (const mp of mdProducts) {
+              if (!products.some(p => p.name.toLowerCase() === mp.name.toLowerCase())) {
+                products.push(mp);
+              }
+            }
+          }
+
+          pagesScraped++;
+          console.log(`Page ${pagesScraped}/${urlsToScrape.length}: ${pageUrl} → ${products.length} products`);
+          return products;
+        } catch (e) {
+          console.warn(`Error scraping ${pageUrl}:`, e);
+          return [];
+        }
+      });
+
+      const batchResults = await Promise.all(batchPromises);
+      for (const products of batchResults) {
+        for (const p of products) {
+          // Deduplicate by name
+          if (!allProducts.some(existing => existing.name.toLowerCase() === p.name.toLowerCase())) {
+            allProducts.push(p);
+          }
         }
       }
+
+      console.log(`After batch: ${allProducts.length} unique products total`);
     }
 
-    console.log(`Total products extracted: ${products.length}`);
+    console.log(`Final: ${allProducts.length} unique products from ${pagesScraped} pages`);
 
     return new Response(
       JSON.stringify({
         success: true,
         data: {
-          products,
-          totalFound: products.length,
-          scrapedUrl: searchUrl,
+          products: allProducts,
+          totalFound: allProducts.length,
+          pagesScraped,
+          totalUrlsFound: allLinks.length,
+          scrapedUrl: formattedUrl,
           scrapedAt: new Date().toISOString(),
-          markdownLength: markdown.length,
-          htmlLength: html.length,
         }
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
