@@ -36,24 +36,24 @@ interface ProdutoConcorrente {
 // Mock data for competitor products
 const generateMockProdutos = (concorrenteId: string): ProdutoConcorrente[] => {
   const produtos: ProdutoConcorrente[] = [
-    { id: "p1", nomeConcorrente: "Arroz Tipo 1 Camil 5kg", precoConcorrente: 26.49, categoria: "Mercearia", meuCodigo: "10012", meuProduto: "Arroz Tipo 1 Camil 5kg", meuPreco: 27.99, diferenca: 1.50, diferencaPct: 5.36, status: "mais_barato", confianca: 95, ultimaAtualizacao: "2026-03-12 08:00" },
+    { id: "p1", nomeConcorrente: "Arroz Tipo 1 Camil 5kg", precoConcorrente: 26.49, categoria: "Mercearia", meuCodigo: "10012", meuProduto: "Arroz Tipo 1 Camil 5kg", meuPreco: 27.99, diferenca: -1.50, diferencaPct: -5.36, status: "mais_caro", confianca: 95, ultimaAtualizacao: "2026-03-12 08:00" },
     { id: "p2", nomeConcorrente: "Feijão Carioca Kicaldo 1kg", precoConcorrente: 8.99, categoria: "Mercearia", meuCodigo: "10015", meuProduto: "Feijão Carioca Kicaldo 1kg", meuPreco: 8.99, diferenca: 0, diferencaPct: 0, status: "igual", confianca: 98, ultimaAtualizacao: "2026-03-12 08:00" },
-    { id: "p3", nomeConcorrente: "Coca-Cola Original 2L", precoConcorrente: 8.99, categoria: "Bebidas", meuCodigo: "20034", meuProduto: "Coca-Cola Original 2L", meuPreco: 8.49, diferenca: -0.50, diferencaPct: -5.56, status: "mais_caro", confianca: 100, ultimaAtualizacao: "2026-03-12 08:00" },
-    { id: "p4", nomeConcorrente: "Cerveja Brahma Duplo Malte Lata 350ml", precoConcorrente: 3.49, categoria: "Bebidas", meuCodigo: "20041", meuProduto: "Cerveja Brahma Duplo Malte 350ml", meuPreco: 3.99, diferenca: 0.50, diferencaPct: 12.53, status: "mais_barato", confianca: 92, ultimaAtualizacao: "2026-03-12 08:00" },
-    { id: "p5", nomeConcorrente: "Sabonete Dove Original 90g", precoConcorrente: 3.99, categoria: "Higiene", meuCodigo: "30021", meuProduto: "Sabonete Dove Original 90g", meuPreco: 4.29, diferenca: 0.30, diferencaPct: 6.99, status: "mais_barato", confianca: 88, ultimaAtualizacao: "2026-03-12 08:00" },
-    { id: "p6", nomeConcorrente: "Detergente Ypê Neutro 500ml", precoConcorrente: 2.79, categoria: "Limpeza", meuCodigo: "40018", meuProduto: "Detergente Ypê 500ml", meuPreco: 2.99, diferenca: 0.20, diferencaPct: 6.69, status: "mais_barato", confianca: 90, ultimaAtualizacao: "2026-03-12 08:00" },
-    { id: "p7", nomeConcorrente: "Presunto Cozido Sadia Fatiado kg", precoConcorrente: 28.49, categoria: "Frios", meuCodigo: "50009", meuProduto: "Presunto Cozido Sadia kg", meuPreco: 29.99, diferenca: 1.50, diferencaPct: 5.00, status: "mais_barato", confianca: 85, ultimaAtualizacao: "2026-03-12 08:00" },
-    { id: "p8", nomeConcorrente: "Picanha Bovina Resfriada kg", precoConcorrente: 62.90, categoria: "Açougue", meuCodigo: "60005", meuProduto: "Picanha Bovina kg", meuPreco: 59.99, diferenca: -2.91, diferencaPct: -4.63, status: "mais_caro", confianca: 78, ultimaAtualizacao: "2026-03-12 08:00" },
-    { id: "p9", nomeConcorrente: "Leite Integral Italac UHT 1L", precoConcorrente: 5.29, categoria: "Laticínios", meuCodigo: "90007", meuProduto: "Leite Integral Italac 1L", meuPreco: 5.49, diferenca: 0.20, diferencaPct: 3.64, status: "mais_barato", confianca: 96, ultimaAtualizacao: "2026-03-12 08:00" },
-    { id: "p10", nomeConcorrente: "Pizza Sadia Mussarela 440g", precoConcorrente: 12.49, categoria: "Congelados", meuCodigo: "11002", meuProduto: "Pizza Sadia Mussarela 440g", meuPreco: 13.99, diferenca: 1.50, diferencaPct: 10.72, status: "mais_barato", confianca: 91, ultimaAtualizacao: "2026-03-12 08:00" },
+    { id: "p3", nomeConcorrente: "Coca-Cola Original 2L", precoConcorrente: 8.99, categoria: "Bebidas", meuCodigo: "20034", meuProduto: "Coca-Cola Original 2L", meuPreco: 8.49, diferenca: 0.50, diferencaPct: 5.89, status: "mais_barato", confianca: 100, ultimaAtualizacao: "2026-03-12 08:00" },
+    { id: "p4", nomeConcorrente: "Cerveja Brahma Duplo Malte Lata 350ml", precoConcorrente: 3.49, categoria: "Bebidas", meuCodigo: "20041", meuProduto: "Cerveja Brahma Duplo Malte 350ml", meuPreco: 3.99, diferenca: -0.50, diferencaPct: -12.53, status: "mais_caro", confianca: 92, ultimaAtualizacao: "2026-03-12 08:00" },
+    { id: "p5", nomeConcorrente: "Sabonete Dove Original 90g", precoConcorrente: 3.99, categoria: "Higiene", meuCodigo: "30021", meuProduto: "Sabonete Dove Original 90g", meuPreco: 4.29, diferenca: -0.30, diferencaPct: -6.99, status: "mais_caro", confianca: 88, ultimaAtualizacao: "2026-03-12 08:00" },
+    { id: "p6", nomeConcorrente: "Detergente Ypê Neutro 500ml", precoConcorrente: 2.79, categoria: "Limpeza", meuCodigo: "40018", meuProduto: "Detergente Ypê 500ml", meuPreco: 2.99, diferenca: -0.20, diferencaPct: -6.69, status: "mais_caro", confianca: 90, ultimaAtualizacao: "2026-03-12 08:00" },
+    { id: "p7", nomeConcorrente: "Presunto Cozido Sadia Fatiado kg", precoConcorrente: 28.49, categoria: "Frios", meuCodigo: "50009", meuProduto: "Presunto Cozido Sadia kg", meuPreco: 29.99, diferenca: -1.50, diferencaPct: -5.00, status: "mais_caro", confianca: 85, ultimaAtualizacao: "2026-03-12 08:00" },
+    { id: "p8", nomeConcorrente: "Picanha Bovina Resfriada kg", precoConcorrente: 62.90, categoria: "Açougue", meuCodigo: "60005", meuProduto: "Picanha Bovina kg", meuPreco: 59.99, diferenca: 2.91, diferencaPct: 4.85, status: "mais_barato", confianca: 78, ultimaAtualizacao: "2026-03-12 08:00" },
+    { id: "p9", nomeConcorrente: "Leite Integral Italac UHT 1L", precoConcorrente: 5.29, categoria: "Laticínios", meuCodigo: "90007", meuProduto: "Leite Integral Italac 1L", meuPreco: 5.49, diferenca: -0.20, diferencaPct: -3.64, status: "mais_caro", confianca: 96, ultimaAtualizacao: "2026-03-12 08:00" },
+    { id: "p10", nomeConcorrente: "Pizza Sadia Mussarela 440g", precoConcorrente: 12.49, categoria: "Congelados", meuCodigo: "11002", meuProduto: "Pizza Sadia Mussarela 440g", meuPreco: 13.99, diferenca: -1.50, diferencaPct: -10.72, status: "mais_caro", confianca: 91, ultimaAtualizacao: "2026-03-12 08:00" },
     { id: "p11", nomeConcorrente: "Azeite Extra Virgem Gallo 500ml", precoConcorrente: 32.99, categoria: "Mercearia", meuCodigo: null, meuProduto: null, meuPreco: null, diferenca: null, diferencaPct: null, status: "sem_match", confianca: 0, ultimaAtualizacao: "2026-03-12 08:00" },
     { id: "p12", nomeConcorrente: "Açúcar Cristal União 1kg", precoConcorrente: 5.49, categoria: "Mercearia", meuCodigo: "10029", meuProduto: "Açúcar Cristal União 1kg", meuPreco: 5.49, diferenca: 0, diferencaPct: 0, status: "igual", confianca: 97, ultimaAtualizacao: "2026-03-12 08:00" },
-    { id: "p13", nomeConcorrente: "Óleo de Soja Liza 900ml", precoConcorrente: 7.49, categoria: "Mercearia", meuCodigo: "10033", meuProduto: "Óleo de Soja Liza 900ml", meuPreco: 7.99, diferenca: 0.50, diferencaPct: 6.26, status: "mais_barato", confianca: 93, ultimaAtualizacao: "2026-03-12 08:00" },
-    { id: "p14", nomeConcorrente: "Suco Del Valle Uva Integral 1L", precoConcorrente: 6.49, categoria: "Bebidas", meuCodigo: "20055", meuProduto: "Suco Del Valle Uva 1L", meuPreco: 6.99, diferenca: 0.50, diferencaPct: 7.15, status: "mais_barato", confianca: 87, ultimaAtualizacao: "2026-03-12 08:00" },
-    { id: "p15", nomeConcorrente: "Queijo Mussarela Fatiado kg", precoConcorrente: 39.90, categoria: "Laticínios", meuCodigo: "90014", meuProduto: "Queijo Mussarela Fatiado kg", meuPreco: 42.99, diferenca: 3.09, diferencaPct: 7.19, status: "mais_barato", confianca: 80, ultimaAtualizacao: "2026-03-12 08:00" },
-    { id: "p16", nomeConcorrente: "Papel Higiênico Neve Folha Dupla 12un", precoConcorrente: 17.99, categoria: "Higiene", meuCodigo: "30038", meuProduto: "Papel Higiênico Neve 12 rolos", meuPreco: 18.99, diferenca: 1.00, diferencaPct: 5.27, status: "mais_barato", confianca: 95, ultimaAtualizacao: "2026-03-12 08:00" },
+    { id: "p13", nomeConcorrente: "Óleo de Soja Liza 900ml", precoConcorrente: 7.49, categoria: "Mercearia", meuCodigo: "10033", meuProduto: "Óleo de Soja Liza 900ml", meuPreco: 7.99, diferenca: -0.50, diferencaPct: -6.26, status: "mais_caro", confianca: 93, ultimaAtualizacao: "2026-03-12 08:00" },
+    { id: "p14", nomeConcorrente: "Suco Del Valle Uva Integral 1L", precoConcorrente: 6.49, categoria: "Bebidas", meuCodigo: "20055", meuProduto: "Suco Del Valle Uva 1L", meuPreco: 6.99, diferenca: -0.50, diferencaPct: -7.15, status: "mais_caro", confianca: 87, ultimaAtualizacao: "2026-03-12 08:00" },
+    { id: "p15", nomeConcorrente: "Queijo Mussarela Fatiado kg", precoConcorrente: 39.90, categoria: "Laticínios", meuCodigo: "90014", meuProduto: "Queijo Mussarela Fatiado kg", meuPreco: 42.99, diferenca: -3.09, diferencaPct: -7.19, status: "mais_caro", confianca: 80, ultimaAtualizacao: "2026-03-12 08:00" },
+    { id: "p16", nomeConcorrente: "Papel Higiênico Neve Folha Dupla 12un", precoConcorrente: 17.99, categoria: "Higiene", meuCodigo: "30038", meuProduto: "Papel Higiênico Neve 12 rolos", meuPreco: 18.99, diferenca: -1.00, diferencaPct: -5.27, status: "mais_caro", confianca: 95, ultimaAtualizacao: "2026-03-12 08:00" },
     { id: "p17", nomeConcorrente: "Biscoito Maizena Vitarella 400g", precoConcorrente: 4.29, categoria: "Mercearia", meuCodigo: null, meuProduto: null, meuPreco: null, diferenca: null, diferencaPct: null, status: "sem_match", confianca: 0, ultimaAtualizacao: "2026-03-12 08:00" },
-    { id: "p18", nomeConcorrente: "Água Sanitária Qboa 1L", precoConcorrente: 3.79, categoria: "Limpeza", meuCodigo: "40025", meuProduto: "Água Sanitária Qboa 1L", meuPreco: 3.99, diferenca: 0.20, diferencaPct: 5.01, status: "mais_barato", confianca: 94, ultimaAtualizacao: "2026-03-12 08:00" },
+    { id: "p18", nomeConcorrente: "Água Sanitária Qboa 1L", precoConcorrente: 3.79, categoria: "Limpeza", meuCodigo: "40025", meuProduto: "Água Sanitária Qboa 1L", meuPreco: 3.99, diferenca: -0.20, diferencaPct: -5.01, status: "mais_caro", confianca: 94, ultimaAtualizacao: "2026-03-12 08:00" },
   ];
   return produtos;
 };
@@ -95,10 +95,10 @@ const ConcorrenteAnalise = ({ concorrente, onBack }: Props) => {
     return list;
   }, [produtos, search, categoriaFilter, statusFilter, sortBy, sortDir]);
 
-  // KPIs
+  // KPIs - from MY store perspective
   const matched = produtos.filter(p => p.status !== "sem_match");
-  const maisBaratos = produtos.filter(p => p.status === "mais_barato").length;
-  const maisCaros = produtos.filter(p => p.status === "mais_caro").length;
+  const maisBaratos = produtos.filter(p => p.status === "mais_barato").length; // EU sou mais barato
+  const maisCaros = produtos.filter(p => p.status === "mais_caro").length; // EU sou mais caro
   const iguais = produtos.filter(p => p.status === "igual").length;
   const semMatch = produtos.filter(p => p.status === "sem_match").length;
   const diffMedia = matched.length
@@ -116,8 +116,8 @@ const ConcorrenteAnalise = ({ concorrente, onBack }: Props) => {
   };
 
   const statusBadge = (s: ProdutoConcorrente["status"]) => {
-    if (s === "mais_barato") return <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-500/20 gap-1 text-[11px]"><TrendingDown className="w-3 h-3" /> Mais Barato</Badge>;
-    if (s === "mais_caro") return <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 gap-1 text-[11px]"><TrendingUp className="w-3 h-3" /> Mais Caro</Badge>;
+    if (s === "mais_barato") return <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-500/20 gap-1 text-[11px]"><TrendingDown className="w-3 h-3" /> Eu Mais Barato</Badge>;
+    if (s === "mais_caro") return <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 gap-1 text-[11px]"><TrendingUp className="w-3 h-3" /> Eu Mais Caro</Badge>;
     if (s === "igual") return <Badge variant="outline" className="bg-muted text-muted-foreground border-border gap-1 text-[11px]"><Minus className="w-3 h-3" /> Igual</Badge>;
     return <Badge variant="outline" className="bg-amber-500/10 text-amber-700 border-amber-500/20 text-[11px]">Sem Match</Badge>;
   };
@@ -172,11 +172,11 @@ const ConcorrenteAnalise = ({ concorrente, onBack }: Props) => {
           <p className="text-2xl font-bold text-foreground">{produtos.length}</p>
         </CardContent></Card>
         <Card><CardContent className="p-4">
-          <p className="text-xs text-muted-foreground flex items-center gap-1"><ArrowDownCircle className="w-3 h-3 text-green-600" /> Mais Baratos</p>
+          <p className="text-xs text-muted-foreground flex items-center gap-1"><ArrowDownCircle className="w-3 h-3 text-green-600" /> Eu Mais Barato</p>
           <p className="text-2xl font-bold text-green-600">{maisBaratos}</p>
         </CardContent></Card>
         <Card><CardContent className="p-4">
-          <p className="text-xs text-muted-foreground flex items-center gap-1"><ArrowUpCircle className="w-3 h-3 text-destructive" /> Mais Caros</p>
+          <p className="text-xs text-muted-foreground flex items-center gap-1"><ArrowUpCircle className="w-3 h-3 text-destructive" /> Eu Mais Caro</p>
           <p className="text-2xl font-bold text-destructive">{maisCaros}</p>
         </CardContent></Card>
         <Card><CardContent className="p-4">

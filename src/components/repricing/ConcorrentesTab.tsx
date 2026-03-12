@@ -38,18 +38,18 @@ interface ColetaLog {
 }
 
 const mockConcorrentes: Concorrente[] = [
-  { id: "1", nome: "Santo Antônio em Casa", url: "https://www.santoantonioemcasa.com.br", plataforma: "vtex", status: "ativo", ultimaColeta: "2026-03-12 08:30", totalProdutos: 1842, matchRate: 72 },
-  { id: "2", nome: "Supermercado Extra", url: "https://www.clubeextra.com.br", plataforma: "vtex", status: "ativo", ultimaColeta: "2026-03-11 22:00", totalProdutos: 3210, matchRate: 65 },
-  { id: "3", nome: "Atacadão Online", url: "https://www.atacadao.com.br", plataforma: "vtex", status: "inativo", ultimaColeta: "2026-03-10 14:15", totalProdutos: 2500, matchRate: 58 },
-  { id: "4", nome: "Mercado Regional", url: "https://www.mercadoregional.com.br", plataforma: "woocommerce", status: "erro", ultimaColeta: "2026-03-09 10:00", totalProdutos: 890, matchRate: 45 },
+  { id: "1", nome: "Santo Antônio em Casa", url: "https://www.santoantonioemcasa.com.br", plataforma: "vtex", status: "ativo", ultimaColeta: "2026-03-12 08:30", totalProdutos: 18, matchRate: 89 },
+  { id: "2", nome: "Supermercado Extra", url: "https://www.clubeextra.com.br", plataforma: "vtex", status: "ativo", ultimaColeta: "2026-03-11 22:00", totalProdutos: 22, matchRate: 82 },
+  { id: "3", nome: "Atacadão Online", url: "https://www.atacadao.com.br", plataforma: "vtex", status: "inativo", ultimaColeta: "2026-03-10 14:15", totalProdutos: 15, matchRate: 73 },
+  { id: "4", nome: "Mercado Regional", url: "https://www.mercadoregional.com.br", plataforma: "woocommerce", status: "erro", ultimaColeta: "2026-03-09 10:00", totalProdutos: 0, matchRate: 0 },
 ];
 
 const mockLogs: ColetaLog[] = [
-  { id: "1", concorrenteId: "1", concorrenteNome: "Santo Antônio em Casa", data: "2026-03-12 08:30", status: "sucesso", produtosColetados: 1842, produtosMatchados: 1326, duracao: "4m 32s" },
-  { id: "2", concorrenteId: "2", concorrenteNome: "Supermercado Extra", data: "2026-03-11 22:00", status: "sucesso", produtosColetados: 3210, produtosMatchados: 2087, duracao: "8m 15s" },
+  { id: "1", concorrenteId: "1", concorrenteNome: "Santo Antônio em Casa", data: "2026-03-12 08:30", status: "sucesso", produtosColetados: 18, produtosMatchados: 16, duracao: "4m 32s" },
+  { id: "2", concorrenteId: "2", concorrenteNome: "Supermercado Extra", data: "2026-03-11 22:00", status: "sucesso", produtosColetados: 22, produtosMatchados: 18, duracao: "8m 15s" },
   { id: "3", concorrenteId: "4", concorrenteNome: "Mercado Regional", data: "2026-03-09 10:00", status: "erro", produtosColetados: 0, produtosMatchados: 0, duracao: "0m 45s", erro: "Timeout ao acessar o site" },
-  { id: "4", concorrenteId: "1", concorrenteNome: "Santo Antônio em Casa", data: "2026-03-11 08:30", status: "sucesso", produtosColetados: 1838, produtosMatchados: 1320, duracao: "4m 28s" },
-  { id: "5", concorrenteId: "3", concorrenteNome: "Atacadão Online", data: "2026-03-10 14:15", status: "sucesso", produtosColetados: 2500, produtosMatchados: 1450, duracao: "6m 50s" },
+  { id: "4", concorrenteId: "1", concorrenteNome: "Santo Antônio em Casa", data: "2026-03-11 08:30", status: "sucesso", produtosColetados: 18, produtosMatchados: 16, duracao: "4m 28s" },
+  { id: "5", concorrenteId: "3", concorrenteNome: "Atacadão Online", data: "2026-03-10 14:15", status: "sucesso", produtosColetados: 15, produtosMatchados: 11, duracao: "6m 50s" },
 ];
 
 const plataformaLabels: Record<string, string> = {
