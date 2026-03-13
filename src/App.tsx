@@ -37,6 +37,7 @@ const App = () => (
             <Route path="/admin/metas" element={<AdminMetas />} />
             <Route path="/controladoria" element={<Controladoria />} />
             <Route path="/repricing" element={<Repricing />} />
+            <Route path="/vtex-collector" element={<VtexCollector />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
