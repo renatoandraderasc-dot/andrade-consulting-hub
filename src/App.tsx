@@ -14,6 +14,7 @@ import Dashboard from "./pages/Dashboard";
 import AdminMetas from "./pages/AdminMetas";
 import Controladoria from "./pages/Controladoria";
 import Repricing from "./pages/Repricing";
+import VtexCollector from "./pages/VtexCollector";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/admin/metas" element={<AdminMetas />} />
             <Route path="/controladoria" element={<Controladoria />} />
             <Route path="/repricing" element={<Repricing />} />
+            <Route path="/vtex-collector" element={<VtexCollector />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
