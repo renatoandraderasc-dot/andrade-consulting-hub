@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { BarChart3, CheckSquare, Settings, Users, LogOut, Menu, X, ArrowLeft, Target, ClipboardList, DollarSign, Database } from "lucide-react";
+import { BarChart3, CheckSquare, Settings, Users, LogOut, Menu, X, ArrowLeft, Target, ClipboardList, DollarSign, Database, RefreshCw } from "lucide-react";
 import andradeLogo from "@/assets/andrade-logo.png";
 
 interface ClientLayoutProps {
@@ -14,6 +14,7 @@ const navItems = [
   { path: "/controladoria", label: "Controladoria", icon: ClipboardList },
   { path: "/repricing", label: "Re-PRICING", icon: DollarSign },
   { path: "/vtex-collector", label: "Coletor VTEX", icon: Database },
+  { path: "/websac-sync", label: "Sync WebSac", icon: RefreshCw },
   { path: "/checklist", label: "Checklist", icon: CheckSquare },
 ];
 
