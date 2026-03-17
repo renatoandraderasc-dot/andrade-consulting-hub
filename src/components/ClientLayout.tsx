@@ -14,6 +14,7 @@ const navItems = [
   { path: "/controladoria", label: "Controladoria", icon: ClipboardList },
   { path: "/repricing", label: "Re-PRICING", icon: DollarSign },
   { path: "/vtex-collector", label: "Coletor VTEX", icon: Database },
+  { path: "/websac-sync", label: "Sync WebSac", icon: RefreshCw },
   { path: "/checklist", label: "Checklist", icon: CheckSquare },
 ];
 

@@ -39,6 +39,7 @@ const App = () => (
             <Route path="/controladoria" element={<Controladoria />} />
             <Route path="/repricing" element={<Repricing />} />
             <Route path="/vtex-collector" element={<VtexCollector />} />
+            <Route path="/websac-sync" element={<WebSacSync />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
