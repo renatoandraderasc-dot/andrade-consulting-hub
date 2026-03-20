@@ -536,6 +536,7 @@ const DIRECT_MAP: Record<string, { tipo: string; subtipo: string }> = {
   "ir": { tipo: "Impostos", subtipo: "IRRF" },
   "simples": { tipo: "Impostos", subtipo: "OUTROS IMPOSTOS (S/ VENDA)" },
   "iof": { tipo: "Despesas", subtipo: "IOF" },
+  "iof bancario": { tipo: "Despesas", subtipo: "IOF" },
 
   // ===== COMPRA DO MÊS =====
   "compras": { tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" },
