@@ -126,7 +126,9 @@ export interface DRENode {
   subtipo?: string;
   formula?: string;
   children?: DRENode[];
-  subgroups?: DRENode[]; // sub-groups within a parent group (4.1, 4.2 inside 4)
+  subgroups?: DRENode[];
+  /** Calculated as percentage of another node's value */
+  calcPctOf?: { nodeId: string; pct: number };
 }
 
 // Helper to make a child node
