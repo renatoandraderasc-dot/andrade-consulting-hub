@@ -218,9 +218,12 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
           <h2 className="text-lg sm:text-xl font-bold text-foreground">Lançamentos</h2>
           <p className="text-sm text-muted-foreground">Cadastre e gerencie os lançamentos financeiros</p>
         </div>
-        <Button onClick={openNew} className="gap-2">
-          <Plus className="h-4 w-4" /> Novo Lançamento
-        </Button>
+        <div className="flex gap-2">
+          <ImportLancamentos storeId={storeId} userId={user?.id || ""} onImportComplete={fetchLancamentos} />
+          <Button onClick={openNew} className="gap-2">
+            <Plus className="h-4 w-4" /> Novo Lançamento
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
