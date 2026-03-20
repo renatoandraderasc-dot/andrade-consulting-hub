@@ -185,10 +185,10 @@ export const DRE_STRUCTURE_COMERCIAL: DRENode[] = [
     formula: "receita_liquida - cmv",
   },
 
-  // ===== RESULTADO OPERACIONAL COMPRA MÊS =====
+  // ===== RESULTADO OPERACIONAL COMPRA MÊS = CMV LOJA - Pagamento Fornecedores =====
   {
     id: "resultado_op_compra", name: "RESULTADO OPERACIONAL LIQUIDO (COMPRA MÊS)", level: 0, isGroup: false, isResult: true,
-    formula: "receita_liquida - compra_mes",
+    formula: "cmv - compra_mes",
   },
 
   // ===== 4.1 | DESPESAS PESSOAL =====
