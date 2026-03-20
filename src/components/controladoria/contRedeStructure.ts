@@ -449,12 +449,10 @@ export const DRE_STRUCTURE_COMERCIAL: DRENode[] = [
     formula: "desp_pessoal + desp_pessoal_rat + desp_terceirizados + desp_informatica + desp_loja + desp_frota + desp_freteiros + desp_embalagens + desp_uso_consumo + desp_marketing + desp_serv_pub + desp_aluguel + desp_seguranca + desp_tributos + desp_inadimplentes + desp_financeiras + desp_diversas + desp_quebras",
   },
 
-  // ===== 5 | DEPRECIAÇÃO =====
+  // ===== 5 | DEPRECIAÇÃO (0,50% do Faturamento) =====
   {
-    id: "depreciacao", name: "5 | DEPRECIAÇÃO (0,50%)", level: 0, isGroup: true, isResult: false, tipo: "Despesas",
-    children: [
-      ch("dep_val", "DEPRECIAÇÃO", "DEPRECIAÇÃO"),
-    ],
+    id: "depreciacao", name: "5 | DEPRECIAÇÃO (0,50% FATURAMENTO)", level: 0, isGroup: false, isResult: false,
+    calcPctOf: { nodeId: "faturamento", pct: 0.005 },
   },
 
   // ===== EBITDA =====
