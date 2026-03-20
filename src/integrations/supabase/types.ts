@@ -157,6 +157,65 @@ export type Database = {
         }
         Relationships: []
       }
+      lancamentos: {
+        Row: {
+          competencia_ano: number
+          competencia_mes: number
+          created_at: string
+          data: string
+          descricao: string | null
+          id: string
+          observacao: string | null
+          status: string
+          store_id: string
+          subtipo: string
+          tipo: string
+          updated_at: string
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          competencia_ano: number
+          competencia_mes: number
+          created_at?: string
+          data?: string
+          descricao?: string | null
+          id?: string
+          observacao?: string | null
+          status?: string
+          store_id: string
+          subtipo: string
+          tipo: string
+          updated_at?: string
+          user_id: string
+          valor?: number
+        }
+        Update: {
+          competencia_ano?: number
+          competencia_mes?: number
+          created_at?: string
+          data?: string
+          descricao?: string | null
+          id?: string
+          observacao?: string | null
+          status?: string
+          store_id?: string
+          subtipo?: string
+          tipo?: string
+          updated_at?: string
+          user_id?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lancamentos_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
