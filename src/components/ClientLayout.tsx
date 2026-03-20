@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { BarChart3, CheckSquare, Settings, Users, LogOut, Menu, X, ArrowLeft, Target, ClipboardList, DollarSign, Database, RefreshCw } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import andradeLogo from "@/assets/andrade-logo.png";
 import andradeLogo from "@/assets/andrade-logo.png";
 
 interface ClientLayoutProps {
