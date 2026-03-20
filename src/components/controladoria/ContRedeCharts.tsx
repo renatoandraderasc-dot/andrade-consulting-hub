@@ -1,52 +1,40 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  BarChart, Bar,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
-import { evolucaoMensalMock, composicaoDespesasMock } from "./mockData";
 
-const fmtK = (v: number) => `R$ ${(v / 1000).toFixed(0)}K`;
+const fmtK = (v: number) => v === 0 ? "R$ 0" : `R$ ${(v / 1000).toFixed(0)}K`;
 
-export const ContRedeCharts = () => {
+interface Props {
+  composicaoDespesas: { name: string; valor: number }[];
+}
+
+export const ContRedeCharts = ({ composicaoDespesas }: Props) => {
+  const hasData = composicaoDespesas.length > 0;
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* Line Chart - Evolução Mensal */}
-      <Card className="bg-card border-border">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base font-semibold">Evolução Mensal</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={evolucaoMensalMock}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="mes" tick={{ fontSize: 12 }} />
-              <YAxis tickFormatter={fmtK} tick={{ fontSize: 11 }} width={70} />
-              <Tooltip formatter={(v: number) => fmtK(v)} />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Line type="monotone" dataKey="receitaLiquida" name="Receita Líquida" stroke="#1e3a5f" strokeWidth={2.5} dot={{ r: 3 }} />
-              <Line type="monotone" dataKey="cmv" name="CMV" stroke="#dc2626" strokeWidth={2} dot={{ r: 3 }} />
-              <Line type="monotone" dataKey="despesas" name="Despesas" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3 }} />
-              <Line type="monotone" dataKey="ebitda" name="EBITDA" stroke="#16a34a" strokeWidth={2.5} dot={{ r: 3 }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
+    <div className="grid grid-cols-1 gap-6">
       {/* Bar Chart - Composição das Despesas */}
       <Card className="bg-card border-border">
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-semibold">Composição das Despesas</CardTitle>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={composicaoDespesasMock} layout="vertical" margin={{ left: 10 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis type="number" tickFormatter={fmtK} tick={{ fontSize: 11 }} />
-              <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(v: number) => fmtK(v)} />
-              <Bar dataKey="valor" name="Valor" fill="#1e3a5f" radius={[0, 4, 4, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          {hasData ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={composicaoDespesas} layout="vertical" margin={{ left: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis type="number" tickFormatter={fmtK} tick={{ fontSize: 11 }} />
+                <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 11 }} />
+                <Tooltip formatter={(v: number) => fmtK(v)} />
+                <Bar dataKey="valor" name="Valor" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-[200px] text-muted-foreground text-sm">
+              Nenhum lançamento de despesas cadastrado para este período
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

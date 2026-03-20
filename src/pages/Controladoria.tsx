@@ -7,6 +7,7 @@ import ClientLayout from "@/components/ClientLayout";
 import { ClassificacaoTab } from "@/components/controladoria/ClassificacaoTab";
 import { ContRedeTab } from "@/components/controladoria/ContRedeTab";
 import { EntradaDadosTab } from "@/components/controladoria/EntradaDadosTab";
+import { LancamentosTab } from "@/components/controladoria/LancamentosTab";
 import { ClipboardList } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -75,22 +76,28 @@ const Controladoria = () => {
         </motion.div>
 
         <Tabs defaultValue="entrada" className="w-full">
-          <TabsList className="mb-6 bg-card border border-border h-11">
+          <TabsList className="mb-6 bg-card border border-border h-11 flex-wrap">
             <TabsTrigger
               value="entrada"
-              className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-4 sm:px-6 font-medium text-xs sm:text-sm"
+              className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
             >
               Entrada de Dados
             </TabsTrigger>
             <TabsTrigger
+              value="lancamentos"
+              className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
+            >
+              Lançamentos
+            </TabsTrigger>
+            <TabsTrigger
               value="classificacao"
-              className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-4 sm:px-6 font-medium text-xs sm:text-sm"
+              className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
             >
               Classificação
             </TabsTrigger>
             <TabsTrigger
               value="contrede"
-              className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-4 sm:px-6 font-medium text-xs sm:text-sm"
+              className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
             >
               Cont Rede
             </TabsTrigger>
@@ -100,12 +107,16 @@ const Controladoria = () => {
             <EntradaDadosTab storeId={storeId} storeName={storeName} />
           </TabsContent>
 
+          <TabsContent value="lancamentos">
+            <LancamentosTab storeId={storeId} storeName={storeName} />
+          </TabsContent>
+
           <TabsContent value="classificacao">
             <ClassificacaoTab />
           </TabsContent>
 
           <TabsContent value="contrede">
-            <ContRedeTab />
+            <ContRedeTab storeId={storeId} />
           </TabsContent>
         </Tabs>
       </div>

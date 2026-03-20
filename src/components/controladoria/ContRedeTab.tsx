@@ -8,24 +8,28 @@ import {
 } from "lucide-react";
 import { DRETable } from "./DRETable";
 import { ContRedeCharts } from "./ContRedeCharts";
-import { dreDataMock } from "./mockData";
+import { useLancamentosData } from "./useLancamentosData";
 
-const meses = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
-const anos = ["2024","2025","2026"];
-const lojas = ["Todas", "SM Nascimento Embu", "SM Nascimento Taboão", "SM Nascimento Itapecerica"];
+const mesesOptions = [
+  { value: 1, label: "Janeiro" }, { value: 2, label: "Fevereiro" },
+  { value: 3, label: "Março" }, { value: 4, label: "Abril" },
+  { value: 5, label: "Maio" }, { value: 6, label: "Junho" },
+  { value: 7, label: "Julho" }, { value: 8, label: "Agosto" },
+  { value: 9, label: "Setembro" }, { value: 10, label: "Outubro" },
+  { value: 11, label: "Novembro" }, { value: 12, label: "Dezembro" },
+];
+const anos = ["2024", "2025", "2026"];
 
-export const ContRedeTab = () => {
-  const [mes, setMes] = useState("Março");
-  const [ano, setAno] = useState("2026");
-  const [loja, setLoja] = useState("Todas");
+interface Props {
+  storeId: string;
+}
 
-  // Extract KPI values from mock
-  const receitaLiq = dreDataMock.find(d => d.id === "receita")!;
-  const impostos = dreDataMock.find(d => d.id === "impostos")!;
-  const cmv = dreDataMock.find(d => d.id === "cmv")!;
-  const despesas = dreDataMock.find(d => d.id === "despesas")!;
-  const ebitda = dreDataMock.find(d => d.id === "ebitda")!;
-  const resultado = dreDataMock.find(d => d.id === "resultado")!;
+export const ContRedeTab = ({ storeId }: Props) => {
+  const now = new Date();
+  const [mes, setMes] = useState(now.getMonth() + 1);
+  const [ano, setAno] = useState(now.getFullYear());
+
+  const { kpis, dreData, composicaoDespesas, loading } = useLancamentosData(storeId, mes, ano);
 
   const fmt = (v: number) => {
     const abs = Math.abs(v);
@@ -34,13 +38,13 @@ export const ContRedeTab = () => {
     return `R$ ${v.toFixed(2).replace(".", ",")}`;
   };
 
-  const kpis = [
-    { label: "Receita Líquida", value: fmt(receitaLiq.valor), variacao: receitaLiq.variacao, icon: DollarSign, positive: true },
-    { label: "Impostos", value: fmt(impostos.valor), variacao: impostos.variacao, icon: Receipt, positive: false },
-    { label: "CMV", value: fmt(cmv.valor), variacao: cmv.variacao, icon: ShoppingCart, positive: false },
-    { label: "Despesas", value: fmt(despesas.valor), variacao: despesas.variacao, icon: TrendingDown, positive: false },
-    { label: "EBITDA", value: fmt(ebitda.valor), variacao: ebitda.variacao, icon: BarChart3, positive: true },
-    { label: resultado.valor >= 0 ? "Lucro" : "Prejuízo", value: fmt(resultado.valor), variacao: resultado.variacao, icon: TrendingUp, positive: resultado.valor >= 0 },
+  const kpiCards = [
+    { label: "Receita Líquida", value: fmt(kpis.receitaLiquida), icon: DollarSign, positive: true },
+    { label: "Impostos", value: fmt(Math.abs(kpis.impostos)), icon: Receipt, positive: false },
+    { label: "CMV", value: fmt(Math.abs(kpis.cmv)), icon: ShoppingCart, positive: false },
+    { label: "Despesas", value: fmt(Math.abs(kpis.despesas)), icon: TrendingDown, positive: false },
+    { label: "EBITDA", value: fmt(kpis.ebitda), icon: BarChart3, positive: kpis.ebitda >= 0 },
+    { label: kpis.resultado >= 0 ? "Lucro" : "Prejuízo", value: fmt(kpis.resultado), icon: TrendingUp, positive: kpis.resultado >= 0 },
   ];
 
   return (
@@ -48,37 +52,33 @@ export const ContRedeTab = () => {
       <div>
         <h2 className="text-lg sm:text-xl font-bold text-foreground">Cont Rede</h2>
         <p className="text-sm text-muted-foreground">
-          Painel consolidado de controladoria da rede
+          Painel consolidado de controladoria da rede — alimentado pelos lançamentos
         </p>
       </div>
 
       {/* Filters */}
       <Card className="bg-card border-border">
         <CardContent className="p-4 flex flex-wrap gap-3">
-          <Select value={mes} onValueChange={setMes}>
+          <Select value={String(mes)} onValueChange={v => setMes(Number(v))}>
             <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
             <SelectContent>
-              {meses.map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+              {mesesOptions.map(m => <SelectItem key={m.value} value={String(m.value)}>{m.label}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Select value={ano} onValueChange={setAno}>
+          <Select value={String(ano)} onValueChange={v => setAno(Number(v))}>
             <SelectTrigger className="w-[100px]"><SelectValue /></SelectTrigger>
             <SelectContent>
               {anos.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Select value={loja} onValueChange={setLoja}>
-            <SelectTrigger className="w-[220px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {lojas.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
-            </SelectContent>
-          </Select>
         </CardContent>
       </Card>
 
+      {loading && <p className="text-muted-foreground text-sm">Carregando dados...</p>}
+
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        {kpis.map((kpi) => (
+        {kpiCards.map((kpi) => (
           <Card key={kpi.label} className="bg-card border-border">
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
@@ -88,19 +88,16 @@ export const ContRedeTab = () => {
                 <span className="text-xs text-muted-foreground">{kpi.label}</span>
               </div>
               <p className="text-lg font-bold text-foreground">{kpi.value}</p>
-              <p className={`text-xs mt-1 ${kpi.variacao >= 0 ? "text-emerald-600" : "text-red-500"}`}>
-                {kpi.variacao >= 0 ? "▲" : "▼"} {Math.abs(kpi.variacao).toFixed(1)}% vs mês anterior
-              </p>
             </CardContent>
           </Card>
         ))}
       </div>
 
       {/* DRE Table */}
-      <DRETable data={dreDataMock} />
+      <DRETable data={dreData} />
 
       {/* Charts */}
-      <ContRedeCharts />
+      <ContRedeCharts composicaoDespesas={composicaoDespesas} />
     </div>
   );
 };
