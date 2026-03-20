@@ -113,7 +113,7 @@ export const ContRedeTab = ({ storeId }: Props) => {
   }, [lancamentos, structure]);
 
   // For % calculation, use faturamento as base
-  const faturamentoBase = dreValues.get("faturamento") || dreValues.get("recebimentos") || 1;
+  const faturamentoBase = dreValues.get("faturamento") || 1;
 
   const toggle = (id: string) => {
     setExpanded(prev => {
