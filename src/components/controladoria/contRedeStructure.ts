@@ -811,12 +811,6 @@ export const DRE_STRUCTURE_FINANCEIRO: DRENode[] = [
     ],
   },
 
-  // ===== 10 | RESULTADO OPERACIONAL =====
-  {
-    id: "resultado_op", name: "10 | RESULTADO OPERACIONAL DO EXERCICIO", level: 0, isGroup: false, isResult: true,
-    formula: "resultado - investimentos",
-  },
-
   // ===== 11 | RESULTADO FINANCEIRO =====
   // Recebimento - Pag. Fornecedores - Impostos - Despesas Total - IRPJ/CSLL - Investimentos
   {
