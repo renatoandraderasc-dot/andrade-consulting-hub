@@ -144,19 +144,6 @@ export const DRE_STRUCTURE_COMERCIAL: DRENode[] = [
       { id: "venda_bruta", name: "RECEITA LIQUIDA", level: 1, isGroup: false, isResult: false, tipo: "Faturamento", subtipo: "Venda Bruta" },
     ],
   },
-  {
-    id: "cancelamentos", name: "(-) VENDAS CANCELADAS", level: 0, isGroup: true, isResult: false, tipo: "Cancelamentos",
-    children: [
-      { id: "cancel_vendas", name: "Cancelamento de Vendas", level: 1, isGroup: false, isResult: false, tipo: "Cancelamentos", subtipo: "Cancelamento de Vendas" },
-    ],
-  },
-  {
-    id: "descontos", name: "(-) DESCONTOS", level: 0, isGroup: true, isResult: false, tipo: "Descontos",
-    children: [
-      { id: "desc_concedidos", name: "Descontos Concedidos", level: 1, isGroup: false, isResult: false, tipo: "Descontos", subtipo: "Descontos Concedidos" },
-    ],
-  },
-
   // ===== 2.1 | IMPOSTOS (CAIXA) =====
   {
     id: "impostos_caixa", name: "2.1 | IMPOSTOS (CAIXA)", level: 0, isGroup: true, isResult: false, tipo: "Impostos",
@@ -171,7 +158,7 @@ export const DRE_STRUCTURE_COMERCIAL: DRENode[] = [
   // ===== 1+2 | RECEITA LÍQUIDA =====
   {
     id: "receita_liquida", name: "1+2 | RECEITA LÍQUIDA (SOMA TOTAL)", level: 0, isGroup: false, isResult: true,
-    formula: "faturamento - cancelamentos - descontos - impostos_caixa",
+    formula: "faturamento - impostos_caixa",
   },
 
   // ===== 3 | CMV LOJA =====
