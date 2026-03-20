@@ -1,5 +1,5 @@
 /**
- * ESTRUTURA FIXA DA CONTROLADORIA — NÃO ALTERAR NOMES NEM ORDEM.
+ * ESTRUTURA FIXA DA CONTROLADORIA — LAYOUT IDÊNTICO AO EXCEL "VISÃO CONTROLADORIA - REDE"
  * Toda a DRE é calculada deterministicamente a partir dos lançamentos.
  */
 
@@ -23,178 +23,493 @@ export const SUBCONTAS_V2: Record<string, string[]> = {
   "Faturamento": ["Venda Bruta", "Venda Cartão Crédito", "Venda Cartão Débito", "Venda Pix", "Venda Convênio", "Venda Dinheiro", "Outras Vendas"],
   "Cancelamentos": ["Cancelamento de Vendas", "Devoluções"],
   "Descontos": ["Descontos Concedidos", "Abatimentos"],
-  "Impostos": ["ICMS", "PIS", "COFINS", "Simples Nacional", "Outros Impostos sobre Venda"],
+  "Impostos": ["ICMS", "PIS", "COFINS", "OUTROS IMPOSTOS (S/ VENDA)", "8 | IRPJ + CSLL", "IRRF", "IOF"],
   "CMV": [
-    "Custo da Mercadoria Vendida",
-    "Material para Insumo Açougue",
-    "Material para Insumo Padaria",
-    "Material para Insumo Rotisseria",
-    "Perdas e Quebras",
-    "Ajustes de Estoque",
+    "CUSTO DA MERCADORIA VENDIDA",
+    "MATERIAL PARA INSUMO AÇOUGUE",
+    "MATERIAL PARA INSUMO PADARIA",
   ],
-  "Compra do Mês": ["Pagamento Fornecedores", "Compra de Mercadorias"],
+  "Compra do Mês": ["COMPRA DO MÊS"],
   "Despesas": [
-    "Despesas de Pessoal",
-    "Pessoal Rateado",
-    "Profissionais Terceirizados",
-    "Contabilidade",
-    "Informática",
-    "Loja",
-    "Frota",
-    "Freteiros",
-    "Embalagens",
-    "Uso e Consumo",
-    "Marketing",
-    "Serviços Públicos",
-    "Energia Elétrica",
-    "Água e Esgoto",
-    "Gás",
-    "Aluguel",
-    "Segurança",
-    "Tributos e Outros",
-    "Inadimplentes",
-    "Despesas Financeiras",
-    "Tarifas/Manutenção de Conta",
-    "Despesas Diversas",
-    "Depreciação",
+    // 4.1 Pessoal
+    "SALÁRIO LÍQUIDO (+ COMPRAS / - H.E.)", "ADIANTAMENTO SALARIAL", "MEDICINA OCUPACIONAL",
+    "INSS", "FGTS", "FGTS (RESCISÃO)", "RESCISÕES", "IRRF", "PROCESSO TRABALHISTA",
+    "COMPLEMENTO DE SALÁRIOS / DIFERENÇAS", "13° SALÁRIO", "FÉRIAS (PROVISÃO - 1/12 AVOS)",
+    "FÉRIAS", "UNIFORMES", "COMPRA DE EPI", "DIARISTA", "TREINAMENTOS", "HORA EXTRA",
+    "CONSULTORIA DE RECRUTAMENTO E SELEÇÃO", "ASSISTÊNCIA MÉDICA", "CONTRIBUIÇÃO SINDICAL",
+    "REFEITÓRIO", "DOAÇÃO BONUS FUNCIONÁRIO", "CONVENIO MERCADO",
+    "TRANSPORTE FUNCIONÁRIOS", "OUTRAS DESPESAS (FUNCIONÁRIOS)",
+    // 4.1.2 Pessoal Rateado
+    "PESSOAL ADMINISTRATIVO", "PESSOAL OPERACIONAL + TRANSPORTES", "PESSOAL COMPRAS + ESTOQUE",
+    // 4.2 Terceirizados
+    "CONSULTORIA - MENSALIDADE", "REFRIGERAÇÃO", "ADVOCACIA", "TI",
+    "DIAGNÓSTICO FISCAL (PIS E COFINS)", "CONTABILIDADE",
+    "LIMPEZA QUIMICA / DEDETIZAÇÃO / LIMP. PRAÇA", "PONTOS DE ACESSO - RH", "ASSOCIAÇÃO DE CLASSE",
+    // 4.3 Informática
+    "COMPRA DE EQUIPAMENTOS INFORMÁTICA", "MANUTENÇÃO TERCERIZADA INFORMÁTICA",
+    "CONTROLWARE", "INTERNET/DOMINIO E-MAILs", "INTERNET", "SUPRIMENTOS", "LOCAÇÃO DE EQUIPAMENTOS",
+    // 4.4 Loja
+    "MANUTENÇÃO PREDIAL", "SEGURO", "MANUTENÇÃO DE EQUIPAMENTOS - MÁQUINAS",
+    "MANUTENÇÃO - INSTALAÇÕES MAQUINAS E EQUIP.",
+    // 4.5 Frota
+    "COMPRA DE VEÍCULOS", "ALUGUEL COM VEÍCULOS", "MANUTENÇÃO DE VEÍCULOS",
+    "COMBUSTÍVEIS E LUBRIFICANTES", "SEGURO E MONITORAMENTO VEÍCULOS",
+    "IPVA / PEDÁGIOS / LICENCIAMENTO/MULTAS",
+    // 4.6 Freteiros
+    "FRETEIROS / ENTREGAS / BUSCAS MERCADORIAS",
+    // 4.7 Embalagens
+    "SACOLAS / EMBALAGENS / BANDEJAS / ETC", "OUTROS (EMBALAGENS)",
+    // 4.8 Uso Consumo
+    "MAT. ESC. / CORREIOS / CARTÓRIOS", "MATERIAL DE USO E CONSUMO",
+    "MATERIAL PARA MANUTENÇÃO ADM/OPERACIONAL", "MATERIAL P/ LIMPEZA DA LOJA",
+    // 4.9 Marketing
+    "AQUISIÇÃO BRINDES/PRODUTOS (PROMOÇÕES)", "TELEVISÃO",
+    "GRÁFICA (IMPRESSÃO JORNAL DE OFERTAS)", "DISTRIBUIÇÃO DO PANFLETO",
+    "MENSALIDADE SOFTWARE WHATS/RÁDIO", "AGÊNCIA/GRAVAÇÃO/LOCUÇÃO",
+    "FAIXAS E CARTAZETES (MATERIAL)", "CARRO DE SOM", "ARCO BALÕES - DECORAÇÃO",
+    "MARKETING (MÍDIAS SOCIAIS) - IMPULSIONAMENTO", "CARTAZISTA - M.O. TERCEIRIZADA",
+    "PUBLICIDADE", "SPOTS VINHETAS",
+    // 4.10 Serviços Públicos
+    "ÁGUA E ESGOTO", "ENERGIA ELÉTRICA", "TELEFONIA FIXA", "TELEFONIA CELULAR",
+    "INMETRO/OUTRAS TAXAS", "GÁS", "PROCON", "IPTU",
+    // 4.11 Aluguel
+    "ALUGUEL COM TERCEIROS (PREDIAL)", "ALUGUEL ESTÁCIONAMENTO",
+    "ALUGUEL COM MÁQUINAS E EQUIPAMENTOS",
+    // 4.12 Segurança
+    "TRANSPORTE DE VALORES - SEPARAÇÃO/CONTAGEM", "DIVERSOS SEGURANÇA",
+    "SISTEMA MONITOR./CAMERAS E SOFTWARES",
+    // 4.13 Tributos
+    "TRIBUTOS - FEDERAIS RETENÇÕES (PCC E IRRF)", "TRIBUTOS - MUNICIPAIS (AUTORIZAÇÕES)",
+    "TRIBUTOS - FEDERAIS PARCELAMENTO TELLES", "TRIBUTOS - MUNICIPAIS RETENÇÕES",
+    // 4.14 Inadimplentes
+    "CHEQUES DEVOLVIDOS DENTRO DO MÊS", "CHEQUES DEVOLVIDOS RECEBIDOS",
+    // 4.15 Despesas Financeiras
+    "DESPESAS BANCÁRIAS", "JUROS DE CONTA GARANTIDA + IOF", "JUROS DE EMPRÉSTIMO",
+    "AMORTIZAÇÃO EMPRÉSTIMO", "JUROS USO LIMITE BANCO", "JUROS POR ATRASO DE DUPLICATAS",
+    "TAXAS DE CARTÕES", "TAXAS COM P.O.S. e TEF e OUTROS GASTOS",
+    "ANUIDADE VOUCHERS - ALIMENTAÇÃO/REFEIÇÃO", "FINANC/LEASING FROTA",
+    "FINANC/LEASING INSTALAÇÕES", "EMPRÉSTIMOS", "TARIFAS/MANUTENÇÃO DE CONTA",
+    "TARIFA COLETA NUMERÁRIO - PROSEGUR",
+    "IMOBILIZADO MÁQUINAS E EQUIPAMENTOS", "IMOBILIZADO AQUISIÇÃO CASAS E TERRENOS",
+    "IMOBILIZADO AQUISIÇÃO EQUIP. ADMINISTRATIVO", "IMOBILIZADO AQUISIÇÃO MÓVEIS E UTENSÍLIOS",
+    "IMOBILIZADO EDIFÍCIO E CONSTRUÇÕES", "CONSÓRCIOS", "ANTECIPAÇÃO CARTÕES",
+    "ABATIMENTO DE BOLETOS (CONTRATOS FINANCEIRO)", "RECARCAS - TENDÊNCIA COMISSÃO 4%",
+    "RECEBIMENTOS CONSÓRCIOS", "DIVERSOS FINANCEIROS", "VALE ALIMENTAÇÃO (VR)",
+    // 4.16 Despesas Diversas
+    "OUTRAS DESPESAS (DIRETORIA)", "OUTRAS DESPESAS (COMERCIAL)",
+    "OUTRAS DESPESAS (ADMINISTRATIVA)", "PRÓ-LABORE (1%)", "DESCONTOS / DOAÇÕES",
+    // 4.17 Quebras
+    "PERDAS", "QUEBRA", "OUTROS",
+    // 5 Depreciação
+    "DEPRECIAÇÃO",
+    // 9 Investimentos
+    "9 | INVESTIMENTOS (OUTROS)",
   ],
   "Recebimentos": [
-    "Recebimento Cartão Crédito",
-    "Recebimento Cartão Débito",
-    "Recebimento Pix",
-    "Recebimento Convênio",
-    "Recebimento Dinheiro",
-    "Outros Recebimentos",
+    "Recebimento Cartão Crédito", "Recebimento Cartão Débito", "Recebimento Pix",
+    "Recebimento Convênio", "Recebimento Dinheiro", "Outros Recebimentos",
   ],
   "Pagamentos": [
-    "Pagamento Fornecedores",
-    "Pagamento Pessoal",
-    "Pagamento Impostos",
-    "Pagamento Aluguel",
-    "Pagamento Serviços",
-    "Outros Pagamentos",
+    "Pagamento Fornecedores", "Pagamento Pessoal", "Pagamento Impostos",
+    "Pagamento Aluguel", "Pagamento Serviços", "Outros Pagamentos",
   ],
 };
 
-// ============ ESTRUTURA FIXA DRE (COMERCIAL) ============
+// ============ ESTRUTURA DRE ============
 export interface DRENode {
   id: string;
   name: string;
-  level: number;       // 0=grupo, 1=subconta, 2=resultado
+  level: number;
   isGroup: boolean;
-  isResult: boolean;   // linhas calculadas (somas, fórmulas)
-  tipo?: string;       // mapeia para tipo do lançamento
-  subtipo?: string;    // mapeia para subtipo específico
-  formula?: string;    // fórmula de cálculo para linhas resultado
+  isResult: boolean;
+  tipo?: string;
+  subtipo?: string;
+  formula?: string;
   children?: DRENode[];
+  subgroups?: DRENode[]; // sub-groups within a parent group (4.1, 4.2 inside 4)
+}
+
+// Helper to make a child node
+function ch(id: string, name: string, subtipo: string): DRENode {
+  return { id, name, level: 1, isGroup: false, isResult: false, tipo: "Despesas", subtipo };
 }
 
 export const DRE_STRUCTURE_COMERCIAL: DRENode[] = [
+  // ===== 1 | FATURAMENTO =====
   {
-    id: "faturamento", name: "FATURAMENTO", level: 0, isGroup: true, isResult: false, tipo: "Faturamento",
+    id: "faturamento", name: "1 | FATURAMENTO / RECEITA BRUTA (S. TOTAL)", level: 0, isGroup: true, isResult: false, tipo: "Faturamento",
     children: [
-      { id: "venda_bruta", name: "Venda Bruta", level: 1, isGroup: false, isResult: false, tipo: "Faturamento", subtipo: "Venda Bruta" },
-      { id: "venda_cc", name: "Venda Cartão Crédito", level: 1, isGroup: false, isResult: false, tipo: "Faturamento", subtipo: "Venda Cartão Crédito" },
-      { id: "venda_cd", name: "Venda Cartão Débito", level: 1, isGroup: false, isResult: false, tipo: "Faturamento", subtipo: "Venda Cartão Débito" },
-      { id: "venda_pix", name: "Venda Pix", level: 1, isGroup: false, isResult: false, tipo: "Faturamento", subtipo: "Venda Pix" },
-      { id: "venda_convenio", name: "Venda Convênio", level: 1, isGroup: false, isResult: false, tipo: "Faturamento", subtipo: "Venda Convênio" },
-      { id: "venda_dinheiro", name: "Venda Dinheiro", level: 1, isGroup: false, isResult: false, tipo: "Faturamento", subtipo: "Venda Dinheiro" },
-      { id: "outras_vendas", name: "Outras Vendas", level: 1, isGroup: false, isResult: false, tipo: "Faturamento", subtipo: "Outras Vendas" },
+      { id: "venda_bruta", name: "RECEITA LIQUIDA", level: 1, isGroup: false, isResult: false, tipo: "Faturamento", subtipo: "Venda Bruta" },
     ],
   },
   {
-    id: "cancelamentos", name: "CANCELAMENTOS", level: 0, isGroup: true, isResult: false, tipo: "Cancelamentos",
+    id: "cancelamentos", name: "(-) VENDAS CANCELADAS", level: 0, isGroup: true, isResult: false, tipo: "Cancelamentos",
     children: [
       { id: "cancel_vendas", name: "Cancelamento de Vendas", level: 1, isGroup: false, isResult: false, tipo: "Cancelamentos", subtipo: "Cancelamento de Vendas" },
-      { id: "devolucoes", name: "Devoluções", level: 1, isGroup: false, isResult: false, tipo: "Cancelamentos", subtipo: "Devoluções" },
     ],
   },
   {
-    id: "descontos", name: "DESCONTOS", level: 0, isGroup: true, isResult: false, tipo: "Descontos",
+    id: "descontos", name: "(-) DESCONTOS", level: 0, isGroup: true, isResult: false, tipo: "Descontos",
     children: [
       { id: "desc_concedidos", name: "Descontos Concedidos", level: 1, isGroup: false, isResult: false, tipo: "Descontos", subtipo: "Descontos Concedidos" },
-      { id: "abatimentos", name: "Abatimentos", level: 1, isGroup: false, isResult: false, tipo: "Descontos", subtipo: "Abatimentos" },
     ],
   },
+
+  // ===== 2.1 | IMPOSTOS (CAIXA) =====
   {
-    id: "receita_liquida", name: "= RECEITA LÍQUIDA", level: 0, isGroup: false, isResult: true,
-    formula: "faturamento - cancelamentos - descontos",
-  },
-  {
-    id: "impostos", name: "IMPOSTOS", level: 0, isGroup: true, isResult: false, tipo: "Impostos",
+    id: "impostos_caixa", name: "2.1 | IMPOSTOS (CAIXA)", level: 0, isGroup: true, isResult: false, tipo: "Impostos",
     children: [
-      { id: "icms", name: "ICMS", level: 1, isGroup: false, isResult: false, tipo: "Impostos", subtipo: "ICMS" },
-      { id: "pis", name: "PIS", level: 1, isGroup: false, isResult: false, tipo: "Impostos", subtipo: "PIS" },
-      { id: "cofins", name: "COFINS", level: 1, isGroup: false, isResult: false, tipo: "Impostos", subtipo: "COFINS" },
-      { id: "simples", name: "Simples Nacional", level: 1, isGroup: false, isResult: false, tipo: "Impostos", subtipo: "Simples Nacional" },
-      { id: "outros_imp", name: "Outros Impostos sobre Venda", level: 1, isGroup: false, isResult: false, tipo: "Impostos", subtipo: "Outros Impostos sobre Venda" },
+      { id: "imp_icms", name: "ICMS", level: 1, isGroup: false, isResult: false, tipo: "Impostos", subtipo: "ICMS" },
+      { id: "imp_pis", name: "PIS", level: 1, isGroup: false, isResult: false, tipo: "Impostos", subtipo: "PIS" },
+      { id: "imp_cofins", name: "COFINS", level: 1, isGroup: false, isResult: false, tipo: "Impostos", subtipo: "COFINS" },
+      { id: "imp_outros", name: "OUTROS IMPOSTOS (S/ VENDA)", level: 1, isGroup: false, isResult: false, tipo: "Impostos", subtipo: "OUTROS IMPOSTOS (S/ VENDA)" },
     ],
   },
+
+  // ===== 1+2 | RECEITA LÍQUIDA =====
   {
-    id: "receita_liquida_total", name: "= RECEITA LÍQUIDA TOTAL", level: 0, isGroup: false, isResult: true,
-    formula: "receita_liquida - impostos",
+    id: "receita_liquida", name: "1+2 | RECEITA LÍQUIDA (SOMA TOTAL)", level: 0, isGroup: false, isResult: true,
+    formula: "faturamento - cancelamentos - descontos - impostos_caixa",
   },
+
+  // ===== 3 | CMV LOJA =====
   {
-    id: "cmv", name: "CMV", level: 0, isGroup: true, isResult: false, tipo: "CMV",
+    id: "cmv", name: "3 | CMV LOJA", level: 0, isGroup: true, isResult: false, tipo: "CMV",
     children: [
-      { id: "cmv_merc", name: "Custo da Mercadoria Vendida", level: 1, isGroup: false, isResult: false, tipo: "CMV", subtipo: "Custo da Mercadoria Vendida" },
-      { id: "cmv_acougue", name: "Material para Insumo Açougue", level: 1, isGroup: false, isResult: false, tipo: "CMV", subtipo: "Material para Insumo Açougue" },
-      { id: "cmv_padaria", name: "Material para Insumo Padaria", level: 1, isGroup: false, isResult: false, tipo: "CMV", subtipo: "Material para Insumo Padaria" },
-      { id: "cmv_rotisseria", name: "Material para Insumo Rotisseria", level: 1, isGroup: false, isResult: false, tipo: "CMV", subtipo: "Material para Insumo Rotisseria" },
-      { id: "cmv_perdas", name: "Perdas e Quebras", level: 1, isGroup: false, isResult: false, tipo: "CMV", subtipo: "Perdas e Quebras" },
-      { id: "cmv_ajustes", name: "Ajustes de Estoque", level: 1, isGroup: false, isResult: false, tipo: "CMV", subtipo: "Ajustes de Estoque" },
+      { id: "cmv_merc", name: "CUSTO DA MERCADORIA VENDIDA", level: 1, isGroup: false, isResult: false, tipo: "CMV", subtipo: "CUSTO DA MERCADORIA VENDIDA" },
+      { id: "cmv_acougue", name: "MATERIAL PARA INSUMO AÇOUGUE", level: 1, isGroup: false, isResult: false, tipo: "CMV", subtipo: "MATERIAL PARA INSUMO AÇOUGUE" },
+      { id: "cmv_padaria", name: "MATERIAL PARA INSUMO PADARIA", level: 1, isGroup: false, isResult: false, tipo: "CMV", subtipo: "MATERIAL PARA INSUMO PADARIA" },
     ],
   },
-  {
-    id: "resultado_op_cmv", name: "= RESULTADO OPERACIONAL CMV", level: 0, isGroup: false, isResult: true,
-    formula: "receita_liquida_total - cmv",
-  },
+
+  // ===== COMPRA DO MÊS =====
   {
     id: "compra_mes", name: "COMPRA DO MÊS", level: 0, isGroup: true, isResult: false, tipo: "Compra do Mês",
     children: [
-      { id: "pag_fornec", name: "Pagamento Fornecedores", level: 1, isGroup: false, isResult: false, tipo: "Compra do Mês", subtipo: "Pagamento Fornecedores" },
-      { id: "compra_merc", name: "Compra de Mercadorias", level: 1, isGroup: false, isResult: false, tipo: "Compra do Mês", subtipo: "Compra de Mercadorias" },
+      { id: "compra_fornec", name: "Pagamento Fornecedores", level: 1, isGroup: false, isResult: false, tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" },
     ],
   },
+
+  // ===== RESULTADO OPERACIONAL CMV =====
   {
-    id: "resultado_op_compra", name: "= RESULTADO OPERACIONAL COMPRA", level: 0, isGroup: false, isResult: true,
-    formula: "receita_liquida_total - compra_mes",
+    id: "resultado_op_cmv", name: "RESULTADO OPERACIONAL LIQUIDO (CMV)", level: 0, isGroup: false, isResult: true,
+    formula: "receita_liquida - cmv",
   },
+
+  // ===== RESULTADO OPERACIONAL COMPRA MÊS =====
   {
-    id: "despesas", name: "DESPESAS", level: 0, isGroup: true, isResult: false, tipo: "Despesas",
+    id: "resultado_op_compra", name: "RESULTADO OPERACIONAL LIQUIDO (COMPRA MÊS)", level: 0, isGroup: false, isResult: true,
+    formula: "receita_liquida - compra_mes",
+  },
+
+  // ===== 4.1 | DESPESAS PESSOAL =====
+  {
+    id: "desp_pessoal", name: "4.1 | DESPESAS PESSOAL", level: 0, isGroup: true, isResult: false, tipo: "Despesas",
     children: [
-      { id: "desp_pessoal", name: "Despesas de Pessoal", level: 1, isGroup: false, isResult: false, tipo: "Despesas", subtipo: "Despesas de Pessoal" },
-      { id: "pessoal_rat", name: "Pessoal Rateado", level: 1, isGroup: false, isResult: false, tipo: "Despesas", subtipo: "Pessoal Rateado" },
-      { id: "terceirizados", name: "Profissionais Terceirizados", level: 1, isGroup: false, isResult: false, tipo: "Despesas", subtipo: "Profissionais Terceirizados" },
-      { id: "contabilidade", name: "Contabilidade", level: 1, isGroup: false, isResult: false, tipo: "Despesas", subtipo: "Contabilidade" },
-      { id: "informatica", name: "Informática", level: 1, isGroup: false, isResult: false, tipo: "Despesas", subtipo: "Informática" },
-      { id: "loja", name: "Loja", level: 1, isGroup: false, isResult: false, tipo: "Despesas", subtipo: "Loja" },
-      { id: "frota", name: "Frota", level: 1, isGroup: false, isResult: false, tipo: "Despesas", subtipo: "Frota" },
-      { id: "freteiros", name: "Freteiros", level: 1, isGroup: false, isResult: false, tipo: "Despesas", subtipo: "Freteiros" },
-      { id: "embalagens", name: "Embalagens", level: 1, isGroup: false, isResult: false, tipo: "Despesas", subtipo: "Embalagens" },
-      { id: "uso_consumo", name: "Uso e Consumo", level: 1, isGroup: false, isResult: false, tipo: "Despesas", subtipo: "Uso e Consumo" },
-      { id: "marketing", name: "Marketing", level: 1, isGroup: false, isResult: false, tipo: "Despesas", subtipo: "Marketing" },
-      { id: "serv_publicos", name: "Serviços Públicos", level: 1, isGroup: false, isResult: false, tipo: "Despesas", subtipo: "Serviços Públicos" },
-      { id: "energia", name: "Energia Elétrica", level: 1, isGroup: false, isResult: false, tipo: "Despesas", subtipo: "Energia Elétrica" },
-      { id: "agua", name: "Água e Esgoto", level: 1, isGroup: false, isResult: false, tipo: "Despesas", subtipo: "Água e Esgoto" },
-      { id: "gas", name: "Gás", level: 1, isGroup: false, isResult: false, tipo: "Despesas", subtipo: "Gás" },
-      { id: "aluguel", name: "Aluguel", level: 1, isGroup: false, isResult: false, tipo: "Despesas", subtipo: "Aluguel" },
-      { id: "seguranca", name: "Segurança", level: 1, isGroup: false, isResult: false, tipo: "Despesas", subtipo: "Segurança" },
-      { id: "tributos_outros", name: "Tributos e Outros", level: 1, isGroup: false, isResult: false, tipo: "Despesas", subtipo: "Tributos e Outros" },
-      { id: "inadimplentes", name: "Inadimplentes", level: 1, isGroup: false, isResult: false, tipo: "Despesas", subtipo: "Inadimplentes" },
-      { id: "desp_financeiras", name: "Despesas Financeiras", level: 1, isGroup: false, isResult: false, tipo: "Despesas", subtipo: "Despesas Financeiras" },
-      { id: "tarifas", name: "Tarifas/Manutenção de Conta", level: 1, isGroup: false, isResult: false, tipo: "Despesas", subtipo: "Tarifas/Manutenção de Conta" },
-      { id: "desp_diversas", name: "Despesas Diversas", level: 1, isGroup: false, isResult: false, tipo: "Despesas", subtipo: "Despesas Diversas" },
-      { id: "depreciacao", name: "Depreciação", level: 1, isGroup: false, isResult: false, tipo: "Despesas", subtipo: "Depreciação" },
+      ch("dp_salario", "SALÁRIO LÍQUIDO (+ COMPRAS / - H.E.)", "SALÁRIO LÍQUIDO (+ COMPRAS / - H.E.)"),
+      ch("dp_adiant", "ADIANTAMENTO SALARIAL", "ADIANTAMENTO SALARIAL"),
+      ch("dp_medicina", "MEDICINA OCUPACIONAL", "MEDICINA OCUPACIONAL"),
+      ch("dp_inss", "INSS", "INSS"),
+      ch("dp_fgts", "FGTS", "FGTS"),
+      ch("dp_fgts_resc", "FGTS (RESCISÃO)", "FGTS (RESCISÃO)"),
+      ch("dp_rescisoes", "RESCISÕES", "RESCISÕES"),
+      ch("dp_irrf", "IRRF", "IRRF"),
+      ch("dp_processo", "PROCESSO TRABALHISTA", "PROCESSO TRABALHISTA"),
+      ch("dp_complem", "COMPLEMENTO DE SALÁRIOS / DIFERENÇAS", "COMPLEMENTO DE SALÁRIOS / DIFERENÇAS"),
+      ch("dp_13sal", "13° SALÁRIO", "13° SALÁRIO"),
+      ch("dp_ferias_prov", "FÉRIAS (PROVISÃO - 1/12 AVOS)", "FÉRIAS (PROVISÃO - 1/12 AVOS)"),
+      ch("dp_ferias", "FÉRIAS", "FÉRIAS"),
+      ch("dp_uniformes", "UNIFORMES", "UNIFORMES"),
+      ch("dp_epi", "COMPRA DE EPI", "COMPRA DE EPI"),
+      ch("dp_diarista", "DIARISTA", "DIARISTA"),
+      ch("dp_treinam", "TREINAMENTOS", "TREINAMENTOS"),
+      ch("dp_hora_extra", "HORA EXTRA", "HORA EXTRA"),
+      ch("dp_recrutam", "CONSULTORIA DE RECRUTAMENTO E SELEÇÃO", "CONSULTORIA DE RECRUTAMENTO E SELEÇÃO"),
+      ch("dp_assist_med", "ASSISTÊNCIA MÉDICA", "ASSISTÊNCIA MÉDICA"),
+      ch("dp_sindical", "CONTRIBUIÇÃO SINDICAL", "CONTRIBUIÇÃO SINDICAL"),
+      ch("dp_refeitorio", "REFEITÓRIO", "REFEITÓRIO"),
+      ch("dp_doacao", "DOAÇÃO BONUS FUNCIONÁRIO", "DOAÇÃO BONUS FUNCIONÁRIO"),
+      ch("dp_convenio", "CONVENIO MERCADO", "CONVENIO MERCADO"),
+      ch("dp_transporte", "TRANSPORTE FUNCIONÁRIOS", "TRANSPORTE FUNCIONÁRIOS"),
+      ch("dp_outras_func", "OUTRAS DESPESAS (FUNCIONÁRIOS)", "OUTRAS DESPESAS (FUNCIONÁRIOS)"),
+      ch("dp_vale_alim", "VALE ALIMENTAÇÃO (VR)", "VALE ALIMENTAÇÃO (VR)"),
     ],
   },
+
+  // ===== 4.1.2 | DESPESAS PESSOAL RATEADAS =====
   {
-    id: "ebitda", name: "= EBITDA", level: 0, isGroup: false, isResult: true,
-    formula: "receita_liquida_total - cmv - despesas",
+    id: "desp_pessoal_rat", name: "4.1.2 | DESPESAS PESSOAL RATEADAS", level: 0, isGroup: true, isResult: false, tipo: "Despesas",
+    children: [
+      ch("dpr_admin", "PESSOAL ADMINISTRATIVO", "PESSOAL ADMINISTRATIVO"),
+      ch("dpr_oper", "PESSOAL OPERACIONAL + TRANSPORTES", "PESSOAL OPERACIONAL + TRANSPORTES"),
+      ch("dpr_compras", "PESSOAL COMPRAS + ESTOQUE", "PESSOAL COMPRAS + ESTOQUE"),
+    ],
   },
+
+  // ===== 4.2 | PROFISSIONAIS TERCEIRIZADOS =====
   {
-    id: "resultado_final", name: "= RESULTADO FINAL", level: 0, isGroup: false, isResult: true,
-    formula: "ebitda - impostos",
+    id: "desp_terceirizados", name: "4.2 | PROFISSIONAIS TERCEIRIZADOS", level: 0, isGroup: true, isResult: false, tipo: "Despesas",
+    children: [
+      ch("dt_consultoria", "CONSULTORIA - MENSALIDADE", "CONSULTORIA - MENSALIDADE"),
+      ch("dt_refrigeracao", "REFRIGERAÇÃO", "REFRIGERAÇÃO"),
+      ch("dt_advocacia", "ADVOCACIA", "ADVOCACIA"),
+      ch("dt_ti", "TI", "TI"),
+      ch("dt_diagfiscal", "DIAGNÓSTICO FISCAL (PIS E COFINS)", "DIAGNÓSTICO FISCAL (PIS E COFINS)"),
+      ch("dt_contabilidade", "CONTABILIDADE", "CONTABILIDADE"),
+      ch("dt_limpeza", "LIMPEZA QUIMICA / DEDETIZAÇÃO / LIMP. PRAÇA", "LIMPEZA QUIMICA / DEDETIZAÇÃO / LIMP. PRAÇA"),
+      ch("dt_pontos_rh", "PONTOS DE ACESSO - RH", "PONTOS DE ACESSO - RH"),
+      ch("dt_assoc_classe", "ASSOCIAÇÃO DE CLASSE", "ASSOCIAÇÃO DE CLASSE"),
+    ],
+  },
+
+  // ===== 4.3 | INFORMÁTICA =====
+  {
+    id: "desp_informatica", name: "4.3 | INFORMÁTICA", level: 0, isGroup: true, isResult: false, tipo: "Despesas",
+    children: [
+      ch("di_compra_equip", "COMPRA DE EQUIPAMENTOS INFORMÁTICA", "COMPRA DE EQUIPAMENTOS INFORMÁTICA"),
+      ch("di_manut_terc", "MANUTENÇÃO TERCERIZADA INFORMÁTICA", "MANUTENÇÃO TERCERIZADA INFORMÁTICA"),
+      ch("di_controlware", "CONTROLWARE", "CONTROLWARE"),
+      ch("di_internet", "INTERNET/DOMINIO E-MAILs", "INTERNET/DOMINIO E-MAILs"),
+      ch("di_internet2", "INTERNET", "INTERNET"),
+      ch("di_suprimentos", "SUPRIMENTOS", "SUPRIMENTOS"),
+      ch("di_locacao", "LOCAÇÃO DE EQUIPAMENTOS", "LOCAÇÃO DE EQUIPAMENTOS"),
+    ],
+  },
+
+  // ===== 4.4 | LOJA =====
+  {
+    id: "desp_loja", name: "4.4 | LOJA", level: 0, isGroup: true, isResult: false, tipo: "Despesas",
+    children: [
+      ch("dl_manut_pred", "MANUTENÇÃO PREDIAL", "MANUTENÇÃO PREDIAL"),
+      ch("dl_seguro", "SEGURO", "SEGURO"),
+      ch("dl_manut_equip", "MANUTENÇÃO DE EQUIPAMENTOS - MÁQUINAS", "MANUTENÇÃO DE EQUIPAMENTOS - MÁQUINAS"),
+      ch("dl_manut_inst", "MANUTENÇÃO - INSTALAÇÕES MAQUINAS E EQUIP.", "MANUTENÇÃO - INSTALAÇÕES MAQUINAS E EQUIP."),
+    ],
+  },
+
+  // ===== 4.5 | FROTA =====
+  {
+    id: "desp_frota", name: "4.5 | FROTA", level: 0, isGroup: true, isResult: false, tipo: "Despesas",
+    children: [
+      ch("df_compra_veic", "COMPRA DE VEÍCULOS", "COMPRA DE VEÍCULOS"),
+      ch("df_alug_veic", "ALUGUEL COM VEÍCULOS", "ALUGUEL COM VEÍCULOS"),
+      ch("df_manut_veic", "MANUTENÇÃO DE VEÍCULOS", "MANUTENÇÃO DE VEÍCULOS"),
+      ch("df_combust", "COMBUSTÍVEIS E LUBRIFICANTES", "COMBUSTÍVEIS E LUBRIFICANTES"),
+      ch("df_seguro_veic", "SEGURO E MONITORAMENTO VEÍCULOS", "SEGURO E MONITORAMENTO VEÍCULOS"),
+      ch("df_ipva", "IPVA / PEDÁGIOS / LICENCIAMENTO/MULTAS", "IPVA / PEDÁGIOS / LICENCIAMENTO/MULTAS"),
+    ],
+  },
+
+  // ===== 4.6 | FRETEIROS =====
+  {
+    id: "desp_freteiros", name: "4.6 | FRETEIROS", level: 0, isGroup: true, isResult: false, tipo: "Despesas",
+    children: [
+      ch("dfr_freteiros", "FRETEIROS / ENTREGAS / BUSCAS MERCADORIAS", "FRETEIROS / ENTREGAS / BUSCAS MERCADORIAS"),
+    ],
+  },
+
+  // ===== 4.7 | EMBALAGENS =====
+  {
+    id: "desp_embalagens", name: "4.7 | EMBALAGENS", level: 0, isGroup: true, isResult: false, tipo: "Despesas",
+    children: [
+      ch("de_sacolas", "SACOLAS / EMBALAGENS / BANDEJAS / ETC", "SACOLAS / EMBALAGENS / BANDEJAS / ETC"),
+      ch("de_outros", "OUTROS (EMBALAGENS)", "OUTROS (EMBALAGENS)"),
+    ],
+  },
+
+  // ===== 4.8 | USO CONSUMO =====
+  {
+    id: "desp_uso_consumo", name: "4.8 | USO CONSUMO", level: 0, isGroup: true, isResult: false, tipo: "Despesas",
+    children: [
+      ch("duc_mat_esc", "MAT. ESC. / CORREIOS / CARTÓRIOS", "MAT. ESC. / CORREIOS / CARTÓRIOS"),
+      ch("duc_mat_uso", "MATERIAL DE USO E CONSUMO", "MATERIAL DE USO E CONSUMO"),
+      ch("duc_mat_manut", "MATERIAL PARA MANUTENÇÃO ADM/OPERACIONAL", "MATERIAL PARA MANUTENÇÃO ADM/OPERACIONAL"),
+      ch("duc_mat_limp", "MATERIAL P/ LIMPEZA DA LOJA", "MATERIAL P/ LIMPEZA DA LOJA"),
+    ],
+  },
+
+  // ===== 4.9 | MARKETING =====
+  {
+    id: "desp_marketing", name: "4.9 | MARKETING", level: 0, isGroup: true, isResult: false, tipo: "Despesas",
+    children: [
+      ch("dm_brindes", "AQUISIÇÃO BRINDES/PRODUTOS (PROMOÇÕES)", "AQUISIÇÃO BRINDES/PRODUTOS (PROMOÇÕES)"),
+      ch("dm_tv", "TELEVISÃO", "TELEVISÃO"),
+      ch("dm_grafica", "GRÁFICA (IMPRESSÃO JORNAL DE OFERTAS)", "GRÁFICA (IMPRESSÃO JORNAL DE OFERTAS)"),
+      ch("dm_panfleto", "DISTRIBUIÇÃO DO PANFLETO", "DISTRIBUIÇÃO DO PANFLETO"),
+      ch("dm_software", "MENSALIDADE SOFTWARE WHATS/RÁDIO", "MENSALIDADE SOFTWARE WHATS/RÁDIO"),
+      ch("dm_agencia", "AGÊNCIA/GRAVAÇÃO/LOCUÇÃO", "AGÊNCIA/GRAVAÇÃO/LOCUÇÃO"),
+      ch("dm_faixas", "FAIXAS E CARTAZETES (MATERIAL)", "FAIXAS E CARTAZETES (MATERIAL)"),
+      ch("dm_carro_som", "CARRO DE SOM", "CARRO DE SOM"),
+      ch("dm_decoracao", "ARCO BALÕES - DECORAÇÃO", "ARCO BALÕES - DECORAÇÃO"),
+      ch("dm_impuls", "MARKETING (MÍDIAS SOCIAIS) - IMPULSIONAMENTO", "MARKETING (MÍDIAS SOCIAIS) - IMPULSIONAMENTO"),
+      ch("dm_cartazista", "CARTAZISTA - M.O. TERCEIRIZADA", "CARTAZISTA - M.O. TERCEIRIZADA"),
+      ch("dm_publicidade", "PUBLICIDADE", "PUBLICIDADE"),
+      ch("dm_spots", "SPOTS VINHETAS", "SPOTS VINHETAS"),
+    ],
+  },
+
+  // ===== 4.10 | SERVIÇOS PÚBLICOS =====
+  {
+    id: "desp_serv_pub", name: "4.10 | SERVIÇOS PÚBLICOS", level: 0, isGroup: true, isResult: false, tipo: "Despesas",
+    children: [
+      ch("dsp_agua", "ÁGUA E ESGOTO", "ÁGUA E ESGOTO"),
+      ch("dsp_energia", "ENERGIA ELÉTRICA", "ENERGIA ELÉTRICA"),
+      ch("dsp_tel_fixa", "TELEFONIA FIXA", "TELEFONIA FIXA"),
+      ch("dsp_tel_cel", "TELEFONIA CELULAR", "TELEFONIA CELULAR"),
+      ch("dsp_inmetro", "INMETRO/OUTRAS TAXAS", "INMETRO/OUTRAS TAXAS"),
+      ch("dsp_gas", "GÁS", "GÁS"),
+      ch("dsp_procon", "PROCON", "PROCON"),
+      ch("dsp_iptu", "IPTU", "IPTU"),
+    ],
+  },
+
+  // ===== 4.11 | ALUGUEL =====
+  {
+    id: "desp_aluguel", name: "4.11 | ALUGUEL", level: 0, isGroup: true, isResult: false, tipo: "Despesas",
+    children: [
+      ch("da_predial", "ALUGUEL COM TERCEIROS (PREDIAL)", "ALUGUEL COM TERCEIROS (PREDIAL)"),
+      ch("da_estacion", "ALUGUEL ESTÁCIONAMENTO", "ALUGUEL ESTÁCIONAMENTO"),
+      ch("da_maq_equip", "ALUGUEL COM MÁQUINAS E EQUIPAMENTOS", "ALUGUEL COM MÁQUINAS E EQUIPAMENTOS"),
+    ],
+  },
+
+  // ===== 4.12 | SEGURANÇA =====
+  {
+    id: "desp_seguranca", name: "4.12 | SEGURANÇA", level: 0, isGroup: true, isResult: false, tipo: "Despesas",
+    children: [
+      ch("ds_transp_val", "TRANSPORTE DE VALORES - SEPARAÇÃO/CONTAGEM", "TRANSPORTE DE VALORES - SEPARAÇÃO/CONTAGEM"),
+      ch("ds_diversos", "DIVERSOS SEGURANÇA", "DIVERSOS SEGURANÇA"),
+      ch("ds_cameras", "SISTEMA MONITOR./CAMERAS E SOFTWARES", "SISTEMA MONITOR./CAMERAS E SOFTWARES"),
+    ],
+  },
+
+  // ===== 4.13 | TRIBUTOS E OUTROS =====
+  {
+    id: "desp_tributos", name: "4.13 | TRIBUTOS E OUTROS", level: 0, isGroup: true, isResult: false, tipo: "Despesas",
+    children: [
+      ch("dtr_fed_ret", "TRIBUTOS - FEDERAIS RETENÇÕES (PCC E IRRF)", "TRIBUTOS - FEDERAIS RETENÇÕES (PCC E IRRF)"),
+      ch("dtr_mun_aut", "TRIBUTOS - MUNICIPAIS (AUTORIZAÇÕES)", "TRIBUTOS - MUNICIPAIS (AUTORIZAÇÕES)"),
+      ch("dtr_fed_parc", "TRIBUTOS - FEDERAIS PARCELAMENTO TELLES", "TRIBUTOS - FEDERAIS PARCELAMENTO TELLES"),
+      ch("dtr_mun_ret", "TRIBUTOS - MUNICIPAIS RETENÇÕES", "TRIBUTOS - MUNICIPAIS RETENÇÕES"),
+    ],
+  },
+
+  // ===== 4.14 | INADIMPLENTES =====
+  {
+    id: "desp_inadimplentes", name: "4.14 | INADIMPLENTES", level: 0, isGroup: true, isResult: false, tipo: "Despesas",
+    children: [
+      ch("din_cheq_dev", "CHEQUES DEVOLVIDOS DENTRO DO MÊS", "CHEQUES DEVOLVIDOS DENTRO DO MÊS"),
+      ch("din_cheq_rec", "CHEQUES DEVOLVIDOS RECEBIDOS", "CHEQUES DEVOLVIDOS RECEBIDOS"),
+    ],
+  },
+
+  // ===== 4.15 | DESPESAS FINANCEIRAS =====
+  {
+    id: "desp_financeiras", name: "4.15 | DESPESAS FINANCEIRAS", level: 0, isGroup: true, isResult: false, tipo: "Despesas",
+    children: [
+      ch("dfin_bancarias", "DESPESAS BANCÁRIAS", "DESPESAS BANCÁRIAS"),
+      ch("dfin_juros_gar", "JUROS DE CONTA GARANTIDA + IOF", "JUROS DE CONTA GARANTIDA + IOF"),
+      ch("dfin_juros_emp", "JUROS DE EMPRÉSTIMO", "JUROS DE EMPRÉSTIMO"),
+      ch("dfin_amort", "AMORTIZAÇÃO EMPRÉSTIMO", "AMORTIZAÇÃO EMPRÉSTIMO"),
+      ch("dfin_juros_lim", "JUROS USO LIMITE BANCO", "JUROS USO LIMITE BANCO"),
+      ch("dfin_juros_dup", "JUROS POR ATRASO DE DUPLICATAS", "JUROS POR ATRASO DE DUPLICATAS"),
+      ch("dfin_tx_cartoes", "TAXAS DE CARTÕES", "TAXAS DE CARTÕES"),
+      ch("dfin_tx_pos", "TAXAS COM P.O.S. e TEF e OUTROS GASTOS", "TAXAS COM P.O.S. e TEF e OUTROS GASTOS"),
+      ch("dfin_anuidade", "ANUIDADE VOUCHERS - ALIMENTAÇÃO/REFEIÇÃO", "ANUIDADE VOUCHERS - ALIMENTAÇÃO/REFEIÇÃO"),
+      ch("dfin_leas_frota", "FINANC/LEASING FROTA", "FINANC/LEASING FROTA"),
+      ch("dfin_leas_inst", "FINANC/LEASING INSTALAÇÕES", "FINANC/LEASING INSTALAÇÕES"),
+      ch("dfin_emprest", "EMPRÉSTIMOS", "EMPRÉSTIMOS"),
+      ch("dfin_tarifas", "TARIFAS/MANUTENÇÃO DE CONTA", "TARIFAS/MANUTENÇÃO DE CONTA"),
+      ch("dfin_prosegur", "TARIFA COLETA NUMERÁRIO - PROSEGUR", "TARIFA COLETA NUMERÁRIO - PROSEGUR"),
+      ch("dfin_imob_maq", "IMOBILIZADO MÁQUINAS E EQUIPAMENTOS", "IMOBILIZADO MÁQUINAS E EQUIPAMENTOS"),
+      ch("dfin_imob_casas", "IMOBILIZADO AQUISIÇÃO CASAS E TERRENOS", "IMOBILIZADO AQUISIÇÃO CASAS E TERRENOS"),
+      ch("dfin_imob_admin", "IMOBILIZADO AQUISIÇÃO EQUIP. ADMINISTRATIVO", "IMOBILIZADO AQUISIÇÃO EQUIP. ADMINISTRATIVO"),
+      ch("dfin_imob_moveis", "IMOBILIZADO AQUISIÇÃO MÓVEIS E UTENSÍLIOS", "IMOBILIZADO AQUISIÇÃO MÓVEIS E UTENSÍLIOS"),
+      ch("dfin_imob_edif", "IMOBILIZADO EDIFÍCIO E CONSTRUÇÕES", "IMOBILIZADO EDIFÍCIO E CONSTRUÇÕES"),
+      ch("dfin_iof", "IOF", "IOF"),
+      ch("dfin_consorcios", "CONSÓRCIOS", "CONSÓRCIOS"),
+      ch("dfin_antecip", "ANTECIPAÇÃO CARTÕES", "ANTECIPAÇÃO CARTÕES"),
+      ch("dfin_abat_bol", "ABATIMENTO DE BOLETOS (CONTRATOS FINANCEIRO)", "ABATIMENTO DE BOLETOS (CONTRATOS FINANCEIRO)"),
+      ch("dfin_recargas", "RECARCAS - TENDÊNCIA COMISSÃO 4%", "RECARCAS - TENDÊNCIA COMISSÃO 4%"),
+      ch("dfin_rec_cons", "RECEBIMENTOS CONSÓRCIOS", "RECEBIMENTOS CONSÓRCIOS"),
+      ch("dfin_diversos", "DIVERSOS FINANCEIROS", "DIVERSOS FINANCEIROS"),
+    ],
+  },
+
+  // ===== 4.16 | DESPESAS DIVERSAS =====
+  {
+    id: "desp_diversas", name: "4.16 | DESPESAS DIVERSAS", level: 0, isGroup: true, isResult: false, tipo: "Despesas",
+    children: [
+      ch("dd_diretoria", "OUTRAS DESPESAS (DIRETORIA)", "OUTRAS DESPESAS (DIRETORIA)"),
+      ch("dd_comercial", "OUTRAS DESPESAS (COMERCIAL)", "OUTRAS DESPESAS (COMERCIAL)"),
+      ch("dd_admin", "OUTRAS DESPESAS (ADMINISTRATIVA)", "OUTRAS DESPESAS (ADMINISTRATIVA)"),
+      ch("dd_prolabore", "PRÓ-LABORE (1%)", "PRÓ-LABORE (1%)"),
+      ch("dd_doacoes", "DESCONTOS / DOAÇÕES", "DESCONTOS / DOAÇÕES"),
+    ],
+  },
+
+  // ===== 4.17 | QUEBRAS E PERDAS =====
+  {
+    id: "desp_quebras", name: "4.17 | QUEBRAS E PERDAS E BAIXA ESTOQUE", level: 0, isGroup: true, isResult: false, tipo: "Despesas",
+    children: [
+      ch("dq_perdas", "PERDAS", "PERDAS"),
+      ch("dq_quebra", "QUEBRA", "QUEBRA"),
+      ch("dq_outros", "OUTROS", "OUTROS"),
+    ],
+  },
+
+  // ===== 4 | DESPESAS (SOMA TOTAL) =====
+  {
+    id: "despesas_total", name: "4 | DESPESAS (SOMA TOTAL)", level: 0, isGroup: false, isResult: true,
+    formula: "desp_pessoal + desp_pessoal_rat + desp_terceirizados + desp_informatica + desp_loja + desp_frota + desp_freteiros + desp_embalagens + desp_uso_consumo + desp_marketing + desp_serv_pub + desp_aluguel + desp_seguranca + desp_tributos + desp_inadimplentes + desp_financeiras + desp_diversas + desp_quebras",
+  },
+
+  // ===== 5 | DEPRECIAÇÃO =====
+  {
+    id: "depreciacao", name: "5 | DEPRECIAÇÃO (0,50%)", level: 0, isGroup: true, isResult: false, tipo: "Despesas",
+    children: [
+      ch("dep_val", "DEPRECIAÇÃO", "DEPRECIAÇÃO"),
+    ],
+  },
+
+  // ===== EBITDA =====
+  {
+    id: "ebitda", name: "EBITDA - LUCRO ANTES DO IRPJ E CSLL", level: 0, isGroup: false, isResult: true,
+    formula: "receita_liquida - cmv - despesas_total - depreciacao",
+  },
+
+  // ===== 8 | IRPJ + CSLL =====
+  {
+    id: "irpj_csll", name: "8 | IRPJ + CSLL", level: 0, isGroup: true, isResult: false, tipo: "Impostos",
+    children: [
+      { id: "irpj_val", name: "IRPJ + CSLL", level: 1, isGroup: false, isResult: false, tipo: "Impostos", subtipo: "8 | IRPJ + CSLL" },
+    ],
+  },
+
+  // ===== 7 | RESULTADO =====
+  {
+    id: "resultado", name: "7 | RESULTADO (LUCRO / PREJUÍZO)", level: 0, isGroup: false, isResult: true,
+    formula: "ebitda - irpj_csll",
+  },
+
+  // ===== 9 | INVESTIMENTOS =====
+  {
+    id: "investimentos", name: "9 | INVESTIMENTOS (OUTROS)", level: 0, isGroup: true, isResult: false, tipo: "Despesas",
+    children: [
+      ch("inv_outros", "9 | INVESTIMENTOS (OUTROS)", "9 | INVESTIMENTOS (OUTROS)"),
+    ],
+  },
+
+  // ===== 10 | RESULTADO OPERACIONAL =====
+  {
+    id: "resultado_op", name: "10 | RESULTADO OPERACIONAL DO EXERCICIO", level: 0, isGroup: false, isResult: true,
+    formula: "resultado - investimentos",
+  },
+
+  // ===== 11 | RESULTADO FINANCEIRO =====
+  {
+    id: "resultado_fin", name: "11 | RESULTADO FINANCEIRO DO EXERCICIO", level: 0, isGroup: false, isResult: true,
+    formula: "faturamento - despesas_total - depreciacao - irpj_csll - investimentos",
   },
 ];
 
@@ -223,25 +538,12 @@ export const DRE_STRUCTURE_FINANCEIRO: DRENode[] = [
     ],
   },
   {
-    id: "despesas_fin", name: "DESPESAS", level: 0, isGroup: true, isResult: false, tipo: "Despesas",
-    children: [
-      { id: "fin_desp_pessoal", name: "Despesas de Pessoal", level: 1, isGroup: false, isResult: false, tipo: "Despesas", subtipo: "Despesas de Pessoal" },
-      { id: "fin_serv_publicos", name: "Serviços Públicos", level: 1, isGroup: false, isResult: false, tipo: "Despesas", subtipo: "Serviços Públicos" },
-      { id: "fin_aluguel", name: "Aluguel", level: 1, isGroup: false, isResult: false, tipo: "Despesas", subtipo: "Aluguel" },
-      { id: "fin_desp_financeiras", name: "Despesas Financeiras", level: 1, isGroup: false, isResult: false, tipo: "Despesas", subtipo: "Despesas Financeiras" },
-      { id: "fin_desp_diversas", name: "Despesas Diversas", level: 1, isGroup: false, isResult: false, tipo: "Despesas", subtipo: "Despesas Diversas" },
-    ],
-  },
-  {
     id: "saldo_financeiro", name: "= SALDO FINANCEIRO", level: 0, isGroup: false, isResult: true,
-    formula: "recebimentos - pagamentos - despesas_fin",
+    formula: "recebimentos - pagamentos",
   },
 ];
 
 // ============ MOTOR DE CLASSIFICAÇÃO DETERMINÍSTICO ============
-// Mapa EXATO: ENTRADA (normalizada) → { tipo, subtipo (CLASSIFICAÇÃO ATUALIZADA) }
-// A chave é a entrada em lowercase sem acentos. O valor é o destino na DRE.
-
 const DIRECT_MAP: Record<string, { tipo: string; subtipo: string }> = {
   // ===== IMPOSTOS =====
   "(- ) impostos a pagar sobre a venda": { tipo: "Impostos", subtipo: "ICMS" },
@@ -250,7 +552,7 @@ const DIRECT_MAP: Record<string, { tipo: string; subtipo: string }> = {
   "imposto de renda e csll / ir": { tipo: "Impostos", subtipo: "8 | IRPJ + CSLL" },
   "ir": { tipo: "Impostos", subtipo: "IRRF" },
   "simples": { tipo: "Impostos", subtipo: "OUTROS IMPOSTOS (S/ VENDA)" },
-  "iof": { tipo: "Impostos", subtipo: "IOF" },
+  "iof": { tipo: "Despesas", subtipo: "IOF" },
 
   // ===== COMPRA DO MÊS =====
   "compras": { tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" },
@@ -319,7 +621,7 @@ const DIRECT_MAP: Record<string, { tipo: string; subtipo: string }> = {
   "gas": { tipo: "Despesas", subtipo: "GÁS" },
   "sevicos publicos / telefone central": { tipo: "Despesas", subtipo: "TELEFONIA FIXA" },
   "telefone central": { tipo: "Despesas", subtipo: "TELEFONIA FIXA" },
-  "telefonoa celular": { tipo: "Despesas", subtipo: "TELEFONIA FIXA" },
+  "telefonoa celular": { tipo: "Despesas", subtipo: "TELEFONIA CELULAR" },
 
   // ===== DESPESAS - PROFISSIONAIS TERCEIRIZADOS =====
   "honor. prof. com tercerizados": { tipo: "Despesas", subtipo: "CONSULTORIA - MENSALIDADE" },
@@ -428,53 +730,37 @@ const DIRECT_MAP: Record<string, { tipo: string; subtipo: string }> = {
   "investimentos": { tipo: "Despesas", subtipo: "9 | INVESTIMENTOS (OUTROS)" },
 };
 
-// Normaliza uma string removendo acentos e convertendo para lowercase
 function normalizeStr(s: string): string {
-  return (s || "")
-    .toLowerCase()
-    .trim()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+  return (s || "").toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
-// Monta o mapa normalizado uma única vez
 const NORMALIZED_MAP = new Map<string, { tipo: string; subtipo: string }>();
 for (const [key, val] of Object.entries(DIRECT_MAP)) {
   NORMALIZED_MAP.set(normalizeStr(key), val);
 }
 
-/**
- * Classifica uma descrição usando correspondência EXATA primeiro,
- * depois fallback por palavras-chave simples.
- * Sem IA. Se não encontrar → "Despesas" / "OUTRAS DESPESAS (ADMINISTRATIVA)"
- */
 export function classifyDeterministic(descricao: string, tipoHint?: string): { tipo: string; subtipo: string } {
   const normalized = normalizeStr(descricao);
   const hintNormalized = tipoHint ? normalizeStr(tipoHint) : "";
 
-  // 1) Tentar match composto "tipo / subtipo" (ex: "DESPESAS PESSOAL / SALÁRIOS")
   if (hintNormalized && normalized) {
     const compoundKey = `${hintNormalized} / ${normalized}`;
     const compound = NORMALIZED_MAP.get(compoundKey);
     if (compound) return compound;
   }
 
-  // 2) Tentar match exato na descrição
   const exactDesc = NORMALIZED_MAP.get(normalized);
   if (exactDesc) return exactDesc;
 
-  // 3) Tentar match exato no tipo/hint
   if (hintNormalized) {
     const exactHint = NORMALIZED_MAP.get(hintNormalized);
     if (exactHint) return exactHint;
   }
 
-  // 4) Tentar match parcial (a descrição contém uma chave do mapa)
   for (const [key, val] of NORMALIZED_MAP.entries()) {
     if (key.length >= 4 && normalized.includes(key)) return val;
   }
 
-  // 5) Tentar match parcial no tipo/hint
   if (hintNormalized) {
     for (const [key, val] of NORMALIZED_MAP.entries()) {
       if (key.length >= 4 && hintNormalized.includes(key)) return val;
@@ -482,127 +768,6 @@ export function classifyDeterministic(descricao: string, tipoHint?: string): { t
   }
 
   return { tipo: "Despesas", subtipo: "OUTRAS DESPESAS (ADMINISTRATIVA)" };
-}
-
-// ============ MAPA DE SUBTIPOS DETALHADOS → GRUPO DRE ============
-// Mapeia cada subtipo detalhado dos lançamentos para o subtipo genérico da DRE
-const SUBTIPO_TO_DRE_GROUP: Record<string, string> = {
-  // Despesas de Pessoal
-  "SALÁRIO LÍQUIDO (+ COMPRAS / - H.E.)": "Despesas de Pessoal",
-  "FGTS": "Despesas de Pessoal",
-  "INSS": "Despesas de Pessoal",
-  "FÉRIAS": "Despesas de Pessoal",
-  "13° SALÁRIO": "Despesas de Pessoal",
-  "RESCISÕES": "Despesas de Pessoal",
-  "HORA EXTRA": "Despesas de Pessoal",
-  "TRANSPORTE FUNCIONÁRIOS": "Despesas de Pessoal",
-  "ASSISTÊNCIA MÉDICA": "Despesas de Pessoal",
-  "VALE ALIMENTAÇÃO (VR)": "Despesas de Pessoal",
-  "UNIFORMES": "Despesas de Pessoal",
-  "PROCESSO TRABALHISTA": "Despesas de Pessoal",
-  "IRRF": "Despesas de Pessoal",
-  "OUTRAS DESPESAS (FUNCIONÁRIOS)": "Despesas de Pessoal",
-  "REFEITÓRIO": "Despesas de Pessoal",
-
-  // Profissionais Terceirizados
-  "CONSULTORIA - MENSALIDADE": "Profissionais Terceirizados",
-  "ADVOCACIA": "Profissionais Terceirizados",
-
-  // Contabilidade
-  "CONTABILIDADE": "Contabilidade",
-
-  // Informática
-  "MANUTENÇÃO TERCERIZADA INFORMÁTICA": "Informática",
-  "CONTROLWARE": "Informática",
-  "INTERNET": "Informática",
-
-  // Loja
-  "MANUTENÇÃO PREDIAL": "Loja",
-  "MANUTENÇÃO DE EQUIPAMENTOS - MÁQUINAS": "Loja",
-  "SEGURO": "Loja",
-  "LIMPEZA QUIMICA / DEDETIZAÇÃO / LIMP. PRAÇA": "Loja",
-  "IMOBILIZADO MÁQUINAS E EQUIPAMENTOS": "Loja",
-
-  // Frota
-  "COMBUSTÍVEIS E LUBRIFICANTES": "Frota",
-  "MANUTENÇÃO DE VEÍCULOS": "Frota",
-  "IPVA / PEDÁGIOS / LICENCIAMENTO/MULTAS": "Frota",
-  "SEGURO E MONITORAMENTO VEÍCULOS": "Frota",
-
-  // Freteiros
-  "FRETEIROS / ENTREGAS / BUSCAS MERCADORIAS": "Freteiros",
-
-  // Embalagens
-  "SACOLAS / EMBALAGENS / BANDEJAS / ETC": "Embalagens",
-
-  // Uso e Consumo
-  "MATERIAL DE USO E CONSUMO": "Uso e Consumo",
-  "MATERIAL P/ LIMPEZA DA LOJA": "Uso e Consumo",
-  "MAT. ESC. / CORREIOS / CARTÓRIOS": "Uso e Consumo",
-
-  // Marketing
-  "MARKETING (MÍDIAS SOCIAIS) - IMPULSIONAMENTO": "Marketing",
-  "CARRO DE SOM": "Marketing",
-  "FAIXAS E CARTAZETES (MATERIAL)": "Marketing",
-  "MENSALIDADE SOFTWARE WHATS/RÁDIO": "Marketing",
-  "GRÁFICA (IMPRESSÃO JORNAL DE OFERTAS)": "Marketing",
-  "DISTRIBUIÇÃO DO PANFLETO": "Marketing",
-  "ARCO BALÕES - DECORAÇÃO": "Marketing",
-
-  // Serviços Públicos
-  // (genérico, quando não é energia/água/gás separado)
-
-  // Energia Elétrica
-  "ENERGIA ELÉTRICA": "Energia Elétrica",
-
-  // Água e Esgoto
-  "ÁGUA E ESGOTO": "Água e Esgoto",
-
-  // Gás
-  "GÁS": "Gás",
-
-  // Aluguel
-  "ALUGUEL COM TERCEIROS (PREDIAL)": "Aluguel",
-
-  // Segurança
-  "DIVERSOS SEGURANÇA": "Segurança",
-
-  // Tributos e Outros
-  "INMETRO/OUTRAS TAXAS": "Tributos e Outros",
-  "IPTU": "Tributos e Outros",
-  "TRIBUTOS - FEDERAIS PARCELAMENTO TELLES": "Tributos e Outros",
-
-  // Despesas Financeiras
-  "DESPESAS BANCÁRIAS": "Despesas Financeiras",
-  "TAXAS DE CARTÕES": "Despesas Financeiras",
-  "DIVERSOS FINANCEIROS": "Despesas Financeiras",
-  "JUROS POR ATRASO DE DUPLICATAS": "Despesas Financeiras",
-  "ANTECIPAÇÃO CARTÕES": "Despesas Financeiras",
-  "EMPRÉSTIMOS": "Despesas Financeiras",
-  "IOF": "Despesas Financeiras",
-
-  // Tarifas/Manutenção de Conta
-  "TELEFONIA FIXA": "Tarifas/Manutenção de Conta",
-
-  // Despesas Diversas
-  "OUTRAS DESPESAS (DIRETORIA)": "Despesas Diversas",
-  "OUTRAS DESPESAS (ADMINISTRATIVA)": "Despesas Diversas",
-  "OUTRAS DESPESAS (COMERCIAL)": "Despesas Diversas",
-  "PRÓ-LABORE (1%)": "Despesas Diversas",
-  "9 | INVESTIMENTOS (OUTROS)": "Despesas Diversas",
-  "MATERIAL PARA INSUMO PADARIA": "Despesas Diversas",
-
-  // Impostos detalhados → grupo genérico
-  "8 | IRPJ + CSLL": "8 | IRPJ + CSLL",
-  "OUTROS IMPOSTOS (S/ VENDA)": "Outros Impostos sobre Venda",
-
-  // Compra do Mês
-  "COMPRA DO MÊS": "Pagamento Fornecedores",
-};
-
-// Resolve o subtipo detalhado para o subtipo genérico da DRE
-function resolveSubtipo(subtipo: string): string {
-  return SUBTIPO_TO_DRE_GROUP[subtipo] || subtipo;
 }
 
 // ============ CÁLCULOS DA DRE ============
@@ -618,7 +783,19 @@ export function calcularDRE(
 ): Map<string, number> {
   const values = new Map<string, number>();
 
-  // Step 1: calculate group totals from lancamentos
+  // Build a set of all child subtipos per tipo to track matched
+  const allChildSubtipos = new Map<string, Set<string>>();
+  for (const node of structure) {
+    if (node.isGroup && node.tipo && node.children) {
+      const existing = allChildSubtipos.get(node.tipo) || new Set<string>();
+      for (const child of node.children) {
+        if (child.subtipo) existing.add(child.subtipo);
+      }
+      allChildSubtipos.set(node.tipo, existing);
+    }
+  }
+
+  // Step 1: calculate group totals
   for (const node of structure) {
     if (node.isGroup && node.tipo) {
       let total = 0;
@@ -627,19 +804,11 @@ export function calcularDRE(
       if (node.children) {
         for (const child of node.children) {
           const childVal = child.subtipo
-            ? groupLancs
-                .filter(l => l.subtipo === child.subtipo || resolveSubtipo(l.subtipo) === child.subtipo)
-                .reduce((s, l) => s + l.valor, 0)
+            ? groupLancs.filter(l => l.subtipo === child.subtipo).reduce((s, l) => s + l.valor, 0)
             : 0;
           values.set(child.id, childVal);
           total += childVal;
         }
-        // Add any lancamentos with unmatched subtipos
-        const matchedSubtipos = new Set(node.children.map(c => c.subtipo).filter(Boolean));
-        const unmatchedVal = groupLancs
-          .filter(l => !matchedSubtipos.has(l.subtipo) && !matchedSubtipos.has(resolveSubtipo(l.subtipo)))
-          .reduce((s, l) => s + l.valor, 0);
-        total += unmatchedVal;
       } else {
         total = groupLancs.reduce((s, l) => s + l.valor, 0);
       }
@@ -659,7 +828,6 @@ export function calcularDRE(
 }
 
 function evaluateFormula(formula: string, values: Map<string, number>): number {
-  // Simple formula parser: "a - b - c + d"
   const parts = formula.split(/\s+/);
   let result = 0;
   let op = "+";
