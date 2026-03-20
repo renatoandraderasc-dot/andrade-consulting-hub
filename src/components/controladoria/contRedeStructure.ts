@@ -484,6 +484,127 @@ export function classifyDeterministic(descricao: string, tipoHint?: string): { t
   return { tipo: "Despesas", subtipo: "OUTRAS DESPESAS (ADMINISTRATIVA)" };
 }
 
+// ============ MAPA DE SUBTIPOS DETALHADOS → GRUPO DRE ============
+// Mapeia cada subtipo detalhado dos lançamentos para o subtipo genérico da DRE
+const SUBTIPO_TO_DRE_GROUP: Record<string, string> = {
+  // Despesas de Pessoal
+  "SALÁRIO LÍQUIDO (+ COMPRAS / - H.E.)": "Despesas de Pessoal",
+  "FGTS": "Despesas de Pessoal",
+  "INSS": "Despesas de Pessoal",
+  "FÉRIAS": "Despesas de Pessoal",
+  "13° SALÁRIO": "Despesas de Pessoal",
+  "RESCISÕES": "Despesas de Pessoal",
+  "HORA EXTRA": "Despesas de Pessoal",
+  "TRANSPORTE FUNCIONÁRIOS": "Despesas de Pessoal",
+  "ASSISTÊNCIA MÉDICA": "Despesas de Pessoal",
+  "VALE ALIMENTAÇÃO (VR)": "Despesas de Pessoal",
+  "UNIFORMES": "Despesas de Pessoal",
+  "PROCESSO TRABALHISTA": "Despesas de Pessoal",
+  "IRRF": "Despesas de Pessoal",
+  "OUTRAS DESPESAS (FUNCIONÁRIOS)": "Despesas de Pessoal",
+  "REFEITÓRIO": "Despesas de Pessoal",
+
+  // Profissionais Terceirizados
+  "CONSULTORIA - MENSALIDADE": "Profissionais Terceirizados",
+  "ADVOCACIA": "Profissionais Terceirizados",
+
+  // Contabilidade
+  "CONTABILIDADE": "Contabilidade",
+
+  // Informática
+  "MANUTENÇÃO TERCERIZADA INFORMÁTICA": "Informática",
+  "CONTROLWARE": "Informática",
+  "INTERNET": "Informática",
+
+  // Loja
+  "MANUTENÇÃO PREDIAL": "Loja",
+  "MANUTENÇÃO DE EQUIPAMENTOS - MÁQUINAS": "Loja",
+  "SEGURO": "Loja",
+  "LIMPEZA QUIMICA / DEDETIZAÇÃO / LIMP. PRAÇA": "Loja",
+  "IMOBILIZADO MÁQUINAS E EQUIPAMENTOS": "Loja",
+
+  // Frota
+  "COMBUSTÍVEIS E LUBRIFICANTES": "Frota",
+  "MANUTENÇÃO DE VEÍCULOS": "Frota",
+  "IPVA / PEDÁGIOS / LICENCIAMENTO/MULTAS": "Frota",
+  "SEGURO E MONITORAMENTO VEÍCULOS": "Frota",
+
+  // Freteiros
+  "FRETEIROS / ENTREGAS / BUSCAS MERCADORIAS": "Freteiros",
+
+  // Embalagens
+  "SACOLAS / EMBALAGENS / BANDEJAS / ETC": "Embalagens",
+
+  // Uso e Consumo
+  "MATERIAL DE USO E CONSUMO": "Uso e Consumo",
+  "MATERIAL P/ LIMPEZA DA LOJA": "Uso e Consumo",
+  "MAT. ESC. / CORREIOS / CARTÓRIOS": "Uso e Consumo",
+
+  // Marketing
+  "MARKETING (MÍDIAS SOCIAIS) - IMPULSIONAMENTO": "Marketing",
+  "CARRO DE SOM": "Marketing",
+  "FAIXAS E CARTAZETES (MATERIAL)": "Marketing",
+  "MENSALIDADE SOFTWARE WHATS/RÁDIO": "Marketing",
+  "GRÁFICA (IMPRESSÃO JORNAL DE OFERTAS)": "Marketing",
+  "DISTRIBUIÇÃO DO PANFLETO": "Marketing",
+  "ARCO BALÕES - DECORAÇÃO": "Marketing",
+
+  // Serviços Públicos
+  // (genérico, quando não é energia/água/gás separado)
+
+  // Energia Elétrica
+  "ENERGIA ELÉTRICA": "Energia Elétrica",
+
+  // Água e Esgoto
+  "ÁGUA E ESGOTO": "Água e Esgoto",
+
+  // Gás
+  "GÁS": "Gás",
+
+  // Aluguel
+  "ALUGUEL COM TERCEIROS (PREDIAL)": "Aluguel",
+
+  // Segurança
+  "DIVERSOS SEGURANÇA": "Segurança",
+
+  // Tributos e Outros
+  "INMETRO/OUTRAS TAXAS": "Tributos e Outros",
+  "IPTU": "Tributos e Outros",
+  "TRIBUTOS - FEDERAIS PARCELAMENTO TELLES": "Tributos e Outros",
+
+  // Despesas Financeiras
+  "DESPESAS BANCÁRIAS": "Despesas Financeiras",
+  "TAXAS DE CARTÕES": "Despesas Financeiras",
+  "DIVERSOS FINANCEIROS": "Despesas Financeiras",
+  "JUROS POR ATRASO DE DUPLICATAS": "Despesas Financeiras",
+  "ANTECIPAÇÃO CARTÕES": "Despesas Financeiras",
+  "EMPRÉSTIMOS": "Despesas Financeiras",
+  "IOF": "Despesas Financeiras",
+
+  // Tarifas/Manutenção de Conta
+  "TELEFONIA FIXA": "Tarifas/Manutenção de Conta",
+
+  // Despesas Diversas
+  "OUTRAS DESPESAS (DIRETORIA)": "Despesas Diversas",
+  "OUTRAS DESPESAS (ADMINISTRATIVA)": "Despesas Diversas",
+  "OUTRAS DESPESAS (COMERCIAL)": "Despesas Diversas",
+  "PRÓ-LABORE (1%)": "Despesas Diversas",
+  "9 | INVESTIMENTOS (OUTROS)": "Despesas Diversas",
+  "MATERIAL PARA INSUMO PADARIA": "Despesas Diversas",
+
+  // Impostos detalhados → grupo genérico
+  "8 | IRPJ + CSLL": "8 | IRPJ + CSLL",
+  "OUTROS IMPOSTOS (S/ VENDA)": "Outros Impostos sobre Venda",
+
+  // Compra do Mês
+  "COMPRA DO MÊS": "Pagamento Fornecedores",
+};
+
+// Resolve o subtipo detalhado para o subtipo genérico da DRE
+function resolveSubtipo(subtipo: string): string {
+  return SUBTIPO_TO_DRE_GROUP[subtipo] || subtipo;
+}
+
 // ============ CÁLCULOS DA DRE ============
 export interface LancamentoData {
   tipo: string;
@@ -506,7 +627,9 @@ export function calcularDRE(
       if (node.children) {
         for (const child of node.children) {
           const childVal = child.subtipo
-            ? groupLancs.filter(l => l.subtipo === child.subtipo).reduce((s, l) => s + l.valor, 0)
+            ? groupLancs
+                .filter(l => l.subtipo === child.subtipo || resolveSubtipo(l.subtipo) === child.subtipo)
+                .reduce((s, l) => s + l.valor, 0)
             : 0;
           values.set(child.id, childVal);
           total += childVal;
@@ -514,7 +637,7 @@ export function calcularDRE(
         // Add any lancamentos with unmatched subtipos
         const matchedSubtipos = new Set(node.children.map(c => c.subtipo).filter(Boolean));
         const unmatchedVal = groupLancs
-          .filter(l => !matchedSubtipos.has(l.subtipo))
+          .filter(l => !matchedSubtipos.has(l.subtipo) && !matchedSubtipos.has(resolveSubtipo(l.subtipo)))
           .reduce((s, l) => s + l.valor, 0);
         total += unmatchedVal;
       } else {
