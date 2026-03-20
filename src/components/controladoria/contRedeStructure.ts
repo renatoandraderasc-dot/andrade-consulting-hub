@@ -23,7 +23,7 @@ export const SUBCONTAS_V2: Record<string, string[]> = {
   "Faturamento": ["Venda Bruta", "Venda Cartão Crédito", "Venda Cartão Débito", "Venda Pix", "Venda Convênio", "Venda Dinheiro", "Outras Vendas"],
   "Cancelamentos": ["Cancelamento de Vendas", "Devoluções"],
   "Descontos": ["Descontos Concedidos", "Abatimentos"],
-  "Impostos": ["ICMS", "PIS", "COFINS", "OUTROS IMPOSTOS (S/ VENDA)", "8 | IRPJ + CSLL", "IRRF", "IOF"],
+  "Impostos": ["ICMS", "PIS", "COFINS", "OUTROS IMPOSTOS (S/ VENDA)", "8 | IRPJ + CSLL", "IRRF"],
   "CMV": [
     "CUSTO DA MERCADORIA VENDIDA",
     "MATERIAL PARA INSUMO AÇOUGUE",
