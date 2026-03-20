@@ -35,7 +35,22 @@ function normalizeHeader(h: string): string {
 
 function parseNumber(val: any): number {
   if (val == null || val === "") return 0;
-  const s = String(val).replace(/\s/g, "").replace("R$", "").replace(/\./g, "").replace(",", ".");
+  // If already a number (common from XLSX), return directly
+  if (typeof val === "number") return isNaN(val) ? 0 : val;
+  let s = String(val).trim().replace(/\s/g, "").replace("R$", "");
+  // Detect format: if has both dot and comma, determine which is decimal
+  const lastComma = s.lastIndexOf(",");
+  const lastDot = s.lastIndexOf(".");
+  if (lastComma > lastDot) {
+    // Brazilian format: 1.234,56 → remove dots, replace comma
+    s = s.replace(/\./g, "").replace(",", ".");
+  } else if (lastDot > lastComma) {
+    // US format or no comma: 1,234.56 → remove commas
+    s = s.replace(/,/g, "");
+  } else {
+    // Only one separator or none
+    s = s.replace(",", ".");
+  }
   const n = parseFloat(s);
   return isNaN(n) ? 0 : n;
 }
