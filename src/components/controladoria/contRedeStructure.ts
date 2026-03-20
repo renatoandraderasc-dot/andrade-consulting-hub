@@ -437,14 +437,10 @@ export const DRE_STRUCTURE_COMERCIAL: DRENode[] = [
     ],
   },
 
-  // ===== 4.17 | QUEBRAS E PERDAS =====
+  // ===== 4.17 | QUEBRAS E PERDAS E BAIXA ESTOQUE (2,5% do CMV) =====
   {
-    id: "desp_quebras", name: "4.17 | QUEBRAS E PERDAS E BAIXA ESTOQUE", level: 0, isGroup: true, isResult: false, tipo: "Despesas",
-    children: [
-      ch("dq_perdas", "PERDAS", "PERDAS"),
-      ch("dq_quebra", "QUEBRA", "QUEBRA"),
-      ch("dq_outros", "OUTROS", "OUTROS"),
-    ],
+    id: "desp_quebras", name: "4.17 | QUEBRAS E PERDAS E BAIXA ESTOQUE (2,5% CMV)", level: 0, isGroup: false, isResult: false,
+    calcPctOf: { nodeId: "cmv", pct: 0.025 },
   },
 
   // ===== 4 | DESPESAS (SOMA TOTAL) =====
