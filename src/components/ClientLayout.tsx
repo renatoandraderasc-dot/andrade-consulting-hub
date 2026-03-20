@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { BarChart3, CheckSquare, Settings, Users, LogOut, Menu, X, ArrowLeft, Target, ClipboardList, DollarSign, Database, RefreshCw } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import andradeLogo from "@/assets/andrade-logo.png";
 
 interface ClientLayoutProps {
@@ -90,6 +91,10 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
       </nav>
 
       <div className="p-3 border-t border-border space-y-1">
+        <div className="flex items-center justify-between px-3 py-1">
+          <span className="text-xs text-muted-foreground font-body">Tema</span>
+          <ThemeToggle />
+        </div>
         <Link
           to="/"
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg font-body text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
