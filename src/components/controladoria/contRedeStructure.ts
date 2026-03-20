@@ -23,7 +23,7 @@ export const SUBCONTAS_V2: Record<string, string[]> = {
   "Faturamento": ["Venda Bruta", "Venda Cartão Crédito", "Venda Cartão Débito", "Venda Pix", "Venda Convênio", "Venda Dinheiro", "Outras Vendas"],
   "Cancelamentos": ["Cancelamento de Vendas", "Devoluções"],
   "Descontos": ["Descontos Concedidos", "Abatimentos"],
-  "Impostos": ["ICMS", "PIS", "COFINS", "OUTROS IMPOSTOS (S/ VENDA)", "8 | IRPJ + CSLL", "IRRF", "IOF"],
+  "Impostos": ["ICMS", "PIS", "COFINS", "OUTROS IMPOSTOS (S/ VENDA)", "8 | IRPJ + CSLL", "IRRF"],
   "CMV": [
     "CUSTO DA MERCADORIA VENDIDA",
     "MATERIAL PARA INSUMO AÇOUGUE",
@@ -126,7 +126,9 @@ export interface DRENode {
   subtipo?: string;
   formula?: string;
   children?: DRENode[];
-  subgroups?: DRENode[]; // sub-groups within a parent group (4.1, 4.2 inside 4)
+  subgroups?: DRENode[];
+  /** Calculated as percentage of another node's value */
+  calcPctOf?: { nodeId: string; pct: number };
 }
 
 // Helper to make a child node
@@ -142,19 +144,6 @@ export const DRE_STRUCTURE_COMERCIAL: DRENode[] = [
       { id: "venda_bruta", name: "RECEITA LIQUIDA", level: 1, isGroup: false, isResult: false, tipo: "Faturamento", subtipo: "Venda Bruta" },
     ],
   },
-  {
-    id: "cancelamentos", name: "(-) VENDAS CANCELADAS", level: 0, isGroup: true, isResult: false, tipo: "Cancelamentos",
-    children: [
-      { id: "cancel_vendas", name: "Cancelamento de Vendas", level: 1, isGroup: false, isResult: false, tipo: "Cancelamentos", subtipo: "Cancelamento de Vendas" },
-    ],
-  },
-  {
-    id: "descontos", name: "(-) DESCONTOS", level: 0, isGroup: true, isResult: false, tipo: "Descontos",
-    children: [
-      { id: "desc_concedidos", name: "Descontos Concedidos", level: 1, isGroup: false, isResult: false, tipo: "Descontos", subtipo: "Descontos Concedidos" },
-    ],
-  },
-
   // ===== 2.1 | IMPOSTOS (CAIXA) =====
   {
     id: "impostos_caixa", name: "2.1 | IMPOSTOS (CAIXA)", level: 0, isGroup: true, isResult: false, tipo: "Impostos",
@@ -169,7 +158,7 @@ export const DRE_STRUCTURE_COMERCIAL: DRENode[] = [
   // ===== 1+2 | RECEITA LÍQUIDA =====
   {
     id: "receita_liquida", name: "1+2 | RECEITA LÍQUIDA (SOMA TOTAL)", level: 0, isGroup: false, isResult: true,
-    formula: "faturamento - cancelamentos - descontos - impostos_caixa",
+    formula: "faturamento - impostos_caixa",
   },
 
   // ===== 3 | CMV LOJA =====
@@ -196,10 +185,10 @@ export const DRE_STRUCTURE_COMERCIAL: DRENode[] = [
     formula: "receita_liquida - cmv",
   },
 
-  // ===== RESULTADO OPERACIONAL COMPRA MÊS =====
+  // ===== RESULTADO OPERACIONAL COMPRA MÊS = CMV LOJA - Pagamento Fornecedores =====
   {
     id: "resultado_op_compra", name: "RESULTADO OPERACIONAL LIQUIDO (COMPRA MÊS)", level: 0, isGroup: false, isResult: true,
-    formula: "receita_liquida - compra_mes",
+    formula: "cmv - compra_mes",
   },
 
   // ===== 4.1 | DESPESAS PESSOAL =====
@@ -448,14 +437,10 @@ export const DRE_STRUCTURE_COMERCIAL: DRENode[] = [
     ],
   },
 
-  // ===== 4.17 | QUEBRAS E PERDAS =====
+  // ===== 4.17 | QUEBRAS E PERDAS E BAIXA ESTOQUE (2,5% do CMV) =====
   {
-    id: "desp_quebras", name: "4.17 | QUEBRAS E PERDAS E BAIXA ESTOQUE", level: 0, isGroup: true, isResult: false, tipo: "Despesas",
-    children: [
-      ch("dq_perdas", "PERDAS", "PERDAS"),
-      ch("dq_quebra", "QUEBRA", "QUEBRA"),
-      ch("dq_outros", "OUTROS", "OUTROS"),
-    ],
+    id: "desp_quebras", name: "4.17 | QUEBRAS E PERDAS E BAIXA ESTOQUE (2,5% CMV)", level: 0, isGroup: false, isResult: false,
+    calcPctOf: { nodeId: "cmv", pct: 0.025 },
   },
 
   // ===== 4 | DESPESAS (SOMA TOTAL) =====
@@ -464,12 +449,10 @@ export const DRE_STRUCTURE_COMERCIAL: DRENode[] = [
     formula: "desp_pessoal + desp_pessoal_rat + desp_terceirizados + desp_informatica + desp_loja + desp_frota + desp_freteiros + desp_embalagens + desp_uso_consumo + desp_marketing + desp_serv_pub + desp_aluguel + desp_seguranca + desp_tributos + desp_inadimplentes + desp_financeiras + desp_diversas + desp_quebras",
   },
 
-  // ===== 5 | DEPRECIAÇÃO =====
+  // ===== 5 | DEPRECIAÇÃO (0,50% do Faturamento) =====
   {
-    id: "depreciacao", name: "5 | DEPRECIAÇÃO (0,50%)", level: 0, isGroup: true, isResult: false, tipo: "Despesas",
-    children: [
-      ch("dep_val", "DEPRECIAÇÃO", "DEPRECIAÇÃO"),
-    ],
+    id: "depreciacao", name: "5 | DEPRECIAÇÃO (0,50% FATURAMENTO)", level: 0, isGroup: false, isResult: false,
+    calcPctOf: { nodeId: "faturamento", pct: 0.005 },
   },
 
   // ===== EBITDA =====
@@ -553,6 +536,7 @@ const DIRECT_MAP: Record<string, { tipo: string; subtipo: string }> = {
   "ir": { tipo: "Impostos", subtipo: "IRRF" },
   "simples": { tipo: "Impostos", subtipo: "OUTROS IMPOSTOS (S/ VENDA)" },
   "iof": { tipo: "Despesas", subtipo: "IOF" },
+  "iof bancario": { tipo: "Despesas", subtipo: "IOF" },
 
   // ===== COMPRA DO MÊS =====
   "compras": { tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" },
@@ -783,7 +767,6 @@ export function calcularDRE(
 ): Map<string, number> {
   const values = new Map<string, number>();
 
-  // Build a set of all child subtipos per tipo to track matched
   const allChildSubtipos = new Map<string, Set<string>>();
   for (const node of structure) {
     if (node.isGroup && node.tipo && node.children) {
@@ -813,6 +796,14 @@ export function calcularDRE(
         total = groupLancs.reduce((s, l) => s + l.valor, 0);
       }
       values.set(node.id, total);
+    }
+  }
+
+  // Step 1.5: calculate percentage-based nodes (Depreciação = 0.5% fat, Quebras = 2.5% CMV)
+  for (const node of structure) {
+    if (node.calcPctOf) {
+      const baseVal = values.get(node.calcPctOf.nodeId) || 0;
+      values.set(node.id, Math.abs(baseVal) * node.calcPctOf.pct);
     }
   }
 
