@@ -4,11 +4,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import ClientLayout from "@/components/ClientLayout";
-import { ClassificacaoTab } from "@/components/controladoria/ClassificacaoTab";
 import { ContRedeTab } from "@/components/controladoria/ContRedeTab";
-import { EntradaDadosTab } from "@/components/controladoria/EntradaDadosTab";
 import { LancamentosTab } from "@/components/controladoria/LancamentosTab";
 import { HistoricoTab } from "@/components/controladoria/HistoricoTab";
+import { ClassificacoesConfigTab } from "@/components/controladoria/ClassificacoesConfigTab";
+import { CategoriasConfigTab } from "@/components/controladoria/CategoriasConfigTab";
 import { ClipboardList } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -97,16 +97,16 @@ const Controladoria = () => {
               Histórico
             </TabsTrigger>
             <TabsTrigger
-              value="entrada"
+              value="classificacoes"
               className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
             >
-              Entrada de Dados
+              Classificações
             </TabsTrigger>
             <TabsTrigger
-              value="classificacao"
+              value="categorias"
               className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
             >
-              Classificação
+              Categorias
             </TabsTrigger>
           </TabsList>
 
@@ -122,12 +122,12 @@ const Controladoria = () => {
             <HistoricoTab storeId={storeId} />
           </TabsContent>
 
-          <TabsContent value="entrada">
-            <EntradaDadosTab storeId={storeId} storeName={storeName} />
+          <TabsContent value="classificacoes">
+            <ClassificacoesConfigTab />
           </TabsContent>
 
-          <TabsContent value="classificacao">
-            <ClassificacaoTab />
+          <TabsContent value="categorias">
+            <CategoriasConfigTab />
           </TabsContent>
         </Tabs>
       </div>
