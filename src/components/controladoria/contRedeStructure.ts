@@ -239,121 +239,249 @@ export const DRE_STRUCTURE_FINANCEIRO: DRENode[] = [
 ];
 
 // ============ MOTOR DE CLASSIFICAÇÃO DETERMINÍSTICO ============
-interface ClassificationRule {
-  keywords: string[];
-  tipo: string;
-  subtipo: string;
-}
+// Mapa EXATO: ENTRADA (normalizada) → { tipo, subtipo (CLASSIFICAÇÃO ATUALIZADA) }
+// A chave é a entrada em lowercase sem acentos. O valor é o destino na DRE.
 
-const CLASSIFICATION_RULES: ClassificationRule[] = [
-  // Faturamento
-  { keywords: ["venda bruta", "faturamento bruto"], tipo: "Faturamento", subtipo: "Venda Bruta" },
-  { keywords: ["cartao credito", "cartão crédito", "venda cc"], tipo: "Faturamento", subtipo: "Venda Cartão Crédito" },
-  { keywords: ["cartao debito", "cartão débito", "venda cd"], tipo: "Faturamento", subtipo: "Venda Cartão Débito" },
-  { keywords: ["pix", "venda pix"], tipo: "Faturamento", subtipo: "Venda Pix" },
-  { keywords: ["convenio", "convênio"], tipo: "Faturamento", subtipo: "Venda Convênio" },
-  { keywords: ["dinheiro", "especie", "espécie"], tipo: "Faturamento", subtipo: "Venda Dinheiro" },
+const DIRECT_MAP: Record<string, { tipo: string; subtipo: string }> = {
+  // ===== IMPOSTOS =====
+  "(- ) impostos a pagar sobre a venda": { tipo: "Impostos", subtipo: "ICMS" },
+  "icms": { tipo: "Impostos", subtipo: "ICMS" },
+  "imposto de renda e csll": { tipo: "Impostos", subtipo: "8 | IRPJ + CSLL" },
+  "imposto de renda e csll / ir": { tipo: "Impostos", subtipo: "8 | IRPJ + CSLL" },
+  "ir": { tipo: "Impostos", subtipo: "IRRF" },
+  "simples": { tipo: "Impostos", subtipo: "OUTROS IMPOSTOS (S/ VENDA)" },
+  "iof": { tipo: "Impostos", subtipo: "IOF" },
 
-  // Cancelamentos
-  { keywords: ["cancelamento", "cancel", "estorno venda"], tipo: "Cancelamentos", subtipo: "Cancelamento de Vendas" },
-  { keywords: ["devolucao", "devolução", "devol"], tipo: "Cancelamentos", subtipo: "Devoluções" },
+  // ===== COMPRA DO MÊS =====
+  "compras": { tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" },
 
-  // Descontos
-  { keywords: ["desconto", "abatimento"], tipo: "Descontos", subtipo: "Descontos Concedidos" },
+  // ===== DESPESAS - PESSOAL =====
+  "despesas pessoal": { tipo: "Despesas", subtipo: "SALÁRIO LÍQUIDO (+ COMPRAS / - H.E.)" },
+  "despesas pessoal / salarios": { tipo: "Despesas", subtipo: "SALÁRIO LÍQUIDO (+ COMPRAS / - H.E.)" },
+  "salarios": { tipo: "Despesas", subtipo: "SALÁRIO LÍQUIDO (+ COMPRAS / - H.E.)" },
+  "despesas pessoal / fgts": { tipo: "Despesas", subtipo: "FGTS" },
+  "fgts": { tipo: "Despesas", subtipo: "FGTS" },
+  "despesas pessoal / inss": { tipo: "Despesas", subtipo: "INSS" },
+  "inss": { tipo: "Despesas", subtipo: "INSS" },
+  "despesas pessoal / ferias do mes": { tipo: "Despesas", subtipo: "FÉRIAS" },
+  "ferias do mes": { tipo: "Despesas", subtipo: "FÉRIAS" },
+  "ferias": { tipo: "Despesas", subtipo: "FÉRIAS" },
+  "despesas pessoal / 13 salario": { tipo: "Despesas", subtipo: "13° SALÁRIO" },
+  "despesas pessoal / rescisoes": { tipo: "Despesas", subtipo: "RESCISÕES" },
+  "rescisoes": { tipo: "Despesas", subtipo: "RESCISÕES" },
+  "despesas pessoal / hora extra": { tipo: "Despesas", subtipo: "HORA EXTRA" },
+  "hora extra": { tipo: "Despesas", subtipo: "HORA EXTRA" },
+  "despesas pessoal / vale transporte": { tipo: "Despesas", subtipo: "TRANSPORTE FUNCIONÁRIOS" },
+  "vale transporte": { tipo: "Despesas", subtipo: "TRANSPORTE FUNCIONÁRIOS" },
+  "despesas pessoal / assistencia media": { tipo: "Despesas", subtipo: "ASSISTÊNCIA MÉDICA" },
+  "assistencia media": { tipo: "Despesas", subtipo: "ASSISTÊNCIA MÉDICA" },
+  "assistencia medica": { tipo: "Despesas", subtipo: "ASSISTÊNCIA MÉDICA" },
+  "despesas pessoal / refeitorio": { tipo: "Despesas", subtipo: "VALE ALIMENTAÇÃO (VR)" },
+  "refeitorio": { tipo: "Despesas", subtipo: "REFEITÓRIO" },
+  "refeicoes externas - lanches e refeicoes": { tipo: "Despesas", subtipo: "REFEITÓRIO" },
+  "despesas diversas / refeicoes externas - lanches e refeicoes": { tipo: "Despesas", subtipo: "OUTRAS DESPESAS (FUNCIONÁRIOS)" },
+  "uniformes": { tipo: "Despesas", subtipo: "UNIFORMES" },
+  "multas trabalhistas ( acao trabalhista )": { tipo: "Despesas", subtipo: "PROCESSO TRABALHISTA" },
 
-  // Impostos
-  { keywords: ["icms"], tipo: "Impostos", subtipo: "ICMS" },
-  { keywords: ["pis"], tipo: "Impostos", subtipo: "PIS" },
-  { keywords: ["cofins"], tipo: "Impostos", subtipo: "COFINS" },
-  { keywords: ["simples", "das", "simples nacional"], tipo: "Impostos", subtipo: "Simples Nacional" },
-  { keywords: ["imposto", "tributo", "iss", "irpj", "csll"], tipo: "Impostos", subtipo: "Outros Impostos sobre Venda" },
+  // ===== DESPESAS - PRÓ-LABORE =====
+  "pro-labore": { tipo: "Despesas", subtipo: "PRÓ-LABORE (1%)" },
+  "pro-labore / pro-labore": { tipo: "Despesas", subtipo: "PRÓ-LABORE (1%)" },
+  "pro labore": { tipo: "Despesas", subtipo: "PRÓ-LABORE (1%)" },
 
-  // CMV
-  { keywords: ["cmv", "custo mercadoria", "custo merc"], tipo: "CMV", subtipo: "Custo da Mercadoria Vendida" },
-  { keywords: ["insumo acougue", "insumo açougue", "açougue"], tipo: "CMV", subtipo: "Material para Insumo Açougue" },
-  { keywords: ["insumo padaria", "padaria"], tipo: "CMV", subtipo: "Material para Insumo Padaria" },
-  { keywords: ["rotisseria", "rotisserie"], tipo: "CMV", subtipo: "Material para Insumo Rotisseria" },
-  { keywords: ["perda", "quebra"], tipo: "CMV", subtipo: "Perdas e Quebras" },
-  { keywords: ["ajuste estoque"], tipo: "CMV", subtipo: "Ajustes de Estoque" },
+  // ===== DESPESAS - ALUGUEL =====
+  "aluguel": { tipo: "Despesas", subtipo: "ALUGUEL COM TERCEIROS (PREDIAL)" },
+  "aluguel / aluguel": { tipo: "Despesas", subtipo: "ALUGUEL COM TERCEIROS (PREDIAL)" },
 
-  // Compra do Mês
-  { keywords: ["fornecedor", "compra merc", "compra de mercadoria"], tipo: "Compra do Mês", subtipo: "Compra de Mercadorias" },
-  { keywords: ["pag fornec", "pagamento fornec", "pagto fornec"], tipo: "Compra do Mês", subtipo: "Pagamento Fornecedores" },
+  // ===== DESPESAS - FROTA =====
+  "frota": { tipo: "Despesas", subtipo: "COMBUSTÍVEIS E LUBRIFICANTES" },
+  "frota / combustiveis e lubrificantes": { tipo: "Despesas", subtipo: "COMBUSTÍVEIS E LUBRIFICANTES" },
+  "combustiveis e lubrificantes": { tipo: "Despesas", subtipo: "COMBUSTÍVEIS E LUBRIFICANTES" },
+  "frota / manutencao veiculos": { tipo: "Despesas", subtipo: "MANUTENÇÃO DE VEÍCULOS" },
+  "manutencao veiculos": { tipo: "Despesas", subtipo: "MANUTENÇÃO DE VEÍCULOS" },
+  "frota / outros (multas, pedagios)": { tipo: "Despesas", subtipo: "IPVA / PEDÁGIOS / LICENCIAMENTO/MULTAS" },
+  "outros (multas, pedagios)": { tipo: "Despesas", subtipo: "IPVA / PEDÁGIOS / LICENCIAMENTO/MULTAS" },
+  "ipva": { tipo: "Despesas", subtipo: "IPVA / PEDÁGIOS / LICENCIAMENTO/MULTAS" },
+  "frota / seguro": { tipo: "Despesas", subtipo: "SEGURO E MONITORAMENTO VEÍCULOS" },
 
-  // Despesas
-  { keywords: ["folha", "salario", "salário", "pessoal", "inss", "fgts", "ferias", "férias", "13"], tipo: "Despesas", subtipo: "Despesas de Pessoal" },
-  { keywords: ["rateio", "rateado", "pessoal rateado"], tipo: "Despesas", subtipo: "Pessoal Rateado" },
-  { keywords: ["terceirizado", "terceirizados", "profissional terceirizado"], tipo: "Despesas", subtipo: "Profissionais Terceirizados" },
-  { keywords: ["contabil", "contábil", "contabilidade", "assessoria contabil"], tipo: "Despesas", subtipo: "Contabilidade" },
-  { keywords: ["informatica", "informática", "sistema", "erp", "software", "ti"], tipo: "Despesas", subtipo: "Informática" },
-  { keywords: ["loja", "manutencao loja", "manutenção loja"], tipo: "Despesas", subtipo: "Loja" },
-  { keywords: ["frota", "combustivel", "combustível", "veiculo", "veículo"], tipo: "Despesas", subtipo: "Frota" },
-  { keywords: ["frete", "freteiro", "freteiros"], tipo: "Despesas", subtipo: "Freteiros" },
-  { keywords: ["embalagem", "embalagens", "sacola"], tipo: "Despesas", subtipo: "Embalagens" },
-  { keywords: ["uso consumo", "uso e consumo", "material limpeza", "higiene"], tipo: "Despesas", subtipo: "Uso e Consumo" },
-  { keywords: ["marketing", "propaganda", "publicidade", "midia", "mídia"], tipo: "Despesas", subtipo: "Marketing" },
-  { keywords: ["servico publico", "serviço público", "serviços públicos"], tipo: "Despesas", subtipo: "Serviços Públicos" },
-  { keywords: ["energia", "eletrica", "elétrica", "luz", "cemig", "enel", "copel"], tipo: "Despesas", subtipo: "Energia Elétrica" },
-  { keywords: ["agua", "água", "esgoto", "saneamento", "sabesp", "copasa"], tipo: "Despesas", subtipo: "Água e Esgoto" },
-  { keywords: ["gas", "gás", "vale gas"], tipo: "Despesas", subtipo: "Gás" },
-  { keywords: ["aluguel", "locacao", "locação"], tipo: "Despesas", subtipo: "Aluguel" },
-  { keywords: ["seguranca", "segurança", "vigilancia", "vigilância", "monitoramento"], tipo: "Despesas", subtipo: "Segurança" },
-  { keywords: ["tarifa", "manutencao conta", "manutenção conta", "taxa bancaria", "taxa bancária"], tipo: "Despesas", subtipo: "Tarifas/Manutenção de Conta" },
-  { keywords: ["inadimplente", "inadimplência"], tipo: "Despesas", subtipo: "Inadimplentes" },
-  { keywords: ["juros", "multa financeira", "encargo", "iof"], tipo: "Despesas", subtipo: "Despesas Financeiras" },
-  { keywords: ["depreciacao", "depreciação"], tipo: "Despesas", subtipo: "Depreciação" },
+  // ===== DESPESAS - EMBALAGENS =====
+  "embalagens": { tipo: "Despesas", subtipo: "SACOLAS / EMBALAGENS / BANDEJAS / ETC" },
+  "embalagens / sacolas": { tipo: "Despesas", subtipo: "SACOLAS / EMBALAGENS / BANDEJAS / ETC" },
+  "sacolas": { tipo: "Despesas", subtipo: "SACOLAS / EMBALAGENS / BANDEJAS / ETC" },
 
-  // Recebimentos
-  { keywords: ["recebimento cc", "receb cartao credito", "receb cartão crédito"], tipo: "Recebimentos", subtipo: "Recebimento Cartão Crédito" },
-  { keywords: ["recebimento cd", "receb cartao debito", "receb cartão débito"], tipo: "Recebimentos", subtipo: "Recebimento Cartão Débito" },
-  { keywords: ["recebimento pix", "pix recebido", "ted recebida"], tipo: "Recebimentos", subtipo: "Recebimento Pix" },
-  { keywords: ["recebimento convenio", "receb convênio"], tipo: "Recebimentos", subtipo: "Recebimento Convênio" },
-  { keywords: ["recebimento dinheiro"], tipo: "Recebimentos", subtipo: "Recebimento Dinheiro" },
+  // ===== DESPESAS - SERVIÇOS PÚBLICOS =====
+  "sevicos publicos": { tipo: "Despesas", subtipo: "ÁGUA E ESGOTO" },
+  "sevicos publicos / agua e esgoto": { tipo: "Despesas", subtipo: "ÁGUA E ESGOTO" },
+  "agua e esgoto": { tipo: "Despesas", subtipo: "ÁGUA E ESGOTO" },
+  "agua": { tipo: "Despesas", subtipo: "ÁGUA E ESGOTO" },
+  "sevicos publicos / energia eletrica": { tipo: "Despesas", subtipo: "ENERGIA ELÉTRICA" },
+  "energia eletrica": { tipo: "Despesas", subtipo: "ENERGIA ELÉTRICA" },
+  "sevicos publicos / gas": { tipo: "Despesas", subtipo: "GÁS" },
+  "gas": { tipo: "Despesas", subtipo: "GÁS" },
+  "sevicos publicos / telefone central": { tipo: "Despesas", subtipo: "TELEFONIA FIXA" },
+  "telefone central": { tipo: "Despesas", subtipo: "TELEFONIA FIXA" },
+  "telefonoa celular": { tipo: "Despesas", subtipo: "TELEFONIA FIXA" },
 
-  // Pagamentos
-  { keywords: ["pagamento pessoal", "pag pessoal", "pagto pessoal"], tipo: "Pagamentos", subtipo: "Pagamento Pessoal" },
-  { keywords: ["pagamento imposto", "pag imposto", "pagto imposto"], tipo: "Pagamentos", subtipo: "Pagamento Impostos" },
-  { keywords: ["pagamento aluguel", "pag aluguel", "pagto aluguel"], tipo: "Pagamentos", subtipo: "Pagamento Aluguel" },
-  { keywords: ["pagamento servico", "pag servico", "pagto servico", "pagamento serviço"], tipo: "Pagamentos", subtipo: "Pagamento Serviços" },
-];
+  // ===== DESPESAS - PROFISSIONAIS TERCEIRIZADOS =====
+  "honor. prof. com tercerizados": { tipo: "Despesas", subtipo: "CONSULTORIA - MENSALIDADE" },
+  "honor. prof. com tercerizados / consultoria": { tipo: "Despesas", subtipo: "CONSULTORIA - MENSALIDADE" },
+  "consultoria": { tipo: "Despesas", subtipo: "CONSULTORIA - MENSALIDADE" },
+  "honor. prof. com tercerizados / advocacia": { tipo: "Despesas", subtipo: "ADVOCACIA" },
+  "advocacia": { tipo: "Despesas", subtipo: "ADVOCACIA" },
+  "honor. prof. com tercerizados / contabilidade": { tipo: "Despesas", subtipo: "CONTABILIDADE" },
+  "contabilidade": { tipo: "Despesas", subtipo: "CONTABILIDADE" },
 
-/**
- * Classifica uma descrição usando correspondência direta por palavras-chave.
- * Sem IA. Se não encontrar → retorna { tipo: "Despesas", subtipo: "Despesas Diversas" }
- */
-export function classifyDeterministic(descricao: string, tipoHint?: string): { tipo: string; subtipo: string } {
-  const normalized = (descricao || "")
+  // ===== DESPESAS - INFORMÁTICA =====
+  "informatica": { tipo: "Despesas", subtipo: "MANUTENÇÃO TERCERIZADA INFORMÁTICA" },
+  "informatica / manutencao tercerizada": { tipo: "Despesas", subtipo: "MANUTENÇÃO TERCERIZADA INFORMÁTICA" },
+  "manutencao tercerizada": { tipo: "Despesas", subtipo: "MANUTENÇÃO TERCERIZADA INFORMÁTICA" },
+  "manutencao terceirizada": { tipo: "Despesas", subtipo: "MANUTENÇÃO TERCERIZADA INFORMÁTICA" },
+  "informatica / pagamento pelo uso do sistema": { tipo: "Despesas", subtipo: "CONTROLWARE" },
+  "pagamento pelo uso do sistema": { tipo: "Despesas", subtipo: "CONTROLWARE" },
+  "sistema": { tipo: "Despesas", subtipo: "CONTROLWARE" },
+  "informatica / serasa/net/roteador": { tipo: "Despesas", subtipo: "INTERNET" },
+  "serasa/net/roteador": { tipo: "Despesas", subtipo: "INTERNET" },
+
+  // ===== DESPESAS - MANUTENÇÃO =====
+  "manutencao": { tipo: "Despesas", subtipo: "MANUTENÇÃO PREDIAL" },
+  "manutencao / manutencao do predio": { tipo: "Despesas", subtipo: "MANUTENÇÃO PREDIAL" },
+  "manutencao do predio": { tipo: "Despesas", subtipo: "MANUTENÇÃO PREDIAL" },
+  "manutencao predial": { tipo: "Despesas", subtipo: "MANUTENÇÃO PREDIAL" },
+  "manutencao / frete maq e equipamentos": { tipo: "Despesas", subtipo: "MANUTENÇÃO DE EQUIPAMENTOS - MÁQUINAS" },
+  "frete maq e equipamentos": { tipo: "Despesas", subtipo: "MANUTENÇÃO DE EQUIPAMENTOS - MÁQUINAS" },
+  "manutencao / manutencao de equipamentos": { tipo: "Despesas", subtipo: "MANUTENÇÃO DE EQUIPAMENTOS - MÁQUINAS" },
+  "manutencao de equipamentos": { tipo: "Despesas", subtipo: "MANUTENÇÃO DE EQUIPAMENTOS - MÁQUINAS" },
+  "manutencao / seguro do imovel": { tipo: "Despesas", subtipo: "SEGURO" },
+  "seguro do imovel": { tipo: "Despesas", subtipo: "SEGURO" },
+  "seguro": { tipo: "Despesas", subtipo: "SEGURO" },
+  "manutencao / dedetizacao": { tipo: "Despesas", subtipo: "LIMPEZA QUIMICA / DEDETIZAÇÃO / LIMP. PRAÇA" },
+  "dedetizacao": { tipo: "Despesas", subtipo: "LIMPEZA QUIMICA / DEDETIZAÇÃO / LIMP. PRAÇA" },
+
+  // ===== DESPESAS - MATERIAL USO E CONSUMO =====
+  "mater. uso consumo": { tipo: "Despesas", subtipo: "MATERIAL DE USO E CONSUMO" },
+  "mater. uso consumo / material de expediente": { tipo: "Despesas", subtipo: "MATERIAL DE USO E CONSUMO" },
+  "material de expediente": { tipo: "Despesas", subtipo: "MATERIAL DE USO E CONSUMO" },
+  "mater. uso consumo / ativo imobilizado": { tipo: "Despesas", subtipo: "IMOBILIZADO MÁQUINAS E EQUIPAMENTOS" },
+  "ativo imobilizado": { tipo: "Despesas", subtipo: "IMOBILIZADO MÁQUINAS E EQUIPAMENTOS" },
+  "material de limpeza escritorio e loja": { tipo: "Despesas", subtipo: "MATERIAL P/ LIMPEZA DA LOJA" },
+
+  // ===== DESPESAS - PROPAGANDA / MARKETING =====
+  "propaganda": { tipo: "Despesas", subtipo: "MARKETING (MÍDIAS SOCIAIS) - IMPULSIONAMENTO" },
+  "impulsionamento": { tipo: "Despesas", subtipo: "MARKETING (MÍDIAS SOCIAIS) - IMPULSIONAMENTO" },
+  "propaganda / outros (ecad/ degustacao/ sky)": { tipo: "Despesas", subtipo: "MARKETING (MÍDIAS SOCIAIS) - IMPULSIONAMENTO" },
+  "outros (ecad/ degustacao/ sky)": { tipo: "Despesas", subtipo: "MARKETING (MÍDIAS SOCIAIS) - IMPULSIONAMENTO" },
+  "propaganda / carro de som + gravacao": { tipo: "Despesas", subtipo: "CARRO DE SOM" },
+  "carro de som + gravacao": { tipo: "Despesas", subtipo: "CARRO DE SOM" },
+  "propaganda / faixas e cartazetes": { tipo: "Despesas", subtipo: "FAIXAS E CARTAZETES (MATERIAL)" },
+  "faixas e cartazetes": { tipo: "Despesas", subtipo: "FAIXAS E CARTAZETES (MATERIAL)" },
+  "propaganda / radio": { tipo: "Despesas", subtipo: "MENSALIDADE SOFTWARE WHATS/RÁDIO" },
+  "radio": { tipo: "Despesas", subtipo: "MENSALIDADE SOFTWARE WHATS/RÁDIO" },
+  "propaganda / panfletos grafica": { tipo: "Despesas", subtipo: "GRÁFICA (IMPRESSÃO JORNAL DE OFERTAS)" },
+  "panfletos grafica": { tipo: "Despesas", subtipo: "DISTRIBUIÇÃO DO PANFLETO" },
+  "agencia": { tipo: "Despesas", subtipo: "GRÁFICA (IMPRESSÃO JORNAL DE OFERTAS)" },
+  "grafica outros": { tipo: "Despesas", subtipo: "GRÁFICA (IMPRESSÃO JORNAL DE OFERTAS)" },
+  "decoracao": { tipo: "Despesas", subtipo: "ARCO BALÕES - DECORAÇÃO" },
+
+  // ===== DESPESAS FINANCEIRAS =====
+  "desp. financeiras": { tipo: "Despesas", subtipo: "DESPESAS BANCÁRIAS" },
+  "desp. financeiras / taxas de cartao": { tipo: "Despesas", subtipo: "TAXAS DE CARTÕES" },
+  "taxas de cartao": { tipo: "Despesas", subtipo: "TAXAS DE CARTÕES" },
+  "taxa cartao": { tipo: "Despesas", subtipo: "TAXAS DE CARTÕES" },
+  "taxas": { tipo: "Despesas", subtipo: "TAXAS DE CARTÕES" },
+  "juros maquinas": { tipo: "Despesas", subtipo: "TAXAS DE CARTÕES" },
+  "desp. financeiras / despesas bancarias": { tipo: "Despesas", subtipo: "DIVERSOS FINANCEIROS" },
+  "despesas bancarias": { tipo: "Despesas", subtipo: "JUROS POR ATRASO DE DUPLICATAS" },
+  "antecipacao": { tipo: "Despesas", subtipo: "ANTECIPAÇÃO CARTÕES" },
+  "emprestimos": { tipo: "Despesas", subtipo: "EMPRÉSTIMOS" },
+  "aplicacao bancaria": { tipo: "Despesas", subtipo: "EMPRÉSTIMOS" },
+
+  // ===== DESPESAS - TAXAS/MULTAS/TRIBUTOS =====
+  "taxas/multas/trib.": { tipo: "Despesas", subtipo: "INMETRO/OUTRAS TAXAS" },
+  "taxas/multas/trib. / iptu - taxas municipais": { tipo: "Despesas", subtipo: "IPTU" },
+  "iptu - taxas municipais": { tipo: "Despesas", subtipo: "IPTU" },
+  "taxas/multas/trib. / outros (autenticacoes)": { tipo: "Despesas", subtipo: "TRIBUTOS - FEDERAIS PARCELAMENTO TELLES" },
+  "outros (autenticacoes)": { tipo: "Despesas", subtipo: "OUTRAS DESPESAS (ADMINISTRATIVA)" },
+  "despesas de cartorio-impost/taxas": { tipo: "Despesas", subtipo: "MAT. ESC. / CORREIOS / CARTÓRIOS" },
+  "correio": { tipo: "Despesas", subtipo: "MAT. ESC. / CORREIOS / CARTÓRIOS" },
+
+  // ===== DESPESAS DIVERSAS =====
+  "despesas diversas": { tipo: "Despesas", subtipo: "OUTRAS DESPESAS (DIRETORIA)" },
+  "despesas diversas / outras": { tipo: "Despesas", subtipo: "OUTRAS DESPESAS (DIRETORIA)" },
+  "outras depesas (diretoria)": { tipo: "Despesas", subtipo: "OUTRAS DESPESAS (DIRETORIA)" },
+  "outras despesas (diretoria)": { tipo: "Despesas", subtipo: "OUTRAS DESPESAS (DIRETORIA)" },
+  "outras despesas diretoria": { tipo: "Despesas", subtipo: "OUTRAS DESPESAS (DIRETORIA)" },
+  "outras despesas (administrativa)": { tipo: "Despesas", subtipo: "OUTRAS DESPESAS (ADMINISTRATIVA)" },
+  "outros": { tipo: "Despesas", subtipo: "OUTRAS DESPESAS (ADMINISTRATIVA)" },
+  "outros (notinhas)": { tipo: "Despesas", subtipo: "OUTRAS DESPESAS (COMERCIAL)" },
+  "outros debito": { tipo: "Despesas", subtipo: "OUTRAS DESPESAS (ADMINISTRATIVA)" },
+  "prestacao de servicos": { tipo: "Despesas", subtipo: "OUTRAS DESPESAS (ADMINISTRATIVA)" },
+
+  // ===== DESPESAS - SEGURANÇA =====
+  "vigilancia": { tipo: "Despesas", subtipo: "DIVERSOS SEGURANÇA" },
+
+  // ===== DESPESAS - FRETEIROS =====
+  "frete": { tipo: "Despesas", subtipo: "FRETEIROS / ENTREGAS / BUSCAS MERCADORIAS" },
+
+  // ===== DESPESAS - INSUMOS =====
+  "insumos padaria": { tipo: "Despesas", subtipo: "MATERIAL PARA INSUMO PADARIA" },
+
+  // ===== INVESTIMENTOS =====
+  "investimentos": { tipo: "Despesas", subtipo: "9 | INVESTIMENTOS (OUTROS)" },
+};
+
+// Normaliza uma string removendo acentos e convertendo para lowercase
+function normalizeStr(s: string): string {
+  return (s || "")
     .toLowerCase()
+    .trim()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
+}
 
-  // If tipoHint is provided and valid, narrow search
-  const rules = tipoHint
-    ? CLASSIFICATION_RULES.filter(r => r.tipo.toLowerCase() === tipoHint.toLowerCase())
-    : CLASSIFICATION_RULES;
+// Monta o mapa normalizado uma única vez
+const NORMALIZED_MAP = new Map<string, { tipo: string; subtipo: string }>();
+for (const [key, val] of Object.entries(DIRECT_MAP)) {
+  NORMALIZED_MAP.set(normalizeStr(key), val);
+}
 
-  for (const rule of rules) {
-    for (const kw of rule.keywords) {
-      const kwNorm = kw.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-      if (normalized.includes(kwNorm)) {
-        return { tipo: rule.tipo, subtipo: rule.subtipo };
-      }
+/**
+ * Classifica uma descrição usando correspondência EXATA primeiro,
+ * depois fallback por palavras-chave simples.
+ * Sem IA. Se não encontrar → "Despesas" / "OUTRAS DESPESAS (ADMINISTRATIVA)"
+ */
+export function classifyDeterministic(descricao: string, tipoHint?: string): { tipo: string; subtipo: string } {
+  const normalized = normalizeStr(descricao);
+  const hintNormalized = tipoHint ? normalizeStr(tipoHint) : "";
+
+  // 1) Tentar match composto "tipo / subtipo" (ex: "DESPESAS PESSOAL / SALÁRIOS")
+  if (hintNormalized && normalized) {
+    const compoundKey = `${hintNormalized} / ${normalized}`;
+    const compound = NORMALIZED_MAP.get(compoundKey);
+    if (compound) return compound;
+  }
+
+  // 2) Tentar match exato na descrição
+  const exactDesc = NORMALIZED_MAP.get(normalized);
+  if (exactDesc) return exactDesc;
+
+  // 3) Tentar match exato no tipo/hint
+  if (hintNormalized) {
+    const exactHint = NORMALIZED_MAP.get(hintNormalized);
+    if (exactHint) return exactHint;
+  }
+
+  // 4) Tentar match parcial (a descrição contém uma chave do mapa)
+  for (const [key, val] of NORMALIZED_MAP.entries()) {
+    if (key.length >= 4 && normalized.includes(key)) return val;
+  }
+
+  // 5) Tentar match parcial no tipo/hint
+  if (hintNormalized) {
+    for (const [key, val] of NORMALIZED_MAP.entries()) {
+      if (key.length >= 4 && hintNormalized.includes(key)) return val;
     }
   }
 
-  // Fallback: search all rules if tipoHint didn't match
-  if (tipoHint) {
-    for (const rule of CLASSIFICATION_RULES) {
-      for (const kw of rule.keywords) {
-        const kwNorm = kw.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        if (normalized.includes(kwNorm)) {
-          return { tipo: rule.tipo, subtipo: rule.subtipo };
-        }
-      }
-    }
-  }
-
-  return { tipo: "Despesas", subtipo: "Despesas Diversas" };
+  return { tipo: "Despesas", subtipo: "OUTRAS DESPESAS (ADMINISTRATIVA)" };
 }
 
 // ============ CÁLCULOS DA DRE ============
