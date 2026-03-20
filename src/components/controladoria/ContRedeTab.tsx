@@ -29,7 +29,7 @@ export const ContRedeTab = ({ storeId }: Props) => {
   const [mes, setMes] = useState(now.getMonth() + 1);
   const [ano, setAno] = useState(now.getFullYear());
 
-  const { kpis, dreData, composicaoDespesas, loading } = useLancamentosData(storeId, mes, ano);
+  const { kpis, dreData, composicaoDespesas, lancamentos, loading, refetch } = useLancamentosData(storeId, mes, ano);
 
   const fmt = (v: number) => {
     const abs = Math.abs(v);
@@ -93,8 +93,8 @@ export const ContRedeTab = ({ storeId }: Props) => {
         ))}
       </div>
 
-      {/* DRE Table */}
-      <DRETable data={dreData} />
+      {/* DRE Table with drill-down */}
+      <DRETable data={dreData} lancamentos={lancamentos} onLancamentoUpdated={refetch} />
 
       {/* Charts */}
       <ContRedeCharts composicaoDespesas={composicaoDespesas} />

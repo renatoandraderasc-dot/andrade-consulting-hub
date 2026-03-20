@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Lancamento } from "./lancamentosTypes";
 import type { DRELine } from "./mockData";
@@ -7,7 +7,7 @@ export function useLancamentosData(storeId: string, mes: number, ano: number) {
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
+  const fetchData = useCallback(() => {
     if (!storeId) return;
     setLoading(true);
     supabase
@@ -22,6 +22,10 @@ export function useLancamentosData(storeId: string, mes: number, ano: number) {
         setLoading(false);
       });
   }, [storeId, mes, ano]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const sumByTipo = (tipo: string) =>
     lancamentos.filter(l => l.tipo === tipo).reduce((s, l) => s + Number(l.valor), 0);
@@ -53,7 +57,7 @@ export function useLancamentosData(storeId: string, mes: number, ano: number) {
 
   const dreData: DRELine[] = useMemo(() => {
     const { vendas, impostos, cmv, despesas, receitaLiquida, ebitda, resultado } = kpis;
-    const rv = vendas || 1; // avoid /0
+    const rv = vendas || 1;
 
     const makeChildren = (tipo: string): DRELine[] =>
       subtiposOf(tipo).map(sub => ({
@@ -88,7 +92,6 @@ export function useLancamentosData(storeId: string, mes: number, ano: number) {
     ];
   }, [kpis, lancamentos]);
 
-  // Chart data: group by subtipo for despesas bar chart
   const composicaoDespesas = useMemo(() =>
     subtiposOf("Despesas").map(sub => ({
       name: sub,
@@ -97,5 +100,5 @@ export function useLancamentosData(storeId: string, mes: number, ano: number) {
     [lancamentos]
   );
 
-  return { lancamentos, loading, kpis, dreData, composicaoDespesas };
+  return { lancamentos, loading, kpis, dreData, composicaoDespesas, refetch: fetchData };
 }
