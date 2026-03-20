@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -13,12 +14,13 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Plus, Pencil, Trash2, Copy, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Copy, Search, CheckSquare } from "lucide-react";
 import { ImportLancamentos } from "./ImportLancamentos";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { TIPOS_LANCAMENTO, SUBCONTAS, type Lancamento } from "./lancamentosTypes";
+import { TIPOS_LANCAMENTO_V2, SUBCONTAS_V2 } from "./contRedeStructure";
+import type { Lancamento } from "./lancamentosTypes";
 
 const meses = [
   { value: 1, label: "Janeiro" }, { value: 2, label: "Fevereiro" },
@@ -29,32 +31,45 @@ const meses = [
   { value: 11, label: "Novembro" }, { value: 12, label: "Dezembro" },
 ];
 
+const STORAGE_KEY_MES = "controladoria_mes";
+const STORAGE_KEY_ANO = "controladoria_ano";
+
 interface Props {
   storeId: string;
   storeName: string;
 }
 
-const now = new Date();
-
 export const LancamentosTab = ({ storeId, storeName }: Props) => {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  // Filters
-  const [filterMes, setFilterMes] = useState(now.getMonth() + 1);
-  const [filterAno, setFilterAno] = useState(now.getFullYear());
+  // Persist month/year via sessionStorage
+  const [filterMes, setFilterMes] = useState(() => {
+    const stored = sessionStorage.getItem(STORAGE_KEY_MES);
+    return stored ? Number(stored) : new Date().getMonth() + 1;
+  });
+  const [filterAno, setFilterAno] = useState(() => {
+    const stored = sessionStorage.getItem(STORAGE_KEY_ANO);
+    return stored ? Number(stored) : new Date().getFullYear();
+  });
   const [filterTipo, setFilterTipo] = useState("Todos");
   const [filterBusca, setFilterBusca] = useState("");
+
+  // Bulk selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => { sessionStorage.setItem(STORAGE_KEY_MES, String(filterMes)); }, [filterMes]);
+  useEffect(() => { sessionStorage.setItem(STORAGE_KEY_ANO, String(filterAno)); }, [filterAno]);
 
   // Form state
   const [form, setForm] = useState({
     data: new Date().toISOString().split("T")[0],
-    competencia_mes: now.getMonth() + 1,
-    competencia_ano: now.getFullYear(),
-    tipo: "Vendas",
+    competencia_mes: filterMes,
+    competencia_ano: filterAno,
+    tipo: "Faturamento" as string,
     subtipo: "Venda Bruta",
     descricao: "",
     valor: "",
@@ -62,7 +77,7 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
     status: "ativo",
   });
 
-  const subcontas = SUBCONTAS[form.tipo] || [];
+  const subcontas = SUBCONTAS_V2[form.tipo] || [];
 
   useEffect(() => {
     if (storeId) fetchLancamentos();
@@ -70,6 +85,7 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
 
   const fetchLancamentos = async () => {
     setLoading(true);
+    setSelectedIds(new Set());
     const { data, error } = await supabase
       .from("lancamentos")
       .select("*")
@@ -101,9 +117,7 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
 
   const totaisPorTipo = useMemo(() => {
     const map: Record<string, number> = {};
-    lancamentos.forEach(l => {
-      map[l.tipo] = (map[l.tipo] || 0) + Number(l.valor);
-    });
+    lancamentos.forEach(l => { map[l.tipo] = (map[l.tipo] || 0) + Number(l.valor); });
     return map;
   }, [lancamentos]);
 
@@ -112,7 +126,7 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
       data: new Date().toISOString().split("T")[0],
       competencia_mes: filterMes,
       competencia_ano: filterAno,
-      tipo: "Vendas",
+      tipo: "Faturamento",
       subtipo: "Venda Bruta",
       descricao: "",
       valor: "",
@@ -122,10 +136,7 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
     setEditingId(null);
   };
 
-  const openNew = () => {
-    resetForm();
-    setDialogOpen(true);
-  };
+  const openNew = () => { resetForm(); setDialogOpen(true); };
 
   const openEdit = (l: Lancamento) => {
     setForm({
@@ -182,16 +193,11 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
     };
 
     if (editingId) {
-      const { error } = await supabase
-        .from("lancamentos")
-        .update(payload as any)
-        .eq("id", editingId);
+      const { error } = await supabase.from("lancamentos").update(payload as any).eq("id", editingId);
       if (error) { toast.error("Erro ao atualizar"); return; }
       toast.success("Lançamento atualizado");
     } else {
-      const { error } = await supabase
-        .from("lancamentos")
-        .insert(payload as any);
+      const { error } = await supabase.from("lancamentos").insert(payload as any);
       if (error) { toast.error("Erro ao salvar"); return; }
       toast.success("Lançamento criado");
     }
@@ -208,15 +214,62 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
     fetchLancamentos();
   };
 
+  // Bulk selection
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filtered.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map(l => l.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Excluir ${selectedIds.size} lançamento(s) selecionado(s)?`)) return;
+
+    const ids = Array.from(selectedIds);
+    const { error } = await supabase.from("lancamentos").delete().in("id", ids);
+    if (error) { toast.error("Erro ao excluir em massa"); return; }
+    toast.success(`${ids.length} lançamento(s) excluído(s)`);
+    setSelectedIds(new Set());
+    fetchLancamentos();
+  };
+
   const fmtCurrency = (v: number) =>
     v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  // Admin check
+  if (!isAdmin) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center py-16">
+          <Card className="bg-card border-border max-w-md">
+            <CardContent className="p-8 text-center">
+              <p className="text-lg font-semibold text-foreground mb-2">Acesso Restrito</p>
+              <p className="text-sm text-muted-foreground">
+                A aba de Lançamentos é restrita a administradores.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg sm:text-xl font-bold text-foreground">Lançamentos</h2>
-          <p className="text-sm text-muted-foreground">Cadastre e gerencie os lançamentos financeiros</p>
+          <p className="text-sm text-muted-foreground">Cadastre e gerencie os lançamentos financeiros (Admin)</p>
         </div>
         <div className="flex gap-2">
           <ImportLancamentos storeId={storeId} userId={user?.id || ""} onImportComplete={fetchLancamentos} />
@@ -253,7 +306,7 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
               <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="Todos">Todos</SelectItem>
-                {TIPOS_LANCAMENTO.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                {TIPOS_LANCAMENTO_V2.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -271,6 +324,22 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Bulk Actions */}
+      {selectedIds.size > 0 && (
+        <Card className="bg-destructive/5 border-destructive/20">
+          <CardContent className="p-3 flex items-center gap-4">
+            <CheckSquare className="h-5 w-5 text-destructive" />
+            <span className="text-sm font-medium">{selectedIds.size} selecionado(s)</span>
+            <Button variant="destructive" size="sm" onClick={handleBulkDelete} className="gap-2">
+              <Trash2 className="h-4 w-4" /> Excluir Selecionados
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setSelectedIds(new Set())}>
+              Limpar Seleção
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Totals per type */}
       {Object.keys(totaisPorTipo).length > 0 && (
@@ -292,6 +361,12 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-[40px]">
+                  <Checkbox
+                    checked={filtered.length > 0 && selectedIds.size === filtered.length}
+                    onCheckedChange={toggleSelectAll}
+                  />
+                </TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Conta</TableHead>
@@ -303,19 +378,21 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                    Carregando...
-                  </TableCell>
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">Carregando...</TableCell>
                 </TableRow>
               ) : filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                    Nenhum lançamento encontrado
-                  </TableCell>
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhum lançamento encontrado</TableCell>
                 </TableRow>
               ) : (
                 filtered.map(l => (
-                  <TableRow key={l.id}>
+                  <TableRow key={l.id} className={selectedIds.has(l.id) ? "bg-primary/5" : ""}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.has(l.id)}
+                        onCheckedChange={() => toggleSelect(l.id)}
+                      />
+                    </TableCell>
                     <TableCell className="text-sm">{new Date(l.data + "T12:00:00").toLocaleDateString("pt-BR")}</TableCell>
                     <TableCell>
                       <span className="text-xs bg-secondary/20 text-secondary-foreground px-2 py-0.5 rounded-full">
@@ -391,16 +468,16 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
               </div>
             </div>
             <div>
-              <Label>Tipo de Lançamento</Label>
-              <Select value={form.tipo} onValueChange={v => setForm(p => ({ ...p, tipo: v, subtipo: (SUBCONTAS[v] || [])[0] || "" }))}>
+              <Label>Tipo</Label>
+              <Select value={form.tipo} onValueChange={v => setForm(p => ({ ...p, tipo: v, subtipo: (SUBCONTAS_V2[v] || [])[0] || "" }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {TIPOS_LANCAMENTO.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                  {TIPOS_LANCAMENTO_V2.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label>Conta / Subtipo</Label>
+              <Label>Subconta</Label>
               <Select value={form.subtipo} onValueChange={v => setForm(p => ({ ...p, subtipo: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -410,30 +487,15 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
             </div>
             <div>
               <Label>Valor (R$)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                placeholder="0,00"
-                value={form.valor}
-                onChange={e => setForm(p => ({ ...p, valor: e.target.value }))}
-              />
+              <Input type="number" step="0.01" placeholder="0,00" value={form.valor} onChange={e => setForm(p => ({ ...p, valor: e.target.value }))} />
             </div>
             <div>
-              <Label>Descrição</Label>
-              <Input
-                placeholder="Descrição do lançamento"
-                value={form.descricao}
-                onChange={e => setForm(p => ({ ...p, descricao: e.target.value }))}
-              />
+              <Label>Descrição / Beneficiário</Label>
+              <Input placeholder="Descrição do lançamento" value={form.descricao} onChange={e => setForm(p => ({ ...p, descricao: e.target.value }))} />
             </div>
             <div>
               <Label>Observação</Label>
-              <Textarea
-                placeholder="Observações adicionais..."
-                value={form.observacao}
-                onChange={e => setForm(p => ({ ...p, observacao: e.target.value }))}
-                rows={2}
-              />
+              <Textarea placeholder="Observações adicionais..." value={form.observacao} onChange={e => setForm(p => ({ ...p, observacao: e.target.value }))} rows={2} />
             </div>
           </div>
           <DialogFooter>

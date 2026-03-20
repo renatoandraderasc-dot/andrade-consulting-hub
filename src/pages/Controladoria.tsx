@@ -8,6 +8,7 @@ import { ClassificacaoTab } from "@/components/controladoria/ClassificacaoTab";
 import { ContRedeTab } from "@/components/controladoria/ContRedeTab";
 import { EntradaDadosTab } from "@/components/controladoria/EntradaDadosTab";
 import { LancamentosTab } from "@/components/controladoria/LancamentosTab";
+import { HistoricoTab } from "@/components/controladoria/HistoricoTab";
 import { ClipboardList } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -75,13 +76,13 @@ const Controladoria = () => {
           </div>
         </motion.div>
 
-        <Tabs defaultValue="entrada" className="w-full">
+        <Tabs defaultValue="contrede" className="w-full">
           <TabsList className="mb-6 bg-card border border-border h-11 flex-wrap">
             <TabsTrigger
-              value="entrada"
+              value="contrede"
               className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
             >
-              Entrada de Dados
+              Cont Rede
             </TabsTrigger>
             <TabsTrigger
               value="lancamentos"
@@ -90,33 +91,43 @@ const Controladoria = () => {
               Lançamentos
             </TabsTrigger>
             <TabsTrigger
+              value="historico"
+              className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
+            >
+              Histórico
+            </TabsTrigger>
+            <TabsTrigger
+              value="entrada"
+              className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
+            >
+              Entrada de Dados
+            </TabsTrigger>
+            <TabsTrigger
               value="classificacao"
               className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
             >
               Classificação
             </TabsTrigger>
-            <TabsTrigger
-              value="contrede"
-              className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
-            >
-              Cont Rede
-            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="entrada">
-            <EntradaDadosTab storeId={storeId} storeName={storeName} />
+          <TabsContent value="contrede">
+            <ContRedeTab storeId={storeId} />
           </TabsContent>
 
           <TabsContent value="lancamentos">
             <LancamentosTab storeId={storeId} storeName={storeName} />
           </TabsContent>
 
-          <TabsContent value="classificacao">
-            <ClassificacaoTab />
+          <TabsContent value="historico">
+            <HistoricoTab storeId={storeId} />
           </TabsContent>
 
-          <TabsContent value="contrede">
-            <ContRedeTab storeId={storeId} />
+          <TabsContent value="entrada">
+            <EntradaDadosTab storeId={storeId} storeName={storeName} />
+          </TabsContent>
+
+          <TabsContent value="classificacao">
+            <ClassificacaoTab />
           </TabsContent>
         </Tabs>
       </div>

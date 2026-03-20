@@ -3,11 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
-import { Upload, Download, AlertCircle, CheckCircle2, Sparkles, Loader2 } from "lucide-react";
+import { Upload, Download, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
+import { classifyDeterministic } from "./contRedeStructure";
 
 interface Props {
   storeId: string;
@@ -23,7 +24,6 @@ interface ParsedRow {
   subtipo: string;
   descricao: string;
   valor: number;
-  classified: boolean;
   error?: string;
 }
 
@@ -44,7 +44,6 @@ function parseDate(val: any): { iso: string; mes: number; ano: number } | null {
   if (!val) return null;
   const s = String(val).trim();
 
-  // dd/mm/yyyy or dd-mm-yyyy
   const dmy = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
   if (dmy) {
     const d = dmy[1].padStart(2, "0");
@@ -53,13 +52,11 @@ function parseDate(val: any): { iso: string; mes: number; ano: number } | null {
     return { iso: `${y}-${m}-${d}`, mes: parseInt(m), ano: parseInt(y) };
   }
 
-  // yyyy-mm-dd
   const ymd = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (ymd) {
     return { iso: s, mes: parseInt(ymd[2]), ano: parseInt(ymd[1]) };
   }
 
-  // Excel serial number
   const num = Number(val);
   if (!isNaN(num) && num > 40000 && num < 60000) {
     const date = new Date((num - 25569) * 86400 * 1000);
@@ -73,31 +70,27 @@ function parseDate(val: any): { iso: string; mes: number; ano: number } | null {
 function parseRow(row: any): ParsedRow {
   const errors: string[] = [];
 
-  // Find the date field (flexible naming)
   const dateVal = row.data_vencimento || row.data || row.vencimento || row.date || "";
   const parsed = parseDate(dateVal);
-
-  if (!parsed) {
-    errors.push("data inválida");
-  }
+  if (!parsed) errors.push("data inválida");
 
   const valor = parseNumber(row.valor || row.value || row.total || "");
   if (valor === 0) errors.push("valor zerado");
 
   const descricao = String(row.descricao || row.beneficiario || row.description || row.desc || "").trim();
+  const tipoHint = String(row.tipo || row.type || row.classificacao || "").trim();
 
-  // tipo is optional — will be classified by AI
-  const tipo = String(row.tipo || row.type || row.classificacao || "").trim();
+  // Classificação determinística — sem IA
+  const { tipo, subtipo } = classifyDeterministic(descricao, tipoHint || undefined);
 
   return {
     data_vencimento: parsed?.iso || new Date().toISOString().split("T")[0],
     competencia_mes: parsed?.mes || new Date().getMonth() + 1,
     competencia_ano: parsed?.ano || new Date().getFullYear(),
     tipo,
-    subtipo: "",
+    subtipo,
     descricao,
     valor,
-    classified: false,
     error: errors.length > 0 ? errors.join("; ") : undefined,
   };
 }
@@ -138,13 +131,11 @@ export const ImportLancamentos = ({ storeId, userId, onImportComplete }: Props) 
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState<ParsedRow[]>([]);
   const [importing, setImporting] = useState(false);
-  const [classifying, setClassifying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [fileName, setFileName] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const validRows = rows.filter(r => !r.error && r.classified);
-  const pendingRows = rows.filter(r => !r.error && !r.classified);
+  const validRows = rows.filter(r => !r.error);
   const errorRows = rows.filter(r => r.error);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -158,65 +149,13 @@ export const ImportLancamentos = ({ storeId, userId, onImportComplete }: Props) 
       if (parsed.length === 0) {
         toast.error("Nenhuma linha encontrada no arquivo");
       } else {
-        toast.success(`${parsed.length} linhas carregadas. Clique em "Classificar com IA" para categorizar.`);
+        const valid = parsed.filter(r => !r.error).length;
+        toast.success(`${parsed.length} linhas carregadas. ${valid} classificadas automaticamente.`);
       }
     } catch (err: any) {
       toast.error(err.message || "Erro ao processar arquivo");
     }
     if (fileRef.current) fileRef.current.value = "";
-  };
-
-  const classifyWithAI = async () => {
-    const toClassify = rows.filter(r => !r.error);
-    if (toClassify.length === 0) return;
-
-    setClassifying(true);
-    try {
-      // Process in batches of 30
-      const batchSize = 30;
-      const allClassified = [...rows];
-
-      for (let i = 0; i < toClassify.length; i += batchSize) {
-        const batch = toClassify.slice(i, i + batchSize);
-        const items = batch.map(r => ({
-          descricao: r.descricao,
-          valor: r.valor,
-          tipo: r.tipo,
-        }));
-
-        const { data, error } = await supabase.functions.invoke("classify-lancamentos", {
-          body: { items },
-        });
-
-        if (error || !data?.classifications) {
-          toast.error(data?.error || "Erro na classificação IA");
-          setClassifying(false);
-          return;
-        }
-
-        // Map classifications back to rows
-        data.classifications.forEach((c: any) => {
-          const batchIdx = c.index - 1;
-          const originalRow = batch[batchIdx];
-          if (!originalRow) return;
-          const globalIdx = allClassified.findIndex(r => r === originalRow);
-          if (globalIdx >= 0) {
-            allClassified[globalIdx] = {
-              ...allClassified[globalIdx],
-              tipo: c.tipo,
-              subtipo: c.subtipo,
-              classified: true,
-            };
-          }
-        });
-      }
-
-      setRows(allClassified);
-      toast.success("Classificação concluída!");
-    } catch (err: any) {
-      toast.error("Erro ao classificar: " + (err.message || "erro desconhecido"));
-    }
-    setClassifying(false);
   };
 
   const handleImport = async () => {
@@ -244,18 +183,14 @@ export const ImportLancamentos = ({ storeId, userId, onImportComplete }: Props) 
       }));
 
       const { error } = await supabase.from("lancamentos").insert(batch as any);
-      if (error) {
-        errors += batch.length;
-      } else {
-        imported += batch.length;
-      }
+      if (error) { errors += batch.length; } else { imported += batch.length; }
       setProgress(Math.round(((i + batch.length) / validRows.length) * 100));
     }
 
     setImporting(false);
-    if (errors > 0) toast.error(`${errors} lançamentos falharam ao importar`);
+    if (errors > 0) toast.error(`${errors} lançamentos falharam`);
     if (imported > 0) {
-      toast.success(`${imported} lançamentos importados com sucesso!`);
+      toast.success(`${imported} lançamentos importados!`);
       onImportComplete();
       setOpen(false);
       setRows([]);
@@ -268,8 +203,8 @@ export const ImportLancamentos = ({ storeId, userId, onImportComplete }: Props) 
       ["15/01/2026", "Fornecedor ABC Alimentos", "15000,50", ""],
       ["20/01/2026", "Energia Elétrica", "3500,00", ""],
       ["25/01/2026", "Aluguel Loja", "8000,00", ""],
-      ["28/01/2026", "Salários Funcionários", "22000,00", ""],
-      ["30/01/2026", "ICMS Mês", "4500,00", "Impostos"],
+      ["28/01/2026", "Folha Pagamento", "22000,00", ""],
+      ["30/01/2026", "ICMS", "4500,00", "Impostos"],
     ];
     const csv = [headers.join(";"), ...examples.map(e => e.join(";"))].join("\n");
     const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
@@ -289,7 +224,7 @@ export const ImportLancamentos = ({ storeId, userId, onImportComplete }: Props) 
         <Upload className="h-4 w-4" /> Importar Planilha
       </Button>
 
-      <Dialog open={open} onOpenChange={v => { if (!importing && !classifying) setOpen(v); }}>
+      <Dialog open={open} onOpenChange={v => { if (!importing) setOpen(v); }}>
         <DialogContent className="sm:max-w-[750px] max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Importar Lançamentos em Lote</DialogTitle>
@@ -317,49 +252,26 @@ export const ImportLancamentos = ({ storeId, userId, onImportComplete }: Props) 
             </div>
 
             <p className="text-xs text-muted-foreground">
-              Colunas aceitas: <strong>data_vencimento</strong> (dd/mm/aaaa), <strong>descricao</strong> (beneficiário), <strong>valor</strong> (R$), <strong>tipo</strong> (opcional — a IA classifica automaticamente).
+              Colunas: <strong>data_vencimento</strong> (dd/mm/aaaa), <strong>descricao</strong> (beneficiário), <strong>valor</strong> (R$), <strong>tipo</strong> (opcional).
+              A classificação é feita automaticamente por palavras-chave (sem custo de IA).
             </p>
 
             {rows.length > 0 && (
               <>
                 <div className="flex flex-wrap gap-4 items-center text-sm">
-                  <span className="text-muted-foreground">
-                    {rows.length} linhas carregadas
+                  <span className="text-muted-foreground">{rows.length} linhas</span>
+                  <span className="flex items-center gap-1 text-green-600">
+                    <CheckCircle2 className="h-4 w-4" /> {validRows.length} válidos
                   </span>
-                  {validRows.length > 0 && (
-                    <span className="flex items-center gap-1 text-green-600">
-                      <CheckCircle2 className="h-4 w-4" /> {validRows.length} classificados
-                    </span>
-                  )}
-                  {pendingRows.length > 0 && (
-                    <span className="flex items-center gap-1 text-amber-600">
-                      <Sparkles className="h-4 w-4" /> {pendingRows.length} aguardando classificação
-                    </span>
-                  )}
                   {errorRows.length > 0 && (
                     <span className="flex items-center gap-1 text-destructive">
                       <AlertCircle className="h-4 w-4" /> {errorRows.length} com erro
                     </span>
                   )}
                   <span className="text-muted-foreground">
-                    Total: {fmtCurrency(rows.filter(r => !r.error).reduce((s, r) => s + r.valor, 0))}
+                    Total: {fmtCurrency(validRows.reduce((s, r) => s + r.valor, 0))}
                   </span>
                 </div>
-
-                {pendingRows.length > 0 && (
-                  <Button
-                    onClick={classifyWithAI}
-                    disabled={classifying}
-                    className="gap-2 w-fit"
-                    variant="default"
-                  >
-                    {classifying ? (
-                      <><Loader2 className="h-4 w-4 animate-spin" /> Classificando...</>
-                    ) : (
-                      <><Sparkles className="h-4 w-4" /> Classificar com IA ({pendingRows.length} itens)</>
-                    )}
-                  </Button>
-                )}
 
                 <div className="overflow-auto flex-1 border rounded-md border-border">
                   <Table>
@@ -367,7 +279,6 @@ export const ImportLancamentos = ({ storeId, userId, onImportComplete }: Props) 
                       <TableRow>
                         <TableHead className="w-8">#</TableHead>
                         <TableHead>Data</TableHead>
-                        <TableHead>Comp.</TableHead>
                         <TableHead>Descrição</TableHead>
                         <TableHead className="text-right">Valor</TableHead>
                         <TableHead>Tipo</TableHead>
@@ -377,33 +288,26 @@ export const ImportLancamentos = ({ storeId, userId, onImportComplete }: Props) 
                     </TableHeader>
                     <TableBody>
                       {rows.slice(0, 100).map((r, i) => (
-                        <TableRow key={i} className={r.error ? "bg-destructive/10" : r.classified ? "" : "bg-amber-500/5"}>
+                        <TableRow key={i} className={r.error ? "bg-destructive/10" : ""}>
                           <TableCell className="text-xs text-muted-foreground">{i + 1}</TableCell>
                           <TableCell className="text-xs">{r.data_vencimento}</TableCell>
-                          <TableCell className="text-xs">{r.competencia_mes}/{r.competencia_ano}</TableCell>
                           <TableCell className="text-xs max-w-[160px] truncate">{r.descricao || "—"}</TableCell>
                           <TableCell className="text-xs text-right font-mono">{fmtCurrency(r.valor)}</TableCell>
                           <TableCell className="text-xs">
-                            {r.tipo ? (
-                              <span className="bg-secondary/20 text-secondary-foreground px-1.5 py-0.5 rounded text-xs">
-                                {r.tipo}
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground italic">—</span>
-                            )}
+                            <span className="bg-secondary/20 text-secondary-foreground px-1.5 py-0.5 rounded text-xs">
+                              {r.tipo}
+                            </span>
                           </TableCell>
-                          <TableCell className="text-xs">{r.subtipo || "—"}</TableCell>
+                          <TableCell className="text-xs">{r.subtipo}</TableCell>
                           <TableCell className="text-xs">
                             {r.error ? (
                               <span className="text-destructive text-xs" title={r.error}>
                                 <AlertCircle className="h-3 w-3 inline mr-1" />{r.error}
                               </span>
-                            ) : r.classified ? (
+                            ) : (
                               <span className="text-green-600 text-xs">
                                 <CheckCircle2 className="h-3 w-3 inline mr-1" />OK
                               </span>
-                            ) : (
-                              <span className="text-amber-600 text-xs">Pendente</span>
                             )}
                           </TableCell>
                         </TableRow>
@@ -419,22 +323,20 @@ export const ImportLancamentos = ({ storeId, userId, onImportComplete }: Props) 
               </>
             )}
 
-            {(importing || classifying) && (
+            {importing && (
               <div className="space-y-2">
-                <Progress value={importing ? progress : undefined} className="h-2" />
-                <p className="text-xs text-muted-foreground text-center">
-                  {classifying ? "Classificando com IA..." : `Importando... ${progress}%`}
-                </p>
+                <Progress value={progress} className="h-2" />
+                <p className="text-xs text-muted-foreground text-center">Importando... {progress}%</p>
               </div>
             )}
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setOpen(false); setRows([]); }} disabled={importing || classifying}>
+            <Button variant="outline" onClick={() => { setOpen(false); setRows([]); }} disabled={importing}>
               Cancelar
             </Button>
-            <Button onClick={handleImport} disabled={importing || classifying || validRows.length === 0} className="gap-2">
-              {importing ? "Importando..." : `Importar ${validRows.length} lançamentos`}
+            <Button onClick={handleImport} disabled={importing || validRows.length === 0} className="gap-2">
+              {importing ? <><Loader2 className="h-4 w-4 animate-spin" /> Importando...</> : `Importar ${validRows.length} lançamentos`}
             </Button>
           </DialogFooter>
         </DialogContent>
