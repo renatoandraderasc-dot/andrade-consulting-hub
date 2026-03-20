@@ -190,21 +190,21 @@ export const ContRedeTab = ({ storeId }: Props) => {
     const isExpanded = expanded.has(node.id);
     const value = dreValues.get(node.id) || 0;
     const pct = faturamentoBase !== 0 ? (value / faturamentoBase) * 100 : 0;
-    const isClickable = !!node.tipo;
+    const isClickable = !!node.tipo || !!node.calcPctOf;
     const isActive = detailFilter?.tipo === node.tipo && !detailFilter?.subtipo;
-    const isSection = node.isGroup && isSectionHeader(node.name);
+    const isSection = (node.isGroup || !!node.calcPctOf) && isSectionHeader(node.name);
 
     return (
       <div key={node.id}>
         <div
-          className={`grid grid-cols-[1fr_140px_80px] sm:grid-cols-[1fr_160px_100px] items-center px-4 border-b border-border text-sm transition-colors
+          className={`group grid grid-cols-[1fr_140px_80px] sm:grid-cols-[1fr_160px_100px] items-center px-4 border-b border-border text-sm transition-all duration-200
             ${node.isResult ? "bg-accent/20 font-bold text-foreground py-3" : ""}
             ${isSection ? "bg-secondary/10 font-semibold py-2.5" : "py-2"}
-            ${!node.isResult && !isSection ? "hover:bg-muted/20" : ""}
+            ${!node.isResult && !isSection ? "hover:bg-orange-50 dark:hover:bg-orange-950/20" : "hover:bg-orange-50 dark:hover:bg-orange-950/20"}
             ${isClickable ? "cursor-pointer" : ""}
             ${isActive ? "bg-primary/10 border-l-2 border-l-primary" : ""}
           `}
-          onClick={() => isClickable ? handleRowClick(node) : node.isResult ? null : toggle(node.id)}
+          onClick={() => node.isGroup ? handleRowClick(node) : null}
         >
           <div className="flex items-center gap-2">
             {node.isGroup && (
@@ -213,14 +213,14 @@ export const ContRedeTab = ({ storeId }: Props) => {
                 : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
             )}
             {!node.isGroup && <span className="w-4 shrink-0" />}
-            <span className={`${node.isResult ? "text-foreground" : "text-foreground/90"} ${isSection ? "text-foreground" : ""}`}>
+            <span className={`${node.isResult ? "text-foreground" : "text-foreground/90"} ${isSection ? "text-foreground" : ""} group-hover:font-bold group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-all duration-200`}>
               {node.name}
             </span>
           </div>
-          <div className={`text-right font-mono text-sm ${value < 0 ? "text-red-600" : ""}`}>
+          <div className={`text-right font-mono text-sm group-hover:font-bold group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-all duration-200 ${value < 0 ? "text-red-600 group-hover:text-orange-600" : ""}`}>
             {fmtCurrency(value)}
           </div>
-          <div className="text-right font-mono text-muted-foreground text-xs">
+          <div className="text-right font-mono text-muted-foreground text-xs group-hover:font-bold group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-all duration-200">
             {pct.toFixed(2)}%
           </div>
         </div>
@@ -234,16 +234,16 @@ export const ContRedeTab = ({ storeId }: Props) => {
           return (
             <div
               key={child.id}
-              className={`grid grid-cols-[1fr_140px_80px] sm:grid-cols-[1fr_160px_100px] items-center px-4 py-1.5 border-b border-border/30 text-xs cursor-pointer transition-colors
-                ${isChildActive ? "bg-primary/10 border-l-2 border-l-primary" : "hover:bg-muted/10"}
+              className={`group grid grid-cols-[1fr_140px_80px] sm:grid-cols-[1fr_160px_100px] items-center px-4 py-1.5 border-b border-border/30 text-xs cursor-pointer transition-all duration-200
+                ${isChildActive ? "bg-primary/10 border-l-2 border-l-primary" : "hover:bg-orange-50 dark:hover:bg-orange-950/20"}
               `}
               onClick={() => child.tipo && child.subtipo && handleChildClick(child.tipo, child.subtipo)}
             >
-              <div className="pl-8 text-foreground/75">{child.name}</div>
-              <div className={`text-right font-mono ${childVal < 0 ? "text-red-600" : ""}`}>
+              <div className="pl-8 text-foreground/75 group-hover:font-bold group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-all duration-200">{child.name}</div>
+              <div className={`text-right font-mono group-hover:font-bold group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-all duration-200 ${childVal < 0 ? "text-red-600" : ""}`}>
                 {fmtCurrency(childVal)}
               </div>
-              <div className="text-right font-mono text-muted-foreground">
+              <div className="text-right font-mono text-muted-foreground group-hover:font-bold group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-all duration-200">
                 {childPct.toFixed(2)}%
               </div>
             </div>
