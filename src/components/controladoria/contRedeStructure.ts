@@ -767,7 +767,6 @@ export function calcularDRE(
 ): Map<string, number> {
   const values = new Map<string, number>();
 
-  // Build a set of all child subtipos per tipo to track matched
   const allChildSubtipos = new Map<string, Set<string>>();
   for (const node of structure) {
     if (node.isGroup && node.tipo && node.children) {
@@ -797,6 +796,14 @@ export function calcularDRE(
         total = groupLancs.reduce((s, l) => s + l.valor, 0);
       }
       values.set(node.id, total);
+    }
+  }
+
+  // Step 1.5: calculate percentage-based nodes (Depreciação = 0.5% fat, Quebras = 2.5% CMV)
+  for (const node of structure) {
+    if (node.calcPctOf) {
+      const baseVal = values.get(node.calcPctOf.nodeId) || 0;
+      values.set(node.id, Math.abs(baseVal) * node.calcPctOf.pct);
     }
   }
 
