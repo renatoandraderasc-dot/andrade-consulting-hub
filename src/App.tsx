@@ -16,6 +16,7 @@ import Controladoria from "./pages/Controladoria";
 import Repricing from "./pages/Repricing";
 import VtexCollector from "./pages/VtexCollector";
 import WebSacSync from "./pages/WebSacSync";
+import PIC from "./pages/PIC";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
