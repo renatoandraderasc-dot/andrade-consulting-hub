@@ -13,6 +13,7 @@ interface ClientLayoutProps {
 const navItems = [
   { path: "/dashboard", label: "Dashboard", icon: BarChart3 },
   { path: "/controladoria", label: "Controladoria", icon: ClipboardList },
+  { path: "/pic", label: "PIC", icon: Trophy },
   { path: "/repricing", label: "Re-PRICING", icon: DollarSign },
   { path: "/vtex-collector", label: "Coletor VTEX", icon: Database },
   { path: "/websac-sync", label: "Sync WebSac", icon: RefreshCw },
