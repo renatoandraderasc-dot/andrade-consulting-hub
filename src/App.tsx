@@ -16,6 +16,7 @@ import Controladoria from "./pages/Controladoria";
 import Repricing from "./pages/Repricing";
 import VtexCollector from "./pages/VtexCollector";
 import WebSacSync from "./pages/WebSacSync";
+import PIC from "./pages/PIC";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -40,6 +41,7 @@ const App = () => (
             <Route path="/repricing" element={<Repricing />} />
             <Route path="/vtex-collector" element={<VtexCollector />} />
             <Route path="/websac-sync" element={<WebSacSync />} />
+            <Route path="/pic" element={<PIC />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
