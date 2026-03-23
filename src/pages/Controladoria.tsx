@@ -110,6 +110,18 @@ const Controladoria = () => {
             >
               Categorias
             </TabsTrigger>
+            <TabsTrigger
+              value="agenda"
+              className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
+            >
+              Agenda Financeira
+            </TabsTrigger>
+            <TabsTrigger
+              value="agenda-analise"
+              className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
+            >
+              Análise Agenda
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="contrede">
