@@ -9,6 +9,8 @@ import { LancamentosTab } from "@/components/controladoria/LancamentosTab";
 import { HistoricoTab } from "@/components/controladoria/HistoricoTab";
 import { ClassificacoesConfigTab } from "@/components/controladoria/ClassificacoesConfigTab";
 import { CategoriasConfigTab } from "@/components/controladoria/CategoriasConfigTab";
+import { AgendaFinanceiraTab } from "@/components/controladoria/AgendaFinanceiraTab";
+import { AgendaAnaliseTab } from "@/components/controladoria/AgendaAnaliseTab";
 import { ClipboardList } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -108,6 +110,18 @@ const Controladoria = () => {
             >
               Categorias
             </TabsTrigger>
+            <TabsTrigger
+              value="agenda"
+              className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
+            >
+              Agenda Financeira
+            </TabsTrigger>
+            <TabsTrigger
+              value="agenda-analise"
+              className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
+            >
+              Análise Agenda
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="contrede">
@@ -128,6 +142,14 @@ const Controladoria = () => {
 
           <TabsContent value="categorias">
             <CategoriasConfigTab />
+          </TabsContent>
+
+          <TabsContent value="agenda">
+            <AgendaFinanceiraTab storeId={storeId} />
+          </TabsContent>
+
+          <TabsContent value="agenda-analise">
+            <AgendaAnaliseTab storeId={storeId} />
           </TabsContent>
         </Tabs>
       </div>
