@@ -15,8 +15,6 @@ const navItems = [
   { path: "/controladoria", label: "Controladoria", icon: ClipboardList },
   { path: "/pic", label: "PIC", icon: Trophy },
   { path: "/repricing", label: "Re-PRICING", icon: DollarSign },
-  { path: "/vtex-collector", label: "Coletor VTEX", icon: Database },
-  { path: "/websac-sync", label: "Sync WebSac", icon: RefreshCw },
   { path: "/checklist", label: "Checklist", icon: CheckSquare },
 ];
 
@@ -24,6 +22,8 @@ const adminItems = [
   { path: "/admin/metas", label: "Metas", icon: Target },
   { path: "/admin/questions", label: "Perguntas", icon: Settings },
   { path: "/admin/users", label: "Usuários", icon: Users },
+  { path: "/vtex-collector", label: "Coletor VTEX", icon: Database },
+  { path: "/websac-sync", label: "Sync WebSac", icon: RefreshCw },
 ];
 
 const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
