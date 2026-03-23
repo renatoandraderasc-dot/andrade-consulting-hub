@@ -143,6 +143,14 @@ const Controladoria = () => {
           <TabsContent value="categorias">
             <CategoriasConfigTab />
           </TabsContent>
+
+          <TabsContent value="agenda">
+            <AgendaFinanceiraTab storeId={storeId} />
+          </TabsContent>
+
+          <TabsContent value="agenda-analise">
+            <AgendaAnaliseTab storeId={storeId} />
+          </TabsContent>
         </Tabs>
       </div>
     </ClientLayout>
