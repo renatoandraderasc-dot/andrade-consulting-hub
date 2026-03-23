@@ -9,6 +9,8 @@ import { LancamentosTab } from "@/components/controladoria/LancamentosTab";
 import { HistoricoTab } from "@/components/controladoria/HistoricoTab";
 import { ClassificacoesConfigTab } from "@/components/controladoria/ClassificacoesConfigTab";
 import { CategoriasConfigTab } from "@/components/controladoria/CategoriasConfigTab";
+import { AgendaFinanceiraTab } from "@/components/controladoria/AgendaFinanceiraTab";
+import { AgendaAnaliseTab } from "@/components/controladoria/AgendaAnaliseTab";
 import { ClipboardList } from "lucide-react";
 import { motion } from "framer-motion";
 
