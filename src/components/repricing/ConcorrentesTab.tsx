@@ -114,7 +114,7 @@ const ConcorrentesTab = () => {
     toast.info(`Iniciando coleta completa de ${concorrente.nome}... Isso pode levar alguns minutos.`);
 
     try {
-      const result = await firecrawlApi.scrapeCompetitorPrices(concorrente.url, 50);
+      const result = await firecrawlApi.scrapeCompetitorPrices(concorrente.url, 1000);
       const duracao = `${Math.round((Date.now() - startTime) / 1000)}s`;
       
       if (result.success && result.data) {
