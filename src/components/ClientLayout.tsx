@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { BarChart3, CheckSquare, Settings, Users, LogOut, Menu, X, ArrowLeft, Target, ClipboardList, DollarSign, Database, RefreshCw, Trophy } from "lucide-react";
+import { BarChart3, CheckSquare, Settings, Users, LogOut, Menu, X, ArrowLeft, Target, ClipboardList, DollarSign, Database, RefreshCw, Trophy, Store } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import andradeLogo from "@/assets/andrade-logo.png";
 
@@ -19,6 +19,7 @@ const navItems = [
 ];
 
 const adminItems = [
+  { path: "/admin/stores", label: "Lojas", icon: Store },
   { path: "/admin/metas", label: "Metas", icon: Target },
   { path: "/admin/questions", label: "Perguntas", icon: Settings },
   { path: "/admin/users", label: "Usuários", icon: Users },
