@@ -555,7 +555,10 @@ Deno.serve(async (req) => {
 
     const jobId = jobRow.id;
 
-    // Start Firecrawl crawl (async)
+    // Start Firecrawl crawl (async) with webhook
+    const webhookUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/firecrawl-webhook`;
+    console.log(`Webhook URL: ${webhookUrl}`);
+
     try {
       const crawlResp = await fetch('https://api.firecrawl.dev/v1/crawl', {
         method: 'POST',
@@ -563,6 +566,7 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           url: formattedUrl,
           limit: pageLimit,
+          webhook: webhookUrl,
           scrapeOptions: {
             formats: ['html', 'markdown'],
             waitFor: 3000,
