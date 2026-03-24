@@ -17,6 +17,7 @@ import Repricing from "./pages/Repricing";
 import VtexCollector from "./pages/VtexCollector";
 import WebSacSync from "./pages/WebSacSync";
 import PIC from "./pages/PIC";
+import AdminStores from "./pages/AdminStores";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
