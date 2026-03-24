@@ -14,7 +14,8 @@ import {
   XCircle, Clock, Store, Link2, Search, Download, Settings2, Eye
 } from "lucide-react";
 import ConcorrenteAnalise from "./ConcorrenteAnalise";
-import { firecrawlApi, type ScrapedProduct, type ScrapeJobStatus } from "@/lib/api/firecrawl";
+import { firecrawlApi, type ScrapedProduct } from "@/lib/api/firecrawl";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Concorrente {
   id: string;
@@ -43,7 +44,10 @@ interface ActiveJob {
   jobId: string;
   concorrenteId: string;
   startTime: number;
-  status: ScrapeJobStatus;
+  progressPct: number;
+  totalUrls: number;
+  pagesCrawled: number;
+  productsFound: number;
 }
 
 const mockConcorrentes: Concorrente[] = [
@@ -51,8 +55,6 @@ const mockConcorrentes: Concorrente[] = [
   { id: "2", nome: "Supermercado Extra", url: "https://www.clubeextra.com.br", plataforma: "vtex", status: "ativo", ultimaColeta: "2026-03-11 22:00", totalProdutos: 22, matchRate: 82 },
   { id: "3", nome: "Atacadão Online", url: "https://www.atacadao.com.br", plataforma: "vtex", status: "inativo", ultimaColeta: "2026-03-10 14:15", totalProdutos: 15, matchRate: 73 },
 ];
-
-const mockLogs: ColetaLog[] = [];
 
 const plataformaLabels: Record<string, string> = {
   vtex: "VTEX",
@@ -76,7 +78,7 @@ const logStatusBadge = (s: ColetaLog["status"]) => {
 
 const ConcorrentesTab = () => {
   const [concorrentes, setConcorrentes] = useState(mockConcorrentes);
-  const [logs, setLogs] = useState<ColetaLog[]>(mockLogs);
+  const [logs, setLogs] = useState<ColetaLog[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({ nome: "", url: "", plataforma: "vtex" as Concorrente["plataforma"] });
@@ -85,85 +87,92 @@ const ConcorrentesTab = () => {
   const [selectedConcorrente, setSelectedConcorrente] = useState<Concorrente | null>(null);
   const [lastScrapedProducts, setLastScrapedProducts] = useState<ScrapedProduct[]>([]);
   const [activeJob, setActiveJob] = useState<ActiveJob | null>(null);
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Polling for active background jobs
+  // Realtime subscription for scrape_jobs updates (webhook-driven)
   useEffect(() => {
-    if (!activeJob || activeJob.status.status === 'done' || activeJob.status.status === 'error') {
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
-        pollingRef.current = null;
-      }
-      return;
-    }
+    if (!activeJob) return;
 
-    pollingRef.current = setInterval(async () => {
-      try {
-        const result = await firecrawlApi.checkScrapeJob(activeJob.jobId);
-        if (!result.success || !result.job) return;
+    const channel = supabase
+      .channel(`scrape-job-${activeJob.jobId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'scrape_jobs',
+          filter: `id=eq.${activeJob.jobId}`,
+        },
+        (payload) => {
+          const row = payload.new as any;
+          console.log('Realtime update:', row.status, row.progress_pct, row.products_found);
 
-        const job = result.job;
-        setActiveJob(prev => prev ? { ...prev, status: job } : null);
+          setActiveJob(prev => prev ? {
+            ...prev,
+            progressPct: row.progress_pct || 0,
+            totalUrls: row.total_urls_found || 0,
+            pagesCrawled: row.pages_crawled || 0,
+            productsFound: row.products_found || 0,
+          } : null);
 
-        if (job.status === 'done') {
-          const duracao = `${Math.round((Date.now() - activeJob.startTime) / 1000)}s`;
-          const products = job.products || [];
-          setLastScrapedProducts(products);
+          if (row.status === 'done') {
+            const products = (row.products_json || []) as ScrapedProduct[];
+            setLastScrapedProducts(products);
+            const duracao = `${Math.round((Date.now() - (activeJob?.startTime || Date.now())) / 1000)}s`;
 
-          setConcorrentes(prev => prev.map(c => c.id === activeJob.concorrenteId ? {
-            ...c,
-            ultimaColeta: new Date().toLocaleString("pt-BR"),
-            status: "ativo" as const,
-            totalProdutos: job.products_found,
-            matchRate: job.products_found > 0 ? Math.min(95, Math.round(job.products_found * 0.05)) : 0,
-          } : c));
+            setConcorrentes(prev => prev.map(c => c.id === activeJob.concorrenteId ? {
+              ...c,
+              ultimaColeta: new Date().toLocaleString("pt-BR"),
+              status: "ativo" as const,
+              totalProdutos: row.products_found || 0,
+              matchRate: row.products_found > 0 ? Math.min(95, Math.round(row.products_found * 0.05)) : 0,
+            } : c));
 
-          setLogs(prev => [{
-            id: Date.now().toString(),
-            concorrenteId: activeJob.concorrenteId,
-            concorrenteNome: concorrentes.find(c => c.id === activeJob.concorrenteId)?.nome || '',
-            data: new Date().toLocaleString("pt-BR"),
-            status: "sucesso",
-            produtosColetados: job.products_found,
-            produtosMatchados: Math.round(job.products_found * 0.85),
-            duracao,
-          }, ...prev]);
+            const concNome = concorrentes.find(c => c.id === activeJob.concorrenteId)?.nome || '';
+            setLogs(prev => [{
+              id: Date.now().toString(),
+              concorrenteId: activeJob.concorrenteId,
+              concorrenteNome: concNome,
+              data: new Date().toLocaleString("pt-BR"),
+              status: "sucesso",
+              produtosColetados: row.products_found || 0,
+              produtosMatchados: Math.round((row.products_found || 0) * 0.85),
+              duracao,
+            }, ...prev]);
 
-          toast.success(`Coleta finalizada! ${job.products_found} produtos encontrados`);
-          setColetando(null);
+            toast.success(`Coleta finalizada! ${row.products_found} produtos encontrados`);
+            setColetando(null);
+            setActiveJob(null);
+          }
+
+          if (row.status === 'error') {
+            const duracao = `${Math.round((Date.now() - (activeJob?.startTime || Date.now())) / 1000)}s`;
+            setConcorrentes(prev => prev.map(c => c.id === activeJob.concorrenteId ? { ...c, status: "erro" as const } : c));
+
+            const concNome = concorrentes.find(c => c.id === activeJob.concorrenteId)?.nome || '';
+            setLogs(prev => [{
+              id: Date.now().toString(),
+              concorrenteId: activeJob.concorrenteId,
+              concorrenteNome: concNome,
+              data: new Date().toLocaleString("pt-BR"),
+              status: "erro",
+              produtosColetados: 0,
+              produtosMatchados: 0,
+              duracao,
+              erro: row.error_message || 'Erro desconhecido',
+            }, ...prev]);
+
+            toast.error(row.error_message || 'Erro na coleta');
+            setColetando(null);
+            setActiveJob(null);
+          }
         }
-
-        if (job.status === 'error') {
-          const duracao = `${Math.round((Date.now() - activeJob.startTime) / 1000)}s`;
-          setConcorrentes(prev => prev.map(c => c.id === activeJob.concorrenteId ? { ...c, status: "erro" as const } : c));
-
-          setLogs(prev => [{
-            id: Date.now().toString(),
-            concorrenteId: activeJob.concorrenteId,
-            concorrenteNome: concorrentes.find(c => c.id === activeJob.concorrenteId)?.nome || '',
-            data: new Date().toLocaleString("pt-BR"),
-            status: "erro",
-            produtosColetados: 0,
-            produtosMatchados: 0,
-            duracao,
-            erro: job.error_message || 'Erro desconhecido',
-          }, ...prev]);
-
-          toast.error(job.error_message || 'Erro na coleta');
-          setColetando(null);
-        }
-      } catch (err) {
-        console.error('Polling error:', err);
-      }
-    }, 5000);
+      )
+      .subscribe();
 
     return () => {
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
-        pollingRef.current = null;
-      }
+      supabase.removeChannel(channel);
     };
-  }, [activeJob?.jobId, activeJob?.status.status]);
+  }, [activeJob?.jobId]);
 
   const openNew = () => { setEditId(null); setForm({ nome: "", url: "", plataforma: "vtex" }); setShowModal(true); };
   const openEdit = (c: Concorrente) => { setEditId(c.id); setForm({ nome: c.nome, url: c.url, plataforma: c.plataforma }); setShowModal(true); };
@@ -198,26 +207,22 @@ const ConcorrentesTab = () => {
       const result = await firecrawlApi.scrapeCompetitorPrices(concorrente.url, 5000, concorrente.nome);
 
       if (result.success && result.async && result.jobId) {
-        // Background job started - set up polling
+        // Background job - realtime will handle updates
         setActiveJob({
           jobId: result.jobId,
           concorrenteId: id,
           startTime,
-          status: {
-            id: result.jobId,
-            status: 'crawling',
-            progress_pct: 5,
-            total_urls_found: 0,
-            pages_crawled: 0,
-            products_found: 0,
-          },
+          progressPct: 5,
+          totalUrls: 0,
+          pagesCrawled: 0,
+          productsFound: 0,
         });
-        toast.info("Coleta em background iniciada. Acompanhe o progresso abaixo.");
-        return; // Don't clear coletando - polling will do it
+        toast.info("Coleta em background iniciada. O progresso será atualizado automaticamente via webhook.");
+        return;
       }
 
       if (result.success && result.data) {
-        // Synchronous result (VTEX)
+        // Synchronous (VTEX)
         const { products, totalFound } = result.data;
         setLastScrapedProducts(products);
         const duracao = `${Math.round((Date.now() - startTime) / 1000)}s`;
@@ -240,21 +245,9 @@ const ConcorrentesTab = () => {
           produtosMatchados: Math.round(totalFound * 0.85),
           duracao,
         }, ...prev]);
-        toast.success(`Coleta finalizada! ${totalFound} produtos encontrados em ${concorrente.nome}`);
+        toast.success(`Coleta finalizada! ${totalFound} produtos em ${concorrente.nome}`);
       } else {
         setConcorrentes(prev => prev.map(c => c.id === id ? { ...c, status: "erro" as const } : c));
-        const duracao = `${Math.round((Date.now() - startTime) / 1000)}s`;
-        setLogs(prev => [{
-          id: Date.now().toString(),
-          concorrenteId: id,
-          concorrenteNome: concorrente.nome,
-          data: new Date().toLocaleString("pt-BR"),
-          status: "erro",
-          produtosColetados: 0,
-          produtosMatchados: 0,
-          duracao,
-          erro: result.error || "Erro desconhecido",
-        }, ...prev]);
         toast.error(result.error || "Erro na coleta");
       }
     } catch (err) {
@@ -306,7 +299,7 @@ const ConcorrentesTab = () => {
   return (
     <div className="space-y-5">
       {/* Active Job Progress */}
-      {activeJob && activeJob.status.status !== 'done' && activeJob.status.status !== 'error' && (
+      {activeJob && (
         <Card className="border-primary/30 bg-primary/5">
           <CardContent className="p-4 space-y-3">
             <div className="flex items-center justify-between">
@@ -317,13 +310,14 @@ const ConcorrentesTab = () => {
                 </span>
               </div>
               <Badge variant="outline" className="bg-amber-500/10 text-amber-700 border-amber-500/20">
-                {activeJob.status.progress_pct}%
+                {activeJob.progressPct}%
               </Badge>
             </div>
-            <Progress value={activeJob.status.progress_pct} className="h-2" />
+            <Progress value={activeJob.progressPct} className="h-2" />
             <div className="flex gap-4 text-xs text-muted-foreground">
-              <span>URLs encontradas: <strong className="text-foreground">{activeJob.status.total_urls_found}</strong></span>
-              <span>Páginas processadas: <strong className="text-foreground">{activeJob.status.pages_crawled}</strong></span>
+              <span>URLs encontradas: <strong className="text-foreground">{activeJob.totalUrls}</strong></span>
+              <span>Páginas processadas: <strong className="text-foreground">{activeJob.pagesCrawled}</strong></span>
+              <span>Produtos: <strong className="text-foreground">{activeJob.productsFound}</strong></span>
               <span>Tempo: <strong className="text-foreground">{Math.round((Date.now() - activeJob.startTime) / 1000)}s</strong></span>
             </div>
           </CardContent>
@@ -473,7 +467,7 @@ const ConcorrentesTab = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {[
               { name: "VTEX", desc: "Coleta via API de catálogo VTEX. Suporta busca por categoria, listagem completa e preços." },
-              { name: "Web Crawl (Firecrawl)", desc: "Para sites não-VTEX: crawl completo em background com renderização JavaScript. Coleta todas as páginas do site." },
+              { name: "Web Crawl (Firecrawl)", desc: "Para sites não-VTEX: crawl completo em background com renderização JavaScript e webhook automático." },
               { name: "WooCommerce", desc: "Integração via REST API do WooCommerce. Requer credenciais de API do site." },
               { name: "Magento", desc: "Coleta via REST API do Magento 2. Suporta catálogo completo com variações." },
               { name: "Shopify", desc: "Integração via Storefront API do Shopify. Coleta preços e disponibilidade." },
