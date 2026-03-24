@@ -111,7 +111,7 @@ const ConcorrentesTab = () => {
     
     setColetando(id);
     const startTime = Date.now();
-    toast.info(`Iniciando coleta completa de ${concorrente.nome}... Isso pode levar alguns minutos.`);
+        toast.info(`Iniciando coleta completa de ${concorrente.nome}... se o catálogo não estiver acessível por método completo, a coleta será interrompida para não gastar créditos.`);
 
     try {
       const result = await firecrawlApi.scrapeCompetitorPrices(concorrente.url, 1000);
@@ -155,7 +155,7 @@ const ConcorrentesTab = () => {
           erro: result.error || "Erro desconhecido",
         };
         setLogs(prev => [newLog, ...prev]);
-        toast.error(`Erro na coleta: ${result.error}`);
+        toast.error(result.error || "Coleta interrompida para evitar consumo desnecessário de créditos.");
       }
     } catch (err) {
       const duracao = `${Math.round((Date.now() - startTime) / 1000)}s`;
