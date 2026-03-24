@@ -19,6 +19,12 @@ interface ScrapedProduct {
   sourceUrl: string;
 }
 
+interface VipCommerceResult {
+  products: ScrapedProduct[];
+  categoryCount: number;
+  reason?: string;
+}
+
 function parseLocalizedNumber(value: string): number {
   if (!value || value === "") return 0;
   let str = String(value).trim().replace(/[R$\s]/g, "");
@@ -62,19 +68,24 @@ async function detectPlatform(baseUrl: string): Promise<'vtex' | 'vipcommerce' |
 }
 
 // ========== VIPCOMMERCE STRATEGY ==========
-async function tryVipCommerceApi(baseUrl: string): Promise<ScrapedProduct[]> {
+async function tryVipCommerceApi(baseUrl: string): Promise<VipCommerceResult> {
   const products: ScrapedProduct[] = [];
   const seenNames = new Set<string>();
   const domain = baseUrl.replace(/^https?:\/\/(www\.)?/, '').replace(/\/.*/, '');
+  let categoryCount = 0;
 
   try {
     // Step 1: Get org/filial info
     const filialResp = await fetch(`https://services.vipcommerce.com.br/organizacoes/filiais/dominio/${domain}`, {
       headers: { 'Accept': 'application/json' },
     });
-    if (!filialResp.ok) return products;
+    if (!filialResp.ok) {
+      return { products, categoryCount, reason: 'VIPCommerce não retornou dados da filial.' };
+    }
     const filialData = await filialResp.json();
-    if (!filialData.success) return products;
+    if (!filialData.success) {
+      return { products, categoryCount, reason: 'VIPCommerce não confirmou a filial da loja.' };
+    }
 
     const orgId = filialData.data.organizacao.id;
     const filialId = filialData.data.id;
@@ -162,7 +173,15 @@ async function tryVipCommerceApi(baseUrl: string): Promise<ScrapedProduct[]> {
         }
       }
     } catch (_) {}
+    categoryCount = categoryIds.length;
     console.log(`VIPCommerce: found ${categoryIds.length} categories`);
+    if (categoryIds.length === 0) {
+      return {
+        products,
+        categoryCount,
+        reason: 'A árvore de categorias do VIPCommerce não está acessível pela API pública desta loja.',
+      };
+    }
 
     // Step 5: Get products per category
     for (const cat of categoryIds) {
@@ -258,9 +277,14 @@ async function tryVipCommerceApi(baseUrl: string): Promise<ScrapedProduct[]> {
     console.log(`VIPCommerce total: ${products.length} products`);
   } catch (e) {
     console.warn('VIPCommerce API error:', e);
+    return {
+      products,
+      categoryCount,
+      reason: e instanceof Error ? e.message : 'Erro desconhecido ao consultar a API VIPCommerce.',
+    };
   }
 
-  return products;
+  return { products, categoryCount };
 }
 
 // ========== VTEX STRATEGIES ==========
@@ -706,13 +730,25 @@ Deno.serve(async (req) => {
     if (platform === 'vipcommerce') {
       // ===== VIPCOMMERCE STRATEGY =====
       console.log('Using VIPCommerce strategy...');
-      const vcProducts = await tryVipCommerceApi(formattedUrl);
-      if (vcProducts.length > 0) {
-        strategies.push(`VIPCommerce API: ${vcProducts.length}`);
-        for (const p of vcProducts) {
+      const vipResult = await tryVipCommerceApi(formattedUrl);
+      if (vipResult.products.length > 0) {
+        strategies.push(`VIPCommerce API: ${vipResult.products.length}`);
+        for (const p of vipResult.products) {
           seenNames.add(p.name.toLowerCase());
           allProducts.push(p);
         }
+      } else {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: vipResult.reason || 'Não foi possível acessar o catálogo completo do VIPCommerce.',
+            details: 'Interrompi o fallback automático para não consumir créditos do Firecrawl com uma coleta parcial deste concorrente.',
+          }),
+          {
+            status: 422,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          }
+        );
       }
     } else if (platform === 'vtex') {
       // ===== VTEX STRATEGIES =====
@@ -739,7 +775,7 @@ Deno.serve(async (req) => {
     }
 
     // ===== FIRECRAWL FALLBACK (always try if we have fewer than 200 products) =====
-    if (allProducts.length < 200) {
+    if (platform !== 'vipcommerce' && allProducts.length < 200) {
       console.log('Firecrawl full scrape...');
       const { products: fcProducts, pagesScraped: fcPages } = await tryFirecrawlFullScrape(formattedUrl, apiKey, pageLimit, seenNames);
       pagesScraped = fcPages;
