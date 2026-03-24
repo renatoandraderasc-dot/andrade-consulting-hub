@@ -19,12 +19,6 @@ interface ScrapedProduct {
   sourceUrl: string;
 }
 
-interface VipCommerceResult {
-  products: ScrapedProduct[];
-  categoryCount: number;
-  reason?: string;
-}
-
 function parseLocalizedNumber(value: string): number {
   if (!value || value === "") return 0;
   let str = String(value).trim().replace(/[R$\s]/g, "");
@@ -41,7 +35,6 @@ function parseLocalizedNumber(value: string): number {
 
 // ========== DETECT PLATFORM ==========
 async function detectPlatform(baseUrl: string): Promise<'vtex' | 'vipcommerce' | 'unknown'> {
-  // Check VTEX
   try {
     const resp = await fetch(`${baseUrl}/api/catalog_system/pub/products/search/?_from=0&_to=0`, {
       headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0' },
@@ -52,7 +45,6 @@ async function detectPlatform(baseUrl: string): Promise<'vtex' | 'vipcommerce' |
     }
   } catch (_) {}
 
-  // Check VIPCommerce
   try {
     const domain = baseUrl.replace(/^https?:\/\/(www\.)?/, '').replace(/\/.*/, '');
     const resp = await fetch(`https://services.vipcommerce.com.br/organizacoes/filiais/dominio/${domain}`, {
@@ -65,226 +57,6 @@ async function detectPlatform(baseUrl: string): Promise<'vtex' | 'vipcommerce' |
   } catch (_) {}
 
   return 'unknown';
-}
-
-// ========== VIPCOMMERCE STRATEGY ==========
-async function tryVipCommerceApi(baseUrl: string): Promise<VipCommerceResult> {
-  const products: ScrapedProduct[] = [];
-  const seenNames = new Set<string>();
-  const domain = baseUrl.replace(/^https?:\/\/(www\.)?/, '').replace(/\/.*/, '');
-  let categoryCount = 0;
-
-  try {
-    // Step 1: Get org/filial info
-    const filialResp = await fetch(`https://services.vipcommerce.com.br/organizacoes/filiais/dominio/${domain}`, {
-      headers: { 'Accept': 'application/json' },
-    });
-    if (!filialResp.ok) {
-      return { products, categoryCount, reason: 'VIPCommerce não retornou dados da filial.' };
-    }
-    const filialData = await filialResp.json();
-    if (!filialData.success) {
-      return { products, categoryCount, reason: 'VIPCommerce não confirmou a filial da loja.' };
-    }
-
-    const orgId = filialData.data.organizacao.id;
-    const filialId = filialData.data.id;
-    const orgLabel = filialData.data.organizacao.label;
-    console.log(`VIPCommerce: org=${orgId}, filial=${filialId}, label=${orgLabel}`);
-
-    // Step 2: Get anonymous store token
-    const headers: Record<string, string> = {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-      'OrganizationId': String(orgId),
-      'DomainKey': domain,
-      'Origin': baseUrl,
-      'Referer': `${baseUrl}/`,
-    };
-
-    // Try getting token - the app uses specific store credentials
-    // We'll try common patterns and also try without auth
-    let token = '';
-    
-    // Try login with label as username
-    const loginPatterns = [
-      { username: orgLabel, key: orgLabel },
-      { username: domain, key: domain },
-      { username: `${orgLabel}-loja`, key: `${orgLabel}-loja` },
-      { username: 'loja', key: orgLabel },
-    ];
-    
-    for (const creds of loginPatterns) {
-      try {
-        const loginResp = await fetch(`https://services.vipcommerce.com.br/api-admin/v1/org/${orgId}/auth/loja/login`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(creds),
-        });
-        if (loginResp.ok) {
-          const loginData = await loginResp.json();
-          if (loginData.success && loginData.data?.token) {
-            token = loginData.data.token;
-            console.log(`VIPCommerce: got token with pattern ${creds.username}`);
-            break;
-          }
-        }
-      } catch (_) {}
-    }
-
-    // Step 3: Get distribution centers
-    const authHeaders = { ...headers };
-    if (token) authHeaders['Authorization'] = `Bearer ${token}`;
-
-    let cdId = 1;
-    try {
-      const cdResp = await fetch(
-        `https://services.vipcommerce.com.br/api-admin/v1/org/${orgId}/loja/centros_distribuicao`,
-        { headers: authHeaders }
-      );
-      if (cdResp.ok) {
-        const cdData = await cdResp.json();
-        if (cdData.success && cdData.data?.[0]?.id) {
-          cdId = cdData.data[0].id;
-        }
-      }
-    } catch (_) {}
-
-    // Step 4: Get category tree
-    const categoryIds: { id: number; name: string }[] = [];
-    try {
-      const catResp = await fetch(
-        `https://services.vipcommerce.com.br/api-admin/v1/org/${orgId}/filial/${filialId}/centro_distribuicao/${cdId}/classificacoes-mercadologicas/arvore`,
-        { headers: authHeaders }
-      );
-      if (catResp.ok) {
-        const catData = await catResp.json();
-        if (catData.success) {
-          function extractCats(cats: any[], parentName = '') {
-            for (const cat of cats) {
-              const name = parentName ? `${parentName} > ${cat.descricao}` : cat.descricao;
-              if (cat.classificacao_mercadologica_id) {
-                categoryIds.push({ id: cat.classificacao_mercadologica_id, name });
-              }
-              if (cat.children?.length) extractCats(cat.children, name);
-            }
-          }
-          extractCats(catData.data || []);
-        }
-      }
-    } catch (_) {}
-    categoryCount = categoryIds.length;
-    console.log(`VIPCommerce: found ${categoryIds.length} categories`);
-    if (categoryIds.length === 0) {
-      return {
-        products,
-        categoryCount,
-        reason: 'A árvore de categorias do VIPCommerce não está acessível pela API pública desta loja.',
-      };
-    }
-
-    // Step 5: Get products per category
-    for (const cat of categoryIds) {
-      let page = 1;
-      let hasMore = true;
-      while (hasMore && page <= 100) {
-        try {
-          const prodResp = await fetch(
-            `https://services.vipcommerce.com.br/api-admin/v1/org/${orgId}/filial/${filialId}/centro_distribuicao/${cdId}/produto?classificacao_mercadologica_id=${cat.id}&page=${page}&limit=50&disponivel=true`,
-            { headers: authHeaders }
-          );
-          if (!prodResp.ok) { hasMore = false; break; }
-          const prodData = await prodResp.json();
-          if (!prodData.success || !prodData.data?.length) { hasMore = false; break; }
-
-          for (const item of prodData.data) {
-            const name = item.descricao || item.nome || '';
-            if (!name || seenNames.has(name.toLowerCase())) continue;
-            seenNames.add(name.toLowerCase());
-
-            const price = item.preco || item.preco_venda || 0;
-            const originalPrice = item.preco_antigo || item.preco_lista || null;
-            if (price <= 0) continue;
-
-            products.push({
-              name,
-              price,
-              originalPrice: originalPrice && originalPrice > price ? originalPrice : null,
-              isPromotion: !!(originalPrice && originalPrice > price),
-              category: cat.name,
-              brand: item.marca?.descricao || item.marca || null,
-              unit: item.unidade || item.embalagem || null,
-              barcode: item.ean || item.codigo_barras || null,
-              sku: item.produto_id?.toString() || item.id?.toString() || null,
-              imageUrl: item.imagem || item.imagem_url || null,
-              sourceUrl: `${baseUrl}/produto/${item.produto_id || item.id}/${(name || '').toLowerCase().replace(/\s+/g, '-')}`,
-            });
-          }
-
-          hasMore = prodData.data.length >= 50;
-          page++;
-        } catch (_) { hasMore = false; }
-      }
-    }
-
-    // Step 6: Also try search-based extraction (vowel search trick)
-    if (products.length < 500) {
-      const searchTerms = ['a', 'e', 'i', 'o', 'u', 'arroz', 'leite', 'cafe', 'oleo', 'acucar', 'feijao', 'cerveja', 'refrigerante', 'sabonete', 'detergente', 'papel', 'carne', 'frango', 'queijo', 'presunto'];
-      for (const term of searchTerms) {
-        let page = 1;
-        let hasMore = true;
-        while (hasMore && page <= 50) {
-          try {
-            const searchResp = await fetch(
-              `https://services.vipcommerce.com.br/api-admin/v1/org/${orgId}/filial/${filialId}/centro_distribuicao/${cdId}/busca?termo=${encodeURIComponent(term)}&page=${page}&limit=50`,
-              { headers: authHeaders }
-            );
-            if (!searchResp.ok) { hasMore = false; break; }
-            const searchData = await searchResp.json();
-            const items = searchData.data?.produtos || searchData.data || [];
-            if (!Array.isArray(items) || items.length === 0) { hasMore = false; break; }
-
-            for (const item of items) {
-              const name = item.descricao || item.nome || '';
-              if (!name || seenNames.has(name.toLowerCase())) continue;
-              seenNames.add(name.toLowerCase());
-
-              const price = item.preco || item.preco_venda || 0;
-              const originalPrice = item.preco_antigo || null;
-              if (price <= 0) continue;
-
-              products.push({
-                name, price,
-                originalPrice: originalPrice && originalPrice > price ? originalPrice : null,
-                isPromotion: !!(originalPrice && originalPrice > price),
-                category: item.departamento || item.classificacao || null,
-                brand: item.marca?.descricao || item.marca || null,
-                unit: item.unidade || null,
-                barcode: item.ean || null,
-                sku: item.produto_id?.toString() || null,
-                imageUrl: item.imagem || null,
-                sourceUrl: `${baseUrl}/produto/${item.produto_id || item.id}/${(name || '').toLowerCase().replace(/\s+/g, '-')}`,
-              });
-            }
-            hasMore = items.length >= 50;
-            page++;
-          } catch (_) { hasMore = false; }
-        }
-        console.log(`VIPCommerce search "${term}": ${products.length} total products`);
-      }
-    }
-
-    console.log(`VIPCommerce total: ${products.length} products`);
-  } catch (e) {
-    console.warn('VIPCommerce API error:', e);
-    return {
-      products,
-      categoryCount,
-      reason: e instanceof Error ? e.message : 'Erro desconhecido ao consultar a API VIPCommerce.',
-    };
-  }
-
-  return { products, categoryCount };
 }
 
 // ========== VTEX STRATEGIES ==========
@@ -434,142 +206,9 @@ async function tryVtexBrandSearch(baseUrl: string, existing: Set<string>): Promi
   return products;
 }
 
-// ========== FIRECRAWL STRATEGIES ==========
-async function tryFirecrawlFullScrape(baseUrl: string, apiKey: string, maxPages: number, existing: Set<string>): Promise<{ products: ScrapedProduct[], pagesScraped: number }> {
-  const products: ScrapedProduct[] = [];
-  const seenNames = new Set(existing);
-  let pagesScraped = 0;
-
-  // Step 1: Map site URLs
-  const productUrls: string[] = [];
-  
-  // Try sitemap
-  for (const path of ['/sitemap.xml', '/sitemap_products.xml', '/sitemap/products.xml']) {
-    try {
-      const resp = await fetch(`${baseUrl}${path}`, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-      if (!resp.ok) continue;
-      const text = await resp.text();
-      const urlMatches = text.match(/<loc>([^<]+)<\/loc>/gi) || [];
-      for (const m of urlMatches) {
-        const url = m.replace(/<\/?loc>/gi, '').trim();
-        if (/\/produto\/|\/p\/|\/product\//i.test(url)) productUrls.push(url);
-        if (/sitemap.*\.xml/i.test(url)) {
-          try {
-            const subResp = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-            if (subResp.ok) {
-              const subText = await subResp.text();
-              const subUrls = subText.match(/<loc>([^<]+)<\/loc>/gi) || [];
-              for (const sm of subUrls) {
-                const subUrl = sm.replace(/<\/?loc>/gi, '').trim();
-                if (/\/produto\/|\/p\/|\/product\//i.test(subUrl)) productUrls.push(subUrl);
-              }
-            }
-          } catch (_) {}
-        }
-      }
-      if (productUrls.length > 0) break;
-    } catch (_) {}
-  }
-
-  // Firecrawl Map
-  try {
-    const mapResponse = await fetch('https://api.firecrawl.dev/v1/map', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: baseUrl, limit: 5000, includeSubdomains: false }),
-    });
-    if (mapResponse.ok) {
-      const mapData = await mapResponse.json();
-      const mapLinks: string[] = mapData.links || [];
-      console.log(`Firecrawl Map found ${mapLinks.length} URLs`);
-      for (const link of mapLinks) {
-        if (/\/produto\/|\/p\/|\/product\/|\/item\//i.test(link) && !productUrls.includes(link)) {
-          productUrls.push(link);
-        }
-      }
-    }
-  } catch (_) {}
-
-  // Step 2: Also scrape category/listing pages with Firecrawl (rendered JS)
-  const listingUrls: string[] = [baseUrl];
-  const departmentPatterns = ['/departamentos/', '/departamento/', '/categoria/', '/c/', '/ofertas/', '/promocoes/'];
-  try {
-    const mapResponse = await fetch('https://api.firecrawl.dev/v1/map', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: baseUrl, limit: 5000, includeSubdomains: false }),
-    });
-    if (mapResponse.ok) {
-      const mapData = await mapResponse.json();
-      for (const link of (mapData.links || [])) {
-        if (departmentPatterns.some(p => link.toLowerCase().includes(p)) && !listingUrls.includes(link)) {
-          listingUrls.push(link);
-        }
-      }
-    }
-  } catch (_) {}
-
-  console.log(`Firecrawl: ${productUrls.length} product URLs, ${listingUrls.length} listing URLs`);
-
-  // Step 3: Scrape listing pages first (each can have many products)
-  for (const url of listingUrls.slice(0, 50)) {
-    const pageProducts = await scrapePageWithFirecrawl(url, apiKey);
-    pagesScraped++;
-    for (const p of pageProducts) {
-      if (!seenNames.has(p.name.toLowerCase())) {
-        seenNames.add(p.name.toLowerCase());
-        products.push(p);
-      }
-    }
-  }
-  console.log(`After listing pages: ${products.length} products`);
-
-  // Step 4: Scrape individual product pages
-  const uniqueUrls = [...new Set(productUrls)].slice(0, maxPages);
-  const batchSize = 10;
-  for (let i = 0; i < uniqueUrls.length; i += batchSize) {
-    const batch = uniqueUrls.slice(i, i + batchSize);
-    const results = await Promise.all(batch.map(url => scrapePageWithFirecrawl(url, apiKey)));
-    for (const pageProducts of results) {
-      pagesScraped++;
-      for (const p of pageProducts) {
-        if (!seenNames.has(p.name.toLowerCase())) {
-          seenNames.add(p.name.toLowerCase());
-          products.push(p);
-        }
-      }
-    }
-    console.log(`Scraped batch ${Math.floor(i/batchSize)+1}: ${products.length} total products`);
-  }
-
-  return { products, pagesScraped };
-}
-
-async function scrapePageWithFirecrawl(url: string, apiKey: string): Promise<ScrapedProduct[]> {
-  try {
-    const response = await fetch('https://api.firecrawl.dev/v1/scrape', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, formats: ['markdown', 'html'], waitFor: 5000, onlyMainContent: false }),
-    });
-    if (!response.ok) return [];
-    const data = await response.json();
-    const html = data.data?.html || data.html || '';
-    const markdown = data.data?.markdown || data.markdown || '';
-    let products = extractProductsFromHtml(html, url);
-    if (products.length < 2 && markdown) {
-      const mdProducts = extractProductsFromMarkdown(markdown, url);
-      for (const mp of mdProducts) {
-        if (!products.some(p => p.name.toLowerCase() === mp.name.toLowerCase())) products.push(mp);
-      }
-    }
-    return products;
-  } catch (_) { return []; }
-}
-
+// ========== PRODUCT EXTRACTION FROM HTML/MARKDOWN ==========
 function extractProductsFromHtml(html: string, sourceUrl: string): ScrapedProduct[] {
   const products: ScrapedProduct[] = [];
-  // JSON-LD
   const jsonLdPattern = /<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi;
   let jsonLdMatch;
   while ((jsonLdMatch = jsonLdPattern.exec(html)) !== null) {
@@ -594,31 +233,6 @@ function extractProductsFromHtml(html: string, sourceUrl: string): ScrapedProduc
             unit: null, barcode: item.gtin13 || item.gtin || null, sku: item.sku || item.productID || null,
             imageUrl: Array.isArray(item.image) ? item.image[0] : item.image || null, sourceUrl,
           });
-        }
-      }
-    } catch (_) {}
-  }
-  // VTEX __STATE__
-  const vtexStatePattern = /window\.__STATE__\s*=\s*(\{[\s\S]*?\});?\s*<\/script>/;
-  const stateMatch = html.match(vtexStatePattern);
-  if (stateMatch) {
-    try {
-      const state = JSON.parse(stateMatch[1]);
-      for (const key of Object.keys(state)) {
-        const val = state[key];
-        if (val?.productName && val?.priceRange) {
-          const sellingPrice = val.priceRange?.sellingPrice?.lowPrice || 0;
-          const listPrice = val.priceRange?.listPrice?.lowPrice || 0;
-          if (sellingPrice > 0) {
-            const isPromo = listPrice > sellingPrice;
-            products.push({
-              name: val.productName, price: sellingPrice,
-              originalPrice: isPromo ? listPrice : null, isPromotion: isPromo,
-              category: val.categoryTree?.map((c: any) => c.name).join(' > ') || null,
-              brand: val.brand || null, unit: null, barcode: val.items?.[0]?.ean || null,
-              sku: val.items?.[0]?.itemId || null, imageUrl: val.items?.[0]?.images?.[0]?.imageUrl || null, sourceUrl,
-            });
-          }
         }
       }
     } catch (_) {}
@@ -689,69 +303,195 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
-    const supabaseAuth = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
-
-    const { url, maxPages } = await req.json();
-    if (!url) {
-      return new Response(JSON.stringify({ success: false, error: 'URL é obrigatória' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-    }
+    const body = await req.json();
+    const { action } = body;
 
     const apiKey = Deno.env.get('FIRECRAWL_API_KEY');
     if (!apiKey) {
       return new Response(JSON.stringify({ success: false, error: 'Firecrawl não está configurado.' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    );
+
+    // ===== ACTION: CHECK JOB STATUS =====
+    if (action === 'check') {
+      const { jobId } = body;
+      if (!jobId) {
+        return new Response(JSON.stringify({ success: false, error: 'jobId é obrigatório' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      const { data: job, error: jobError } = await supabaseAdmin
+        .from('scrape_jobs')
+        .select('*')
+        .eq('id', jobId)
+        .single();
+
+      if (jobError || !job) {
+        return new Response(JSON.stringify({ success: false, error: 'Job não encontrado' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      // If already done or error, return cached result
+      if (job.status === 'done' || job.status === 'error') {
+        return new Response(JSON.stringify({
+          success: true,
+          job: {
+            id: job.id,
+            status: job.status,
+            progress_pct: job.progress_pct,
+            total_urls_found: job.total_urls_found,
+            pages_crawled: job.pages_crawled,
+            products_found: job.products_found,
+            error_message: job.error_message,
+            products: job.status === 'done' ? job.products_json : null,
+          }
+        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      // Check Firecrawl crawl status
+      if (!job.firecrawl_crawl_id) {
+        return new Response(JSON.stringify({
+          success: true,
+          job: { id: job.id, status: job.status, progress_pct: 5, total_urls_found: 0, pages_crawled: 0, products_found: 0 }
+        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      const crawlStatusResp = await fetch(`https://api.firecrawl.dev/v1/crawl/${job.firecrawl_crawl_id}`, {
+        headers: { 'Authorization': `Bearer ${apiKey}` },
+      });
+
+      if (!crawlStatusResp.ok) {
+        const errText = await crawlStatusResp.text();
+        console.error('Firecrawl crawl status error:', errText);
+        return new Response(JSON.stringify({
+          success: true,
+          job: { id: job.id, status: 'crawling', progress_pct: job.progress_pct, total_urls_found: job.total_urls_found, pages_crawled: job.pages_crawled, products_found: job.products_found }
+        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      const crawlStatus = await crawlStatusResp.json();
+      console.log(`Crawl status: ${crawlStatus.status}, completed: ${crawlStatus.completed}/${crawlStatus.total}`);
+
+      const completed = crawlStatus.completed || 0;
+      const total = crawlStatus.total || 1;
+      const progressPct = Math.min(95, Math.round((completed / total) * 100));
+
+      if (crawlStatus.status === 'completed') {
+        // Extract products from all crawled pages
+        const allProducts: ScrapedProduct[] = [];
+        const seenNames = new Set<string>();
+        const pages = crawlStatus.data || [];
+
+        for (const page of pages) {
+          const html = page.html || '';
+          const markdown = page.markdown || '';
+          const pageUrl = page.metadata?.sourceURL || job.competitor_url;
+
+          const htmlProducts = extractProductsFromHtml(html, pageUrl);
+          for (const p of htmlProducts) {
+            if (!seenNames.has(p.name.toLowerCase())) {
+              seenNames.add(p.name.toLowerCase());
+              allProducts.push(p);
+            }
+          }
+
+          if (markdown) {
+            const mdProducts = extractProductsFromMarkdown(markdown, pageUrl);
+            for (const p of mdProducts) {
+              if (!seenNames.has(p.name.toLowerCase())) {
+                seenNames.add(p.name.toLowerCase());
+                allProducts.push(p);
+              }
+            }
+          }
+        }
+
+        allProducts.sort((a, b) => {
+          const catA = a.category || 'zzz';
+          const catB = b.category || 'zzz';
+          if (catA !== catB) return catA.localeCompare(catB);
+          return a.name.localeCompare(b.name);
+        });
+
+        // Update job as done
+        await supabaseAdmin.from('scrape_jobs').update({
+          status: 'done',
+          progress_pct: 100,
+          pages_crawled: completed,
+          products_found: allProducts.length,
+          products_json: allProducts,
+          updated_at: new Date().toISOString(),
+        }).eq('id', jobId);
+
+        return new Response(JSON.stringify({
+          success: true,
+          job: {
+            id: job.id,
+            status: 'done',
+            progress_pct: 100,
+            total_urls_found: total,
+            pages_crawled: completed,
+            products_found: allProducts.length,
+            products: allProducts,
+          }
+        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      if (crawlStatus.status === 'failed' || crawlStatus.status === 'cancelled') {
+        await supabaseAdmin.from('scrape_jobs').update({
+          status: 'error',
+          error_message: `Crawl ${crawlStatus.status}`,
+          progress_pct: progressPct,
+          pages_crawled: completed,
+          updated_at: new Date().toISOString(),
+        }).eq('id', jobId);
+
+        return new Response(JSON.stringify({
+          success: true,
+          job: { id: job.id, status: 'error', progress_pct: progressPct, error_message: `Crawl ${crawlStatus.status}`, pages_crawled: completed, products_found: 0 }
+        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      // Still in progress
+      await supabaseAdmin.from('scrape_jobs').update({
+        status: 'crawling',
+        progress_pct: progressPct,
+        total_urls_found: total,
+        pages_crawled: completed,
+        updated_at: new Date().toISOString(),
+      }).eq('id', jobId);
+
+      return new Response(JSON.stringify({
+        success: true,
+        job: { id: job.id, status: 'crawling', progress_pct: progressPct, total_urls_found: total, pages_crawled: completed, products_found: 0 }
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // ===== ACTION: START (default) =====
+    const { url, maxPages, competitorName } = body;
+    if (!url) {
+      return new Response(JSON.stringify({ success: false, error: 'URL é obrigatória' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     let formattedUrl = url.trim();
     if (!formattedUrl.startsWith('http://') && !formattedUrl.startsWith('https://')) formattedUrl = `https://${formattedUrl}`;
     formattedUrl = formattedUrl.replace(/\/+$/, '');
 
-    const pageLimit = Math.min(maxPages || 500, 1000);
-    let allProducts: ScrapedProduct[] = [];
-    let pagesScraped = 0;
-    const seenNames = new Set<string>();
-    const strategies: string[] = [];
+    const pageLimit = Math.min(maxPages || 5000, 5000);
 
-    // ===== DETECT PLATFORM =====
+    // Detect platform
     console.log('Detecting platform...');
     const platform = await detectPlatform(formattedUrl);
     console.log(`Platform detected: ${platform}`);
 
-    if (platform === 'vipcommerce') {
-      // ===== VIPCOMMERCE STRATEGY =====
-      console.log('Using VIPCommerce strategy...');
-      const vipResult = await tryVipCommerceApi(formattedUrl);
-      if (vipResult.products.length > 0) {
-        strategies.push(`VIPCommerce API: ${vipResult.products.length}`);
-        for (const p of vipResult.products) {
-          seenNames.add(p.name.toLowerCase());
-          allProducts.push(p);
-        }
-      } else {
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error: vipResult.reason || 'Não foi possível acessar o catálogo completo do VIPCommerce.',
-            details: 'Interrompi o fallback automático para não consumir créditos do Firecrawl com uma coleta parcial deste concorrente.',
-          }),
-          {
-            status: 422,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          }
-        );
-      }
-    } else if (platform === 'vtex') {
-      // ===== VTEX STRATEGIES =====
+    // ===== VTEX: synchronous (works well) =====
+    if (platform === 'vtex') {
+      const allProducts: ScrapedProduct[] = [];
+      const seenNames = new Set<string>();
+      const strategies: string[] = [];
+
       console.log('Strategy 1: VTEX Search API...');
       const vtexProducts = await tryVtexApi(formattedUrl);
       if (vtexProducts.length > 0) {
@@ -772,46 +512,107 @@ Deno.serve(async (req) => {
         strategies.push(`Brands: +${brandProducts.length}`);
         for (const p of brandProducts) { seenNames.add(p.name.toLowerCase()); allProducts.push(p); }
       }
-    }
 
-    // ===== FIRECRAWL FALLBACK (always try if we have fewer than 200 products) =====
-    if (platform !== 'vipcommerce' && allProducts.length < 200) {
-      console.log('Firecrawl full scrape...');
-      const { products: fcProducts, pagesScraped: fcPages } = await tryFirecrawlFullScrape(formattedUrl, apiKey, pageLimit, seenNames);
-      pagesScraped = fcPages;
-      if (fcProducts.length > 0) {
-        strategies.push(`Firecrawl: +${fcProducts.length}`);
-        for (const p of fcProducts) { seenNames.add(p.name.toLowerCase()); allProducts.push(p); }
-      }
-    }
+      allProducts.sort((a, b) => {
+        const catA = a.category || 'zzz';
+        const catB = b.category || 'zzz';
+        if (catA !== catB) return catA.localeCompare(catB);
+        return a.name.localeCompare(b.name);
+      });
 
-    allProducts.sort((a, b) => {
-      const catA = a.category || 'zzz';
-      const catB = b.category || 'zzz';
-      if (catA !== catB) return catA.localeCompare(catB);
-      return a.name.localeCompare(b.name);
-    });
+      console.log(`VTEX FINAL: ${allProducts.length} products | Strategies: ${strategies.join(' | ')}`);
 
-    console.log(`FINAL: ${allProducts.length} unique products | Platform: ${platform} | Strategies: ${strategies.join(' | ')}`);
-
-    return new Response(
-      JSON.stringify({
+      return new Response(JSON.stringify({
         success: true,
         data: {
           products: allProducts,
           totalFound: allProducts.length,
-          pagesScraped: pagesScraped || allProducts.length,
+          pagesScraped: allProducts.length,
           totalUrlsFound: allProducts.length,
           scrapedUrl: formattedUrl,
           scrapedAt: new Date().toISOString(),
           platform,
           strategies,
         }
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // ===== NON-VTEX: async background crawl via Firecrawl =====
+    console.log(`Starting async Firecrawl crawl for ${formattedUrl} (limit: ${pageLimit})...`);
+
+    // Create job record
+    const { data: jobRow, error: insertError } = await supabaseAdmin.from('scrape_jobs').insert({
+      competitor_url: formattedUrl,
+      competitor_name: competitorName || null,
+      status: 'crawling',
+      progress_pct: 0,
+    }).select('id').single();
+
+    if (insertError || !jobRow) {
+      console.error('Failed to create job:', insertError);
+      return new Response(JSON.stringify({ success: false, error: 'Falha ao criar job de coleta' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    const jobId = jobRow.id;
+
+    // Start Firecrawl crawl (async)
+    try {
+      const crawlResp = await fetch('https://api.firecrawl.dev/v1/crawl', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: formattedUrl,
+          limit: pageLimit,
+          scrapeOptions: {
+            formats: ['html', 'markdown'],
+            waitFor: 3000,
+            onlyMainContent: false,
+          },
+        }),
+      });
+
+      if (!crawlResp.ok) {
+        const errBody = await crawlResp.text();
+        console.error('Firecrawl crawl start failed:', errBody);
+        await supabaseAdmin.from('scrape_jobs').update({
+          status: 'error',
+          error_message: `Firecrawl error (${crawlResp.status}): ${errBody.slice(0, 200)}`,
+          updated_at: new Date().toISOString(),
+        }).eq('id', jobId);
+
+        return new Response(JSON.stringify({ success: false, error: `Firecrawl retornou erro ${crawlResp.status}`, jobId }), { status: crawlResp.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      const crawlData = await crawlResp.json();
+      const crawlId = crawlData.id;
+      console.log(`Firecrawl crawl started: ${crawlId}`);
+
+      // Update job with crawl ID
+      await supabaseAdmin.from('scrape_jobs').update({
+        firecrawl_crawl_id: crawlId,
+        status: 'crawling',
+        progress_pct: 5,
+        updated_at: new Date().toISOString(),
+      }).eq('id', jobId);
+
+      return new Response(JSON.stringify({
+        success: true,
+        async: true,
+        jobId,
+        message: 'Coleta iniciada em background. Use action=check com jobId para acompanhar o progresso.',
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    } catch (crawlErr) {
+      console.error('Crawl start error:', crawlErr);
+      await supabaseAdmin.from('scrape_jobs').update({
+        status: 'error',
+        error_message: crawlErr instanceof Error ? crawlErr.message : 'Erro ao iniciar crawl',
+        updated_at: new Date().toISOString(),
+      }).eq('id', jobId);
+
+      return new Response(JSON.stringify({ success: false, error: 'Falha ao iniciar o crawl', jobId }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
   } catch (error) {
-    console.error('Error scraping competitor:', error);
+    console.error('Error in scrape-competitor-prices:', error);
     const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
     return new Response(JSON.stringify({ success: false, error: errorMessage }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
