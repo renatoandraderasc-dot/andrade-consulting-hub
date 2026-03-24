@@ -30,7 +30,7 @@ export interface ScrapeResult {
 export const firecrawlApi = {
   async scrapeCompetitorPrices(url: string, maxPages?: number): Promise<ScrapeResult> {
     const { data, error } = await supabase.functions.invoke('scrape-competitor-prices', {
-      body: { url, maxPages: maxPages || 200 },
+      body: { url, maxPages: maxPages || 1000 },
     });
 
     if (error) {
