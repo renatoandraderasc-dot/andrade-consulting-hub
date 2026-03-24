@@ -19,6 +19,7 @@ const navItems = [
 ];
 
 const adminItems = [
+  { path: "/admin/stores", label: "Lojas", icon: Store },
   { path: "/admin/metas", label: "Metas", icon: Target },
   { path: "/admin/questions", label: "Perguntas", icon: Settings },
   { path: "/admin/users", label: "Usuários", icon: Users },
