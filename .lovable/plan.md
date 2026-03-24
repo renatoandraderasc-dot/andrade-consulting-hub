@@ -1,119 +1,75 @@
 
 
-# Plano de Implementacao
+# Plano: Motor Generico de Coleta em Background com Firecrawl Crawl
 
-Este plano cobre tres grandes funcionalidades solicitadas:
+## Problema Raiz
+O VIPCommerce (e outras plataformas não-VTEX) bloqueia acesso à API de categorias/produtos. A tentativa de usar endpoints internos falha (0 categorias encontradas). A abordagem atual tenta tudo em uma única chamada de Edge Function que tem timeout limitado.
 
----
+## Solucao Definitiva
+Usar o **Firecrawl Crawl** (crawl assíncrono que renderiza JavaScript) como motor principal para qualquer site que não seja VTEX. O crawl visita todas as páginas do site, renderiza o JS (funciona com Angular SPAs como VIPCommerce), e extrai produtos do HTML/markdown. O processo roda em background com progresso persistido no banco.
 
-## 1. Salvar Checklist e Enviar Email
+```text
+┌─────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│  Frontend   │────>│  Edge Function   │────>│  Firecrawl API  │
+│  (iniciar)  │     │  (iniciar job)   │     │  /v1/crawl      │
+└─────────────┘     └──────────────────┘     └─────────────────┘
+       │                                            │
+       │ polling                                    │ webhook/poll
+       ▼                                            ▼
+┌─────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│  Progress   │<────│  Edge Function   │<────│  Crawl Results  │
+│  Bar UI     │     │  (check status)  │     │  (all pages)    │
+└─────────────┘     └──────────────────┘     └─────────────────┘
+```
 
-**Problema atual:** O checklist nao salva os dados no banco de dados. Os dados ficam apenas no estado local.
+## Etapas de Implementacao
 
-**Solucao:**
-- Adicionar um botao "Enviar" no final do checklist de cada departamento
-- Ao clicar, salvar uma `checklist_submission` e os `checklist_answers` correspondentes no banco
-- Criar uma edge function `send-checklist-email` que envia um email de notificacao para `renatoandraderasc@gmail.com` com o resumo do checklist (loja, departamento, pontuacao, data/hora)
-- A edge function usara o servico de email integrado do Lovable Cloud (Resend via Supabase)
-- Sera necessario configurar a chave da API Resend como secret
+### 1. Criar tabela `scrape_jobs` (migration)
+Armazena o estado de cada coleta em background:
+- `id`, `competitor_url`, `competitor_name`, `status` (pending/mapping/crawling/extracting/done/error)
+- `firecrawl_crawl_id` (ID retornado pelo Firecrawl)
+- `total_urls_found`, `pages_crawled`, `products_found`
+- `progress_pct`, `error_message`
+- `products_json` (JSONB com todos os produtos extraidos)
+- `created_at`, `updated_at`
+- RLS: admins full access, authenticated users can read
 
----
+### 2. Reescrever Edge Function `scrape-competitor-prices`
+Nova logica em 2 modos:
 
-## 2. Sistema de Lojas com Controle de Acesso
+**Modo 1 - Iniciar coleta** (`action: "start"`):
+- Para VTEX: manter estrategia atual (sincrona, funciona bem)
+- Para qualquer outro site: usar Firecrawl `/v1/map` (descobrir URLs) + `/v1/crawl` (crawl assincrono com `limit: 5000`, `scrapeOptions: { formats: ['html'], waitFor: 3000 }`)
+- Salvar o `crawl_id` na tabela `scrape_jobs`
+- Retornar imediatamente com `jobId`
 
-**Problema atual:** Nao existe conceito de "loja" no sistema. Todos os usuarios veem a mesma coisa.
+**Modo 2 - Verificar progresso** (`action: "check"`, `jobId`):
+- Consultar Firecrawl `/v1/crawl/{crawl_id}` para status
+- Se completo: extrair produtos de todas as paginas (JSON-LD, precos no HTML, markdown)
+- Atualizar `scrape_jobs` com progresso e produtos
+- Retornar status + produtos quando pronto
 
-**Solucao:**
+### 3. Atualizar Frontend `ConcorrentesTab.tsx`
+- Ao clicar "Coletar": iniciar job e receber `jobId`
+- Polling a cada 5 segundos para verificar progresso
+- Mostrar barra de progresso com: URLs encontradas, paginas processadas, produtos extraidos
+- Quando finalizado: exibir resultado e permitir analise
 
-### Banco de Dados
-- Criar tabela `stores` com as 10 lojas listadas
-- Criar tabela `user_store_access` para vincular usuarios a lojas, com campo `approved` (boolean) para controle de aprovacao pelo admin
-- Adicionar `store_id` na tabela `checklist_submissions` para registrar de qual loja veio o checklist
-
-### Fluxo do Usuario
-- Na tela de cadastro (signup), adicionar um campo de selecao de loja
-- Apos o cadastro, o usuario fica "pendente de aprovacao"
-- O admin tem uma pagina para ver usuarios pendentes e aprovar/rejeitar
-- Apos aprovado, o usuario faz login e ve apenas os dados da(s) loja(s) que tem acesso
-- O titulo do checklist mostra o nome da loja do usuario
-
-### Fluxo do Admin
-- Nova pagina `/admin/users` para gerenciar usuarios e aprovar acessos
-- Lista usuarios pendentes e permite aprovar/rejeitar
-
----
-
-## 3. Dashboard Comercial
-
-**Problema atual:** Nao existe dashboard.
-
-**Solucao:**
-- Criar nova pagina `/dashboard` com os seguintes cards/graficos usando a biblioteca Recharts (ja instalada):
-  - **Faturamento x Margem** - Grafico de barras comparativo
-  - **Atingimento de Meta** - Grafico de gauge/progresso
-  - **Faturamento por Departamento** - Grafico de barras horizontal
-  - **Produtos mais Vendidos** - Tabela/lista ranqueada
-  - **Quantidade de Clientes** - Card com numero e grafico de tendencia
-  - **Produtos com Menor Margem** - Tabela com destaque em vermelho
-  - **Curva ABC por Categoria** - Grafico de Pareto (barras + linha)
-  - **Faturamento de Promocao por Departamento** - Grafico de barras
-
-- Como nao ha fonte de dados real para esses indicadores comerciais, o dashboard sera criado com **dados de exemplo (mock)** e estrutura pronta para receber dados reais futuramente (via tabelas ou API)
-- Criar tabela `commercial_data` para armazenar os dados quando forem alimentados
-
----
+### 4. Atualizar `firecrawl.ts` (API client)
+- Adicionar metodos `startScrapeJob(url)` e `checkScrapeJob(jobId)`
 
 ## Detalhes Tecnicos
 
-### Migracao do Banco de Dados
+- **Firecrawl Crawl** renderiza JavaScript (resolve o problema do Angular SPA do VIPCommerce)
+- **Limit de 5000 paginas** no crawl garante cobertura completa
+- **waitFor: 3000ms** da tempo para SPAs carregarem produtos
+- **Extracao dupla**: JSON-LD structured data + regex de precos no markdown
+- **Sem timeout**: o crawl roda nos servidores do Firecrawl, a Edge Function so consulta o status
+- **Creditos**: usa creditos do Firecrawl proporcionais ao numero de paginas, mas e o unico metodo que garante cobertura total para sites nao-VTEX
 
-```text
-Novas tabelas:
-+------------------+     +---------------------+
-| stores           |     | user_store_access   |
-|------------------|     |---------------------|
-| id (uuid, PK)    |     | id (uuid, PK)       |
-| name (text)      |     | user_id (uuid, FK)  |
-| created_at       |     | store_id (uuid, FK) |
-+------------------+     | approved (boolean)  |
-                          | created_at          |
-                          +---------------------+
-
-Alteracao:
-checklist_submissions + store_id (uuid, FK -> stores)
-```
-
-Dados iniciais nas lojas:
-- Supermercado Duminduim
-- Supermercado Maninho
-- Supermercado Nascimento Osasco
-- Supermercado Nascimento Embu
-- Supermercado F.silva
-- Supermercado Carvalho Matriz
-- Supermercado Carvalho Filial
-- Supermercado Sempre Bom
-- Supermercado Mais Voce
-- Supermercado Santa Izabel
-
-### RLS Policies
-- `stores`: leitura publica para autenticados
-- `user_store_access`: usuarios veem apenas seus proprios acessos; admins veem e gerenciam todos
-- `checklist_submissions`: filtrado por `store_id` do usuario
-
-### Edge Function: send-checklist-email
-- Recebe: submission_id
-- Busca dados da submission, respostas, loja, usuario
-- Envia email formatado para renatoandraderasc@gmail.com
-- Requer secret RESEND_API_KEY
-
-### Novos Arquivos
-- `src/pages/Dashboard.tsx` - Dashboard comercial
-- `src/pages/AdminUsers.tsx` - Gerenciamento de usuarios/lojas
-- `supabase/functions/send-checklist-email/index.ts` - Edge function de email
-
-### Arquivos Modificados
-- `src/pages/Login.tsx` - Adicionar selecao de loja no cadastro
-- `src/pages/Checklist.tsx` - Botao enviar, salvar no banco, chamar edge function
-- `src/App.tsx` - Novas rotas
-- `src/components/Navbar.tsx` - Link para dashboard
+## Arquivos Modificados
+1. `supabase/migrations/new` - Tabela `scrape_jobs`
+2. `supabase/functions/scrape-competitor-prices/index.ts` - Logica de job assincrono
+3. `src/lib/api/firecrawl.ts` - Novos metodos de job
+4. `src/components/repricing/ConcorrentesTab.tsx` - UI de progresso
 
