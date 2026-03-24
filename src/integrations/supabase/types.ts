@@ -237,6 +237,54 @@ export type Database = {
         }
         Relationships: []
       }
+      scrape_jobs: {
+        Row: {
+          competitor_name: string | null
+          competitor_url: string
+          created_at: string
+          error_message: string | null
+          firecrawl_crawl_id: string | null
+          id: string
+          pages_crawled: number | null
+          products_found: number | null
+          products_json: Json | null
+          progress_pct: number | null
+          status: string
+          total_urls_found: number | null
+          updated_at: string
+        }
+        Insert: {
+          competitor_name?: string | null
+          competitor_url: string
+          created_at?: string
+          error_message?: string | null
+          firecrawl_crawl_id?: string | null
+          id?: string
+          pages_crawled?: number | null
+          products_found?: number | null
+          products_json?: Json | null
+          progress_pct?: number | null
+          status?: string
+          total_urls_found?: number | null
+          updated_at?: string
+        }
+        Update: {
+          competitor_name?: string | null
+          competitor_url?: string
+          created_at?: string
+          error_message?: string | null
+          firecrawl_crawl_id?: string | null
+          id?: string
+          pages_crawled?: number | null
+          products_found?: number | null
+          products_json?: Json | null
+          progress_pct?: number | null
+          status?: string
+          total_urls_found?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       store_daily_metrics: {
         Row: {
           created_at: string

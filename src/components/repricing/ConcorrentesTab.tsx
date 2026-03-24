@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,13 +7,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import {
   Plus, Globe, RefreshCw, Trash2, Play, Loader2, CheckCircle2,
   XCircle, Clock, Store, Link2, Search, Download, Settings2, Eye
 } from "lucide-react";
 import ConcorrenteAnalise from "./ConcorrenteAnalise";
-import { firecrawlApi, type ScrapedProduct } from "@/lib/api/firecrawl";
+import { firecrawlApi, type ScrapedProduct, type ScrapeJobStatus } from "@/lib/api/firecrawl";
 
 interface Concorrente {
   id: string;
@@ -38,20 +39,20 @@ interface ColetaLog {
   erro?: string;
 }
 
+interface ActiveJob {
+  jobId: string;
+  concorrenteId: string;
+  startTime: number;
+  status: ScrapeJobStatus;
+}
+
 const mockConcorrentes: Concorrente[] = [
-  { id: "1", nome: "Santo Antônio em Casa", url: "https://www.santoantonioemcasa.com.br", plataforma: "vtex", status: "ativo", ultimaColeta: "2026-03-12 08:30", totalProdutos: 18, matchRate: 89 },
+  { id: "1", nome: "Santo Antônio em Casa", url: "https://www.santoantonioemcasa.com.br", plataforma: "outro", status: "ativo", ultimaColeta: null, totalProdutos: 0, matchRate: 0 },
   { id: "2", nome: "Supermercado Extra", url: "https://www.clubeextra.com.br", plataforma: "vtex", status: "ativo", ultimaColeta: "2026-03-11 22:00", totalProdutos: 22, matchRate: 82 },
   { id: "3", nome: "Atacadão Online", url: "https://www.atacadao.com.br", plataforma: "vtex", status: "inativo", ultimaColeta: "2026-03-10 14:15", totalProdutos: 15, matchRate: 73 },
-  { id: "4", nome: "Mercado Regional", url: "https://www.mercadoregional.com.br", plataforma: "woocommerce", status: "erro", ultimaColeta: "2026-03-09 10:00", totalProdutos: 0, matchRate: 0 },
 ];
 
-const mockLogs: ColetaLog[] = [
-  { id: "1", concorrenteId: "1", concorrenteNome: "Santo Antônio em Casa", data: "2026-03-12 08:30", status: "sucesso", produtosColetados: 18, produtosMatchados: 16, duracao: "4m 32s" },
-  { id: "2", concorrenteId: "2", concorrenteNome: "Supermercado Extra", data: "2026-03-11 22:00", status: "sucesso", produtosColetados: 22, produtosMatchados: 18, duracao: "8m 15s" },
-  { id: "3", concorrenteId: "4", concorrenteNome: "Mercado Regional", data: "2026-03-09 10:00", status: "erro", produtosColetados: 0, produtosMatchados: 0, duracao: "0m 45s", erro: "Timeout ao acessar o site" },
-  { id: "4", concorrenteId: "1", concorrenteNome: "Santo Antônio em Casa", data: "2026-03-11 08:30", status: "sucesso", produtosColetados: 18, produtosMatchados: 16, duracao: "4m 28s" },
-  { id: "5", concorrenteId: "3", concorrenteNome: "Atacadão Online", data: "2026-03-10 14:15", status: "sucesso", produtosColetados: 15, produtosMatchados: 11, duracao: "6m 50s" },
-];
+const mockLogs: ColetaLog[] = [];
 
 const plataformaLabels: Record<string, string> = {
   vtex: "VTEX",
@@ -75,7 +76,7 @@ const logStatusBadge = (s: ColetaLog["status"]) => {
 
 const ConcorrentesTab = () => {
   const [concorrentes, setConcorrentes] = useState(mockConcorrentes);
-  const [logs, setLogs] = useState(mockLogs);
+  const [logs, setLogs] = useState<ColetaLog[]>(mockLogs);
   const [showModal, setShowModal] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({ nome: "", url: "", plataforma: "vtex" as Concorrente["plataforma"] });
@@ -83,6 +84,86 @@ const ConcorrentesTab = () => {
   const [search, setSearch] = useState("");
   const [selectedConcorrente, setSelectedConcorrente] = useState<Concorrente | null>(null);
   const [lastScrapedProducts, setLastScrapedProducts] = useState<ScrapedProduct[]>([]);
+  const [activeJob, setActiveJob] = useState<ActiveJob | null>(null);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Polling for active background jobs
+  useEffect(() => {
+    if (!activeJob || activeJob.status.status === 'done' || activeJob.status.status === 'error') {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+      return;
+    }
+
+    pollingRef.current = setInterval(async () => {
+      try {
+        const result = await firecrawlApi.checkScrapeJob(activeJob.jobId);
+        if (!result.success || !result.job) return;
+
+        const job = result.job;
+        setActiveJob(prev => prev ? { ...prev, status: job } : null);
+
+        if (job.status === 'done') {
+          const duracao = `${Math.round((Date.now() - activeJob.startTime) / 1000)}s`;
+          const products = job.products || [];
+          setLastScrapedProducts(products);
+
+          setConcorrentes(prev => prev.map(c => c.id === activeJob.concorrenteId ? {
+            ...c,
+            ultimaColeta: new Date().toLocaleString("pt-BR"),
+            status: "ativo" as const,
+            totalProdutos: job.products_found,
+            matchRate: job.products_found > 0 ? Math.min(95, Math.round(job.products_found * 0.05)) : 0,
+          } : c));
+
+          setLogs(prev => [{
+            id: Date.now().toString(),
+            concorrenteId: activeJob.concorrenteId,
+            concorrenteNome: concorrentes.find(c => c.id === activeJob.concorrenteId)?.nome || '',
+            data: new Date().toLocaleString("pt-BR"),
+            status: "sucesso",
+            produtosColetados: job.products_found,
+            produtosMatchados: Math.round(job.products_found * 0.85),
+            duracao,
+          }, ...prev]);
+
+          toast.success(`Coleta finalizada! ${job.products_found} produtos encontrados`);
+          setColetando(null);
+        }
+
+        if (job.status === 'error') {
+          const duracao = `${Math.round((Date.now() - activeJob.startTime) / 1000)}s`;
+          setConcorrentes(prev => prev.map(c => c.id === activeJob.concorrenteId ? { ...c, status: "erro" as const } : c));
+
+          setLogs(prev => [{
+            id: Date.now().toString(),
+            concorrenteId: activeJob.concorrenteId,
+            concorrenteNome: concorrentes.find(c => c.id === activeJob.concorrenteId)?.nome || '',
+            data: new Date().toLocaleString("pt-BR"),
+            status: "erro",
+            produtosColetados: 0,
+            produtosMatchados: 0,
+            duracao,
+            erro: job.error_message || 'Erro desconhecido',
+          }, ...prev]);
+
+          toast.error(job.error_message || 'Erro na coleta');
+          setColetando(null);
+        }
+      } catch (err) {
+        console.error('Polling error:', err);
+      }
+    }, 5000);
+
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
+  }, [activeJob?.jobId, activeJob?.status.status]);
 
   const openNew = () => { setEditId(null); setForm({ nome: "", url: "", plataforma: "vtex" }); setShowModal(true); };
   const openEdit = (c: Concorrente) => { setEditId(c.id); setForm({ nome: c.nome, url: c.url, plataforma: c.plataforma }); setShowModal(true); };
@@ -108,28 +189,48 @@ const ConcorrentesTab = () => {
   const handleColetar = useCallback(async (id: string) => {
     const concorrente = concorrentes.find(c => c.id === id);
     if (!concorrente) return;
-    
+
     setColetando(id);
     const startTime = Date.now();
-        toast.info(`Iniciando coleta completa de ${concorrente.nome}... se o catálogo não estiver acessível por método completo, a coleta será interrompida para não gastar créditos.`);
+    toast.info(`Iniciando coleta de ${concorrente.nome}...`);
 
     try {
-      const result = await firecrawlApi.scrapeCompetitorPrices(concorrente.url, 1000);
-      const duracao = `${Math.round((Date.now() - startTime) / 1000)}s`;
-      
+      const result = await firecrawlApi.scrapeCompetitorPrices(concorrente.url, 5000, concorrente.nome);
+
+      if (result.success && result.async && result.jobId) {
+        // Background job started - set up polling
+        setActiveJob({
+          jobId: result.jobId,
+          concorrenteId: id,
+          startTime,
+          status: {
+            id: result.jobId,
+            status: 'crawling',
+            progress_pct: 5,
+            total_urls_found: 0,
+            pages_crawled: 0,
+            products_found: 0,
+          },
+        });
+        toast.info("Coleta em background iniciada. Acompanhe o progresso abaixo.");
+        return; // Don't clear coletando - polling will do it
+      }
+
       if (result.success && result.data) {
+        // Synchronous result (VTEX)
         const { products, totalFound } = result.data;
         setLastScrapedProducts(products);
-        
+        const duracao = `${Math.round((Date.now() - startTime) / 1000)}s`;
+
         setConcorrentes(prev => prev.map(c => c.id === id ? {
           ...c,
           ultimaColeta: new Date().toLocaleString("pt-BR"),
           status: "ativo" as const,
           totalProdutos: totalFound,
-          matchRate: totalFound > 0 ? Math.min(95, Math.round(totalFound * 5.5)) : 0,
+          matchRate: totalFound > 0 ? Math.min(95, Math.round(totalFound * 0.05)) : 0,
         } : c));
 
-        const newLog: ColetaLog = {
+        setLogs(prev => [{
           id: Date.now().toString(),
           concorrenteId: id,
           concorrenteNome: concorrente.nome,
@@ -138,12 +239,12 @@ const ConcorrentesTab = () => {
           produtosColetados: totalFound,
           produtosMatchados: Math.round(totalFound * 0.85),
           duracao,
-        };
-        setLogs(prev => [newLog, ...prev]);
+        }, ...prev]);
         toast.success(`Coleta finalizada! ${totalFound} produtos encontrados em ${concorrente.nome}`);
       } else {
         setConcorrentes(prev => prev.map(c => c.id === id ? { ...c, status: "erro" as const } : c));
-        const newLog: ColetaLog = {
+        const duracao = `${Math.round((Date.now() - startTime) / 1000)}s`;
+        setLogs(prev => [{
           id: Date.now().toString(),
           concorrenteId: id,
           concorrenteNome: concorrente.nome,
@@ -153,30 +254,16 @@ const ConcorrentesTab = () => {
           produtosMatchados: 0,
           duracao,
           erro: result.error || "Erro desconhecido",
-        };
-        setLogs(prev => [newLog, ...prev]);
-        toast.error(result.error || "Coleta interrompida para evitar consumo desnecessário de créditos.");
+        }, ...prev]);
+        toast.error(result.error || "Erro na coleta");
       }
     } catch (err) {
-      const duracao = `${Math.round((Date.now() - startTime) / 1000)}s`;
       setConcorrentes(prev => prev.map(c => c.id === id ? { ...c, status: "erro" as const } : c));
-      const newLog: ColetaLog = {
-        id: Date.now().toString(),
-        concorrenteId: id,
-        concorrenteNome: concorrente.nome,
-        data: new Date().toLocaleString("pt-BR"),
-        status: "erro",
-        produtosColetados: 0,
-        produtosMatchados: 0,
-        duracao,
-        erro: err instanceof Error ? err.message : "Erro de conexão",
-      };
-      setLogs(prev => [newLog, ...prev]);
       toast.error("Falha na coleta de preços");
     } finally {
-      setColetando(null);
+      if (!activeJob) setColetando(null);
     }
-  }, [concorrentes]);
+  }, [concorrentes, activeJob]);
 
   const handleColetarTodos = async () => {
     toast.info("Iniciando coleta em todos os concorrentes ativos...");
@@ -218,6 +305,31 @@ const ConcorrentesTab = () => {
 
   return (
     <div className="space-y-5">
+      {/* Active Job Progress */}
+      {activeJob && activeJob.status.status !== 'done' && activeJob.status.status !== 'error' && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                <span className="text-sm font-medium text-foreground">
+                  Coleta em andamento: {concorrentes.find(c => c.id === activeJob.concorrenteId)?.nome}
+                </span>
+              </div>
+              <Badge variant="outline" className="bg-amber-500/10 text-amber-700 border-amber-500/20">
+                {activeJob.status.progress_pct}%
+              </Badge>
+            </div>
+            <Progress value={activeJob.status.progress_pct} className="h-2" />
+            <div className="flex gap-4 text-xs text-muted-foreground">
+              <span>URLs encontradas: <strong className="text-foreground">{activeJob.status.total_urls_found}</strong></span>
+              <span>Páginas processadas: <strong className="text-foreground">{activeJob.status.pages_crawled}</strong></span>
+              <span>Tempo: <strong className="text-foreground">{Math.round((Date.now() - activeJob.startTime) / 1000)}s</strong></span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card><CardContent className="p-4">
@@ -332,6 +444,9 @@ const ConcorrentesTab = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {logs.length === 0 && (
+                  <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-6">Nenhuma coleta realizada ainda</TableCell></TableRow>
+                )}
                 {logs.map(l => (
                   <TableRow key={l.id}>
                     <TableCell className="text-xs text-muted-foreground">{l.data}</TableCell>
@@ -349,7 +464,7 @@ const ConcorrentesTab = () => {
         </CardContent>
       </Card>
 
-      {/* Informações sobre plataformas */}
+      {/* Plataformas */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2"><Settings2 className="w-4 h-4" /> Plataformas Suportadas</CardTitle>
@@ -358,10 +473,10 @@ const ConcorrentesTab = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {[
               { name: "VTEX", desc: "Coleta via API de catálogo VTEX. Suporta busca por categoria, listagem completa e preços." },
+              { name: "Web Crawl (Firecrawl)", desc: "Para sites não-VTEX: crawl completo em background com renderização JavaScript. Coleta todas as páginas do site." },
               { name: "WooCommerce", desc: "Integração via REST API do WooCommerce. Requer credenciais de API do site." },
               { name: "Magento", desc: "Coleta via REST API do Magento 2. Suporta catálogo completo com variações." },
               { name: "Shopify", desc: "Integração via Storefront API do Shopify. Coleta preços e disponibilidade." },
-              { name: "Web Scraping", desc: "Para sites sem API, utiliza scraping com renderização JavaScript (Firecrawl)." },
             ].map(p => (
               <div key={p.name} className="border border-border rounded-lg p-3">
                 <p className="text-sm font-semibold text-foreground">{p.name}</p>
@@ -396,7 +511,7 @@ const ConcorrentesTab = () => {
                   <SelectItem value="woocommerce">WooCommerce</SelectItem>
                   <SelectItem value="magento">Magento</SelectItem>
                   <SelectItem value="shopify">Shopify</SelectItem>
-                  <SelectItem value="outro">Outro (Web Scraping)</SelectItem>
+                  <SelectItem value="outro">Outro (Web Crawl)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

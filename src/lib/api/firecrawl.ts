@@ -17,6 +17,9 @@ export interface ScrapedProduct {
 export interface ScrapeResult {
   success: boolean;
   error?: string;
+  async?: boolean;
+  jobId?: string;
+  message?: string;
   data?: {
     products: ScrapedProduct[];
     totalFound: number;
@@ -27,10 +30,38 @@ export interface ScrapeResult {
   };
 }
 
+export interface ScrapeJobStatus {
+  id: string;
+  status: 'pending' | 'crawling' | 'extracting' | 'done' | 'error';
+  progress_pct: number;
+  total_urls_found: number;
+  pages_crawled: number;
+  products_found: number;
+  error_message?: string;
+  products?: ScrapedProduct[];
+}
+
+export interface CheckJobResult {
+  success: boolean;
+  error?: string;
+  job?: ScrapeJobStatus;
+}
+
 export const firecrawlApi = {
-  async scrapeCompetitorPrices(url: string, maxPages?: number): Promise<ScrapeResult> {
+  async scrapeCompetitorPrices(url: string, maxPages?: number, competitorName?: string): Promise<ScrapeResult> {
     const { data, error } = await supabase.functions.invoke('scrape-competitor-prices', {
-      body: { url, maxPages: maxPages || 1000 },
+      body: { action: 'start', url, maxPages: maxPages || 5000, competitorName },
+    });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    return data;
+  },
+
+  async checkScrapeJob(jobId: string): Promise<CheckJobResult> {
+    const { data, error } = await supabase.functions.invoke('scrape-competitor-prices', {
+      body: { action: 'check', jobId },
     });
 
     if (error) {
