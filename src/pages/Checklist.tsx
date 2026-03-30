@@ -199,10 +199,11 @@ const Checklist = () => {
     const path = `${user!.id}/${Date.now()}_${file.name}`;
     const { data, error } = await supabase.storage.from("checklist-photos").upload(path, file);
     if (!error && data) {
-      const { data: urlData } = supabase.storage.from("checklist-photos").getPublicUrl(data.path);
+      // Store the path and get a signed URL for preview
+      const { data: signedData } = await supabase.storage.from("checklist-photos").createSignedUrl(data.path, 3600);
       setScoreState((prev) => ({
         ...prev,
-        [qId]: { ...prev[qId], score: prev[qId]?.score || 5, photoUrl: urlData.publicUrl },
+        [qId]: { ...prev[qId], score: prev[qId]?.score || 5, photoUrl: signedData?.signedUrl || data.path },
       }));
     }
     setUploading(null);
