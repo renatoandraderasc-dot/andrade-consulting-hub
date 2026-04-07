@@ -236,9 +236,23 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
     if (!confirm(`Excluir ${selectedIds.size} lançamento(s) selecionado(s)?`)) return;
 
     const ids = Array.from(selectedIds);
-    const { error } = await supabase.from("lancamentos").delete().in("id", ids);
-    if (error) { toast.error("Erro ao excluir em massa"); return; }
-    toast.success(`${ids.length} lançamento(s) excluído(s)`);
+    const BATCH_SIZE = 50;
+    let errorCount = 0;
+
+    for (let i = 0; i < ids.length; i += BATCH_SIZE) {
+      const batch = ids.slice(i, i + BATCH_SIZE);
+      const { error } = await supabase.from("lancamentos").delete().in("id", batch);
+      if (error) {
+        console.error("Erro ao excluir lote:", error);
+        errorCount++;
+      }
+    }
+
+    if (errorCount > 0) {
+      toast.error(`Erro ao excluir alguns lançamentos (${errorCount} lote(s) falharam)`);
+    } else {
+      toast.success(`${ids.length} lançamento(s) excluído(s)`);
+    }
     setSelectedIds(new Set());
     fetchLancamentos();
   };
