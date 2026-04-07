@@ -831,8 +831,28 @@ const DIRECT_MAP: Record<string, { tipo: string; subtipo: string }> = {
   "iof": { tipo: "Despesas", subtipo: "IOF" },
   "iof bancario": { tipo: "Despesas", subtipo: "IOF" },
 
-  // ===== COMPRA DO MÊS =====
+  // ===== COMPRA DO MÊS / PAGAMENTO FORNECEDORES =====
   "compras": { tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" },
+  "compra": { tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" },
+  "compra do mes": { tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" },
+  "compra de mercadoria": { tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" },
+  "compra de mercadorias": { tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" },
+  "compra mercadoria": { tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" },
+  "compra mercadorias": { tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" },
+  "compra fornecedor": { tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" },
+  "compra fornecedores": { tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" },
+  "pagamento fornecedor": { tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" },
+  "pagamento fornecedores": { tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" },
+  "pagamento de fornecedor": { tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" },
+  "pagamento de fornecedores": { tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" },
+  "pag fornecedor": { tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" },
+  "pag fornecedores": { tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" },
+  "fornecedor": { tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" },
+  "fornecedores": { tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" },
+  "duplicata": { tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" },
+  "duplicatas": { tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" },
+  "nf fornecedor": { tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" },
+  "nota fiscal fornecedor": { tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" },
 
   // ===== DESPESAS - PESSOAL =====
   "despesas pessoal": { tipo: "Despesas", subtipo: "SALÁRIO LÍQUIDO (+ COMPRAS / - H.E.)" },
