@@ -63,7 +63,7 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
       </div>
 
       <nav className="flex-1 p-3 space-y-1">
-        {navItems.map((item) => (
+        {navItems.filter((i) => canSee(i.key)).map((item) => (
           <Link
             key={item.path}
             to={item.path}
