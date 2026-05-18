@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { BarChart3, CheckSquare, Settings, Users, LogOut, Menu, X, ArrowLeft, Target, ClipboardList, DollarSign, Database, RefreshCw, Trophy, Store } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import andradeLogo from "@/assets/andrade-logo.png";
@@ -11,27 +12,37 @@ interface ClientLayoutProps {
 }
 
 const navItems = [
-  { path: "/dashboard", label: "Dashboard", icon: BarChart3 },
-  { path: "/controladoria", label: "Controladoria", icon: ClipboardList },
-  { path: "/pic", label: "PIC", icon: Trophy },
-  { path: "/repricing", label: "Re-PRICING", icon: DollarSign },
-  { path: "/checklist", label: "Checklist", icon: CheckSquare },
+  { key: "dashboard", path: "/dashboard", label: "Dashboard", icon: BarChart3 },
+  { key: "controladoria", path: "/controladoria", label: "Controladoria", icon: ClipboardList },
+  { key: "pic", path: "/pic", label: "PIC", icon: Trophy },
+  { key: "repricing", path: "/repricing", label: "Re-PRICING", icon: DollarSign },
+  { key: "checklist", path: "/checklist", label: "Checklist", icon: CheckSquare },
 ];
 
 const adminItems = [
-  { path: "/admin/stores", label: "Lojas", icon: Store },
-  { path: "/admin/metas", label: "Metas", icon: Target },
-  { path: "/admin/questions", label: "Perguntas", icon: Settings },
-  { path: "/admin/users", label: "Usuários", icon: Users },
-  { path: "/vtex-collector", label: "Coletor VTEX", icon: Database },
-  { path: "/websac-sync", label: "Sync WebSac", icon: RefreshCw },
+  { key: "admin_stores", path: "/admin/stores", label: "Lojas", icon: Store },
+  { key: "admin_metas", path: "/admin/metas", label: "Metas", icon: Target },
+  { key: "admin_questions", path: "/admin/questions", label: "Perguntas", icon: Settings },
+  { key: "admin_users", path: "/admin/users", label: "Usuários", icon: Users },
+  { key: "vtex_collector", path: "/vtex-collector", label: "Coletor VTEX", icon: Database },
+  { key: "websac_sync", path: "/websac-sync", label: "Sync WebSac", icon: RefreshCw },
 ];
 
 const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
-  const { isAdmin, signOut } = useAuth();
+  const { user, isAdmin, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [allowedModules, setAllowedModules] = useState<Set<string> | null>(null);
+
+  useEffect(() => {
+    if (!user || isAdmin) { setAllowedModules(null); return; }
+    supabase.from("user_module_access").select("module, allowed").eq("user_id", user.id).then(({ data }) => {
+      setAllowedModules(new Set((data || []).filter((r) => r.allowed).map((r) => r.module)));
+    });
+  }, [user, isAdmin]);
+
+  const canSee = (key: string) => isAdmin || (allowedModules === null ? true : allowedModules.has(key));
 
   const handleSignOut = async () => {
     await signOut();
