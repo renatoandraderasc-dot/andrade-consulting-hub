@@ -218,18 +218,21 @@ export type Database = {
       }
       profiles: {
         Row: {
+          blocked: boolean
           created_at: string
           full_name: string | null
           id: string
           user_id: string
         }
         Insert: {
+          blocked?: boolean
           created_at?: string
           full_name?: string | null
           id?: string
           user_id: string
         }
         Update: {
+          blocked?: boolean
           created_at?: string
           full_name?: string | null
           id?: string
@@ -509,6 +512,30 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+        }
+        Relationships: []
+      }
+      user_module_access: {
+        Row: {
+          allowed: boolean
+          created_at: string
+          id: string
+          module: string
+          user_id: string
+        }
+        Insert: {
+          allowed?: boolean
+          created_at?: string
+          id?: string
+          module: string
+          user_id: string
+        }
+        Update: {
+          allowed?: boolean
+          created_at?: string
+          id?: string
+          module?: string
+          user_id?: string
         }
         Relationships: []
       }
