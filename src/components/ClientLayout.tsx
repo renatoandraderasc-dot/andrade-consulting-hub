@@ -42,7 +42,8 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
     });
   }, [user, isAdmin]);
 
-  const canSee = (key: string) => isAdmin || (allowedModules === null ? true : allowedModules.has(key));
+  // If no permissions are configured (null or empty set), default to showing all modules.
+  const canSee = (key: string) => isAdmin || allowedModules === null || allowedModules.size === 0 || allowedModules.has(key);
 
   const handleSignOut = async () => {
     await signOut();
