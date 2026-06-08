@@ -12,53 +12,40 @@ const MONTHS = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", 
 interface VendaPadaria {
   id: string;
   data: string;
-  ranking_dia_semana: string | null;
-  tipo: string | null;
+  ano: number | null;
   mes: number | null;
-  dia_sem: string | null;
   vendas_realizada: number | null;
+  vendas_meta: number | null;
   margem_realizada: number | null;
+  margem_meta: number | null;
   volume: number | null;
 }
 
 const fmtPct = (v: number) =>
   `${(v ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
 
-type Metric = "vendas_realizada" | "margem_realizada" | "volume";
-
 interface ChartProps {
   title: string;
-  rows: VendaPadaria[];
-  metric: Metric;
-  color: string;
+  daysPct: number[]; // length 31, percentage values
 }
 
-const HorizontalBarChart = ({ title, rows, metric, color }: ChartProps) => {
-  // build map day -> value (1..31)
-  const byDay = new Map<number, number>();
-  rows.forEach((r) => {
-    const d = new Date(r.data + "T00:00:00").getDate();
-    byDay.set(d, Number(r[metric] ?? 0));
-  });
-
-  const days = Array.from({ length: 31 }, (_, i) => i + 1);
-  const values = days.map((d) => byDay.get(d) ?? 0);
-  const accumulated =
-    values.reduce((a, b) => a + b, 0) / Math.max(values.filter((v) => v > 0).length, 1);
-  const maxValue = Math.max(accumulated, ...values, 1);
+const HorizontalBarChart = ({ title, daysPct }: ChartProps) => {
+  const filled = daysPct.filter((v) => v > 0);
+  const accumulated = filled.length ? filled.reduce((a, b) => a + b, 0) / filled.length : 0;
+  const maxValue = Math.max(accumulated, ...daysPct, 100);
 
   const Bar = ({ label, value, isAccum }: { label: string; value: number; isAccum?: boolean }) => {
     const widthPct = (value / maxValue) * 100;
     const bg = isAccum ? "bg-emerald-500" : "bg-sky-500";
     return (
       <div className="flex items-center gap-2 text-xs h-5">
-        <div className={`w-8 text-right shrink-0 ${isAccum ? "text-emerald-400 font-bold" : "text-slate-400"}`}>
+        <div className={`w-10 text-right shrink-0 ${isAccum ? "text-emerald-400 font-bold" : "text-slate-400"}`}>
           {label}
         </div>
         <div className="flex-1 relative h-4 bg-slate-800/60 rounded-sm overflow-hidden">
           <div
             className={`absolute inset-y-0 left-0 ${bg} transition-all`}
-            style={{ width: `${Math.max(widthPct, 0)}%` }}
+            style={{ width: `${Math.max(Math.min(widthPct, 100), 0)}%` }}
           />
           <span
             className={`absolute inset-y-0 right-1 flex items-center text-[10px] font-semibold ${
@@ -78,8 +65,8 @@ const HorizontalBarChart = ({ title, rows, metric, color }: ChartProps) => {
       <div className="space-y-1">
         <Bar label="ACUM" value={accumulated} isAccum />
         <div className="h-px bg-slate-700 my-1" />
-        {days.map((d) => (
-          <Bar key={d} label={String(d)} value={values[d - 1]} />
+        {daysPct.map((v, i) => (
+          <Bar key={i} label={String(i + 1)} value={v} />
         ))}
       </div>
     </Card>
@@ -91,15 +78,35 @@ const DashboardPadaria = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<VendaPadaria[]>([]);
-  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
+  const now = new Date();
+  const [selectedYear, setSelectedYear] = useState<number>(now.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number>(now.getMonth() + 1);
+  const [availableYears, setAvailableYears] = useState<number[]>([now.getFullYear()]);
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/login");
   }, [user, authLoading, navigate]);
 
   useEffect(() => {
+    if (user) fetchYears();
+  }, [user]);
+
+  useEffect(() => {
     if (user) fetchData();
-  }, [user, selectedMonth]);
+  }, [user, selectedMonth, selectedYear]);
+
+  const fetchYears = async () => {
+    const { data } = await supabase.from("vendas_padaria" as any).select("ano").not("ano", "is", null);
+    if (data) {
+      const years = Array.from(new Set((data as any[]).map((r) => r.ano).filter(Boolean))).sort(
+        (a: number, b: number) => b - a
+      );
+      if (years.length) {
+        setAvailableYears(years as number[]);
+        if (!years.includes(selectedYear)) setSelectedYear(years[0] as number);
+      }
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -107,17 +114,46 @@ const DashboardPadaria = () => {
       .from("vendas_padaria" as any)
       .select("*")
       .eq("mes", selectedMonth)
+      .eq("ano", selectedYear)
       .order("data", { ascending: true });
     if (!error && data) setRows(data as any);
+    else setRows([]);
     setLoading(false);
   };
 
-  // Mix progress: count of days with volume > 0 vs 31
-  const mixProgress = useMemo(() => {
-    const dias = new Set(
-      rows.filter((r) => Number(r.volume) > 0).map((r) => new Date(r.data + "T00:00:00").getDate())
+  // Aggregate by day of month
+  const { fatPct, margemPct, volPct, mixProgress } = useMemo(() => {
+    const fat = Array(31).fill(0);
+    const mar = Array(31).fill(0);
+    const vol = Array(31).fill(0);
+
+    rows.forEach((r) => {
+      const day = new Date(r.data + "T00:00:00").getDate();
+      const idx = day - 1;
+      if (idx < 0 || idx > 30) return;
+
+      const vMeta = Number(r.vendas_meta ?? 0);
+      const vReal = Number(r.vendas_realizada ?? 0);
+      const mMeta = Number(r.margem_meta ?? 0);
+      const mReal = Number(r.margem_realizada ?? 0);
+      const volume = Number(r.volume ?? 0);
+
+      if (vMeta > 0) fat[idx] = (vReal / vMeta) * 100;
+      if (mMeta > 0) mar[idx] = (mReal / mMeta) * 100;
+      // Volume already comes as % (per spec) — if >1 treat as %, else as fraction
+      vol[idx] = volume > 1 ? volume : volume * 100;
+    });
+
+    const diasComMix = new Set(
+      rows.filter((r) => Number(r.volume ?? 0) > 0).map((r) => new Date(r.data + "T00:00:00").getDate())
     );
-    return { current: dias.size, total: 31 };
+
+    return {
+      fatPct: fat,
+      margemPct: mar,
+      volPct: vol,
+      mixProgress: { current: diasComMix.size, total: 31 },
+    };
   }, [rows]);
 
   return (
@@ -132,11 +168,24 @@ const DashboardPadaria = () => {
               </div>
               <div>
                 <h1 className="text-2xl font-bold tracking-tight">Dashboard Padaria</h1>
-                <p className="text-xs text-slate-400">Indicadores diários — % atingido por dia</p>
+                <p className="text-xs text-slate-400">% atingido por dia — Faturamento, Margem e Volume</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-400">Mês:</span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-slate-400">Ano:</span>
+              <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(Number(v))}>
+                <SelectTrigger className="w-28 bg-slate-900 border-slate-700 text-slate-100">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-900 border-slate-700 text-slate-100">
+                  {availableYears.map((y) => (
+                    <SelectItem key={y} value={String(y)}>
+                      {y}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span className="text-xs text-slate-400 ml-2">Mês:</span>
               <Select value={String(selectedMonth)} onValueChange={(v) => setSelectedMonth(Number(v))}>
                 <SelectTrigger className="w-40 bg-slate-900 border-slate-700 text-slate-100">
                   <SelectValue />
@@ -152,7 +201,6 @@ const DashboardPadaria = () => {
             </div>
           </div>
 
-          {/* Charts */}
           {loading ? (
             <div className="flex items-center justify-center py-24">
               <Loader2 className="w-8 h-8 animate-spin text-amber-400" />
@@ -160,12 +208,11 @@ const DashboardPadaria = () => {
           ) : (
             <>
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <HorizontalBarChart title="FATURAMENTO" rows={rows} metric="vendas_realizada" color="sky" />
-                <HorizontalBarChart title="MARGEM" rows={rows} metric="margem_realizada" color="sky" />
-                <HorizontalBarChart title="VOLUME" rows={rows} metric="volume" color="sky" />
+                <HorizontalBarChart title="FATURAMENTO" daysPct={fatPct} />
+                <HorizontalBarChart title="MARGEM" daysPct={margemPct} />
+                <HorizontalBarChart title="VOLUME" daysPct={volPct} />
               </div>
 
-              {/* Mix progress */}
               <Card className="bg-slate-900/80 border-slate-800 p-5">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-sm font-bold text-slate-200 tracking-wide">PROGRESSO DE MIX</h3>
@@ -181,15 +228,17 @@ const DashboardPadaria = () => {
                   />
                 </div>
                 <p className="mt-2 text-xs text-slate-400">
-                  {((mixProgress.current / mixProgress.total) * 100)
-                    .toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                  {((mixProgress.current / mixProgress.total) * 100).toLocaleString("pt-BR", {
+                    minimumFractionDigits: 1,
+                    maximumFractionDigits: 1,
+                  })}
                   % do mês com lançamentos de volume.
                 </p>
               </Card>
 
               {rows.length === 0 && (
                 <div className="text-center py-12 text-slate-500 text-sm">
-                  Nenhum registro encontrado para {MONTHS[selectedMonth]}.
+                  Nenhum registro encontrado para {MONTHS[selectedMonth]}/{selectedYear}.
                 </div>
               )}
             </>
