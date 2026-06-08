@@ -591,41 +591,65 @@ export type Database = {
       }
       vendas_padaria: {
         Row: {
+          ano: number | null
           created_at: string
           data: string
           dia_sem: string | null
           id: string
+          loja: string | null
+          lucro: number | null
+          lucro_meta: number | null
+          margem_meta: number | null
           margem_realizada: number | null
           mes: number | null
+          mes_nome: string | null
+          part_percent: number | null
           ranking_dia_semana: string | null
           tipo: string | null
           updated_at: string
+          vendas_meta: number | null
           vendas_realizada: number | null
           volume: number | null
         }
         Insert: {
+          ano?: number | null
           created_at?: string
           data: string
           dia_sem?: string | null
           id?: string
+          loja?: string | null
+          lucro?: number | null
+          lucro_meta?: number | null
+          margem_meta?: number | null
           margem_realizada?: number | null
           mes?: number | null
+          mes_nome?: string | null
+          part_percent?: number | null
           ranking_dia_semana?: string | null
           tipo?: string | null
           updated_at?: string
+          vendas_meta?: number | null
           vendas_realizada?: number | null
           volume?: number | null
         }
         Update: {
+          ano?: number | null
           created_at?: string
           data?: string
           dia_sem?: string | null
           id?: string
+          loja?: string | null
+          lucro?: number | null
+          lucro_meta?: number | null
+          margem_meta?: number | null
           margem_realizada?: number | null
           mes?: number | null
+          mes_nome?: string | null
+          part_percent?: number | null
           ranking_dia_semana?: string | null
           tipo?: string | null
           updated_at?: string
+          vendas_meta?: number | null
           vendas_realizada?: number | null
           volume?: number | null
         }
