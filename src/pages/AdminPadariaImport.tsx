@@ -62,14 +62,14 @@ const COLUMNS = [
   "mes",
   "dia_sem",
   "vendas_realizada",
-  "vendas_meta",
   "margem_realizada",
-  "margem_meta",
   "volume",
+  "vendas_meta",
+  "margem_meta",
+  "lucro_meta",
   "loja",
   "part_percent",
   "lucro",
-  "lucro_meta",
   "ano",
   "mes_nome",
 ];
@@ -80,10 +80,10 @@ const NUMERIC_COLS = new Set([
   "margem_realizada",
   "margem_meta",
   "volume",
-  "part_percent",
   "lucro",
   "lucro_meta",
 ]);
+// part_percent: percent value (e.g. "35,35" or "35,35%") -> 0.3535
 
 interface ParsedRow {
   data: string;
@@ -161,6 +161,8 @@ const AdminPadariaImport = () => {
             if (!row.mes_nome) row.mes_nome = MONTH_NAMES[d.month];
           } else if (col === "mes" || col === "ano") {
             row[col] = v ? parseInt(v.replace(/\D/g, "")) || null : null;
+          } else if (col === "part_percent") {
+            row[col] = parseBRNumber(v) / 100;
           } else if (NUMERIC_COLS.has(col)) {
             row[col] = parseBRNumber(v);
           } else {
@@ -194,8 +196,13 @@ const AdminPadariaImport = () => {
     if (!preview.length) return;
     setSaving(true);
     try {
-      const { error } = await supabase.from("vendas_padaria" as any).insert(preview as any);
-      if (error) throw error;
+      console.log("[PadariaImport] inserting", preview.length, "rows", preview[0]);
+      const { data, error } = await supabase.from("vendas_padaria" as any).insert(preview as any).select();
+      if (error) {
+        console.error("[PadariaImport] supabase error:", error);
+        throw error;
+      }
+      console.log("[PadariaImport] inserted:", data);
       toast({
         title: "Importação concluída",
         description: `${preview.length} registro(s) enviado(s) para vendas_padaria.`,
@@ -204,9 +211,10 @@ const AdminPadariaImport = () => {
       setPreview([]);
       setErrors([]);
     } catch (e: any) {
+      console.error("[PadariaImport] catch:", e);
       toast({
         title: "Erro ao importar",
-        description: e?.message ?? String(e),
+        description: e?.message ?? e?.hint ?? JSON.stringify(e),
         variant: "destructive",
       });
     } finally {
