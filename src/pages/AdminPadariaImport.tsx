@@ -62,14 +62,14 @@ const COLUMNS = [
   "mes",
   "dia_sem",
   "vendas_realizada",
-  "vendas_meta",
   "margem_realizada",
-  "margem_meta",
   "volume",
+  "vendas_meta",
+  "margem_meta",
+  "lucro_meta",
   "loja",
   "part_percent",
   "lucro",
-  "lucro_meta",
   "ano",
   "mes_nome",
 ];
@@ -80,10 +80,10 @@ const NUMERIC_COLS = new Set([
   "margem_realizada",
   "margem_meta",
   "volume",
-  "part_percent",
   "lucro",
   "lucro_meta",
 ]);
+// part_percent: percent value (e.g. "35,35" or "35,35%") -> 0.3535
 
 interface ParsedRow {
   data: string;
