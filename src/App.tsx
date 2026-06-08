@@ -18,6 +18,7 @@ import VtexCollector from "./pages/VtexCollector";
 import WebSacSync from "./pages/WebSacSync";
 import PIC from "./pages/PIC";
 import DashboardPadaria from "./pages/DashboardPadaria";
+import AdminPadariaImport from "./pages/AdminPadariaImport";
 import AdminStores from "./pages/AdminStores";
 import NotFound from "./pages/NotFound";
 
@@ -45,6 +46,7 @@ const App = () => (
             <Route path="/websac-sync" element={<WebSacSync />} />
             <Route path="/pic" element={<PIC />} />
             <Route path="/pic/padaria" element={<DashboardPadaria />} />
+            <Route path="/admin/padaria-import" element={<AdminPadariaImport />} />
             <Route path="/admin/stores" element={<AdminStores />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
