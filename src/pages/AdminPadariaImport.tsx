@@ -196,8 +196,13 @@ const AdminPadariaImport = () => {
     if (!preview.length) return;
     setSaving(true);
     try {
-      const { error } = await supabase.from("vendas_padaria" as any).insert(preview as any);
-      if (error) throw error;
+      console.log("[PadariaImport] inserting", preview.length, "rows", preview[0]);
+      const { data, error } = await supabase.from("vendas_padaria" as any).insert(preview as any).select();
+      if (error) {
+        console.error("[PadariaImport] supabase error:", error);
+        throw error;
+      }
+      console.log("[PadariaImport] inserted:", data);
       toast({
         title: "Importação concluída",
         description: `${preview.length} registro(s) enviado(s) para vendas_padaria.`,
@@ -206,9 +211,10 @@ const AdminPadariaImport = () => {
       setPreview([]);
       setErrors([]);
     } catch (e: any) {
+      console.error("[PadariaImport] catch:", e);
       toast({
         title: "Erro ao importar",
-        description: e?.message ?? String(e),
+        description: e?.message ?? e?.hint ?? JSON.stringify(e),
         variant: "destructive",
       });
     } finally {
