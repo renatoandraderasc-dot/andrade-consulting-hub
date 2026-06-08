@@ -2,6 +2,7 @@ export const APP_MODULES = [
   { key: "dashboard", label: "Dashboard", path: "/dashboard" },
   { key: "controladoria", label: "Controladoria", path: "/controladoria" },
   { key: "pic", label: "PIC", path: "/pic" },
+  { key: "pic_padaria", label: "Dashboard Padaria", path: "/pic/padaria" },
   { key: "repricing", label: "Re-PRICING", path: "/repricing" },
   { key: "checklist", label: "Checklist", path: "/checklist" },
   { key: "admin_stores", label: "Admin: Lojas", path: "/admin/stores" },

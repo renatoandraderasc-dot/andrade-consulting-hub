@@ -589,6 +589,48 @@ export type Database = {
           },
         ]
       }
+      vendas_padaria: {
+        Row: {
+          created_at: string
+          data: string
+          dia_sem: string | null
+          id: string
+          margem_realizada: number | null
+          mes: number | null
+          ranking_dia_semana: string | null
+          tipo: string | null
+          updated_at: string
+          vendas_realizada: number | null
+          volume: number | null
+        }
+        Insert: {
+          created_at?: string
+          data: string
+          dia_sem?: string | null
+          id?: string
+          margem_realizada?: number | null
+          mes?: number | null
+          ranking_dia_semana?: string | null
+          tipo?: string | null
+          updated_at?: string
+          vendas_realizada?: number | null
+          volume?: number | null
+        }
+        Update: {
+          created_at?: string
+          data?: string
+          dia_sem?: string | null
+          id?: string
+          margem_realizada?: number | null
+          mes?: number | null
+          ranking_dia_semana?: string | null
+          tipo?: string | null
+          updated_at?: string
+          vendas_realizada?: number | null
+          volume?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
