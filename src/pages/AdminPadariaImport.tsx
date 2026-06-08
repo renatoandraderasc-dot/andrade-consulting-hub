@@ -253,7 +253,7 @@ const AdminPadariaImport = () => {
               className="min-h-[200px] font-mono text-xs bg-slate-950 border-slate-700 text-slate-200"
             />
             <div className="flex gap-2">
-              <Button onClick={handleParse} disabled={parsing || !raw.trim()} variant="secondary">
+              <Button onClick={handleParse} disabled={parsing} variant="secondary">
                 {parsing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                 Analisar
               </Button>
