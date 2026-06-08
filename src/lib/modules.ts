@@ -3,6 +3,7 @@ export const APP_MODULES = [
   { key: "controladoria", label: "Controladoria", path: "/controladoria" },
   { key: "pic", label: "PIC", path: "/pic" },
   { key: "pic_padaria", label: "Dashboard Padaria", path: "/pic/padaria" },
+  { key: "admin_padaria_import", label: "Admin: Import Padaria", path: "/admin/padaria-import" },
   { key: "repricing", label: "Re-PRICING", path: "/repricing" },
   { key: "checklist", label: "Checklist", path: "/checklist" },
   { key: "admin_stores", label: "Admin: Lojas", path: "/admin/stores" },
