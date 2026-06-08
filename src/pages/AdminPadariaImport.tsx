@@ -161,6 +161,8 @@ const AdminPadariaImport = () => {
             if (!row.mes_nome) row.mes_nome = MONTH_NAMES[d.month];
           } else if (col === "mes" || col === "ano") {
             row[col] = v ? parseInt(v.replace(/\D/g, "")) || null : null;
+          } else if (col === "part_percent") {
+            row[col] = parseBRNumber(v) / 100;
           } else if (NUMERIC_COLS.has(col)) {
             row[col] = parseBRNumber(v);
           } else {
