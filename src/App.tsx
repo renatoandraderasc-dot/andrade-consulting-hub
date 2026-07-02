@@ -20,6 +20,9 @@ import PIC from "./pages/PIC";
 import DashboardPadaria from "./pages/DashboardPadaria";
 import AdminPadariaImport from "./pages/AdminPadariaImport";
 import AdminStores from "./pages/AdminStores";
+import Produtos from "./pages/Produtos";
+import EncarteEditor from "./pages/EncarteEditor";
+import MeusEncartes from "./pages/MeusEncartes";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -48,6 +51,10 @@ const App = () => (
             <Route path="/pic/padaria" element={<DashboardPadaria />} />
             <Route path="/admin/padaria-import" element={<AdminPadariaImport />} />
             <Route path="/admin/stores" element={<AdminStores />} />
+            <Route path="/produtos" element={<Produtos />} />
+            <Route path="/encartes" element={<MeusEncartes />} />
+            <Route path="/encartes/editor" element={<EncarteEditor />} />
+            <Route path="/encartes/editor/:id" element={<EncarteEditor />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
