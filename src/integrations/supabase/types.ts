@@ -157,6 +157,108 @@ export type Database = {
         }
         Relationships: []
       }
+      encarte_itens: {
+        Row: {
+          created_at: string
+          destaque: boolean
+          encarte_id: string
+          id: string
+          observacao: string | null
+          ordem: number
+          preco_de: number | null
+          preco_oferta: number
+          produto_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          destaque?: boolean
+          encarte_id: string
+          id?: string
+          observacao?: string | null
+          ordem?: number
+          preco_de?: number | null
+          preco_oferta: number
+          produto_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          destaque?: boolean
+          encarte_id?: string
+          id?: string
+          observacao?: string | null
+          ordem?: number
+          preco_de?: number | null
+          preco_oferta?: number
+          produto_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "encarte_itens_encarte_id_fkey"
+            columns: ["encarte_id"]
+            isOneToOne: false
+            referencedRelation: "encartes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "encarte_itens_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      encartes: {
+        Row: {
+          colunas: number
+          created_at: string
+          formato: string
+          id: string
+          loja_endereco: string | null
+          loja_logo_url: string | null
+          loja_nome: string | null
+          loja_telefone: string | null
+          nome: string
+          tema: string
+          titulo: string | null
+          updated_at: string
+          validade_ate: string | null
+          validade_de: string | null
+        }
+        Insert: {
+          colunas?: number
+          created_at?: string
+          formato?: string
+          id?: string
+          loja_endereco?: string | null
+          loja_logo_url?: string | null
+          loja_nome?: string | null
+          loja_telefone?: string | null
+          nome: string
+          tema?: string
+          titulo?: string | null
+          updated_at?: string
+          validade_ate?: string | null
+          validade_de?: string | null
+        }
+        Update: {
+          colunas?: number
+          created_at?: string
+          formato?: string
+          id?: string
+          loja_endereco?: string | null
+          loja_logo_url?: string | null
+          loja_nome?: string | null
+          loja_telefone?: string | null
+          nome?: string
+          tema?: string
+          titulo?: string | null
+          updated_at?: string
+          validade_ate?: string | null
+          validade_de?: string | null
+        }
+        Relationships: []
+      }
       lancamentos: {
         Row: {
           competencia_ano: number
@@ -215,6 +317,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      produtos: {
+        Row: {
+          categoria: string | null
+          codigo_interno: string | null
+          created_at: string
+          descricao: string
+          ean: string | null
+          id: string
+          imagem_url: string | null
+          preco_regular: number | null
+          secao: string | null
+          subcategoria: string | null
+          unidade: string
+          updated_at: string
+        }
+        Insert: {
+          categoria?: string | null
+          codigo_interno?: string | null
+          created_at?: string
+          descricao: string
+          ean?: string | null
+          id?: string
+          imagem_url?: string | null
+          preco_regular?: number | null
+          secao?: string | null
+          subcategoria?: string | null
+          unidade?: string
+          updated_at?: string
+        }
+        Update: {
+          categoria?: string | null
+          codigo_interno?: string | null
+          created_at?: string
+          descricao?: string
+          ean?: string | null
+          id?: string
+          imagem_url?: string | null
+          preco_regular?: number | null
+          secao?: string | null
+          subcategoria?: string | null
+          unidade?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
