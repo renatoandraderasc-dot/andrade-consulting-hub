@@ -23,6 +23,7 @@ import AdminStores from "./pages/AdminStores";
 import Produtos from "./pages/Produtos";
 import EncarteEditor from "./pages/EncarteEditor";
 import MeusEncartes from "./pages/MeusEncartes";
+import OAuthConsent from "./pages/OAuthConsent";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -55,6 +56,7 @@ const App = () => (
             <Route path="/encartes" element={<MeusEncartes />} />
             <Route path="/encartes/editor" element={<EncarteEditor />} />
             <Route path="/encartes/editor/:id" element={<EncarteEditor />} />
+            <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
