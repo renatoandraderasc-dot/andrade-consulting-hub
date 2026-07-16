@@ -57,7 +57,7 @@ const Login = () => {
         password,
         options: {
           data: { full_name: fullName },
-          emailRedirectTo: window.location.origin,
+          emailRedirectTo: window.location.origin + (nextPath ?? ""),
         },
       });
       if (signUpError) {
@@ -90,7 +90,7 @@ const Login = () => {
 
         if (isAdmin) {
           sessionStorage.setItem("selectedStoreId", selectedStore);
-          navigate("/dashboard");
+          navigate(postLoginTarget);
         } else {
           // Regular users need approved access to the selected store
           const { data: access } = await supabase
@@ -105,7 +105,7 @@ const Login = () => {
             setError("Você não tem acesso aprovado a esta loja. Aguarde a aprovação do administrador.");
           } else {
             sessionStorage.setItem("selectedStoreId", selectedStore);
-            navigate("/dashboard");
+            navigate(postLoginTarget);
           }
         }
       }
