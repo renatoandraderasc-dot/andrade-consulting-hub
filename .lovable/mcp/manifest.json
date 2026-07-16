@@ -1,0 +1,126 @@
+{
+  "version": 1,
+  "sdk_version": "0.23.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://pfflraftymstgtslofno.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "andrade-consultoria-mcp",
+      "version": "0.1.0",
+      "title": "Andrade Consultoria MCP"
+    },
+    "tools": [
+      {
+        "name": "whoami",
+        "title": "Quem sou eu",
+        "description": "Retorna o id e o email do usuário autenticado no app. Útil para verificar a conexão.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_produtos",
+        "title": "Listar produtos",
+        "description": "Lista/pesquisa produtos cadastrados da loja pelo nome (descrição), código interno ou EAN. Retorna até 50 produtos com id, código, EAN, descrição, categoria, preço regular.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "search": {
+              "description": "Texto para buscar em descrição, código interno ou EAN. Opcional.",
+              "type": "string"
+            },
+            "limit": {
+              "description": "Máximo de resultados (default 20, teto 50).",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_encartes",
+        "title": "Listar encartes",
+        "description": "Lista os encartes (flyers) do usuário autenticado, com nome, tema, formato, validade e data de criação.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "limit": {
+              "description": "Máximo de resultados (default 20).",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_vendas_padaria",
+        "title": "Listar vendas da padaria",
+        "description": "Consulta linhas da tabela de vendas da padaria, filtrando opcionalmente por ano, mês e loja. Retorna até 100 registros com data, loja, vendas/meta, margem/meta, volume, lucro e part_percent.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "ano": {
+              "description": "Filtrar pelo ano (ex: 2026).",
+              "type": "integer",
+              "minimum": 2000,
+              "maximum": 2100
+            },
+            "mes": {
+              "description": "Filtrar pelo mês (1-12).",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 12
+            },
+            "loja": {
+              "description": "Filtrar pela loja (match exato).",
+              "type": "string"
+            },
+            "limit": {
+              "description": "Máximo de resultados (default 31).",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
