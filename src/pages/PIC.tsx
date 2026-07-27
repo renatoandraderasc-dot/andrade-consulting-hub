@@ -5,6 +5,7 @@ import { Trophy, TrendingUp, TrendingDown, Calendar, Filter, Sparkles, Flag, Che
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import ClientLayout from "@/components/ClientLayout";
+import SyncStatusBadge from "@/components/SyncStatusBadge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -191,7 +192,10 @@ const PIC = () => {
             </div>
             <div>
               <h1 className="text-2xl font-bold font-heading text-foreground">PIC — Painel de Indicadores Comerciais</h1>
-              <p className="text-sm text-muted-foreground font-body">Acompanhamento de metas por departamento</p>
+              <div className="flex items-center gap-3 flex-wrap mt-1">
+                <p className="text-sm text-muted-foreground font-body">Acompanhamento de metas por departamento</p>
+                {storeId && <SyncStatusBadge storeId={storeId} />}
+              </div>
             </div>
           </div>
 
