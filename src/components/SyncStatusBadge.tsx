@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   storeId: string;
+  onSyncChange?: () => void;
 }
 
 interface SyncInfo {
@@ -22,7 +23,7 @@ const formatDateTime = (iso: string) => {
   });
 };
 
-const SyncStatusBadge = ({ storeId }: Props) => {
+const SyncStatusBadge = ({ storeId, onSyncChange }: Props) => {
   const [info, setInfo] = useState<SyncInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -32,7 +33,13 @@ const SyncStatusBadge = ({ storeId }: Props) => {
       .select("last_sync_at, last_error")
       .eq("store_id", storeId)
       .maybeSingle();
-    setInfo(data ?? { last_sync_at: null, last_error: null });
+    const nextInfo = data ?? { last_sync_at: null, last_error: null };
+    setInfo((previous) => {
+      if (previous && previous.last_sync_at !== nextInfo.last_sync_at) {
+        onSyncChange?.();
+      }
+      return nextInfo;
+    });
     setLoading(false);
   };
 
@@ -52,7 +59,7 @@ const SyncStatusBadge = ({ storeId }: Props) => {
       supabase.removeChannel(channel);
       clearInterval(interval);
     };
-  }, [storeId]);
+  }, [storeId, onSyncChange]);
 
   if (loading || !info) return null;
 
@@ -80,9 +87,7 @@ const SyncStatusBadge = ({ storeId }: Props) => {
       <span className="font-medium">
         {hasError ? "Erro no sync" : hasSync ? "Sync OK" : "Sem sync"}
       </span>
-      {hasSync && (
-        <span className="text-muted-foreground">· {formatDateTime(info.last_sync_at!)}</span>
-      )}
+      {info.last_sync_at && <span className="text-muted-foreground">· {formatDateTime(info.last_sync_at)}</span>}
     </div>
   );
 };
