@@ -12,6 +12,7 @@ import AdminUsers from "./pages/AdminUsers";
 import Checklist from "./pages/Checklist";
 import Dashboard from "./pages/Dashboard";
 import AdminMetas from "./pages/AdminMetas";
+import MetasGerador from "./pages/MetasGerador";
 import Controladoria from "./pages/Controladoria";
 import Repricing from "./pages/Repricing";
 import VtexCollector from "./pages/VtexCollector";
