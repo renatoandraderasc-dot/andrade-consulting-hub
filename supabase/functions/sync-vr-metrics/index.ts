@@ -118,6 +118,16 @@ Deno.serve(async (req) => {
           porDepto.set(depto, atual);
         }
 
+        // Agrega LOJA (Supermercado — Total) como soma de todos os departamentos do dia
+        const totalLoja = { vendas: 0, lucro: 0, volume: 0, temVolume: false };
+        for (const tot of porDepto.values()) {
+          totalLoja.vendas += tot.vendas;
+          totalLoja.lucro += tot.lucro;
+          totalLoja.volume += tot.volume;
+          if (tot.temVolume) totalLoja.temVolume = true;
+        }
+        porDepto.set("LOJA", totalLoja);
+
         for (const [department, tot] of porDepto) {
           const payload: Record<string, unknown> = {
             store_id: cfg.store_id,
