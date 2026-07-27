@@ -367,6 +367,19 @@ const MetasGerador = () => {
                     <Download className="w-4 h-4" /> Exportar Excel
                   </button>
                 )}
+                <button
+                  onClick={handleSaveMetas}
+                  disabled={saving || dirtyDates.size === 0}
+                  className={btnPrimary}
+                >
+                  <Save className="w-4 h-4" />
+                  {dirtyDates.size > 0 ? `Salvar (${dirtyDates.size})` : "Salvar"}
+                </button>
+                {dirtyDates.size > 0 && (
+                  <span className="text-xs font-body text-amber-500 self-center">
+                    Alterações não salvas
+                  </span>
+                )}
               </div>
             </div>
 
