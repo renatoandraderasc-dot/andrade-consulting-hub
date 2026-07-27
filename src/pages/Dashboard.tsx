@@ -251,10 +251,10 @@ const Dashboard = () => {
     const realVol = dailyData.reduce((s, d) => s + d.realizadoVolume, 0);
     const projVol = dailyData.reduce((s, d) => s + d.projecaoVolume, 0);
 
-    // Average margin percentages
-    const avgMetaMargemPct = dailyData.length > 0 ? dailyData.reduce((s, d) => s + d.metaMargemPct, 0) / dailyData.length : 0;
-    const avgRealMargemPct = dailyData.length > 0 ? dailyData.reduce((s, d) => s + d.realizadoMargemPct, 0) / dailyData.length : 0;
-    const avgProjMargemPct = dailyData.length > 0 ? dailyData.reduce((s, d) => s + d.projecaoMargemPct, 0) / dailyData.length : 0;
+    // Standardized margin: realized profit ÷ realized revenue (same rule everywhere in the app)
+    const metaMargemPct = metaAcumVendas > 0 ? (metaAcumLucro / metaAcumVendas) * 100 : 0;
+    const realMargemPct = realVendas > 0 ? (realLucro / realVendas) * 100 : 0;
+    const projMargemPct = projVendas > 0 ? (projLucro / projVendas) * 100 : 0;
 
     return {
       vendas: {
@@ -274,9 +274,9 @@ const Dashboard = () => {
         projecaoPct: metaAcumLucro > 0 ? (projLucro / metaAcumLucro) * 100 : 0,
       },
       margem: {
-        metaPct: avgMetaMargemPct,
-        realizadoPct: avgRealMargemPct,
-        projecaoPct: avgProjMargemPct,
+        metaPct: metaMargemPct,
+        realizadoPct: realMargemPct,
+        projecaoPct: projMargemPct,
       },
       volume: {
         metaMensal: metaAcumVol,
@@ -299,19 +299,19 @@ const Dashboard = () => {
 
   return (
     <ClientLayout storeName={storeName}>
-      <div className="container mx-auto px-4 py-6 max-w-[1400px]">
+      <div className="container mx-auto px-6 py-6 max-w-[1400px]">
         {/* Header */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-4">
-          <div className="clip-tag-lg bg-ink text-paper px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 bg-poster-yellow text-ink flex items-center justify-center border-2 border-poster-yellow">
-                <BarChart3 className="w-6 h-6" />
+              <div className="h-10 w-10 rounded-lg bg-secondary text-primary flex items-center justify-center border border-border">
+                <BarChart3 className="w-5 h-5" />
               </div>
               <div>
-                <h1 className="font-condensed uppercase tracking-widest text-2xl font-bold leading-none">
-                  Dashboard <span className="text-poster-yellow">{storeName}</span>
+                <h1 className="text-xl font-semibold text-foreground leading-tight">
+                  {storeName || "Dashboard"}
                 </h1>
-                <p className="text-paper/70 font-condensed uppercase tracking-widest text-[11px] mt-1">
+                <p className="text-muted-foreground text-xs mt-0.5">
                   {MONTHS[selectedMonth]} {selectedYear}
                   {selectedDept ? ` · ${selectedDept}` : ""}
                 </p>
@@ -324,7 +324,7 @@ const Dashboard = () => {
                 <select
                   value={selectedDept}
                   onChange={(e) => setSelectedDept(e.target.value)}
-                  className="bg-paper text-ink border-2 border-poster-yellow px-3 py-1.5 font-condensed uppercase tracking-wider text-xs"
+                  className="bg-card text-foreground border border-border rounded-md px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
                 >
                   {departments.map((d) => (
                     <option key={d} value={d}>{d}</option>
@@ -334,7 +334,7 @@ const Dashboard = () => {
               <select
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                className="bg-paper text-ink border-2 border-poster-yellow px-3 py-1.5 font-condensed uppercase tracking-wider text-xs"
+                className="bg-card text-foreground border border-border rounded-md px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
               >
                 {MONTHS.slice(1).map((m, i) => (
                   <option key={i + 1} value={i + 1}>{m}</option>
@@ -343,7 +343,7 @@ const Dashboard = () => {
               <select
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(Number(e.target.value))}
-                className="bg-paper text-ink border-2 border-poster-yellow px-3 py-1.5 font-condensed uppercase tracking-wider text-xs"
+                className="bg-card text-foreground border border-border rounded-md px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
               >
                 {[2024, 2025, 2026].map((y) => (
                   <option key={y} value={y}>{y}</option>
@@ -361,26 +361,23 @@ const Dashboard = () => {
           <VendasLojaSection storeId={storeId} month={selectedMonth} year={selectedYear} />
         )}
 
-        <CouponDivider label={`Faturamento x Margem por Dia ${selectedDept ? `— ${selectedDept}` : ""}`} />
+        <CouponDivider label={`Faturamento x margem por dia${selectedDept ? ` — ${selectedDept}` : ""}`} />
         <DailyMetricsTable data={dailyData} />
 
         {/* Product Comparison */}
         <ProductComparison
           data={productData}
-          title={`Comparativo de Produtos — ${MONTHS[selectedMonth]} ${selectedYear}`}
+          title={`Comparativo de produtos — ${MONTHS[selectedMonth]} ${selectedYear}`}
         />
 
         {/* Category Chart */}
         <div className="mt-6">
           <CategoryChart
             data={categoryData}
-            title="Distribuição de Vendas por Categoria (vs Mês Anterior e Ano Anterior)"
+            title="Vendas por seção (comparado com mês anterior e ano anterior)"
           />
         </div>
       </div>
-
-      {/* Persona mascote — feliz/triste conforme meta */}
-      <MascotPersona pct={kpiData.vendas.realizadoPct || 0} />
     </ClientLayout>
   );
 };
