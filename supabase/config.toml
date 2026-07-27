@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.list-stores]
 verify_jwt = false
+
+[functions.sync-vr-metrics]
+verify_jwt = false
