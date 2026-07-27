@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.importar-historico-vr]
 verify_jwt = false
+
+[functions.importar-compras-vr]
+verify_jwt = false
