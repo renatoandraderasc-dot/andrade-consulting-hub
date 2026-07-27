@@ -34,7 +34,7 @@ interface DayMetric {
 const pctFmt = (v: number) => `${v.toFixed(2).replace(".", ",")}%`;
 
 const PIC = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [storeId, setStoreId] = useState("");
   const [storeName, setStoreName] = useState("");
@@ -47,7 +47,7 @@ const PIC = () => {
   useEffect(() => {
     if (!authLoading && !user) { navigate("/login"); return; }
     if (user) fetchStoreInfo();
-  }, [user, authLoading]);
+  }, [user, authLoading, isAdmin]);
 
   useEffect(() => {
     if (storeId) fetchData();
@@ -79,6 +79,8 @@ const PIC = () => {
 
 
   const fetchStoreInfo = async () => {
+    if (!user) return;
+
     const selectedStoreId = sessionStorage.getItem("selectedStoreId");
     if (selectedStoreId) {
       const { data } = await supabase
@@ -94,10 +96,26 @@ const PIC = () => {
     }
 
     const { data: access } = await supabase
-      .from("user_store_access").select("store_id, stores(name)").eq("user_id", user!.id).eq("approved", true).limit(1).single();
+      .from("user_store_access").select("store_id, stores(name)").eq("user_id", user.id).eq("approved", true).limit(1).maybeSingle();
     if (access) {
       setStoreId(access.store_id);
       setStoreName((access as any).stores?.name || "");
+      return;
+    }
+
+    if (isAdmin) {
+      const { data: vrStore } = await supabase
+        .from("store_vr_config")
+        .select("store_id, stores(name)")
+        .eq("enabled", true)
+        .order("last_sync_at", { ascending: false, nullsFirst: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (vrStore) {
+        setStoreId(vrStore.store_id);
+        setStoreName((vrStore as any).stores?.name || "");
+      }
     }
   };
 
