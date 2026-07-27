@@ -37,10 +37,12 @@ function datasParaSincronizar(): string[] {
 interface LinhaVr {
   secao: string;
   total_vendido: string | number;
-  custo_total: string | number;
+  custo_total?: string | number;
   lucro: string | number;
-  margem_pct: string | number;
+  margem_pct?: string | number;
+  volume?: string | number;
 }
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
