@@ -312,25 +312,27 @@ const MetasGerador = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <div>
             <label className="font-body text-xs text-muted-foreground mb-1 block">Loja</label>
-            <select value={storeId} onChange={(e) => { setStoreId(e.target.value); setStoreName(stores.find(s => s.id === e.target.value)?.name || ""); }} className={selectCls}>
+            <select value={storeId} onChange={(e) => { if (!confirmDiscardIfDirty()) return; setStoreId(e.target.value); setStoreName(stores.find(s => s.id === e.target.value)?.name || ""); }} className={selectCls}>
               {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </div>
           <div>
             <label className="font-body text-xs text-muted-foreground mb-1 block">Departamento</label>
-            <select value={department} onChange={(e) => setDepartment(e.target.value)} className={selectCls}>
-              {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
+            <select value={department} onChange={(e) => { if (!confirmDiscardIfDirty()) return; setDepartment(e.target.value); }} className={selectCls}>
+              {DEPARTMENTS_PIC.map((d) => <option key={d} value={d}>{d}</option>)}
+              <option disabled>──────────</option>
+              <option value="LOJA">{deptLabel("LOJA")}</option>
             </select>
           </div>
           <div>
             <label className="font-body text-xs text-muted-foreground mb-1 block">Mês</label>
-            <select value={month} onChange={(e) => setMonth(Number(e.target.value))} className={selectCls}>
+            <select value={month} onChange={(e) => { if (!confirmDiscardIfDirty()) return; setMonth(Number(e.target.value)); }} className={selectCls}>
               {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
             </select>
           </div>
           <div>
             <label className="font-body text-xs text-muted-foreground mb-1 block">Ano</label>
-            <select value={year} onChange={(e) => setYear(Number(e.target.value))} className={selectCls}>
+            <select value={year} onChange={(e) => { if (!confirmDiscardIfDirty()) return; setYear(Number(e.target.value)); }} className={selectCls}>
               {[2023, 2024, 2025, 2026, 2027].map((y) => <option key={y} value={y}>{y}</option>)}
             </select>
           </div>
