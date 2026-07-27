@@ -8,6 +8,7 @@ export const APP_MODULES = [
   { key: "checklist", label: "Checklist", path: "/checklist" },
   { key: "admin_stores", label: "Admin: Lojas", path: "/admin/stores" },
   { key: "admin_metas", label: "Admin: Metas", path: "/admin/metas" },
+  { key: "metas_gerador", label: "Gerador de Metas", path: "/metas-gerador" },
   { key: "admin_questions", label: "Admin: Perguntas", path: "/admin/questions" },
   { key: "admin_users", label: "Admin: Usuários", path: "/admin/users" },
   { key: "vtex_collector", label: "Coletor VTEX", path: "/vtex-collector" },
