@@ -2,250 +2,236 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Poster/Gondola typography */
-@import url('https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@400;500;600;700&family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
+/* BI executive theme — sober, professional. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 @layer base {
   :root {
-    /* Paper & Ink foundation */
-    --background: 40 43% 96%;          /* #FAF7F0 off-white paper */
-    --foreground: 24 9% 7%;            /* #141210 ink */
+    /* Surfaces */
+    --background: 220 13% 7%;          /* #0E1013 */
+    --foreground: 220 13% 92%;         /* #E7E9EE */
 
-    --card: 40 45% 98%;
-    --card-foreground: 24 9% 7%;
+    --card: 220 12% 11%;               /* #16191F */
+    --card-foreground: 220 13% 92%;
 
-    --popover: 40 45% 98%;
-    --popover-foreground: 24 9% 7%;
+    --popover: 220 12% 11%;
+    --popover-foreground: 220 13% 92%;
 
-    /* Primary = ink black for buttons/CTA borders */
-    --primary: 24 9% 7%;
-    --primary-foreground: 40 43% 96%;
+    --primary: 217 94% 58%;            /* #2D7FF9 accent (petrol blue) */
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 40 20% 88%;
-    --secondary-foreground: 24 9% 7%;
+    --secondary: 220 10% 15%;
+    --secondary-foreground: 220 13% 92%;
 
-    --muted: 40 15% 90%;
-    --muted-foreground: 24 8% 32%;
+    --muted: 220 10% 15%;
+    --muted-foreground: 218 13% 64%;   /* #97A0AE */
 
-    --accent: 50 100% 50%;             /* poster yellow accent */
-    --accent-foreground: 24 9% 7%;
+    --accent: 217 94% 58%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 358 78% 49%;        /* #E01B24 offer red */
+    --destructive: 0 74% 51%;          /* #DC2626 */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 24 9% 15%;
-    --input: 24 15% 80%;
-    --ring: 50 100% 50%;
+    --border: 220 12% 17%;             /* #232830 */
+    --input: 220 12% 17%;
+    --ring: 217 94% 58%;
 
-    --radius: 0.25rem;
+    --radius: 0.5rem;
 
-    /* Poster tokens */
-    --paper: 40 43% 96%;
-    --paper-shade: 40 30% 92%;
-    --ink: 24 9% 7%;
-    --poster-yellow: 50 100% 50%;      /* #FFD400 */
-    --poster-yellow-foreground: 24 9% 7%;
-    --offer-red: 358 78% 49%;          /* #E01B24 */
+    /* Semantic signals */
+    --success: 142 71% 36%;            /* #16A34A */
+    --success-foreground: 0 0% 100%;
+    --warning: 32 94% 44%;             /* #D97706 */
+    --warning-foreground: 0 0% 100%;
+    --danger: 0 74% 51%;               /* #DC2626 */
+    --danger-foreground: 0 0% 100%;
+    --accent-blue: 217 94% 58%;
+
+    /* Legacy poster tokens repointed to sober equivalents (so old markup still renders cleanly) */
+    --paper: 220 13% 7%;
+    --paper-shade: 220 12% 11%;
+    --ink: 220 12% 11%;
+    --poster-yellow: 220 12% 17%;
+    --poster-yellow-foreground: 220 13% 92%;
+    --offer-red: 0 74% 51%;
     --offer-red-foreground: 0 0% 100%;
-    --gondola-green: 123 46% 34%;      /* #2E7D32 */
+    --gondola-green: 142 71% 36%;
     --gondola-green-foreground: 0 0% 100%;
 
-    /* Sidebar (mostly unused now, kept for compatibility) */
-    --sidebar: 24 9% 7%;
-    --sidebar-background: 24 9% 7%;
-    --sidebar-foreground: 40 43% 96%;
-    --sidebar-primary: 50 100% 50%;
-    --sidebar-primary-foreground: 24 9% 7%;
-    --sidebar-accent: 24 9% 12%;
-    --sidebar-accent-foreground: 40 43% 96%;
-    --sidebar-border: 24 9% 20%;
-    --sidebar-ring: 50 100% 50%;
+    /* Sidebar */
+    --sidebar: 220 12% 9%;
+    --sidebar-background: 220 12% 9%;
+    --sidebar-foreground: 220 13% 92%;
+    --sidebar-primary: 217 94% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 10% 15%;
+    --sidebar-accent-foreground: 220 13% 92%;
+    --sidebar-border: 220 12% 17%;
+    --sidebar-ring: 217 94% 58%;
 
-    /* Charts (poster palette) */
-    --chart-1: 50 100% 50%;
-    --chart-2: 358 78% 49%;
-    --chart-3: 123 46% 34%;
-    --chart-4: 24 9% 32%;
-    --chart-5: 24 9% 60%;
+    /* Charts */
+    --chart-1: 217 94% 58%;
+    --chart-2: 142 71% 36%;
+    --chart-3: 32 94% 44%;
+    --chart-4: 0 74% 51%;
+    --chart-5: 218 13% 64%;
 
-    /* Legacy tokens kept for existing code */
-    --gold: 50 100% 50%;
-    --gold-light: 50 100% 65%;
-    --navy: 24 9% 7%;
-    --navy-deep: 24 9% 4%;
+    /* Legacy compat */
+    --gold: 217 94% 58%;
+    --gold-light: 217 94% 68%;
+    --navy: 220 12% 11%;
+    --navy-deep: 220 13% 7%;
 
     --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
-    --font-condensed: 'Archivo Narrow', 'Oswald', ui-sans-serif, sans-serif;
+    --font-condensed: 'Inter', ui-sans-serif, sans-serif;
     --font-serif: 'Inter', ui-serif, Georgia, serif;
-    --font-mono: 'Archivo Narrow', ui-monospace, monospace;
+    --font-mono: 'Inter', ui-monospace, monospace;
 
-    --shadow-2xs: 0 1px 0 0 hsl(0 0% 0% / 0.08);
-    --shadow-xs: 0 1px 0 0 hsl(0 0% 0% / 0.08);
-    --shadow-sm: 0 2px 0 0 hsl(0 0% 0% / 0.12);
-    --shadow: 0 2px 0 0 hsl(0 0% 0% / 0.12);
-    --shadow-md: 0 3px 0 0 hsl(0 0% 0% / 0.15);
-    --shadow-lg: 0 4px 0 0 hsl(0 0% 0% / 0.18);
-    --shadow-xl: 0 6px 0 0 hsl(0 0% 0% / 0.2);
-    --shadow-2xl: 0 8px 0 0 hsl(0 0% 0% / 0.25);
+    --shadow-2xs: 0 1px 0 0 hsl(0 0% 0% / 0.25);
+    --shadow-xs: 0 1px 2px 0 hsl(0 0% 0% / 0.3);
+    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.3);
+    --shadow: 0 1px 3px 0 hsl(0 0% 0% / 0.35);
+    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.4);
+    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.45);
+    --shadow-xl: 0 20px 25px -5px hsl(0 0% 0% / 0.5);
+    --shadow-2xl: 0 25px 50px -12px hsl(0 0% 0% / 0.55);
+  }
+
+  /* Light mode kept BI-neutral (paper white) for anyone that toggles it */
+  .light, :root.light {
+    --background: 220 20% 98%;
+    --foreground: 220 15% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 15% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 15% 12%;
+    --primary: 217 94% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 15% 94%;
+    --secondary-foreground: 220 15% 12%;
+    --muted: 220 15% 94%;
+    --muted-foreground: 218 13% 40%;
+    --accent: 217 94% 50%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 74% 45%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 15% 90%;
+    --input: 220 15% 90%;
+    --ring: 217 94% 50%;
+    --paper: 220 20% 98%;
+    --paper-shade: 220 15% 94%;
+    --ink: 0 0% 100%;
+    --poster-yellow: 220 15% 94%;
+    --poster-yellow-foreground: 220 15% 12%;
   }
 
   .dark {
-    --background: 24 9% 7%;
-    --foreground: 40 43% 96%;
-
-    --card: 24 9% 10%;
-    --card-foreground: 40 43% 96%;
-
-    --popover: 24 9% 10%;
-    --popover-foreground: 40 43% 96%;
-
-    --primary: 50 100% 50%;
-    --primary-foreground: 24 9% 7%;
-
-    --secondary: 24 9% 15%;
-    --secondary-foreground: 40 43% 96%;
-
-    --muted: 24 9% 14%;
-    --muted-foreground: 40 15% 70%;
-
-    --accent: 50 100% 50%;
-    --accent-foreground: 24 9% 7%;
-
-    --destructive: 358 78% 55%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 40 15% 25%;
-    --input: 40 15% 25%;
-    --ring: 50 100% 50%;
-
-    --paper: 24 9% 7%;
-    --paper-shade: 24 9% 12%;
-    --ink: 40 43% 96%;
-
-    --sidebar: 24 9% 4%;
-    --sidebar-background: 24 9% 4%;
-    --sidebar-foreground: 40 43% 96%;
-    --sidebar-accent: 24 9% 12%;
-    --sidebar-accent-foreground: 40 43% 96%;
-    --sidebar-border: 24 9% 20%;
-
-    --chart-1: 50 100% 55%;
-    --chart-2: 358 78% 58%;
-    --chart-3: 123 46% 48%;
-    --chart-4: 40 15% 70%;
-    --chart-5: 40 15% 45%;
+    /* dark == default (already set on :root) */
   }
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
+  * { @apply border-border; }
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-sans);
-    font-feature-settings: "ss01", "cv11";
+    font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
   }
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-condensed);
-    letter-spacing: -0.02em;
-    font-weight: 700;
+    font-family: var(--font-sans);
+    letter-spacing: -0.01em;
+    font-weight: 600;
   }
   /* Tabular numerics everywhere numbers appear */
-  table, .tabular, .font-condensed, .font-price {
+  table, .tabular, .font-price {
     font-variant-numeric: tabular-nums;
   }
 }
 
 @layer utilities {
+  /* Legacy typography utilities — remapped to Inter with tabular nums */
   .font-condensed {
-    font-family: var(--font-condensed);
-    letter-spacing: -0.01em;
+    font-family: var(--font-sans);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
   }
   .font-price {
-    font-family: var(--font-condensed);
-    font-weight: 700;
-    letter-spacing: -0.03em;
+    font-family: var(--font-sans);
+    font-weight: 600;
+    letter-spacing: -0.02em;
     font-variant-numeric: tabular-nums;
-    line-height: 0.9;
+    line-height: 1;
   }
 
-  /* Chanfered price-tag corners */
-  .clip-tag {
-    clip-path: polygon(
-      12px 0,
-      calc(100% - 12px) 0,
-      100% 12px,
-      100% 100%,
-      0 100%,
-      0 12px
-    );
-  }
+  /* Legacy shape utilities — flattened to standard rounded corners */
+  .clip-tag,
   .clip-tag-lg {
-    clip-path: polygon(
-      18px 0,
-      calc(100% - 18px) 0,
-      100% 18px,
-      100% 100%,
-      0 100%,
-      0 18px
-    );
+    clip-path: none;
+    border-radius: 8px;
   }
-
-  /* Diamond stamp */
   .clip-diamond {
-    clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+    clip-path: none;
+    border-radius: 9999px;
   }
 
-  /* Ticket picote — dotted divider */
-  .picote {
-    background-image: radial-gradient(circle, hsl(var(--foreground) / 0.5) 1px, transparent 1.5px);
-    background-size: 10px 2px;
-    background-repeat: repeat-x;
-    background-position: center;
-    height: 8px;
-  }
+  /* Legacy dividers — now a single 1px subtle line */
+  .picote,
   .picote-thick {
-    background-image: radial-gradient(circle, hsl(var(--foreground) / 0.6) 1.5px, transparent 2px);
-    background-size: 12px 3px;
-    background-repeat: repeat-x;
-    background-position: center;
-    height: 10px;
+    background: none;
+    height: 1px;
+    background-color: hsl(var(--border));
   }
 
-  /* Poster colors as utilities */
-  .bg-poster-yellow { background-color: hsl(var(--poster-yellow)); color: hsl(var(--poster-yellow-foreground)); }
-  .bg-offer-red { background-color: hsl(var(--offer-red)); color: hsl(var(--offer-red-foreground)); }
-  .bg-gondola-green { background-color: hsl(var(--gondola-green)); color: hsl(var(--gondola-green-foreground)); }
-  .bg-ink { background-color: hsl(var(--ink)); color: hsl(var(--paper)); }
-  .bg-paper { background-color: hsl(var(--paper)); color: hsl(var(--ink)); }
-  .text-poster-yellow { color: hsl(var(--poster-yellow)); }
-  .text-offer-red { color: hsl(var(--offer-red)); }
-  .text-gondola-green { color: hsl(var(--gondola-green)); }
-  .text-ink { color: hsl(var(--ink)); }
-  .border-ink { border-color: hsl(var(--ink)); }
+  /* Legacy poster color utilities — repointed to BI surfaces / signals */
+  .bg-poster-yellow {
+    background-color: hsl(var(--card));
+    color: hsl(var(--foreground));
+  }
+  .bg-offer-red {
+    background-color: hsl(var(--danger));
+    color: hsl(var(--danger-foreground));
+  }
+  .bg-gondola-green {
+    background-color: hsl(var(--success));
+    color: hsl(var(--success-foreground));
+  }
+  .bg-ink {
+    background-color: hsl(var(--card));
+    color: hsl(var(--foreground));
+  }
+  .bg-paper {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+  .text-poster-yellow { color: hsl(var(--accent-blue)); }
+  .text-offer-red { color: hsl(var(--danger)); }
+  .text-gondola-green { color: hsl(var(--success)); }
+  .text-ink { color: hsl(var(--foreground)); }
+  .border-ink { border-color: hsl(var(--border)); }
+
+  /* BI signal utilities */
+  .text-success { color: hsl(var(--success)); }
+  .text-warning { color: hsl(var(--warning)); }
+  .text-danger { color: hsl(var(--danger)); }
+  .bg-success { background-color: hsl(var(--success)); color: hsl(var(--success-foreground)); }
+  .bg-warning { background-color: hsl(var(--warning)); color: hsl(var(--warning-foreground)); }
+  .bg-danger { background-color: hsl(var(--danger)); color: hsl(var(--danger-foreground)); }
 
   /* Legacy compat */
-  .text-gradient-gold { color: hsl(var(--offer-red)); }
-  .bg-gradient-gold { background: hsl(var(--poster-yellow)); color: hsl(var(--ink)); }
-  .border-gold { border-color: hsl(var(--poster-yellow)); }
+  .text-gradient-gold { color: hsl(var(--accent-blue)); }
+  .bg-gradient-gold { background: hsl(var(--card)); color: hsl(var(--foreground)); }
+  .border-gold { border-color: hsl(var(--border)); }
 
-  /* Live pulse (used on "ao vivo" stamp) */
+  /* Subtle live pulse (used on realtime chip) */
   @keyframes live-pulse {
-    0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 hsl(var(--offer-red) / 0.5); }
-    50%      { transform: scale(1.06); box-shadow: 0 0 0 8px hsl(var(--offer-red) / 0); }
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
   }
-  .animate-live-pulse { animation: live-pulse 1.8s ease-in-out infinite; }
+  .animate-live-pulse { animation: live-pulse 2s ease-in-out infinite; }
 
-  @keyframes mascot-bob {
-    0%, 100% { transform: translateY(0); }
-    50%      { transform: translateY(-4px); }
-  }
-  .animate-mascot-bob { animation: mascot-bob 2.4s ease-in-out infinite; }
-
-  @keyframes mascot-sway {
-    0%, 100% { transform: rotate(-2deg); }
-    50%      { transform: rotate(2deg); }
-  }
-  .animate-mascot-sway { animation: mascot-sway 3s ease-in-out infinite; }
+  @keyframes mascot-bob { 0%,100%{transform:none} 50%{transform:none} }
+  .animate-mascot-bob { animation: none; }
+  @keyframes mascot-sway { 0%,100%{transform:none} 50%{transform:none} }
+  .animate-mascot-sway { animation: none; }
 }
