@@ -76,8 +76,10 @@ const MetasGerador = () => {
     if (data) {
       setStores(data);
       if (data.length && !storeId) {
-        setStoreId(data[0].id);
-        setStoreName(data[0].name);
+        const preferred = storeIdParam && data.find((s) => s.id === storeIdParam);
+        const pick = preferred || data[0];
+        setStoreId(pick.id);
+        setStoreName(pick.name);
       }
     }
   };
