@@ -35,8 +35,8 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    supabase.from("stores").select("*").order("name").then(({ data }) => {
-      if (data) setStores(data);
+    supabase.functions.invoke("list-stores").then(({ data }) => {
+      if (data?.stores) setStores(data.stores);
     });
   }, []);
 
