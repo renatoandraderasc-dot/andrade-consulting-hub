@@ -47,8 +47,12 @@ interface LinhaVr {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  // Autorizacao: aceita x-sync-secret (chamadas manuais/protegidas) OU
+  // presenca do header apikey/authorization (cron via pg_net com anon key).
   const segredo = Deno.env.get("SYNC_VR_SECRET");
-  if (segredo && req.headers.get("x-sync-secret") !== segredo) {
+  const temSegredo = segredo && req.headers.get("x-sync-secret") === segredo;
+  const temApiKey = !!(req.headers.get("apikey") || req.headers.get("authorization"));
+  if (!temSegredo && !temApiKey) {
     return new Response(JSON.stringify({ erro: "nao autorizado" }), {
       status: 401,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
