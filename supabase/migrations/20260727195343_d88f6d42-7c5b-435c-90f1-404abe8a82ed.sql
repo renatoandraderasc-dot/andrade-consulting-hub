@@ -1,0 +1,1 @@
+ALTER VIEW public.vr_sync_status SET (security_invoker = true);
