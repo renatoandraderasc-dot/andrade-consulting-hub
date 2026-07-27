@@ -42,6 +42,8 @@ const MetasGerador = () => {
   const { user, isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const storeIdParam = searchParams.get("store");
 
   const [stores, setStores] = useState<Store[]>([]);
   const [storeId, setStoreId] = useState("");
