@@ -288,6 +288,15 @@ const AdminMetas = () => {
             </h1>
           </div>
           <p className="text-muted-foreground font-body">Insira os indicadores mensais por loja</p>
+          <div className="mt-4 flex justify-center">
+            <button
+              onClick={() => navigate(`/metas-gerador${selectedStore ? `?store=${selectedStore}` : ""}`)}
+              className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-xl font-body font-semibold text-sm hover:bg-primary/90 transition-colors"
+            >
+              <Wand2 className="w-4 h-4" />
+              Gerar automaticamente
+            </button>
+          </div>
         </motion.div>
 
         {/* Excel Upload */}
