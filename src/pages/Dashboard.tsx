@@ -10,6 +10,8 @@ import DailyMetricsTable, { DailyRow } from "@/components/dashboard/DailyMetrics
 import ProductComparison, { ProductCompRow } from "@/components/dashboard/ProductComparison";
 import CategoryChart, { CategoryChartData } from "@/components/dashboard/CategoryChart";
 import VendasLojaSection from "@/components/dashboard/VendasLojaSection";
+import MascotPersona from "@/components/poster/MascotPersona";
+import CouponDivider from "@/components/poster/CouponDivider";
 
 const MONTHS = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
