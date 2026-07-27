@@ -159,14 +159,16 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
       value: fmtBRL(totals.realVendas),
       sub: `Meta ${fmtBRL(totals.metaVendas)}`,
       icon: DollarSign,
-      color: "text-primary",
+      ribbon: "yellow" as const,
+      pct: totals.pctMeta,
     },
     {
       label: "Lucro do mês",
       value: fmtBRL(totals.realLucro),
       sub: `Meta ${fmtBRL(totals.metaLucro)}`,
       icon: TrendingUp,
-      color: "text-emerald-500",
+      ribbon: "red" as const,
+      pct: totals.metaLucro > 0 ? (totals.realLucro / totals.metaLucro) * 100 : 0,
     },
     {
       label: "Margem %",
@@ -177,16 +179,23 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
           : "—"
       }`,
       icon: Percent,
-      color: "text-amber-500",
+      ribbon: "green" as const,
+      pct: totals.metaVendas > 0
+        ? (totals.margemReal / ((totals.metaLucro / totals.metaVendas) * 100)) * 100
+        : 0,
     },
     {
       label: "% da meta atingida",
       value: fmtPct(totals.pctMeta),
-      sub: `Projeção (real + metas restantes) ${fmtBRL(totals.projecaoMes)}`,
+      sub: `Proj. ${fmtBRL(totals.projecaoMes)}`,
       icon: Target,
-      color: "text-orange-500",
+      ribbon: "ink" as const,
+      pct: totals.pctMeta,
     },
   ];
+
+  const toneFromPct = (p: number): "green" | "yellow" | "red" =>
+    p >= 100 ? "green" : p >= 80 ? "yellow" : "red";
 
   return (
     <motion.section
@@ -194,97 +203,100 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
       animate={{ opacity: 1, y: 0 }}
       className="mt-8 mb-6"
     >
-      <div className="flex items-center gap-2 mb-4">
-        <Store className="w-5 h-5 text-primary" />
-        <h2 className="font-display text-lg font-semibold">Vendas da Loja</h2>
-        <span className="text-xs text-muted-foreground font-body">
-          (total do supermercado — department = LOJA)
-        </span>
+      <CouponDivider label="Vendas da Loja — Supermercado Total" />
+
+      <div className="flex items-center justify-between mb-4 mt-3">
+        <div className="flex items-center gap-2">
+          <Store className="w-5 h-5 text-offer-red" />
+          <h2 className="font-condensed uppercase tracking-widest text-lg font-bold">
+            Vendas da Loja
+          </h2>
+          <span className="inline-flex items-center gap-1 ml-2 px-2 py-0.5 bg-offer-red text-white text-[10px] font-condensed uppercase tracking-widest animate-live-pulse">
+            <span className="w-1.5 h-1.5 rounded-full bg-white" /> Ao vivo
+          </span>
+        </div>
+        <StatusStamp pct={totals.pctMeta} />
       </div>
 
       {loading && rows.length === 0 ? (
-        <div className="text-sm text-muted-foreground font-body py-8 text-center">
+        <div className="text-sm text-muted-foreground font-condensed uppercase tracking-widest py-8 text-center">
           Carregando...
         </div>
       ) : rows.length === 0 ? (
-        <div className="text-sm text-muted-foreground font-body py-8 text-center bg-card border border-border rounded-lg">
-          Sem dados de <strong>LOJA</strong> para este mês.
+        <div className="clip-tag bg-card border-2 border-ink py-8 text-center">
+          <p className="font-condensed uppercase tracking-widest text-sm">
+            Sem dados de <strong>LOJA</strong> para este mês.
+          </p>
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-            {cards.map((c) => {
-              const Icon = c.icon;
-              return (
-                <div
-                  key={c.label}
-                  className="bg-card border border-border rounded-lg p-4 flex flex-col gap-1"
-                >
-                  <div className="flex items-center gap-2 text-muted-foreground font-body text-xs">
-                    <Icon className={`w-4 h-4 ${c.color}`} />
-                    {c.label}
-                  </div>
-                  <div className="font-display text-xl font-bold">{c.value}</div>
-                  <div className="text-xs text-muted-foreground font-body">{c.sub}</div>
-                </div>
-              );
-            })}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6 pt-2">
+            {cards.map((c) => (
+              <PriceTagCard
+                key={c.label}
+                label={c.label}
+                ribbonTone={c.ribbon}
+                icon={<c.icon className="w-3.5 h-3.5" />}
+                value={c.value}
+                sub={c.sub}
+                badge={{ text: `${c.pct.toFixed(0)}%`, tone: toneFromPct(c.pct) }}
+              />
+            ))}
           </div>
 
-          <div className="bg-card border border-border rounded-lg p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-display text-sm font-semibold">
+          <div className="clip-tag bg-card border-2 border-ink">
+            <div className="bg-ink text-paper px-4 py-2 flex items-center justify-between">
+              <h3 className="font-condensed uppercase tracking-widest text-sm font-bold">
                 Evolução diária — Realizado × Meta
               </h3>
-              <div className="text-xs text-muted-foreground font-body">
-                Projeção: realizado + metas restantes:{" "}
-                <span className="text-foreground font-semibold">
-                  {fmtBRL(totals.projecaoMes)}
-                </span>{" "}
-                ({totals.diasComRealizado}/{totals.totalDias} dias)
+              <div className="text-[10px] font-condensed uppercase tracking-widest text-poster-yellow">
+                Projeção: {fmtBRL(totals.projecaoMes)} · {totals.diasComRealizado}/{totals.totalDias} dias
               </div>
             </div>
-            <div style={{ width: "100%", height: 320 }}>
-              <ResponsiveContainer>
-                <ComposedChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="dia" stroke="hsl(var(--muted-foreground))" fontSize={11} />
-                  <YAxis
-                    stroke="hsl(var(--muted-foreground))"
-                    fontSize={11}
-                    tickFormatter={(v) =>
-                      v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)
-                    }
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      background: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: 8,
-                      fontSize: 12,
-                    }}
-                    formatter={(v: any) => fmtBRL(Number(v))}
-                  />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Bar dataKey="Meta" fill="hsl(var(--muted-foreground))" opacity={0.5} />
-                  <Bar dataKey="Realizado" fill="hsl(var(--primary))" />
-                  <Line
-                    type="monotone"
-                    dataKey="Meta acumulada"
-                    stroke="hsl(var(--muted-foreground))"
-                    strokeWidth={2}
-                    dot={false}
-                    strokeDasharray="4 4"
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="Realizado acumulado"
-                    stroke="hsl(var(--primary))"
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
+            <div className="p-4">
+              <div style={{ width: "100%", height: 320 }}>
+                <ResponsiveContainer>
+                  <ComposedChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--ink) / 0.15)" />
+                    <XAxis dataKey="dia" stroke="hsl(var(--ink))" fontSize={11} />
+                    <YAxis
+                      stroke="hsl(var(--ink))"
+                      fontSize={11}
+                      tickFormatter={(v) =>
+                        v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)
+                      }
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        background: "hsl(var(--card))",
+                        border: "2px solid hsl(var(--ink))",
+                        borderRadius: 0,
+                        fontSize: 12,
+                        fontFamily: "Archivo Narrow, sans-serif",
+                      }}
+                      formatter={(v: any) => fmtBRL(Number(v))}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 12, fontFamily: "Archivo Narrow, sans-serif", textTransform: "uppercase", letterSpacing: "0.05em" }} />
+                    <Bar dataKey="Meta" fill="hsl(var(--ink) / 0.25)" />
+                    <Bar dataKey="Realizado" fill="hsl(var(--poster-yellow))" stroke="hsl(var(--ink))" strokeWidth={1} />
+                    <Line
+                      type="monotone"
+                      dataKey="Meta acumulada"
+                      stroke="hsl(var(--offer-red))"
+                      strokeWidth={2}
+                      dot={false}
+                      strokeDasharray="4 4"
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="Realizado acumulado"
+                      stroke="hsl(var(--gondola-green))"
+                      strokeWidth={2.5}
+                      dot={false}
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           </div>
         </>
