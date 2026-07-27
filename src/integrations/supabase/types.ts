@@ -644,6 +644,44 @@ export type Database = {
           },
         ]
       }
+      store_vr_config: {
+        Row: {
+          api_key: string
+          api_url: string
+          created_at: string
+          enabled: boolean
+          last_error: string | null
+          last_sync_at: string | null
+          store_id: string
+        }
+        Insert: {
+          api_key: string
+          api_url: string
+          created_at?: string
+          enabled?: boolean
+          last_error?: string | null
+          last_sync_at?: string | null
+          store_id: string
+        }
+        Update: {
+          api_key?: string
+          api_url?: string
+          created_at?: string
+          enabled?: boolean
+          last_error?: string | null
+          last_sync_at?: string | null
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_vr_config_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stores: {
         Row: {
           created_at: string
@@ -802,9 +840,63 @@ export type Database = {
         }
         Relationships: []
       }
+      vr_secao_departamento: {
+        Row: {
+          department: string
+          id: string
+          secao_vr: string
+          store_id: string
+        }
+        Insert: {
+          department: string
+          id?: string
+          secao_vr: string
+          store_id: string
+        }
+        Update: {
+          department?: string
+          id?: string
+          secao_vr?: string
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vr_secao_departamento_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
-      [_ in never]: never
+      vr_sync_status: {
+        Row: {
+          enabled: boolean | null
+          last_sync_at: string | null
+          store_id: string | null
+        }
+        Insert: {
+          enabled?: boolean | null
+          last_sync_at?: string | null
+          store_id?: string | null
+        }
+        Update: {
+          enabled?: boolean | null
+          last_sync_at?: string | null
+          store_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_vr_config_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       has_role: {
