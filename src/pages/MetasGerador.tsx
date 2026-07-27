@@ -10,7 +10,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 interface Store { id: string; name: string; }
 
-const DEPARTMENTS = ["PADARIA", "AÇOUGUE", "HORTIFRUTI", "OUTROS"];
+const DEPARTMENTS_PIC = ["PADARIA", "AÇOUGUE", "HORTIFRUTI"];
+const DEPARTMENTS = [...DEPARTMENTS_PIC, "LOJA"];
+const deptLabel = (d: string) => (d === "LOJA" ? "Supermercado — Total" : d);
 const MONTHS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 const TIPO_OPTIONS = [
   "SEG D","TER D","QUA D","QUI D","SEX D","SAB F","DOM F",
