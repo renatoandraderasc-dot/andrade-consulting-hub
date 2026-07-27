@@ -2,7 +2,10 @@ import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { BarChart3, CheckSquare, Settings, Users, LogOut, Menu, X, ArrowLeft, Target, ClipboardList, DollarSign, Database, RefreshCw, Trophy, Store } from "lucide-react";
+import {
+  BarChart3, CheckSquare, Settings, Users, LogOut, Menu, X, ArrowLeft,
+  Target, ClipboardList, DollarSign, Database, RefreshCw, Trophy, Store,
+} from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import andradeLogo from "@/assets/andrade-logo.png";
 
@@ -15,7 +18,7 @@ const navItems = [
   { key: "dashboard", path: "/dashboard", label: "Dashboard", icon: BarChart3 },
   { key: "controladoria", path: "/controladoria", label: "Controladoria", icon: ClipboardList },
   { key: "pic", path: "/pic", label: "PIC", icon: Trophy },
-  { key: "repricing", path: "/repricing", label: "Re-PRICING", icon: DollarSign },
+  { key: "repricing", path: "/repricing", label: "Re-Pricing", icon: DollarSign },
   { key: "checklist", path: "/checklist", label: "Checklist", icon: CheckSquare },
 ];
 
@@ -32,7 +35,7 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
   const { user, isAdmin, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [allowedModules, setAllowedModules] = useState<Set<string> | null>(null);
 
   useEffect(() => {
@@ -42,8 +45,8 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
     });
   }, [user, isAdmin]);
 
-  // If no permissions are configured (null or empty set), default to showing all modules.
-  const canSee = (key: string) => isAdmin || allowedModules === null || allowedModules.size === 0 || allowedModules.has(key);
+  const canSee = (key: string) =>
+    isAdmin || allowedModules === null || allowedModules.size === 0 || allowedModules.has(key);
 
   const handleSignOut = async () => {
     await signOut();
@@ -52,110 +55,113 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
 
   const isActive = (path: string) => location.pathname === path;
 
-  const SidebarContent = () => (
-    <div className="flex flex-col h-full">
-      <div className="p-4 border-b border-border">
-        <Link to="/" className="flex items-center gap-2">
-          <img src={andradeLogo} alt="Andrade" className="h-9" />
-        </Link>
-        {storeName && (
-          <p className="font-body text-xs text-muted-foreground mt-2 truncate">{storeName}</p>
-        )}
-      </div>
+  const visibleNav = navItems.filter((i) => canSee(i.key));
 
-      <nav className="flex-1 p-3 space-y-1">
-        {navItems.filter((i) => canSee(i.key)).map((item) => (
-          <Link
-            key={item.path}
-            to={item.path}
-            onClick={() => setSidebarOpen(false)}
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg font-body text-sm transition-colors ${
-              isActive(item.path)
-                ? "bg-primary/10 text-foreground font-semibold"
-                : "text-muted-foreground hover:text-foreground hover:bg-accent"
+  const NavButton = ({ item, mobile = false }: any) => {
+    const active = isActive(item.path);
+    return (
+      <Link
+        to={item.path}
+        onClick={() => setMenuOpen(false)}
+        className={`relative group flex items-center gap-2 px-3 h-full font-condensed text-sm uppercase tracking-wider font-semibold transition-colors ${
+          mobile ? "py-3 border-b border-sidebar-border w-full" : ""
+        } ${active ? "text-poster-yellow" : "text-paper hover:text-poster-yellow"}`}
+      >
+        <item.icon className="w-4 h-4" />
+        {item.label}
+        {!mobile && (
+          <span
+            className={`absolute left-0 right-0 -bottom-[1px] h-1.5 bg-poster-yellow transition-transform origin-left ${
+              active ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"
             }`}
-          >
-            <item.icon className="w-4 h-4" />
-            {item.label}
-          </Link>
-        ))}
-
-        {isAdmin && (
-          <>
-            <div className="pt-4 pb-1 px-3">
-              <p className="font-body text-[10px] uppercase tracking-wider text-muted-foreground/60 font-semibold">Admin</p>
-            </div>
-            {adminItems.map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg font-body text-sm transition-colors ${
-                  isActive(item.path)
-                    ? "bg-primary/10 text-foreground font-semibold"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                }`}
-              >
-                <item.icon className="w-4 h-4" />
-                {item.label}
-              </Link>
-            ))}
-          </>
+          />
         )}
-      </nav>
-
-      <div className="p-3 border-t border-border space-y-1">
-        <div className="flex items-center justify-between px-3 py-1">
-          <span className="text-xs text-muted-foreground font-body">Tema</span>
-          <ThemeToggle />
-        </div>
-        <Link
-          to="/"
-          className="flex items-center gap-3 px-3 py-2.5 rounded-lg font-body text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" /> Voltar ao site
-        </Link>
-        <button
-          onClick={handleSignOut}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg font-body text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-        >
-          <LogOut className="w-4 h-4" /> Sair
-        </button>
-      </div>
-    </div>
-  );
+      </Link>
+    );
+  };
 
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* Desktop sidebar */}
-      <aside className="hidden md:flex w-56 border-r border-border bg-card flex-col shrink-0 sticky top-0 h-screen">
-        <SidebarContent />
-      </aside>
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Gondola top bar */}
+      <header className="sticky top-0 z-40 bg-ink border-b-4 border-poster-yellow">
+        <div className="flex items-stretch h-14 pl-3 pr-2">
+          <Link to="/" className="flex items-center gap-3 pr-4 border-r border-sidebar-border">
+            <img src={andradeLogo} alt="Andrade" className="h-8" />
+            {storeName && (
+              <div className="hidden md:flex flex-col leading-tight">
+                <span className="font-condensed uppercase text-[10px] tracking-widest text-poster-yellow">Loja</span>
+                <span className="font-condensed uppercase text-xs font-bold text-paper truncate max-w-[180px]">
+                  {storeName}
+                </span>
+              </div>
+            )}
+          </Link>
 
-      {/* Mobile overlay */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
-          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
-          <aside className="absolute left-0 top-0 bottom-0 w-56 bg-card border-r border-border z-10">
-            <SidebarContent />
-          </aside>
+          {/* Desktop nav */}
+          <nav className="hidden md:flex items-stretch ml-2">
+            {visibleNav.map((item) => (
+              <NavButton key={item.path} item={item} />
+            ))}
+            {isAdmin && (
+              <div className="flex items-stretch ml-2 pl-2 border-l border-sidebar-border">
+                {adminItems.map((item) => (
+                  <NavButton key={item.path} item={item} />
+                ))}
+              </div>
+            )}
+          </nav>
+
+          <div className="ml-auto flex items-center gap-2 pl-2">
+            <ThemeToggle />
+            <Link
+              to="/"
+              className="hidden md:inline-flex items-center gap-1 px-2 py-1 font-condensed uppercase text-[11px] tracking-widest text-paper/70 hover:text-poster-yellow"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" /> Site
+            </Link>
+            <button
+              onClick={handleSignOut}
+              className="hidden md:inline-flex items-center gap-1 px-3 py-1 border-2 border-poster-yellow bg-poster-yellow text-ink font-condensed uppercase text-[11px] tracking-widest hover:bg-offer-red hover:text-white hover:border-offer-red transition-colors"
+            >
+              <LogOut className="w-3.5 h-3.5" /> Sair
+            </button>
+            <button
+              onClick={() => setMenuOpen((v) => !v)}
+              className="md:hidden text-paper p-2"
+              aria-label="Menu"
+            >
+              {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
         </div>
-      )}
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Mobile header */}
-        <header className="md:hidden sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border h-14 flex items-center px-4 gap-3">
-          <button onClick={() => setSidebarOpen(true)} className="text-muted-foreground hover:text-foreground">
-            <Menu className="w-5 h-5" />
-          </button>
-          <img src={andradeLogo} alt="Logo" className="h-7" />
-        </header>
+        {/* Mobile drawer */}
+        {menuOpen && (
+          <div className="md:hidden bg-ink border-t border-sidebar-border">
+            {visibleNav.map((item) => (
+              <NavButton key={item.path} item={item} mobile />
+            ))}
+            {isAdmin && (
+              <>
+                <div className="px-3 py-2 font-condensed uppercase text-[10px] tracking-widest text-poster-yellow">
+                  Admin
+                </div>
+                {adminItems.map((item) => (
+                  <NavButton key={item.path} item={item} mobile />
+                ))}
+              </>
+            )}
+            <button
+              onClick={handleSignOut}
+              className="w-full flex items-center gap-2 px-3 py-3 font-condensed uppercase text-sm tracking-widest text-paper"
+            >
+              <LogOut className="w-4 h-4" /> Sair
+            </button>
+          </div>
+        )}
+      </header>
 
-        <main className="flex-1">
-          {children}
-        </main>
-      </div>
+      <main className="flex-1">{children}</main>
     </div>
   );
 };
