@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const MONTHS = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-const DEPARTMENTS = ["PADARIA", "AÇOUGUE", "HORTIFRUTI", "MERCERIA"];
+const DEPARTMENTS = ["PADARIA", "AÇOUGUE", "HORTIFRUTI", "OUTROS"];
 const KPI_LABELS: Record<string, string> = {
   faturamento: "Faturamento",
   margem: "Margem",

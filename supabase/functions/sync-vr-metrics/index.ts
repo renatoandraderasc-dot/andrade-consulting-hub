@@ -82,13 +82,10 @@ Deno.serve(async (req) => {
       if (m.store_id === cfg.store_id) mapaLoja.set(norm(m.secao_vr), m.department);
     }
 
-    const naoMapeadas = new Set<string>();
     let gravadas = 0;
     let erroLoja: string | null = null;
 
     try {
-      if (mapaLoja.size === 0) throw new Error("nenhum mapeamento secao->departamento cadastrado para esta loja");
-
       for (const dataDia of datas) {
         const url =
           `${cfg.api_url.replace(/\/+$/, "")}/relatorios/vendas_secao_dia` +
@@ -105,11 +102,7 @@ Deno.serve(async (req) => {
 
         const porDepto = new Map<string, { vendas: number; lucro: number }>();
         for (const l of linhas) {
-          const depto = mapaLoja.get(norm(l.secao));
-          if (!depto) {
-            naoMapeadas.add(l.secao);
-            continue;
-          }
+          const depto = mapaLoja.get(norm(l.secao)) ?? "OUTROS";
           const atual = porDepto.get(depto) ?? { vendas: 0, lucro: 0 };
           atual.vendas += parseFloat(String(l.total_vendido)) || 0;
           atual.lucro += parseFloat(String(l.lucro)) || 0;
@@ -136,10 +129,6 @@ Deno.serve(async (req) => {
       }
     } catch (e) {
       erroLoja = e instanceof Error ? e.message : String(e);
-    }
-
-    if (!erroLoja && naoMapeadas.size > 0) {
-      erroLoja = `aviso: secoes sem mapeamento ignoradas: ${[...naoMapeadas].join(", ")}`;
     }
 
     await supabase
