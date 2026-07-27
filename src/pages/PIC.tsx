@@ -52,6 +52,20 @@ const PIC = () => {
     if (storeId) fetchData();
   }, [storeId, selectedMonth, selectedYear]);
 
+  useEffect(() => {
+    if (!storeId) return;
+    const channel = supabase
+      .channel(`pic-sdm-${storeId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "store_daily_metrics", filter: `store_id=eq.${storeId}` },
+        () => fetchData(),
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [storeId, selectedMonth, selectedYear]);
+
+
   const fetchStoreInfo = async () => {
     const { data: access } = await supabase
       .from("user_store_access").select("store_id, stores(name)").eq("user_id", user!.id).eq("approved", true).limit(1).single();

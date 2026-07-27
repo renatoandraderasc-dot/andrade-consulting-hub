@@ -54,6 +54,24 @@ const Dashboard = () => {
     }
   }, [storeId, selectedMonth, selectedYear]);
 
+  useEffect(() => {
+    if (!storeId) return;
+    const channel = supabase
+      .channel(`dash-sdm-${storeId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "store_daily_metrics", filter: `store_id=eq.${storeId}` },
+        () => {
+          if (selectedDept) fetchDailyData();
+          fetchStoreMetrics();
+          fetchCategoryData();
+        },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [storeId, selectedDept, selectedMonth, selectedYear]);
+
+
   const fetchStoreInfo = async () => {
     const sid = sessionStorage.getItem("selectedStoreId");
     if (sid) {
