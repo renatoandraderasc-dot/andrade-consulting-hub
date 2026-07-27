@@ -192,7 +192,10 @@ const PIC = () => {
             </div>
             <div>
               <h1 className="text-2xl font-bold font-heading text-foreground">PIC — Painel de Indicadores Comerciais</h1>
-              <p className="text-sm text-muted-foreground font-body">Acompanhamento de metas por departamento</p>
+              <div className="flex items-center gap-3 flex-wrap mt-1">
+                <p className="text-sm text-muted-foreground font-body">Acompanhamento de metas por departamento</p>
+                {storeId && <SyncStatusBadge storeId={storeId} />}
+              </div>
             </div>
           </div>
 
