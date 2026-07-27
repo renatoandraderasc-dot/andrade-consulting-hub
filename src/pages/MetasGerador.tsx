@@ -99,9 +99,63 @@ const MetasGerador = () => {
       .lte("date", fim)
       .order("date");
     setMetasRows(data || []);
+    setDirtyDates(new Set());
   };
 
-  const fetchCalendario = async () => {
+  // Aviso ao sair da página com alterações não salvas
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (dirtyDates.size === 0) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [dirtyDates]);
+
+  const confirmDiscardIfDirty = () => {
+    if (dirtyDates.size === 0) return true;
+    return window.confirm("Existem alterações de metas não salvas. Deseja descartá-las?");
+  };
+
+  const handleEditMeta = (date: string, field: "meta_vendas" | "meta_margem_pct", raw: string) => {
+    const num = parseFloat(raw.replace(/\./g, "").replace(",", ".")) || 0;
+    setMetasRows((rows) =>
+      rows.map((r) => {
+        if (r.date !== date) return r;
+        const next = { ...r, [field]: num };
+        next.meta_lucro = (Number(next.meta_vendas) || 0) * (Number(next.meta_margem_pct) || 0) / 100;
+        return next;
+      }),
+    );
+    setDirtyDates((s) => new Set(s).add(date));
+  };
+
+  const handleSaveMetas = async () => {
+    if (dirtyDates.size === 0) return;
+    setSaving(true);
+    try {
+      const changed = metasRows.filter((r) => dirtyDates.has(r.date));
+      const payload = changed.map((r) => ({
+        store_id: storeId,
+        department,
+        date: r.date,
+        meta_vendas: Number(r.meta_vendas) || 0,
+        meta_margem_pct: Number(r.meta_margem_pct) || 0,
+        meta_lucro: ((Number(r.meta_vendas) || 0) * (Number(r.meta_margem_pct) || 0)) / 100,
+      }));
+      const { error } = await supabase
+        .from("store_daily_metrics")
+        .upsert(payload, { onConflict: "store_id,department,date" });
+      if (error) throw error;
+      toast({ title: "Metas salvas", description: `${payload.length} dia(s) atualizado(s).` });
+      setDirtyDates(new Set());
+    } catch (err: any) {
+      toast({ title: "Erro ao salvar", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
     const { inicio, fim } = monthRange(year, month);
     const { data } = await supabase
       .from("vr_calendario")
