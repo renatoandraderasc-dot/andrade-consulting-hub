@@ -10,6 +10,8 @@ import DailyMetricsTable, { DailyRow } from "@/components/dashboard/DailyMetrics
 import ProductComparison, { ProductCompRow } from "@/components/dashboard/ProductComparison";
 import CategoryChart, { CategoryChartData } from "@/components/dashboard/CategoryChart";
 import VendasLojaSection from "@/components/dashboard/VendasLojaSection";
+import MascotPersona from "@/components/poster/MascotPersona";
+import CouponDivider from "@/components/poster/CouponDivider";
 
 const MONTHS = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
@@ -299,17 +301,19 @@ const Dashboard = () => {
     <ClientLayout storeName={storeName}>
       <div className="container mx-auto px-4 py-6 max-w-[1400px]">
         {/* Header */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-4">
+          <div className="clip-tag-lg bg-ink text-paper px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center gap-3">
-              <BarChart3 className="w-7 h-7 text-primary" />
+              <div className="h-10 w-10 bg-poster-yellow text-ink flex items-center justify-center border-2 border-poster-yellow">
+                <BarChart3 className="w-6 h-6" />
+              </div>
               <div>
-                <h1 className="font-display text-2xl font-bold">
-                  Dashboard <span className="text-gradient-gold">{storeName}</span>
+                <h1 className="font-condensed uppercase tracking-widest text-2xl font-bold leading-none">
+                  Dashboard <span className="text-poster-yellow">{storeName}</span>
                 </h1>
-                <p className="text-muted-foreground font-body text-xs">
+                <p className="text-paper/70 font-condensed uppercase tracking-widest text-[11px] mt-1">
                   {MONTHS[selectedMonth]} {selectedYear}
-                  {selectedDept ? ` — ${selectedDept}` : ""}
+                  {selectedDept ? ` · ${selectedDept}` : ""}
                 </p>
               </div>
             </div>
@@ -320,7 +324,7 @@ const Dashboard = () => {
                 <select
                   value={selectedDept}
                   onChange={(e) => setSelectedDept(e.target.value)}
-                  className="bg-card border border-border rounded-lg px-3 py-1.5 font-body text-xs"
+                  className="bg-paper text-ink border-2 border-poster-yellow px-3 py-1.5 font-condensed uppercase tracking-wider text-xs"
                 >
                   {departments.map((d) => (
                     <option key={d} value={d}>{d}</option>
@@ -330,7 +334,7 @@ const Dashboard = () => {
               <select
                 value={selectedMonth}
                 onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                className="bg-card border border-border rounded-lg px-3 py-1.5 font-body text-xs"
+                className="bg-paper text-ink border-2 border-poster-yellow px-3 py-1.5 font-condensed uppercase tracking-wider text-xs"
               >
                 {MONTHS.slice(1).map((m, i) => (
                   <option key={i + 1} value={i + 1}>{m}</option>
@@ -339,7 +343,7 @@ const Dashboard = () => {
               <select
                 value={selectedYear}
                 onChange={(e) => setSelectedYear(Number(e.target.value))}
-                className="bg-card border border-border rounded-lg px-3 py-1.5 font-body text-xs"
+                className="bg-paper text-ink border-2 border-poster-yellow px-3 py-1.5 font-condensed uppercase tracking-wider text-xs"
               >
                 {[2024, 2025, 2026].map((y) => (
                   <option key={y} value={y}>{y}</option>
@@ -357,12 +361,7 @@ const Dashboard = () => {
           <VendasLojaSection storeId={storeId} month={selectedMonth} year={selectedYear} />
         )}
 
-        {/* Daily Metrics Table */}
-        <div className="mb-2">
-          <h2 className="font-display text-sm font-semibold mb-3">
-            Faturamento x Margem por Dia {selectedDept ? `— ${selectedDept}` : ""}
-          </h2>
-        </div>
+        <CouponDivider label={`Faturamento x Margem por Dia ${selectedDept ? `— ${selectedDept}` : ""}`} />
         <DailyMetricsTable data={dailyData} />
 
         {/* Product Comparison */}
@@ -379,6 +378,9 @@ const Dashboard = () => {
           />
         </div>
       </div>
+
+      {/* Persona mascote — feliz/triste conforme meta */}
+      <MascotPersona pct={kpiData.vendas.realizadoPct || 0} />
     </ClientLayout>
   );
 };
