@@ -352,6 +352,11 @@ const Dashboard = () => {
         {/* KPI Cards */}
         <DashboardKPIs {...kpiData} />
 
+        {/* Vendas da Loja (department = LOJA) — independente do filtro */}
+        {storeId && (
+          <VendasLojaSection storeId={storeId} month={selectedMonth} year={selectedYear} />
+        )}
+
         {/* Daily Metrics Table */}
         <div className="mb-2">
           <h2 className="font-display text-sm font-semibold mb-3">
