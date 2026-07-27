@@ -398,15 +398,35 @@ const MetasGerador = () => {
                   {metasRows.length === 0 && (
                     <tr><td colSpan={5} className="py-6 text-center text-muted-foreground font-body">Nenhuma meta gerada ainda.</td></tr>
                   )}
-                  {metasRows.map((r) => (
-                    <tr key={r.date} className="border-b border-border/50">
-                      <td className="py-2 pr-4 font-body">{fmtDate(r.date)}</td>
-                      <td className="py-2 px-2 font-body">{r.tipo_dia}</td>
-                      <td className="py-2 px-2 text-right font-body">{fmtBRL(Number(r.meta_vendas))}</td>
-                      <td className="py-2 px-2 text-right font-body">{fmtNum(Number(r.meta_margem_pct), 2)}%</td>
-                      <td className="py-2 pl-2 text-right font-body">{fmtBRL(Number(r.meta_lucro))}</td>
-                    </tr>
-                  ))}
+                  {metasRows.map((r) => {
+                    const isDirty = dirtyDates.has(r.date);
+                    const inputCls = `w-32 bg-background border rounded-lg px-2 py-1.5 text-right font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 ${isDirty ? "border-amber-500" : "border-border"}`;
+                    return (
+                      <tr key={r.date} className="border-b border-border/50">
+                        <td className="py-2 pr-4 font-body">{fmtDate(r.date)}</td>
+                        <td className="py-2 px-2 font-body">{r.tipo_dia}</td>
+                        <td className="py-2 px-2 text-right">
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            value={fmtNum(Number(r.meta_vendas) || 0, 2)}
+                            onChange={(e) => handleEditMeta(r.date, "meta_vendas", e.target.value)}
+                            className={inputCls}
+                          />
+                        </td>
+                        <td className="py-2 px-2 text-right">
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            value={fmtNum(Number(r.meta_margem_pct) || 0, 2)}
+                            onChange={(e) => handleEditMeta(r.date, "meta_margem_pct", e.target.value)}
+                            className={inputCls + " w-24"}
+                          />
+                        </td>
+                        <td className="py-2 pl-2 text-right font-body">{fmtBRL(Number(r.meta_lucro))}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
                 {metasRows.length > 0 && (
                   <tfoot>
