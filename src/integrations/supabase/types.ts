@@ -318,6 +318,44 @@ export type Database = {
           },
         ]
       }
+      meta_taxas: {
+        Row: {
+          department: string
+          id: string
+          store_id: string
+          tipo: string
+          tx_margem: number
+          tx_venda: number
+          tx_volume: number
+        }
+        Insert: {
+          department: string
+          id?: string
+          store_id: string
+          tipo: string
+          tx_margem?: number
+          tx_venda?: number
+          tx_volume?: number
+        }
+        Update: {
+          department?: string
+          id?: string
+          store_id?: string
+          tipo?: string
+          tx_margem?: number
+          tx_venda?: number
+          tx_volume?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_taxas_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       produtos: {
         Row: {
           categoria: string | null
@@ -840,6 +878,44 @@ export type Database = {
         }
         Relationships: []
       }
+      vr_calendario: {
+        Row: {
+          data: string
+          dia_sem: string
+          editado: boolean
+          id: string
+          semana: number
+          store_id: string
+          tipo: string
+        }
+        Insert: {
+          data: string
+          dia_sem: string
+          editado?: boolean
+          id?: string
+          semana: number
+          store_id: string
+          tipo: string
+        }
+        Update: {
+          data?: string
+          dia_sem?: string
+          editado?: boolean
+          id?: string
+          semana?: number
+          store_id?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vr_calendario_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vr_secao_departamento: {
         Row: {
           department: string
@@ -899,12 +975,39 @@ export type Database = {
       }
     }
     Functions: {
+      gerar_calendario: {
+        Args: { p_fim: string; p_inicio: string; p_store_id: string }
+        Returns: number
+      }
+      gerar_metas: {
+        Args: {
+          p_ano: number
+          p_base?: string
+          p_department: string
+          p_mes: number
+          p_store_id: string
+        }
+        Returns: {
+          dias_gerados: number
+          total_meta: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      semear_taxas_padrao: {
+        Args: {
+          p_department: string
+          p_store_id: string
+          p_tx_base?: number
+          p_tx_forte?: number
+          p_tx_margem?: number
+        }
+        Returns: number
       }
     }
     Enums: {
