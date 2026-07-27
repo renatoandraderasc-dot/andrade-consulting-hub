@@ -136,6 +136,176 @@ export type Database = {
           },
         ]
       }
+      compras_config: {
+        Row: {
+          ano: number
+          hist_fim: string
+          hist_inicio: string
+          id: string
+          mes: number
+          meta_venda_mes: number
+          parcelas_excesso: number
+          store_id: string
+        }
+        Insert: {
+          ano: number
+          hist_fim: string
+          hist_inicio: string
+          id?: string
+          mes: number
+          meta_venda_mes?: number
+          parcelas_excesso?: number
+          store_id: string
+        }
+        Update: {
+          ano?: number
+          hist_fim?: string
+          hist_inicio?: string
+          id?: string
+          mes?: number
+          meta_venda_mes?: number
+          parcelas_excesso?: number
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compras_config_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compras_departamento: {
+        Row: {
+          ativo: boolean
+          departamento: string
+          id: string
+          store_id: string
+          tx_perdas: number
+          tx_recuperacao: number
+        }
+        Insert: {
+          ativo?: boolean
+          departamento: string
+          id?: string
+          store_id: string
+          tx_perdas?: number
+          tx_recuperacao?: number
+        }
+        Update: {
+          ativo?: boolean
+          departamento?: string
+          id?: string
+          store_id?: string
+          tx_perdas?: number
+          tx_recuperacao?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compras_departamento_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compras_historico: {
+        Row: {
+          ano: number
+          atualizado_em: string
+          cmv: number
+          compra: number
+          departamento: string
+          id: string
+          mes: number
+          store_id: string
+          venda: number
+        }
+        Insert: {
+          ano: number
+          atualizado_em?: string
+          cmv?: number
+          compra?: number
+          departamento: string
+          id?: string
+          mes: number
+          store_id: string
+          venda?: number
+        }
+        Update: {
+          ano?: number
+          atualizado_em?: string
+          cmv?: number
+          compra?: number
+          departamento?: string
+          id?: string
+          mes?: number
+          store_id?: string
+          venda?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compras_historico_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      compras_meta: {
+        Row: {
+          ano: number
+          compra_sobre_venda: number
+          departamento: string
+          gerado_em: string
+          id: string
+          mes: number
+          meta_compra: number
+          meta_venda: number
+          parcela_excesso: number
+          participacao: number
+          store_id: string
+        }
+        Insert: {
+          ano: number
+          compra_sobre_venda?: number
+          departamento: string
+          gerado_em?: string
+          id?: string
+          mes: number
+          meta_compra?: number
+          meta_venda?: number
+          parcela_excesso?: number
+          participacao?: number
+          store_id: string
+        }
+        Update: {
+          ano?: number
+          compra_sobre_venda?: number
+          departamento?: string
+          gerado_em?: string
+          id?: string
+          mes?: number
+          meta_compra?: number
+          meta_venda?: number
+          parcela_excesso?: number
+          participacao?: number
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compras_meta_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       departments: {
         Row: {
           created_at: string
@@ -990,6 +1160,14 @@ export type Database = {
         Returns: {
           dias_gerados: number
           total_meta: number
+        }[]
+      }
+      gerar_metas_compra: {
+        Args: { p_ano: number; p_mes: number; p_store_id: string }
+        Returns: {
+          departamentos: number
+          meta_compra_total: number
+          meta_venda_total: number
         }[]
       }
       has_role: {
