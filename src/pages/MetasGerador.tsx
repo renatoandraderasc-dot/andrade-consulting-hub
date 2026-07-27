@@ -57,6 +57,8 @@ const MetasGerador = () => {
 
   const [loading, setLoading] = useState(false);
   const [metasRows, setMetasRows] = useState<any[]>([]);
+  const [dirtyDates, setDirtyDates] = useState<Set<string>>(new Set());
+  const [saving, setSaving] = useState(false);
   const [calRows, setCalRows] = useState<any[]>([]);
   const [taxasRows, setTaxasRows] = useState<any[]>([]);
 
