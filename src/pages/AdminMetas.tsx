@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Target, Save, Upload, FileSpreadsheet } from "lucide-react";
+import { Target, Save, Upload, FileSpreadsheet, Wand2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import ClientLayout from "@/components/ClientLayout";
