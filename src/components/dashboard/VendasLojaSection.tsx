@@ -15,7 +15,7 @@ import {
   Tooltip,
   Legend,
   CartesianGrid,
-  defs as _defs,
+  
 } from "recharts";
 
 interface Props {
