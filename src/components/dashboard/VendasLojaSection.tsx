@@ -2,6 +2,9 @@ import { useEffect, useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Store, TrendingUp, DollarSign, Percent, Target } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import PriceTagCard from "@/components/poster/PriceTagCard";
+import CouponDivider from "@/components/poster/CouponDivider";
+import StatusStamp from "@/components/poster/StatusStamp";
 import {
   ResponsiveContainer,
   ComposedChart,
