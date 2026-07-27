@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Target, Wand2, Download, Sprout, RotateCcw, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -42,6 +42,8 @@ const MetasGerador = () => {
   const { user, isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const storeIdParam = searchParams.get("store");
 
   const [stores, setStores] = useState<Store[]>([]);
   const [storeId, setStoreId] = useState("");
@@ -74,8 +76,10 @@ const MetasGerador = () => {
     if (data) {
       setStores(data);
       if (data.length && !storeId) {
-        setStoreId(data[0].id);
-        setStoreName(data[0].name);
+        const preferred = storeIdParam && data.find((s) => s.id === storeIdParam);
+        const pick = preferred || data[0];
+        setStoreId(pick.id);
+        setStoreName(pick.name);
       }
     }
   };
