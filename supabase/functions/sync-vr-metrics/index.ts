@@ -75,7 +75,9 @@ Deno.serve(async (req) => {
     .from("vr_secao_departamento")
     .select("store_id, secao_vr, department");
 
-  const datas = datasParaSincronizar();
+  const [dataOntem, dataHoje] = datasParaSincronizar();
+  const datas = [dataOntem, dataHoje];
+
   const resumo: Record<string, unknown>[] = [];
 
   for (const cfg of configs ?? []) {
