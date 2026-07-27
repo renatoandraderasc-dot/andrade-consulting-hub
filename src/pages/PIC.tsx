@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Trophy, TrendingUp, TrendingDown, Calendar, Filter, Sparkles, Flag, ChevronDown } from "lucide-react";
@@ -34,7 +34,7 @@ interface DayMetric {
 const pctFmt = (v: number) => `${v.toFixed(2).replace(".", ",")}%`;
 
 const PIC = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [storeId, setStoreId] = useState("");
   const [storeName, setStoreName] = useState("");
@@ -47,10 +47,21 @@ const PIC = () => {
   useEffect(() => {
     if (!authLoading && !user) { navigate("/login"); return; }
     if (user) fetchStoreInfo();
-  }, [user, authLoading]);
+  }, [user, authLoading, isAdmin]);
 
   useEffect(() => {
     if (storeId) fetchData();
+  }, [storeId, selectedMonth, selectedYear]);
+
+  useEffect(() => {
+    if (!storeId) return;
+    const interval = setInterval(fetchData, 60_000);
+    const handleFocus = () => fetchData();
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", handleFocus);
+    };
   }, [storeId, selectedMonth, selectedYear]);
 
   useEffect(() => {
@@ -68,11 +79,43 @@ const PIC = () => {
 
 
   const fetchStoreInfo = async () => {
+    if (!user) return;
+
+    const selectedStoreId = sessionStorage.getItem("selectedStoreId");
+    if (selectedStoreId) {
+      const { data } = await supabase
+        .from("stores")
+        .select("id, name")
+        .eq("id", selectedStoreId)
+        .single();
+      if (data) {
+        setStoreId(data.id);
+        setStoreName(data.name);
+        return;
+      }
+    }
+
     const { data: access } = await supabase
-      .from("user_store_access").select("store_id, stores(name)").eq("user_id", user!.id).eq("approved", true).limit(1).single();
+      .from("user_store_access").select("store_id, stores(name)").eq("user_id", user.id).eq("approved", true).limit(1).maybeSingle();
     if (access) {
       setStoreId(access.store_id);
       setStoreName((access as any).stores?.name || "");
+      return;
+    }
+
+    if (isAdmin) {
+      const { data: vrStore } = await supabase
+        .from("store_vr_config")
+        .select("store_id, stores(name)")
+        .eq("enabled", true)
+        .order("last_sync_at", { ascending: false, nullsFirst: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (vrStore) {
+        setStoreId(vrStore.store_id);
+        setStoreName((vrStore as any).stores?.name || "");
+      }
     }
   };
 
@@ -110,6 +153,10 @@ const PIC = () => {
     setRawData(results);
     setLoading(false);
   };
+
+  const handleSyncChange = useCallback(() => {
+    if (storeId) fetchData();
+  }, [storeId, selectedMonth, selectedYear]);
 
   // Build KPI data per department
   const deptKpis = useMemo(() => {
@@ -194,7 +241,7 @@ const PIC = () => {
               <h1 className="text-2xl font-bold font-heading text-foreground">PIC — Painel de Indicadores Comerciais</h1>
               <div className="flex items-center gap-3 flex-wrap mt-1">
                 <p className="text-sm text-muted-foreground font-body">Acompanhamento de metas por departamento</p>
-                {storeId && <SyncStatusBadge storeId={storeId} />}
+                {storeId && <SyncStatusBadge storeId={storeId} onSyncChange={handleSyncChange} />}
               </div>
             </div>
           </div>
