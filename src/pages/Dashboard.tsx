@@ -9,6 +9,7 @@ import DashboardKPIs from "@/components/dashboard/DashboardKPIs";
 import DailyMetricsTable, { DailyRow } from "@/components/dashboard/DailyMetricsTable";
 import ProductComparison, { ProductCompRow } from "@/components/dashboard/ProductComparison";
 import CategoryChart, { CategoryChartData } from "@/components/dashboard/CategoryChart";
+import VendasLojaSection from "@/components/dashboard/VendasLojaSection";
 
 const MONTHS = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
@@ -350,6 +351,11 @@ const Dashboard = () => {
 
         {/* KPI Cards */}
         <DashboardKPIs {...kpiData} />
+
+        {/* Vendas da Loja (department = LOJA) — independente do filtro */}
+        {storeId && (
+          <VendasLojaSection storeId={storeId} month={selectedMonth} year={selectedYear} />
+        )}
 
         {/* Daily Metrics Table */}
         <div className="mb-2">
