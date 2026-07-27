@@ -179,7 +179,7 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
     {
       label: "% da meta atingida",
       value: fmtPct(totals.pctMeta),
-      sub: `Projeção ${fmtBRL(totals.projecaoMes)}`,
+      sub: `Projeção (real + metas restantes) ${fmtBRL(totals.projecaoMes)}`,
       icon: Target,
       color: "text-orange-500",
     },
