@@ -5,6 +5,7 @@ import { Trophy, TrendingUp, TrendingDown, Calendar, Filter, Sparkles, Flag, Che
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import ClientLayout from "@/components/ClientLayout";
+import SyncStatusBadge from "@/components/SyncStatusBadge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
