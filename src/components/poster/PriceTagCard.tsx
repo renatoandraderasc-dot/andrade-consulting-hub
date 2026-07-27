@@ -1,65 +1,102 @@
 import { ReactNode } from "react";
+import { ArrowUp, ArrowDown } from "lucide-react";
 
 interface PriceTagCardProps {
   label: string;
   value: ReactNode;
   sub?: ReactNode;
-  badge?: { text: string; tone?: "green" | "red" | "yellow" | "ink" };
-  ribbonTone?: "yellow" | "red" | "green" | "ink";
+  /** Small delta chip beside the sub line. Colored via `tone`. */
+  badge?: { text: string; tone?: "success" | "warning" | "danger" | "neutral" };
+  /** Kept for API compatibility — no longer renders a colored ribbon. */
+  ribbonTone?: "yellow" | "red" | "green" | "ink" | "success" | "warning" | "danger" | "neutral";
   icon?: ReactNode;
   className?: string;
+  /** Optional progress %, 0..100+. Rendered as a slim 4px bar with the pct as text. */
+  progressPct?: number;
 }
 
-const ribbonClass: Record<string, string> = {
-  yellow: "bg-poster-yellow text-ink",
-  red: "bg-offer-red text-white",
-  green: "bg-gondola-green text-white",
-  ink: "bg-ink text-paper",
+const toneText: Record<string, string> = {
+  success: "text-success",
+  warning: "text-warning",
+  danger: "text-danger",
+  neutral: "text-muted-foreground",
 };
 
-const badgeClass: Record<string, string> = {
-  green: "bg-gondola-green text-white border-gondola-green",
-  red: "bg-offer-red text-white border-offer-red",
-  yellow: "bg-poster-yellow text-ink border-ink",
-  ink: "bg-ink text-paper border-ink",
+const toneBar: Record<string, string> = {
+  success: "bg-success",
+  warning: "bg-warning",
+  danger: "bg-danger",
+  neutral: "bg-muted-foreground/60",
 };
+
+function pctTone(p?: number): "success" | "warning" | "danger" | "neutral" {
+  if (p == null) return "neutral";
+  if (p >= 100) return "success";
+  if (p >= 80) return "warning";
+  return "danger";
+}
 
 export default function PriceTagCard({
   label,
   value,
   sub,
   badge,
-  ribbonTone = "yellow",
   icon,
   className = "",
+  progressPct,
 }: PriceTagCardProps) {
+  const tone = badge?.tone ?? "neutral";
+  const isDelta =
+    badge && (badge.text.trim().startsWith("+") || badge.text.trim().startsWith("-"));
+  const deltaUp = badge?.text.trim().startsWith("+");
+  const barTone = toneBar[pctTone(progressPct)];
+  const barPct = Math.max(0, Math.min(progressPct ?? 0, 100));
+
   return (
-    <div className={`relative ${className}`}>
-      <div className="clip-tag-lg bg-card border-2 border-ink shadow-md">
-        <div
-          className={`clip-tag-lg h-8 flex items-center px-4 uppercase tracking-widest text-[11px] font-bold font-condensed ${ribbonClass[ribbonTone]}`}
-        >
-          {icon && <span className="mr-2 inline-flex items-center">{icon}</span>}
-          {label}
-        </div>
-        <div className="px-5 pt-4 pb-5 min-h-[110px] flex flex-col justify-between">
-          <div className="font-price text-4xl md:text-5xl leading-none text-ink dark:text-foreground break-words">
-            {value}
-          </div>
-          {sub && (
-            <div className="mt-3 text-[11px] uppercase tracking-wider font-condensed font-semibold text-muted-foreground">
-              {sub}
-            </div>
-          )}
-        </div>
+    <div
+      className={`rounded-lg bg-card border border-border p-5 flex flex-col gap-3 ${className}`}
+    >
+      <div className="flex items-center gap-2 text-muted-foreground">
+        {icon && <span className="inline-flex items-center">{icon}</span>}
+        <span className="text-[11px] uppercase tracking-wider font-medium">{label}</span>
       </div>
 
-      {badge && (
-        <div
-          className={`absolute -top-3 -right-3 h-14 w-14 rounded-full border-2 flex flex-col items-center justify-center text-center font-condensed font-bold leading-none shadow-sm ${badgeClass[badge.tone || "yellow"]}`}
-        >
-          <span className="text-[9px] uppercase tracking-wider opacity-80">de/por</span>
-          <span className="text-sm mt-0.5">{badge.text}</span>
+      <div className="text-[32px] leading-none font-semibold tabular text-foreground break-words">
+        {value}
+      </div>
+
+      {(sub || badge) && (
+        <div className="flex items-center justify-between gap-3 min-h-[20px]">
+          {sub && (
+            <span className="text-xs text-muted-foreground tabular">{sub}</span>
+          )}
+          {badge && (
+            <span
+              className={`inline-flex items-center gap-1 text-[11px] font-medium tabular ${toneText[tone]}`}
+            >
+              {isDelta &&
+                (deltaUp ? (
+                  <ArrowUp className="w-3 h-3" strokeWidth={2.5} />
+                ) : (
+                  <ArrowDown className="w-3 h-3" strokeWidth={2.5} />
+                ))}
+              {badge.text}
+            </span>
+          )}
+        </div>
+      )}
+
+      {progressPct != null && (
+        <div className="flex items-center gap-2 mt-1">
+          <div className="flex-1 h-1 rounded-full bg-secondary overflow-hidden">
+            <div
+              className={`h-full ${barTone} transition-all duration-500`}
+              style={{ width: `${barPct}%` }}
+            />
+          </div>
+          <span className="text-[11px] text-muted-foreground tabular min-w-[36px] text-right">
+            {progressPct.toFixed(0)}%
+          </span>
         </div>
       )}
     </div>

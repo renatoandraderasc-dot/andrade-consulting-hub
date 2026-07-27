@@ -2,16 +2,16 @@ interface Props {
   label?: string;
   className?: string;
 }
+/** Section title with a discrete 1px underline. No dotted dividers. */
 export default function CouponDivider({ label, className = "" }: Props) {
   return (
-    <div className={`flex items-center gap-3 my-4 ${className}`}>
-      <div className="picote flex-1" />
+    <div className={`mt-8 mb-4 ${className}`}>
       {label && (
-        <span className="font-condensed uppercase tracking-widest text-[10px] font-bold text-muted-foreground whitespace-nowrap">
+        <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium mb-2">
           {label}
-        </span>
+        </div>
       )}
-      <div className="picote flex-1" />
+      <div className="h-px w-full bg-border" />
     </div>
   );
 }
