@@ -144,7 +144,7 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
         dia: String(r.day).padStart(2, "0"),
         Meta: r.metaVendas,
         Realizado: r.realizadoVendas,
-        "Meta acumulada": accMeta,
+        "Meta acumulada": accMeta + accReal,
         "Realizado acumulado": accReal,
       };
     });
