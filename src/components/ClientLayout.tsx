@@ -63,18 +63,14 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
       <Link
         to={item.path}
         onClick={() => setMenuOpen(false)}
-        className={`relative group flex items-center gap-2 px-3 h-full font-condensed text-sm uppercase tracking-wider font-semibold transition-colors ${
-          mobile ? "py-3 border-b border-sidebar-border w-full" : ""
-        } ${active ? "text-poster-yellow" : "text-paper hover:text-poster-yellow"}`}
+        className={`relative flex items-center gap-2 px-3 h-full text-[13px] font-medium transition-colors ${
+          mobile ? "py-3 border-b border-border w-full" : ""
+        } ${active ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
       >
-        <item.icon className="w-4 h-4" />
+        <item.icon className="w-4 h-4" strokeWidth={2} />
         {item.label}
-        {!mobile && (
-          <span
-            className={`absolute left-0 right-0 -bottom-[1px] h-1.5 bg-poster-yellow transition-transform origin-left ${
-              active ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"
-            }`}
-          />
+        {!mobile && active && (
+          <span className="absolute left-3 right-3 -bottom-px h-0.5 bg-primary" />
         )}
       </Link>
     );
@@ -82,28 +78,26 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Gondola top bar */}
-      <header className="sticky top-0 z-40 bg-ink border-b-4 border-poster-yellow">
-        <div className="flex items-stretch h-14 pl-3 pr-2">
-          <Link to="/" className="flex items-center gap-3 pr-4 border-r border-sidebar-border">
-            <img src={andradeLogo} alt="Andrade" className="h-8" />
+      <header className="sticky top-0 z-40 bg-card/95 backdrop-blur border-b border-border">
+        <div className="flex items-stretch h-14 px-4">
+          <Link to="/" className="flex items-center gap-3 pr-4 mr-2 border-r border-border">
+            <img src={andradeLogo} alt="Andrade" className="h-7" />
             {storeName && (
               <div className="hidden md:flex flex-col leading-tight">
-                <span className="font-condensed uppercase text-[10px] tracking-widest text-poster-yellow">Loja</span>
-                <span className="font-condensed uppercase text-xs font-bold text-paper truncate max-w-[180px]">
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Loja</span>
+                <span className="text-xs font-semibold text-foreground truncate max-w-[180px]">
                   {storeName}
                 </span>
               </div>
             )}
           </Link>
 
-          {/* Desktop nav */}
-          <nav className="hidden md:flex items-stretch ml-2">
+          <nav className="hidden md:flex items-stretch">
             {visibleNav.map((item) => (
               <NavButton key={item.path} item={item} />
             ))}
             {isAdmin && (
-              <div className="flex items-stretch ml-2 pl-2 border-l border-sidebar-border">
+              <div className="flex items-stretch ml-2 pl-2 border-l border-border">
                 {adminItems.map((item) => (
                   <NavButton key={item.path} item={item} />
                 ))}
@@ -111,23 +105,23 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
             )}
           </nav>
 
-          <div className="ml-auto flex items-center gap-2 pl-2">
+          <div className="ml-auto flex items-center gap-2">
             <ThemeToggle />
             <Link
               to="/"
-              className="hidden md:inline-flex items-center gap-1 px-2 py-1 font-condensed uppercase text-[11px] tracking-widest text-paper/70 hover:text-poster-yellow"
+              className="hidden md:inline-flex items-center gap-1 px-2 py-1 text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
             >
               <ArrowLeft className="w-3.5 h-3.5" /> Site
             </Link>
             <button
               onClick={handleSignOut}
-              className="hidden md:inline-flex items-center gap-1 px-3 py-1 border-2 border-poster-yellow bg-poster-yellow text-ink font-condensed uppercase text-[11px] tracking-widest hover:bg-offer-red hover:text-white hover:border-offer-red transition-colors"
+              className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-secondary text-foreground text-[12px] font-medium hover:bg-secondary/70 transition-colors"
             >
               <LogOut className="w-3.5 h-3.5" /> Sair
             </button>
             <button
               onClick={() => setMenuOpen((v) => !v)}
-              className="md:hidden text-paper p-2"
+              className="md:hidden text-foreground p-2"
               aria-label="Menu"
             >
               {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -135,15 +129,14 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
           </div>
         </div>
 
-        {/* Mobile drawer */}
         {menuOpen && (
-          <div className="md:hidden bg-ink border-t border-sidebar-border">
+          <div className="md:hidden bg-card border-t border-border">
             {visibleNav.map((item) => (
               <NavButton key={item.path} item={item} mobile />
             ))}
             {isAdmin && (
               <>
-                <div className="px-3 py-2 font-condensed uppercase text-[10px] tracking-widest text-poster-yellow">
+                <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-muted-foreground">
                   Admin
                 </div>
                 {adminItems.map((item) => (
@@ -153,7 +146,7 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
             )}
             <button
               onClick={handleSignOut}
-              className="w-full flex items-center gap-2 px-3 py-3 font-condensed uppercase text-sm tracking-widest text-paper"
+              className="w-full flex items-center gap-2 px-3 py-3 text-sm text-foreground border-t border-border"
             >
               <LogOut className="w-4 h-4" /> Sair
             </button>

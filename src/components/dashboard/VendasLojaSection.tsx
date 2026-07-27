@@ -8,13 +8,14 @@ import StatusStamp from "@/components/poster/StatusStamp";
 import {
   ResponsiveContainer,
   ComposedChart,
+  Area,
   Line,
-  Bar,
   XAxis,
   YAxis,
   Tooltip,
   Legend,
   CartesianGrid,
+  
 } from "recharts";
 
 interface Props {
@@ -34,9 +35,15 @@ interface DailyLoja {
   realizadoMargemPct: number;
 }
 
-const fmtBRL = (v: number) =>
-  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
-const fmtPct = (v: number) => `${v.toFixed(1)}%`;
+const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+const fmtBRL = (v: number) => brl.format(v || 0);
+const fmtPct = (v: number) => `${(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
+const fmtShort = (v: number) =>
+  v >= 1_000_000
+    ? `${(v / 1_000_000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}M`
+    : v >= 1000
+    ? `${(v / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}k`
+    : String(v || 0);
 
 export default function VendasLojaSection({ storeId, month, year }: Props) {
   const [rows, setRows] = useState<DailyLoja[]>([]);
@@ -104,10 +111,11 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
     const realVendas = rows.reduce((s, r) => s + r.realizadoVendas, 0);
     const metaLucro = rows.reduce((s, r) => s + r.metaLucro, 0);
     const realLucro = rows.reduce((s, r) => s + r.realizadoLucro, 0);
+    // Standardized: realized profit ÷ realized revenue
     const margemReal = realVendas > 0 ? (realLucro / realVendas) * 100 : 0;
+    const margemMeta = metaVendas > 0 ? (metaLucro / metaVendas) * 100 : 0;
     const pctMeta = metaVendas > 0 ? (realVendas / metaVendas) * 100 : 0;
 
-    // Projeção: realizado + metas dos dias restantes
     const hoje = new Date();
     const hojeStr = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(hoje.getDate()).padStart(2, "0")}`;
     const diasComRealizado = rows.filter((r) => r.realizadoVendas > 0).length;
@@ -129,6 +137,7 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
       metaLucro,
       realLucro,
       margemReal,
+      margemMeta,
       pctMeta,
       projecaoMes,
       projecaoLucro,
@@ -147,11 +156,15 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
         dia: String(r.day).padStart(2, "0"),
         Meta: r.metaVendas,
         Realizado: r.realizadoVendas,
-        "Meta acumulada": accMeta + accReal,
+        // Fix: was accMeta + accReal (double-counted). Correct = cumulative meta only.
+        "Meta acumulada": accMeta,
         "Realizado acumulado": accReal,
       };
     });
   }, [rows]);
+
+  const toneFromPct = (p: number): "success" | "warning" | "danger" =>
+    p >= 100 ? "success" : p >= 80 ? "warning" : "danger";
 
   const cards = [
     {
@@ -159,7 +172,6 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
       value: fmtBRL(totals.realVendas),
       sub: `Meta ${fmtBRL(totals.metaVendas)}`,
       icon: DollarSign,
-      ribbon: "yellow" as const,
       pct: totals.pctMeta,
     },
     {
@@ -167,131 +179,134 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
       value: fmtBRL(totals.realLucro),
       sub: `Meta ${fmtBRL(totals.metaLucro)}`,
       icon: TrendingUp,
-      ribbon: "red" as const,
       pct: totals.metaLucro > 0 ? (totals.realLucro / totals.metaLucro) * 100 : 0,
     },
     {
       label: "Margem %",
       value: fmtPct(totals.margemReal),
-      sub: `Meta ${
-        totals.realVendas > 0
-          ? fmtPct(totals.metaVendas > 0 ? (totals.metaLucro / totals.metaVendas) * 100 : 0)
-          : "—"
-      }`,
+      sub: `Meta ${fmtPct(totals.margemMeta)}`,
       icon: Percent,
-      ribbon: "green" as const,
-      pct: totals.metaVendas > 0
-        ? (totals.margemReal / ((totals.metaLucro / totals.metaVendas) * 100)) * 100
-        : 0,
+      pct: totals.margemMeta > 0 ? (totals.margemReal / totals.margemMeta) * 100 : 0,
     },
     {
       label: "% da meta atingida",
       value: fmtPct(totals.pctMeta),
-      sub: `Proj. ${fmtBRL(totals.projecaoMes)}`,
+      sub: `Projeção ${fmtBRL(totals.projecaoMes)}`,
       icon: Target,
-      ribbon: "ink" as const,
       pct: totals.pctMeta,
     },
   ];
 
-  const toneFromPct = (p: number): "green" | "yellow" | "red" =>
-    p >= 100 ? "green" : p >= 80 ? "yellow" : "red";
-
   return (
     <motion.section
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="mt-8 mb-6"
+      className="mt-6 mb-6"
     >
-      <CouponDivider label="Vendas da Loja — Supermercado Total" />
+      <CouponDivider label="Vendas da loja — Supermercado total" />
 
-      <div className="flex items-center justify-between mb-4 mt-3">
-        <div className="flex items-center gap-2">
-          <Store className="w-5 h-5 text-offer-red" />
-          <h2 className="font-condensed uppercase tracking-widest text-lg font-bold">
-            Vendas da Loja
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <Store className="w-4 h-4 text-muted-foreground" />
+          <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">
+            Vendas da loja
           </h2>
-          <span className="inline-flex items-center gap-1 ml-2 px-2 py-0.5 bg-offer-red text-white text-[10px] font-condensed uppercase tracking-widest animate-live-pulse">
-            <span className="w-1.5 h-1.5 rounded-full bg-white" /> Ao vivo
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <span className="w-1.5 h-1.5 rounded-full bg-success animate-live-pulse" />
+            Ao vivo
           </span>
         </div>
         <StatusStamp pct={totals.pctMeta} />
       </div>
 
       {loading && rows.length === 0 ? (
-        <div className="text-sm text-muted-foreground font-condensed uppercase tracking-widest py-8 text-center">
-          Carregando...
-        </div>
+        <div className="text-sm text-muted-foreground py-8 text-center">Carregando...</div>
       ) : rows.length === 0 ? (
-        <div className="clip-tag bg-card border-2 border-ink py-8 text-center">
-          <p className="font-condensed uppercase tracking-widest text-sm">
-            Sem dados de <strong>LOJA</strong> para este mês.
+        <div className="rounded-lg bg-card border border-border py-8 text-center">
+          <p className="text-sm text-muted-foreground">
+            Sem dados de <strong className="text-foreground">LOJA</strong> para este mês.
           </p>
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6 pt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             {cards.map((c) => (
               <PriceTagCard
                 key={c.label}
                 label={c.label}
-                ribbonTone={c.ribbon}
-                icon={<c.icon className="w-3.5 h-3.5" />}
+                icon={<c.icon className="w-4 h-4" />}
                 value={c.value}
                 sub={c.sub}
                 badge={{ text: `${c.pct.toFixed(0)}%`, tone: toneFromPct(c.pct) }}
+                progressPct={c.pct}
               />
             ))}
           </div>
 
-          <div className="clip-tag bg-card border-2 border-ink">
-            <div className="bg-ink text-paper px-4 py-2 flex items-center justify-between">
-              <h3 className="font-condensed uppercase tracking-widest text-sm font-bold">
+          <div className="rounded-lg bg-card border border-border">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+              <h3 className="text-sm font-semibold text-foreground">
                 Evolução diária — Realizado × Meta
               </h3>
-              <div className="text-[10px] font-condensed uppercase tracking-widest text-poster-yellow">
-                Projeção: {fmtBRL(totals.projecaoMes)} · {totals.diasComRealizado}/{totals.totalDias} dias
+              <div className="text-[11px] text-muted-foreground">
+                Projeção {fmtBRL(totals.projecaoMes)} · {totals.diasComRealizado}/{totals.totalDias} dias
               </div>
             </div>
-            <div className="p-4">
+            <div className="p-5">
               <div style={{ width: "100%", height: 320 }}>
                 <ResponsiveContainer>
-                  <ComposedChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--ink) / 0.15)" />
-                    <XAxis dataKey="dia" stroke="hsl(var(--ink))" fontSize={11} />
-                    <YAxis
-                      stroke="hsl(var(--ink))"
+                  <ComposedChart data={chartData} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
+                    <defs>
+                      <linearGradient id="gradRealizado" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.35} />
+                        <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis
+                      dataKey="dia"
+                      stroke="hsl(var(--muted-foreground))"
                       fontSize={11}
-                      tickFormatter={(v) =>
-                        v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)
-                      }
+                      tickLine={false}
+                      axisLine={{ stroke: "hsl(var(--border))" }}
+                    />
+                    <YAxis
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={11}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={fmtShort}
                     />
                     <Tooltip
+                      cursor={{ stroke: "hsl(var(--border))" }}
                       contentStyle={{
-                        background: "hsl(var(--card))",
-                        border: "2px solid hsl(var(--ink))",
-                        borderRadius: 0,
+                        background: "hsl(var(--popover))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: 8,
                         fontSize: 12,
-                        fontFamily: "Archivo Narrow, sans-serif",
+                        color: "hsl(var(--foreground))",
                       }}
+                      labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 600 }}
                       formatter={(v: any) => fmtBRL(Number(v))}
                     />
-                    <Legend wrapperStyle={{ fontSize: 12, fontFamily: "Archivo Narrow, sans-serif", textTransform: "uppercase", letterSpacing: "0.05em" }} />
-                    <Bar dataKey="Meta" fill="hsl(var(--ink) / 0.25)" />
-                    <Bar dataKey="Realizado" fill="hsl(var(--poster-yellow))" stroke="hsl(var(--ink))" strokeWidth={1} />
+                    <Legend
+                      wrapperStyle={{ fontSize: 11, color: "hsl(var(--muted-foreground))" }}
+                      iconType="plainline"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="Realizado acumulado"
+                      stroke="hsl(var(--primary))"
+                      strokeWidth={2}
+                      fill="url(#gradRealizado)"
+                      dot={false}
+                    />
                     <Line
                       type="monotone"
                       dataKey="Meta acumulada"
-                      stroke="hsl(var(--offer-red))"
-                      strokeWidth={2}
-                      dot={false}
-                      strokeDasharray="4 4"
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="Realizado acumulado"
-                      stroke="hsl(var(--gondola-green))"
-                      strokeWidth={2.5}
+                      stroke="hsl(var(--muted-foreground))"
+                      strokeWidth={1.5}
+                      strokeDasharray="5 4"
                       dot={false}
                     />
                   </ComposedChart>

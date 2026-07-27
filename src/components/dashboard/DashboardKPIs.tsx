@@ -1,6 +1,5 @@
 import { Target, TrendingUp, DollarSign, BarChart3 } from "lucide-react";
 import PriceTagCard from "@/components/poster/PriceTagCard";
-import Thermometer from "@/components/poster/Thermometer";
 import CouponDivider from "@/components/poster/CouponDivider";
 
 interface KPIData {
@@ -19,91 +18,57 @@ interface DashboardKPIsProps {
   volume: KPIData;
 }
 
-const fmtBRL = (v: number) =>
-  v >= 1_000_000
-    ? `R$ ${(v / 1_000_000).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}M`
-    : v >= 1000
-    ? `R$ ${(v / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}k`
-    : `R$ ${v.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`;
-const fmtNum = (v: number) =>
-  v >= 1000 ? `${(v / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}k` : v.toLocaleString("pt-BR");
-const pct = (v: number) => `${v.toFixed(1)}%`;
+const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+const num = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 });
 
-const toneFromPct = (p: number): "green" | "yellow" | "red" =>
-  p >= 100 ? "green" : p >= 80 ? "yellow" : "red";
+const fmtBRL = (v: number) => brl.format(v || 0);
+const fmtNum = (v: number) => num.format(v || 0);
+const pct = (v: number) => `${(v || 0).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`;
+
+const toneFromPct = (p: number): "success" | "warning" | "danger" =>
+  p >= 100 ? "success" : p >= 80 ? "warning" : "danger";
 
 const DashboardKPIs = ({ vendas, lucro, margem, volume }: DashboardKPIsProps) => {
+  const margemAtingidoPct = margem.metaPct > 0 ? (margem.realizadoPct / margem.metaPct) * 100 : 0;
+
   return (
     <>
-      <CouponDivider label="Indicadores do Mês" />
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6 pt-3">
+      <CouponDivider label="Indicadores do mês" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-2">
         <PriceTagCard
           label="Vendas"
-          ribbonTone="yellow"
-          icon={<DollarSign className="w-3.5 h-3.5" />}
+          icon={<DollarSign className="w-4 h-4" />}
           value={fmtBRL(vendas.realizado)}
-          sub={
-            <div className="space-y-1 w-full">
-              <div className="flex justify-between tabular">
-                <span>Meta</span><span>{fmtBRL(vendas.metaAcumulada || vendas.metaMensal)}</span>
-              </div>
-              <Thermometer pct={vendas.realizadoPct} />
-            </div>
-          }
+          sub={<>Meta {fmtBRL(vendas.metaAcumulada || vendas.metaMensal)}</>}
           badge={{ text: pct(vendas.realizadoPct), tone: toneFromPct(vendas.realizadoPct) }}
+          progressPct={vendas.realizadoPct}
         />
 
         <PriceTagCard
           label="Lucro"
-          ribbonTone="red"
-          icon={<TrendingUp className="w-3.5 h-3.5" />}
+          icon={<TrendingUp className="w-4 h-4" />}
           value={fmtBRL(lucro.realizado)}
-          sub={
-            <div className="space-y-1 w-full">
-              <div className="flex justify-between tabular">
-                <span>Meta</span><span>{fmtBRL(lucro.metaAcumulada)}</span>
-              </div>
-              <Thermometer pct={lucro.realizadoPct} />
-            </div>
-          }
+          sub={<>Meta {fmtBRL(lucro.metaAcumulada)}</>}
           badge={{ text: pct(lucro.realizadoPct), tone: toneFromPct(lucro.realizadoPct) }}
+          progressPct={lucro.realizadoPct}
         />
 
         <PriceTagCard
           label="Margem"
-          ribbonTone="green"
-          icon={<Target className="w-3.5 h-3.5" />}
+          icon={<Target className="w-4 h-4" />}
           value={pct(margem.realizadoPct)}
-          sub={
-            <div className="space-y-1 w-full">
-              <div className="flex justify-between tabular">
-                <span>Meta</span><span>{pct(margem.metaPct)}</span>
-              </div>
-              <Thermometer
-                pct={margem.metaPct > 0 ? (margem.realizadoPct / margem.metaPct) * 100 : 0}
-              />
-            </div>
-          }
-          badge={{
-            text: pct(margem.metaPct > 0 ? (margem.realizadoPct / margem.metaPct) * 100 : 0),
-            tone: toneFromPct(margem.metaPct > 0 ? (margem.realizadoPct / margem.metaPct) * 100 : 0),
-          }}
+          sub={<>Meta {pct(margem.metaPct)}</>}
+          badge={{ text: pct(margemAtingidoPct), tone: toneFromPct(margemAtingidoPct) }}
+          progressPct={margemAtingidoPct}
         />
 
         <PriceTagCard
           label="Volume"
-          ribbonTone="ink"
-          icon={<BarChart3 className="w-3.5 h-3.5" />}
+          icon={<BarChart3 className="w-4 h-4" />}
           value={fmtNum(volume.realizado)}
-          sub={
-            <div className="space-y-1 w-full">
-              <div className="flex justify-between tabular">
-                <span>Meta</span><span>{fmtNum(volume.metaAcumulada)}</span>
-              </div>
-              <Thermometer pct={volume.realizadoPct} />
-            </div>
-          }
+          sub={<>Meta {fmtNum(volume.metaAcumulada)}</>}
           badge={{ text: pct(volume.realizadoPct), tone: toneFromPct(volume.realizadoPct) }}
+          progressPct={volume.realizadoPct}
         />
       </div>
     </>
