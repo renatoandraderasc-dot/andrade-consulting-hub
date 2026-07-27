@@ -156,6 +156,8 @@ const MetasGerador = () => {
       setSaving(false);
     }
   };
+
+  const fetchCalendario = async () => {
     const { inicio, fim } = monthRange(year, month);
     const { data } = await supabase
       .from("vr_calendario")
