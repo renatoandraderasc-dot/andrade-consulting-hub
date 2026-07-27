@@ -10,7 +10,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 interface Store { id: string; name: string; }
 
-const DEPARTMENTS = ["PADARIA", "AÇOUGUE", "HORTIFRUTI", "OUTROS"];
+const DEPARTMENTS_PIC = ["PADARIA", "AÇOUGUE", "HORTIFRUTI"];
+const DEPARTMENTS = [...DEPARTMENTS_PIC, "LOJA"];
+const deptLabel = (d: string) => (d === "LOJA" ? "Supermercado — Total" : d);
 const MONTHS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 const TIPO_OPTIONS = [
   "SEG D","TER D","QUA D","QUI D","SEX D","SAB F","DOM F",
@@ -55,6 +57,8 @@ const MetasGerador = () => {
 
   const [loading, setLoading] = useState(false);
   const [metasRows, setMetasRows] = useState<any[]>([]);
+  const [dirtyDates, setDirtyDates] = useState<Set<string>>(new Set());
+  const [saving, setSaving] = useState(false);
   const [calRows, setCalRows] = useState<any[]>([]);
   const [taxasRows, setTaxasRows] = useState<any[]>([]);
 
@@ -95,6 +99,62 @@ const MetasGerador = () => {
       .lte("date", fim)
       .order("date");
     setMetasRows(data || []);
+    setDirtyDates(new Set());
+  };
+
+  // Aviso ao sair da página com alterações não salvas
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (dirtyDates.size === 0) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [dirtyDates]);
+
+  const confirmDiscardIfDirty = () => {
+    if (dirtyDates.size === 0) return true;
+    return window.confirm("Existem alterações de metas não salvas. Deseja descartá-las?");
+  };
+
+  const handleEditMeta = (date: string, field: "meta_vendas" | "meta_margem_pct", raw: string) => {
+    const num = parseFloat(raw.replace(/\./g, "").replace(",", ".")) || 0;
+    setMetasRows((rows) =>
+      rows.map((r) => {
+        if (r.date !== date) return r;
+        const next = { ...r, [field]: num };
+        next.meta_lucro = (Number(next.meta_vendas) || 0) * (Number(next.meta_margem_pct) || 0) / 100;
+        return next;
+      }),
+    );
+    setDirtyDates((s) => new Set(s).add(date));
+  };
+
+  const handleSaveMetas = async () => {
+    if (dirtyDates.size === 0) return;
+    setSaving(true);
+    try {
+      const changed = metasRows.filter((r) => dirtyDates.has(r.date));
+      const payload = changed.map((r) => ({
+        store_id: storeId,
+        department,
+        date: r.date,
+        meta_vendas: Number(r.meta_vendas) || 0,
+        meta_margem_pct: Number(r.meta_margem_pct) || 0,
+        meta_lucro: ((Number(r.meta_vendas) || 0) * (Number(r.meta_margem_pct) || 0)) / 100,
+      }));
+      const { error } = await supabase
+        .from("store_daily_metrics")
+        .upsert(payload, { onConflict: "store_id,department,date" });
+      if (error) throw error;
+      toast({ title: "Metas salvas", description: `${payload.length} dia(s) atualizado(s).` });
+      setDirtyDates(new Set());
+    } catch (err: any) {
+      toast({ title: "Erro ao salvar", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const fetchCalendario = async () => {
@@ -252,25 +312,27 @@ const MetasGerador = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <div>
             <label className="font-body text-xs text-muted-foreground mb-1 block">Loja</label>
-            <select value={storeId} onChange={(e) => { setStoreId(e.target.value); setStoreName(stores.find(s => s.id === e.target.value)?.name || ""); }} className={selectCls}>
+            <select value={storeId} onChange={(e) => { if (!confirmDiscardIfDirty()) return; setStoreId(e.target.value); setStoreName(stores.find(s => s.id === e.target.value)?.name || ""); }} className={selectCls}>
               {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </div>
           <div>
             <label className="font-body text-xs text-muted-foreground mb-1 block">Departamento</label>
-            <select value={department} onChange={(e) => setDepartment(e.target.value)} className={selectCls}>
-              {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
+            <select value={department} onChange={(e) => { if (!confirmDiscardIfDirty()) return; setDepartment(e.target.value); }} className={selectCls}>
+              {DEPARTMENTS_PIC.map((d) => <option key={d} value={d}>{d}</option>)}
+              <option disabled>──────────</option>
+              <option value="LOJA">{deptLabel("LOJA")}</option>
             </select>
           </div>
           <div>
             <label className="font-body text-xs text-muted-foreground mb-1 block">Mês</label>
-            <select value={month} onChange={(e) => setMonth(Number(e.target.value))} className={selectCls}>
+            <select value={month} onChange={(e) => { if (!confirmDiscardIfDirty()) return; setMonth(Number(e.target.value)); }} className={selectCls}>
               {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
             </select>
           </div>
           <div>
             <label className="font-body text-xs text-muted-foreground mb-1 block">Ano</label>
-            <select value={year} onChange={(e) => setYear(Number(e.target.value))} className={selectCls}>
+            <select value={year} onChange={(e) => { if (!confirmDiscardIfDirty()) return; setYear(Number(e.target.value)); }} className={selectCls}>
               {[2023, 2024, 2025, 2026, 2027].map((y) => <option key={y} value={y}>{y}</option>)}
             </select>
           </div>
@@ -305,6 +367,19 @@ const MetasGerador = () => {
                     <Download className="w-4 h-4" /> Exportar Excel
                   </button>
                 )}
+                <button
+                  onClick={handleSaveMetas}
+                  disabled={saving || dirtyDates.size === 0}
+                  className={btnPrimary}
+                >
+                  <Save className="w-4 h-4" />
+                  {dirtyDates.size > 0 ? `Salvar (${dirtyDates.size})` : "Salvar"}
+                </button>
+                {dirtyDates.size > 0 && (
+                  <span className="text-xs font-body text-amber-500 self-center">
+                    Alterações não salvas
+                  </span>
+                )}
               </div>
             </div>
 
@@ -323,15 +398,35 @@ const MetasGerador = () => {
                   {metasRows.length === 0 && (
                     <tr><td colSpan={5} className="py-6 text-center text-muted-foreground font-body">Nenhuma meta gerada ainda.</td></tr>
                   )}
-                  {metasRows.map((r) => (
-                    <tr key={r.date} className="border-b border-border/50">
-                      <td className="py-2 pr-4 font-body">{fmtDate(r.date)}</td>
-                      <td className="py-2 px-2 font-body">{r.tipo_dia}</td>
-                      <td className="py-2 px-2 text-right font-body">{fmtBRL(Number(r.meta_vendas))}</td>
-                      <td className="py-2 px-2 text-right font-body">{fmtNum(Number(r.meta_margem_pct), 2)}%</td>
-                      <td className="py-2 pl-2 text-right font-body">{fmtBRL(Number(r.meta_lucro))}</td>
-                    </tr>
-                  ))}
+                  {metasRows.map((r) => {
+                    const isDirty = dirtyDates.has(r.date);
+                    const inputCls = `w-32 bg-background border rounded-lg px-2 py-1.5 text-right font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 ${isDirty ? "border-amber-500" : "border-border"}`;
+                    return (
+                      <tr key={r.date} className="border-b border-border/50">
+                        <td className="py-2 pr-4 font-body">{fmtDate(r.date)}</td>
+                        <td className="py-2 px-2 font-body">{r.tipo_dia}</td>
+                        <td className="py-2 px-2 text-right">
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            value={fmtNum(Number(r.meta_vendas) || 0, 2)}
+                            onChange={(e) => handleEditMeta(r.date, "meta_vendas", e.target.value)}
+                            className={inputCls}
+                          />
+                        </td>
+                        <td className="py-2 px-2 text-right">
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            value={fmtNum(Number(r.meta_margem_pct) || 0, 2)}
+                            onChange={(e) => handleEditMeta(r.date, "meta_margem_pct", e.target.value)}
+                            className={inputCls + " w-24"}
+                          />
+                        </td>
+                        <td className="py-2 pl-2 text-right font-body">{fmtBRL(Number(r.meta_lucro))}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
                 {metasRows.length > 0 && (
                   <tfoot>
