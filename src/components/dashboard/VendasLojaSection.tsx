@@ -234,7 +234,7 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
                 Evolução diária — Realizado × Meta
               </h3>
               <div className="text-xs text-muted-foreground font-body">
-                Projeção do mês:{" "}
+                Projeção: realizado + metas restantes:{" "}
                 <span className="text-foreground font-semibold">
                   {fmtBRL(totals.projecaoMes)}
                 </span>{" "}
