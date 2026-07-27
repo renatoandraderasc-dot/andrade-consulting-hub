@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.sync-vr-metrics]
 verify_jwt = false
+
+[functions.importar-historico-vr]
+verify_jwt = false
