@@ -37,10 +37,12 @@ function datasParaSincronizar(): string[] {
 interface LinhaVr {
   secao: string;
   total_vendido: string | number;
-  custo_total: string | number;
+  custo_total?: string | number;
   lucro: string | number;
-  margem_pct: string | number;
+  margem_pct?: string | number;
+  volume?: string | number;
 }
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -73,7 +75,9 @@ Deno.serve(async (req) => {
     .from("vr_secao_departamento")
     .select("store_id, secao_vr, department");
 
-  const datas = datasParaSincronizar();
+  const [dataOntem, dataHoje] = datasParaSincronizar();
+  const datas = [dataOntem, dataHoje];
+
   const resumo: Record<string, unknown>[] = [];
 
   for (const cfg of configs ?? []) {
@@ -87,8 +91,9 @@ Deno.serve(async (req) => {
 
     try {
       for (const dataDia of datas) {
+        const relatorio = dataDia === dataHoje ? "vendas_secao_agora" : "vendas_secao_dia";
         const url =
-          `${cfg.api_url.replace(/\/+$/, "")}/relatorios/vendas_secao_dia` +
+          `${cfg.api_url.replace(/\/+$/, "")}/relatorios/${relatorio}` +
           `?data=${dataDia}&chave=${encodeURIComponent(cfg.api_key)}`;
         const resp = await fetch(url, {
           headers: { "ngrok-skip-browser-warning": "true" },
@@ -100,17 +105,21 @@ Deno.serve(async (req) => {
         }
         const linhas: LinhaVr[] = await resp.json();
 
-        const porDepto = new Map<string, { vendas: number; lucro: number }>();
+        const porDepto = new Map<string, { vendas: number; lucro: number; volume: number; temVolume: boolean }>();
         for (const l of linhas) {
           const depto = mapaLoja.get(norm(l.secao)) ?? "OUTROS";
-          const atual = porDepto.get(depto) ?? { vendas: 0, lucro: 0 };
+          const atual = porDepto.get(depto) ?? { vendas: 0, lucro: 0, volume: 0, temVolume: false };
           atual.vendas += parseFloat(String(l.total_vendido)) || 0;
           atual.lucro += parseFloat(String(l.lucro)) || 0;
+          if (l.volume !== undefined && l.volume !== null) {
+            atual.volume += parseFloat(String(l.volume)) || 0;
+            atual.temVolume = true;
+          }
           porDepto.set(depto, atual);
         }
 
         for (const [department, tot] of porDepto) {
-          const payload = {
+          const payload: Record<string, unknown> = {
             store_id: cfg.store_id,
             department,
             date: dataDia,
@@ -120,6 +129,9 @@ Deno.serve(async (req) => {
               ? Math.round((tot.lucro / tot.vendas) * 10000) / 100
               : 0,
           };
+          if (tot.temVolume) {
+            payload.realizado_volume = Math.round(tot.volume * 1000) / 1000;
+          }
           const { error: upErr } = await supabase
             .from("store_daily_metrics")
             .upsert(payload, { onConflict: "store_id,department,date" });
@@ -127,6 +139,7 @@ Deno.serve(async (req) => {
           gravadas++;
         }
       }
+
     } catch (e) {
       erroLoja = e instanceof Error ? e.message : String(e);
     }
