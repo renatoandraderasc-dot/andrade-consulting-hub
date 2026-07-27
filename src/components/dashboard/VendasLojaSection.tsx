@@ -104,17 +104,21 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
     const margemReal = realVendas > 0 ? (realLucro / realVendas) * 100 : 0;
     const pctMeta = metaVendas > 0 ? (realVendas / metaVendas) * 100 : 0;
 
-    // Projeção pelo ritmo atual
+    // Projeção: realizado + metas dos dias restantes
+    const hoje = new Date();
+    const hojeStr = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(hoje.getDate()).padStart(2, "0")}`;
     const diasComRealizado = rows.filter((r) => r.realizadoVendas > 0).length;
     const totalDias = rows.length;
-    const projecaoMes =
-      diasComRealizado > 0 && totalDias > 0
-        ? (realVendas / diasComRealizado) * totalDias
-        : 0;
-    const projecaoLucro =
-      diasComRealizado > 0 && totalDias > 0
-        ? (realLucro / diasComRealizado) * totalDias
-        : 0;
+
+    const metasRestantesVendas = rows
+      .filter((r) => r.date > hojeStr)
+      .reduce((s, r) => s + r.metaVendas, 0);
+    const metasRestantesLucro = rows
+      .filter((r) => r.date > hojeStr)
+      .reduce((s, r) => s + r.metaLucro, 0);
+
+    const projecaoMes = realVendas + metasRestantesVendas;
+    const projecaoLucro = realLucro + metasRestantesLucro;
 
     return {
       metaVendas,
@@ -175,7 +179,7 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
     {
       label: "% da meta atingida",
       value: fmtPct(totals.pctMeta),
-      sub: `Projeção ${fmtBRL(totals.projecaoMes)}`,
+      sub: `Projeção (real + metas restantes) ${fmtBRL(totals.projecaoMes)}`,
       icon: Target,
       color: "text-orange-500",
     },
@@ -230,7 +234,7 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
                 Evolução diária — Realizado × Meta
               </h3>
               <div className="text-xs text-muted-foreground font-body">
-                Projeção do mês:{" "}
+                Projeção: realizado + metas restantes:{" "}
                 <span className="text-foreground font-semibold">
                   {fmtBRL(totals.projecaoMes)}
                 </span>{" "}
