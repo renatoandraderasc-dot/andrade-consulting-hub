@@ -17,30 +17,26 @@ export interface DailyRow {
   projecaoVolume: number;
 }
 
-const fmt = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-const pct = (v: number) => `${v.toFixed(2)}%`;
+const num = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 });
+const fmt = (v: number) => num.format(v || 0);
+const pct = (v: number) => `${(v || 0).toFixed(2)}%`;
 
 const StatusIcon = ({ ok }: { ok: boolean }) =>
   ok ? (
-    <CheckCircle2 className="w-3.5 h-3.5 text-gondola-green inline" />
+    <CheckCircle2 className="w-3.5 h-3.5 text-success inline" />
   ) : (
-    <XCircle className="w-3.5 h-3.5 text-offer-red inline" />
+    <XCircle className="w-3.5 h-3.5 text-danger inline" />
   );
-
-const dotted = "border-b border-dotted border-ink/40";
 
 const DailyMetricsTable = ({ data }: { data: DailyRow[] }) => {
   if (data.length === 0) {
     return (
-      <div className="clip-tag bg-card border-2 border-ink p-6 text-center">
-        <p className="text-muted-foreground font-condensed uppercase tracking-widest text-xs">
-          Nenhum dado diário cadastrado para este período.
-        </p>
+      <div className="rounded-lg bg-card border border-border p-6 text-center">
+        <p className="text-sm text-muted-foreground">Nenhum dado diário cadastrado para este período.</p>
       </div>
     );
   }
 
-  // Totals row
   const t = data.reduce(
     (acc, r) => ({
       metaVendas: acc.metaVendas + r.metaVendas,
@@ -59,35 +55,38 @@ const DailyMetricsTable = ({ data }: { data: DailyRow[] }) => {
       metaVolume: 0, realizadoVolume: 0, projecaoVolume: 0,
     },
   );
-  const avg = (k: keyof DailyRow) => (data.length ? data.reduce((s, r) => s + (r[k] as number), 0) / data.length : 0);
+  // Margin totals derived consistently: total lucro / total vendas
+  const metaMargemTotal = t.metaVendas > 0 ? (t.metaLucro / t.metaVendas) * 100 : 0;
+  const realMargemTotal = t.realizadoVendas > 0 ? (t.realizadoLucro / t.realizadoVendas) * 100 : 0;
+  const projMargemTotal = t.projecaoVendas > 0 ? (t.projecaoLucro / t.projecaoVendas) * 100 : 0;
 
   return (
-    <div className="clip-tag border-2 border-ink bg-card overflow-hidden mb-6">
+    <div className="rounded-lg bg-card border border-border overflow-hidden mb-6">
       <div className="overflow-x-auto">
         <table className="w-full text-xs tabular">
           <thead>
-            <tr className="bg-ink text-paper">
-              <th colSpan={2} className="px-2 py-2 text-left font-condensed uppercase tracking-widest" />
-              <th colSpan={3} className="px-2 py-2 text-center font-condensed font-bold uppercase tracking-widest border-l border-paper/20">Vendas</th>
-              <th colSpan={3} className="px-2 py-2 text-center font-condensed font-bold uppercase tracking-widest border-l border-paper/20">Lucro</th>
-              <th colSpan={3} className="px-2 py-2 text-center font-condensed font-bold uppercase tracking-widest border-l border-paper/20">Margem</th>
-              <th colSpan={3} className="px-2 py-2 text-center font-condensed font-bold uppercase tracking-widest border-l border-paper/20">Volume</th>
+            <tr className="text-muted-foreground border-b border-border">
+              <th colSpan={2} className="px-3 py-2 text-left font-medium uppercase tracking-wider text-[11px]" />
+              <th colSpan={3} className="px-3 py-2 text-center font-medium uppercase tracking-wider text-[11px] border-l border-border">Vendas</th>
+              <th colSpan={3} className="px-3 py-2 text-center font-medium uppercase tracking-wider text-[11px] border-l border-border">Lucro</th>
+              <th colSpan={3} className="px-3 py-2 text-center font-medium uppercase tracking-wider text-[11px] border-l border-border">Margem</th>
+              <th colSpan={3} className="px-3 py-2 text-center font-medium uppercase tracking-wider text-[11px] border-l border-border">Volume</th>
             </tr>
-            <tr className="bg-ink text-paper/80 font-condensed uppercase tracking-widest text-[10px]">
-              <th className="px-2 py-1.5 text-left">Data</th>
-              <th className="px-2 py-1.5 text-left">Tipo</th>
-              <th className="px-2 py-1.5 text-right border-l border-paper/20">Meta</th>
-              <th className="px-2 py-1.5 text-right">Realiz.</th>
-              <th className="px-2 py-1.5 text-right">Proj.</th>
-              <th className="px-2 py-1.5 text-right border-l border-paper/20">Meta</th>
-              <th className="px-2 py-1.5 text-right">Realiz.</th>
-              <th className="px-2 py-1.5 text-right">Proj.</th>
-              <th className="px-2 py-1.5 text-right border-l border-paper/20">Meta</th>
-              <th className="px-2 py-1.5 text-right">Realiz.</th>
-              <th className="px-2 py-1.5 text-right">Proj.</th>
-              <th className="px-2 py-1.5 text-right border-l border-paper/20">Meta</th>
-              <th className="px-2 py-1.5 text-right">Realiz.</th>
-              <th className="px-2 py-1.5 text-right">Proj.</th>
+            <tr className="text-muted-foreground uppercase tracking-wider text-[10px] border-b border-border">
+              <th className="px-3 py-2 text-left font-medium">Data</th>
+              <th className="px-3 py-2 text-left font-medium">Tipo</th>
+              <th className="px-3 py-2 text-right font-medium border-l border-border">Meta</th>
+              <th className="px-3 py-2 text-right font-medium">Realiz.</th>
+              <th className="px-3 py-2 text-right font-medium">Proj.</th>
+              <th className="px-3 py-2 text-right font-medium border-l border-border">Meta</th>
+              <th className="px-3 py-2 text-right font-medium">Realiz.</th>
+              <th className="px-3 py-2 text-right font-medium">Proj.</th>
+              <th className="px-3 py-2 text-right font-medium border-l border-border">Meta</th>
+              <th className="px-3 py-2 text-right font-medium">Realiz.</th>
+              <th className="px-3 py-2 text-right font-medium">Proj.</th>
+              <th className="px-3 py-2 text-right font-medium border-l border-border">Meta</th>
+              <th className="px-3 py-2 text-right font-medium">Realiz.</th>
+              <th className="px-3 py-2 text-right font-medium">Proj.</th>
             </tr>
           </thead>
           <tbody>
@@ -95,41 +94,41 @@ const DailyMetricsTable = ({ data }: { data: DailyRow[] }) => {
               const vendasOk = row.realizadoVendas >= row.metaVendas && row.metaVendas > 0;
               const lucroOk = row.realizadoLucro >= row.metaLucro && row.metaLucro > 0;
               return (
-                <tr key={i} className={`${dotted} hover:bg-poster-yellow/10 transition-colors`}>
-                  <td className="px-2 py-1.5 font-condensed">{row.date}</td>
-                  <td className="px-2 py-1.5 font-semibold uppercase text-[10px] tracking-wider">{row.tipoDia}</td>
-                  <td className="px-2 py-1.5 text-right border-l border-dotted border-ink/30">{fmt(row.metaVendas)}</td>
-                  <td className="px-2 py-1.5 text-right"><StatusIcon ok={vendasOk} /> {fmt(row.realizadoVendas)}</td>
-                  <td className="px-2 py-1.5 text-right">{fmt(row.projecaoVendas)}</td>
-                  <td className="px-2 py-1.5 text-right border-l border-dotted border-ink/30">{fmt(row.metaLucro)}</td>
-                  <td className="px-2 py-1.5 text-right"><StatusIcon ok={lucroOk} /> {fmt(row.realizadoLucro)}</td>
-                  <td className="px-2 py-1.5 text-right">{fmt(row.projecaoLucro)}</td>
-                  <td className="px-2 py-1.5 text-right border-l border-dotted border-ink/30">{pct(row.metaMargemPct)}</td>
-                  <td className="px-2 py-1.5 text-right">{pct(row.realizadoMargemPct)}</td>
-                  <td className="px-2 py-1.5 text-right">{pct(row.projecaoMargemPct)}</td>
-                  <td className="px-2 py-1.5 text-right border-l border-dotted border-ink/30">{fmt(row.metaVolume)}</td>
-                  <td className="px-2 py-1.5 text-right">{fmt(row.realizadoVolume)}</td>
-                  <td className="px-2 py-1.5 text-right">{fmt(row.projecaoVolume)}</td>
+                <tr key={i} className="border-b border-border/60 hover:bg-secondary/40 transition-colors">
+                  <td className="px-3 py-2">{row.date}</td>
+                  <td className="px-3 py-2 text-muted-foreground text-[11px] uppercase tracking-wider">{row.tipoDia}</td>
+                  <td className="px-3 py-2 text-right border-l border-border/60">{fmt(row.metaVendas)}</td>
+                  <td className="px-3 py-2 text-right"><StatusIcon ok={vendasOk} /> {fmt(row.realizadoVendas)}</td>
+                  <td className="px-3 py-2 text-right text-muted-foreground">{fmt(row.projecaoVendas)}</td>
+                  <td className="px-3 py-2 text-right border-l border-border/60">{fmt(row.metaLucro)}</td>
+                  <td className="px-3 py-2 text-right"><StatusIcon ok={lucroOk} /> {fmt(row.realizadoLucro)}</td>
+                  <td className="px-3 py-2 text-right text-muted-foreground">{fmt(row.projecaoLucro)}</td>
+                  <td className="px-3 py-2 text-right border-l border-border/60">{pct(row.metaMargemPct)}</td>
+                  <td className="px-3 py-2 text-right">{pct(row.realizadoMargemPct)}</td>
+                  <td className="px-3 py-2 text-right text-muted-foreground">{pct(row.projecaoMargemPct)}</td>
+                  <td className="px-3 py-2 text-right border-l border-border/60">{fmt(row.metaVolume)}</td>
+                  <td className="px-3 py-2 text-right">{fmt(row.realizadoVolume)}</td>
+                  <td className="px-3 py-2 text-right text-muted-foreground">{fmt(row.projecaoVolume)}</td>
                 </tr>
               );
             })}
           </tbody>
           <tfoot>
-            <tr className="bg-poster-yellow text-ink font-condensed font-bold uppercase">
-              <td className="px-2 py-2 text-left">Total</td>
-              <td className="px-2 py-2" />
-              <td className="px-2 py-2 text-right border-l border-ink/20">{fmt(t.metaVendas)}</td>
-              <td className="px-2 py-2 text-right">{fmt(t.realizadoVendas)}</td>
-              <td className="px-2 py-2 text-right">{fmt(t.projecaoVendas)}</td>
-              <td className="px-2 py-2 text-right border-l border-ink/20">{fmt(t.metaLucro)}</td>
-              <td className="px-2 py-2 text-right">{fmt(t.realizadoLucro)}</td>
-              <td className="px-2 py-2 text-right">{fmt(t.projecaoLucro)}</td>
-              <td className="px-2 py-2 text-right border-l border-ink/20">{pct(avg("metaMargemPct"))}</td>
-              <td className="px-2 py-2 text-right">{pct(avg("realizadoMargemPct"))}</td>
-              <td className="px-2 py-2 text-right">{pct(avg("projecaoMargemPct"))}</td>
-              <td className="px-2 py-2 text-right border-l border-ink/20">{fmt(t.metaVolume)}</td>
-              <td className="px-2 py-2 text-right">{fmt(t.realizadoVolume)}</td>
-              <td className="px-2 py-2 text-right">{fmt(t.projecaoVolume)}</td>
+            <tr className="bg-secondary/60 text-foreground font-semibold border-t border-border">
+              <td className="px-3 py-2.5 text-left uppercase tracking-wider text-[11px]">Total</td>
+              <td className="px-3 py-2.5" />
+              <td className="px-3 py-2.5 text-right border-l border-border">{fmt(t.metaVendas)}</td>
+              <td className="px-3 py-2.5 text-right">{fmt(t.realizadoVendas)}</td>
+              <td className="px-3 py-2.5 text-right text-muted-foreground">{fmt(t.projecaoVendas)}</td>
+              <td className="px-3 py-2.5 text-right border-l border-border">{fmt(t.metaLucro)}</td>
+              <td className="px-3 py-2.5 text-right">{fmt(t.realizadoLucro)}</td>
+              <td className="px-3 py-2.5 text-right text-muted-foreground">{fmt(t.projecaoLucro)}</td>
+              <td className="px-3 py-2.5 text-right border-l border-border">{pct(metaMargemTotal)}</td>
+              <td className="px-3 py-2.5 text-right">{pct(realMargemTotal)}</td>
+              <td className="px-3 py-2.5 text-right text-muted-foreground">{pct(projMargemTotal)}</td>
+              <td className="px-3 py-2.5 text-right border-l border-border">{fmt(t.metaVolume)}</td>
+              <td className="px-3 py-2.5 text-right">{fmt(t.realizadoVolume)}</td>
+              <td className="px-3 py-2.5 text-right text-muted-foreground">{fmt(t.projecaoVolume)}</td>
             </tr>
           </tfoot>
         </table>
