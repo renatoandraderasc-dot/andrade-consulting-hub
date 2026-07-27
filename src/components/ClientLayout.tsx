@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import {
   BarChart3, CheckSquare, Settings, Users, LogOut, Menu, X, ArrowLeft,
-  Target, ClipboardList, DollarSign, Database, RefreshCw, Trophy, Store,
+  Target, ClipboardList, DollarSign, Database, RefreshCw, Trophy, Store, ShoppingCart,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import andradeLogo from "@/assets/andrade-logo.png";
@@ -17,6 +17,7 @@ interface ClientLayoutProps {
 const navItems = [
   { key: "dashboard", path: "/dashboard", label: "Dashboard", icon: BarChart3 },
   { key: "controladoria", path: "/controladoria", label: "Controladoria", icon: ClipboardList },
+  { key: "compras", path: "/compras", label: "Compras", icon: ShoppingCart },
   { key: "pic", path: "/pic", label: "PIC", icon: Trophy },
   { key: "repricing", path: "/repricing", label: "Re-Pricing", icon: DollarSign },
   { key: "checklist", path: "/checklist", label: "Checklist", icon: CheckSquare },
