@@ -118,8 +118,21 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
 
     const hoje = new Date();
     const hojeStr = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(hoje.getDate()).padStart(2, "0")}`;
+    const isCurrentMonth =
+      rows.length > 0 &&
+      rows[0].date.slice(0, 7) === hojeStr.slice(0, 7);
     const diasComRealizado = rows.filter((r) => r.realizadoVendas > 0).length;
     const totalDias = rows.length;
+
+    // Meta acumulada = soma das metas até hoje (ou mês todo, se mês fechado)
+    const rowsAteHoje = isCurrentMonth ? rows.filter((r) => r.date <= hojeStr) : rows;
+    const metaAcumVendas = rowsAteHoje.reduce((s, r) => s + r.metaVendas, 0);
+    const metaAcumLucro = rowsAteHoje.reduce((s, r) => s + r.metaLucro, 0);
+    const realAcumVendas = rowsAteHoje.reduce((s, r) => s + r.realizadoVendas, 0);
+    const realAcumLucro = rowsAteHoje.reduce((s, r) => s + r.realizadoLucro, 0);
+
+    const pctAcumVendas = metaAcumVendas > 0 ? (realAcumVendas / metaAcumVendas) * 100 : 0;
+    const pctAcumLucro = metaAcumLucro > 0 ? (realAcumLucro / metaAcumLucro) * 100 : 0;
 
     const metasRestantesVendas = rows
       .filter((r) => r.date > hojeStr)
@@ -139,10 +152,15 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
       margemReal,
       margemMeta,
       pctMeta,
+      metaAcumVendas,
+      metaAcumLucro,
+      pctAcumVendas,
+      pctAcumLucro,
       projecaoMes,
       projecaoLucro,
       diasComRealizado,
       totalDias,
+      isCurrentMonth,
     };
   }, [rows]);
 
@@ -173,6 +191,8 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
       sub: `Meta ${fmtBRL(totals.metaVendas)}`,
       icon: DollarSign,
       pct: totals.pctMeta,
+      pctAcum: totals.pctAcumVendas,
+      metaAcum: totals.metaAcumVendas,
     },
     {
       label: "Lucro do mês",
@@ -180,6 +200,8 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
       sub: `Meta ${fmtBRL(totals.metaLucro)}`,
       icon: TrendingUp,
       pct: totals.metaLucro > 0 ? (totals.realLucro / totals.metaLucro) * 100 : 0,
+      pctAcum: totals.pctAcumLucro,
+      metaAcum: totals.metaAcumLucro,
     },
     {
       label: "Margem %",
@@ -187,6 +209,8 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
       sub: `Meta ${fmtPct(totals.margemMeta)}`,
       icon: Percent,
       pct: totals.margemMeta > 0 ? (totals.margemReal / totals.margemMeta) * 100 : 0,
+      pctAcum: totals.margemMeta > 0 ? (totals.margemReal / totals.margemMeta) * 100 : 0,
+      metaAcum: 0,
     },
     {
       label: "% da meta atingida",
@@ -194,8 +218,11 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
       sub: `Projeção ${fmtBRL(totals.projecaoMes)}`,
       icon: Target,
       pct: totals.pctMeta,
+      pctAcum: totals.pctAcumVendas,
+      metaAcum: totals.metaAcumVendas,
     },
   ];
+
 
   return (
     <motion.section
