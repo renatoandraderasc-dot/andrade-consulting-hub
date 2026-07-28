@@ -32,12 +32,17 @@ interface DayMetric {
 }
 
 interface KpiData {
-  acumulado: number;
-  realizado: number;
-  meta: number;
+  // Percentuais de progresso
+  pctTotal: number;       // Realizado / Meta Mensal
+  pctAcumulado: number;   // Realizado até hoje / Meta Acumulada até hoje
+  // Valores absolutos
+  realizado: number;      // realizado até hoje (ou fim de mês, se mês passado)
+  metaMensal: number;     // meta total do mês
+  metaAcumulada: number;  // meta até o dia de hoje
   hasMeta: boolean;
   daily: { day: number; pct: number; realizado: number; meta: number; hasMeta: boolean }[];
 }
+
 
 const pctFmt = (v: number) => `${v.toFixed(2).replace(".", ",")}%`;
 
@@ -166,6 +171,18 @@ const PIC = () => {
     if (storeId) fetchData();
   }, [storeId, selectedMonth, selectedYear]);
 
+  // Determina o "dia de hoje" para cálculo de meta acumulada.
+  // Se o mês selecionado é o mês atual → dia corrente.
+  // Se for mês passado → último dia com dados; se futuro → 0.
+  const todayDate = new Date();
+  const isCurrentMonth =
+    todayDate.getFullYear() === selectedYear && todayDate.getMonth() + 1 === selectedMonth;
+  const isPastMonth =
+    selectedYear < todayDate.getFullYear() ||
+    (selectedYear === todayDate.getFullYear() && selectedMonth < todayDate.getMonth() + 1);
+  const cutoffDay = isCurrentMonth ? todayDate.getDate() : isPastMonth ? 31 : 0;
+
+
   // Build KPI data per department
   const deptKpis = useMemo(() => {
     const result: Record<string, Record<string, KpiData>> = {};
@@ -174,36 +191,56 @@ const PIC = () => {
       result[dept] = {};
 
       const calcKpi = (metaKey: keyof DayMetric, realKey: keyof DayMetric) => {
-        let metaAcum = 0, realAcum = 0;
+        let metaMensal = 0, metaAcumulada = 0, realizado = 0;
+        let accMetaRun = 0, accRealRun = 0;
         const daily: KpiData["daily"] = [];
         for (const r of rows) {
-          metaAcum += Number(r[metaKey]) || 0;
-          realAcum += Number(r[realKey]) || 0;
-          const pct = metaAcum > 0 ? (realAcum / metaAcum) * 100 : 0;
-          daily.push({ day: r.day, pct, realizado: Number(r[realKey]) || 0, meta: Number(r[metaKey]) || 0, hasMeta: (Number(r[metaKey]) || 0) > 0 });
+          const m = Number(r[metaKey]) || 0;
+          const v = Number(r[realKey]) || 0;
+          metaMensal += m;
+          accMetaRun += m;
+          accRealRun += v;
+          if (r.day <= cutoffDay) {
+            metaAcumulada += m;
+            realizado += v;
+          }
+          const pct = accMetaRun > 0 ? (accRealRun / accMetaRun) * 100 : 0;
+          daily.push({ day: r.day, pct, realizado: v, meta: m, hasMeta: m > 0 });
         }
-        const acumulado = metaAcum > 0 ? (realAcum / metaAcum) * 100 : 0;
-        return { acumulado, realizado: realAcum, meta: metaAcum, hasMeta: metaAcum > 0, daily };
+        const pctTotal = metaMensal > 0 ? (realizado / metaMensal) * 100 : 0;
+        const pctAcumulado = metaAcumulada > 0 ? (realizado / metaAcumulada) * 100 : 0;
+        return { pctTotal, pctAcumulado, realizado, metaMensal, metaAcumulada, hasMeta: metaMensal > 0, daily };
       };
 
-      const calcMargemKpi = () => {
-        let metaAcum = 0, realAcum = 0, count = 0;
+      const calcMargemKpi = (): KpiData => {
+        let metaMensalSum = 0, metaMensalCount = 0;
+        let metaAcumSum = 0, realAcumSum = 0, count = 0;
+        let runMeta = 0, runReal = 0, runCount = 0;
         const daily: KpiData["daily"] = [];
         for (const r of rows) {
           if (r.meta_margem_pct > 0) {
-            metaAcum += r.meta_margem_pct;
-            realAcum += r.realizado_margem_pct;
-            count++;
+            metaMensalSum += r.meta_margem_pct;
+            metaMensalCount++;
+            if (r.day <= cutoffDay) {
+              metaAcumSum += r.meta_margem_pct;
+              realAcumSum += r.realizado_margem_pct;
+              count++;
+            }
+            runMeta += r.meta_margem_pct;
+            runReal += r.realizado_margem_pct;
+            runCount++;
           }
-          const avgMeta = count > 0 ? metaAcum / count : 0;
-          const avgReal = count > 0 ? realAcum / count : 0;
-          const pct = avgMeta > 0 ? (avgReal / avgMeta) * 100 : 0;
+          const avgMetaRun = runCount > 0 ? runMeta / runCount : 0;
+          const avgRealRun = runCount > 0 ? runReal / runCount : 0;
+          const pct = avgMetaRun > 0 ? (avgRealRun / avgMetaRun) * 100 : 0;
           daily.push({ day: r.day, pct, realizado: r.realizado_margem_pct, meta: r.meta_margem_pct, hasMeta: r.meta_margem_pct > 0 });
         }
-        const avgMeta = count > 0 ? metaAcum / count : 0;
-        const avgReal = count > 0 ? realAcum / count : 0;
-        const acumulado = avgMeta > 0 ? (avgReal / avgMeta) * 100 : 0;
-        return { acumulado, realizado: avgReal, meta: avgMeta, hasMeta: avgMeta > 0, daily };
+        const metaMensal = metaMensalCount > 0 ? metaMensalSum / metaMensalCount : 0;
+        const metaAcumulada = count > 0 ? metaAcumSum / count : 0;
+        const realizado = count > 0 ? realAcumSum / count : 0;
+        const pctTotal = metaMensal > 0 ? (realizado / metaMensal) * 100 : 0;
+        const pctAcumulado = metaAcumulada > 0 ? (realizado / metaAcumulada) * 100 : 0;
+        return { pctTotal, pctAcumulado, realizado, metaMensal, metaAcumulada, hasMeta: metaMensal > 0, daily };
       };
 
       result[dept].faturamento = calcKpi("meta_vendas", "realizado_vendas");
@@ -212,7 +249,8 @@ const PIC = () => {
       result[dept].volume = calcKpi("meta_volume", "realizado_volume");
     }
     return result;
-  }, [rawData]);
+  }, [rawData, cutoffDay]);
+
 
   // AI Analysis
   const aiAnalysis = useMemo(() => {
@@ -220,8 +258,8 @@ const PIC = () => {
     for (const dept of DEPARTMENTS) {
       const kpis = deptKpis[dept];
       if (!kpis) continue;
-      const fat = kpis.faturamento?.acumulado || 0;
-      const marg = kpis.margem?.acumulado || 0;
+      const fat = kpis.faturamento?.pctAcumulado || 0;
+      const marg = kpis.margem?.pctAcumulado || 0;
 
       if (fat >= 100) insights.push(`🏆 ${dept} superou a meta de faturamento com ${pctFmt(fat)}!`);
       else if (fat >= 90) insights.push(`📈 ${dept} está próximo da meta de faturamento (${pctFmt(fat)}).`);
@@ -325,7 +363,7 @@ const DepartmentCard = ({ dept, kpis, viewMode, delay, today }: DeptCardProps) =
         <h2 className="text-white font-heading font-bold text-lg tracking-wide">{dept}</h2>
         <div className="flex items-center gap-1.5">
           {kpiKeys.map((k) => {
-            const val = kpis[k]?.acumulado || 0;
+            const val = kpis[k]?.pctAcumulado || 0;
             return (
               <span key={k} className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${val >= 100 ? "bg-emerald-500/20 text-emerald-400" : val >= 80 ? "bg-amber-500/20 text-amber-400" : "bg-red-500/20 text-red-400"}`}>
                 {KPI_LABELS[k]?.charAt(0)}: {kpis[k]?.hasMeta ? pctFmt(val) : kpis[k]?.realizado > 0 ? "Real." : "—"}
@@ -359,13 +397,39 @@ interface KpiSectionProps {
 
 const KpiSection = ({ label, kpi, viewMode, today }: KpiSectionProps) => {
   const [expanded, setExpanded] = useState(false);
-  const acumColor = kpi.acumulado >= 100 ? "bg-emerald-500" : kpi.acumulado >= 80 ? "bg-blue-500" : "bg-red-500";
+  const acumColor = kpi.pctAcumulado >= 100 ? "bg-emerald-500" : kpi.pctAcumulado >= 80 ? "bg-blue-500" : "bg-red-500";
+  const totalColor = kpi.pctTotal >= 100 ? "bg-emerald-500" : kpi.pctTotal >= 80 ? "bg-blue-500" : "bg-amber-500";
   const isCurrency = label !== "Margem" && label !== "Mix";
   const valueFmt = (value: number) => {
     if (label === "Margem") return pctFmt(value);
     if (label === "Mix") return value.toLocaleString("pt-BR", { maximumFractionDigits: 3 });
     return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
   };
+
+  const renderBar = (
+    labelBar: string,
+    pct: number,
+    barColor: string,
+    tooltipTitle: string,
+    tooltipSub: string,
+  ) => (
+    <div className="flex items-center gap-2 mb-1" title={`${tooltipTitle}\n${tooltipSub}`}>
+      <span className="text-[10px] text-muted-foreground font-mono w-16 shrink-0">{labelBar}</span>
+      <div className="flex-1 h-5 bg-muted/40 rounded-sm overflow-hidden relative">
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${Math.min(pct, 120)}%` }}
+          transition={{ duration: 1, ease: "easeOut" }}
+          className={`h-full ${barColor} rounded-sm`}
+          style={{ maxWidth: "100%" }}
+        />
+        <div className="absolute top-0 bottom-0 w-px bg-foreground/20" style={{ left: "100%" }} />
+      </div>
+      <span className={`text-xs font-mono font-bold w-20 text-right ${pct >= 100 ? "text-emerald-500" : pct >= 80 ? "text-blue-500" : "text-red-500"}`}>
+        {pctFmt(pct)}
+      </span>
+    </div>
+  );
 
   return (
     <div>
@@ -374,37 +438,50 @@ const KpiSection = ({ label, kpi, viewMode, today }: KpiSectionProps) => {
         <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
       </button>
 
-      {/* Acumulado bar */}
-      <div className="flex items-center gap-2 mb-1">
-        <span className="text-[10px] text-muted-foreground font-mono w-16 shrink-0">ACUMUL.</span>
-        <div className="flex-1 h-5 bg-muted/40 rounded-sm overflow-hidden relative">
-          {kpi.hasMeta ? (
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${Math.min(kpi.acumulado, 120)}%` }}
-              transition={{ duration: 1, ease: "easeOut" }}
-              className={`h-full ${acumColor} rounded-sm`}
-              style={{ maxWidth: "100%" }}
-            />
-          ) : kpi.realizado > 0 ? (
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: "100%" }}
-              transition={{ duration: 1, ease: "easeOut" }}
-              className="h-full bg-blue-500 rounded-sm"
-            />
-          ) : null}
-          {/* 100% mark */}
-          {kpi.hasMeta && <div className="absolute top-0 bottom-0 left-[83.3%] w-px bg-foreground/20" style={{ left: `${Math.min(100, 100)}%` }} />}
-        </div>
-        <span className={`text-xs font-mono font-bold w-20 text-right ${kpi.hasMeta ? kpi.acumulado >= 100 ? "text-emerald-500" : kpi.acumulado >= 80 ? "text-blue-500" : "text-red-500" : kpi.realizado > 0 ? "text-blue-500" : "text-muted-foreground"}`}>
-          {kpi.hasMeta ? pctFmt(kpi.acumulado) : kpi.realizado > 0 ? valueFmt(kpi.realizado) : "—"}
-        </span>
-      </div>
-
-      {!kpi.hasMeta && kpi.realizado > 0 && !isCurrency && (
-        <p className="ml-[4.5rem] text-[10px] text-muted-foreground font-mono">sem meta cadastrada</p>
+      {kpi.hasMeta ? (
+        <>
+          {renderBar(
+            "ACUMUL.",
+            kpi.pctAcumulado,
+            acumColor,
+            `Progresso da Meta Acumulada até hoje`,
+            `Realizado ${valueFmt(kpi.realizado)} / Meta acum. ${valueFmt(kpi.metaAcumulada)}`,
+          )}
+          {renderBar(
+            "TOTAL",
+            kpi.pctTotal,
+            totalColor,
+            `Progresso Total do mês`,
+            `Realizado ${valueFmt(kpi.realizado)} / Meta mensal ${valueFmt(kpi.metaMensal)}`,
+          )}
+          <p className="ml-[4.5rem] text-[10px] text-muted-foreground font-mono">
+            Meta acum. {valueFmt(kpi.metaAcumulada)} · Meta mês {valueFmt(kpi.metaMensal)} · Realizado {valueFmt(kpi.realizado)}
+          </p>
+        </>
+      ) : (
+        <>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[10px] text-muted-foreground font-mono w-16 shrink-0">REALIZ.</span>
+            <div className="flex-1 h-5 bg-muted/40 rounded-sm overflow-hidden relative">
+              {kpi.realizado > 0 && (
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: "100%" }}
+                  transition={{ duration: 1, ease: "easeOut" }}
+                  className="h-full bg-blue-500 rounded-sm"
+                />
+              )}
+            </div>
+            <span className={`text-xs font-mono font-bold w-20 text-right ${kpi.realizado > 0 ? "text-blue-500" : "text-muted-foreground"}`}>
+              {kpi.realizado > 0 ? valueFmt(kpi.realizado) : "—"}
+            </span>
+          </div>
+          {kpi.realizado > 0 && (
+            <p className="ml-[4.5rem] text-[10px] text-muted-foreground font-mono">sem meta cadastrada</p>
+          )}
+        </>
       )}
+
 
       {/* Daily bars (expandable) */}
       <AnimatePresence>
@@ -460,10 +537,10 @@ const FinishLineAnimation = ({ deptKpis }: { deptKpis: Record<string, Record<str
     return DEPARTMENTS.map((dept) => {
       const kpis = deptKpis[dept] || {};
       const avg = (
-        (kpis.faturamento?.acumulado || 0) +
-        (kpis.margem?.acumulado || 0) +
-        (kpis.arrecadacao?.acumulado || 0) +
-        (kpis.volume?.acumulado || 0)
+        (kpis.faturamento?.pctAcumulado || 0) +
+        (kpis.margem?.pctAcumulado || 0) +
+        (kpis.arrecadacao?.pctAcumulado || 0) +
+        (kpis.volume?.pctAcumulado || 0)
       ) / 4;
       return { dept, avg };
     }).sort((a, b) => b.avg - a.avg);

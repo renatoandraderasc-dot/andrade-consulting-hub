@@ -118,8 +118,21 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
 
     const hoje = new Date();
     const hojeStr = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(hoje.getDate()).padStart(2, "0")}`;
+    const isCurrentMonth =
+      rows.length > 0 &&
+      rows[0].date.slice(0, 7) === hojeStr.slice(0, 7);
     const diasComRealizado = rows.filter((r) => r.realizadoVendas > 0).length;
     const totalDias = rows.length;
+
+    // Meta acumulada = soma das metas até hoje (ou mês todo, se mês fechado)
+    const rowsAteHoje = isCurrentMonth ? rows.filter((r) => r.date <= hojeStr) : rows;
+    const metaAcumVendas = rowsAteHoje.reduce((s, r) => s + r.metaVendas, 0);
+    const metaAcumLucro = rowsAteHoje.reduce((s, r) => s + r.metaLucro, 0);
+    const realAcumVendas = rowsAteHoje.reduce((s, r) => s + r.realizadoVendas, 0);
+    const realAcumLucro = rowsAteHoje.reduce((s, r) => s + r.realizadoLucro, 0);
+
+    const pctAcumVendas = metaAcumVendas > 0 ? (realAcumVendas / metaAcumVendas) * 100 : 0;
+    const pctAcumLucro = metaAcumLucro > 0 ? (realAcumLucro / metaAcumLucro) * 100 : 0;
 
     const metasRestantesVendas = rows
       .filter((r) => r.date > hojeStr)
@@ -139,10 +152,15 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
       margemReal,
       margemMeta,
       pctMeta,
+      metaAcumVendas,
+      metaAcumLucro,
+      pctAcumVendas,
+      pctAcumLucro,
       projecaoMes,
       projecaoLucro,
       diasComRealizado,
       totalDias,
+      isCurrentMonth,
     };
   }, [rows]);
 
@@ -173,6 +191,8 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
       sub: `Meta ${fmtBRL(totals.metaVendas)}`,
       icon: DollarSign,
       pct: totals.pctMeta,
+      pctAcum: totals.pctAcumVendas,
+      metaAcum: totals.metaAcumVendas,
     },
     {
       label: "Lucro do mês",
@@ -180,6 +200,8 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
       sub: `Meta ${fmtBRL(totals.metaLucro)}`,
       icon: TrendingUp,
       pct: totals.metaLucro > 0 ? (totals.realLucro / totals.metaLucro) * 100 : 0,
+      pctAcum: totals.pctAcumLucro,
+      metaAcum: totals.metaAcumLucro,
     },
     {
       label: "Margem %",
@@ -187,6 +209,8 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
       sub: `Meta ${fmtPct(totals.margemMeta)}`,
       icon: Percent,
       pct: totals.margemMeta > 0 ? (totals.margemReal / totals.margemMeta) * 100 : 0,
+      pctAcum: totals.margemMeta > 0 ? (totals.margemReal / totals.margemMeta) * 100 : 0,
+      metaAcum: 0,
     },
     {
       label: "% da meta atingida",
@@ -194,8 +218,11 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
       sub: `Projeção ${fmtBRL(totals.projecaoMes)}`,
       icon: Target,
       pct: totals.pctMeta,
+      pctAcum: totals.pctAcumVendas,
+      metaAcum: totals.metaAcumVendas,
     },
   ];
+
 
   return (
     <motion.section
@@ -229,7 +256,7 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             {cards.map((c) => (
               <PriceTagCard
                 key={c.label}
@@ -242,6 +269,85 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
               />
             ))}
           </div>
+
+          {/* Progresso Total x Meta Acumulada */}
+          <div className="rounded-lg bg-card border border-border p-5 mb-6">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+              <h3 className="text-sm font-semibold text-foreground">
+                Progresso Total vs. Meta Acumulada
+              </h3>
+              {totals.isCurrentMonth && (
+                <span className="text-[11px] text-muted-foreground">
+                  Meta acumulada até hoje ({new Date().toLocaleDateString("pt-BR")})
+                </span>
+              )}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {[
+                {
+                  title: "Faturamento",
+                  real: totals.realVendas,
+                  metaMes: totals.metaVendas,
+                  metaAcum: totals.metaAcumVendas,
+                  pctTotal: totals.pctMeta,
+                  pctAcum: totals.pctAcumVendas,
+                },
+                {
+                  title: "Lucro",
+                  real: totals.realLucro,
+                  metaMes: totals.metaLucro,
+                  metaAcum: totals.metaAcumLucro,
+                  pctTotal: totals.metaLucro > 0 ? (totals.realLucro / totals.metaLucro) * 100 : 0,
+                  pctAcum: totals.pctAcumLucro,
+                },
+              ].map((b) => {
+                const colorFor = (p: number) =>
+                  p >= 100 ? "bg-emerald-500" : p >= 80 ? "bg-blue-500" : p >= 50 ? "bg-amber-500" : "bg-red-500";
+                const textColorFor = (p: number) =>
+                  p >= 100 ? "text-emerald-500" : p >= 80 ? "text-blue-500" : p >= 50 ? "text-amber-500" : "text-red-500";
+                return (
+                  <div key={b.title}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-semibold text-foreground uppercase tracking-wide">{b.title}</span>
+                      <span className="text-[11px] text-muted-foreground">
+                        Realizado {fmtBRL(b.real)}
+                      </span>
+                    </div>
+                    {/* Progresso Total */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-[10px] text-muted-foreground w-20 shrink-0">Total mês</span>
+                      <div className="flex-1 h-2 bg-muted/40 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full ${colorFor(b.pctTotal)} transition-all`}
+                          style={{ width: `${Math.min(b.pctTotal, 100)}%` }}
+                        />
+                      </div>
+                      <span className={`text-xs font-mono font-bold w-14 text-right ${textColorFor(b.pctTotal)}`}>
+                        {b.pctTotal.toFixed(1)}%
+                      </span>
+                    </div>
+                    {/* Progresso Meta Acumulada */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-muted-foreground w-20 shrink-0">Acumul. hoje</span>
+                      <div className="flex-1 h-2 bg-muted/40 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full ${colorFor(b.pctAcum)} transition-all`}
+                          style={{ width: `${Math.min(b.pctAcum, 100)}%` }}
+                        />
+                      </div>
+                      <span className={`text-xs font-mono font-bold w-14 text-right ${textColorFor(b.pctAcum)}`}>
+                        {b.pctAcum.toFixed(1)}%
+                      </span>
+                    </div>
+                    <p className="mt-1 ml-20 text-[10px] text-muted-foreground">
+                      Meta mês {fmtBRL(b.metaMes)} · Meta acum. {fmtBRL(b.metaAcum)}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
 
           <div className="rounded-lg bg-card border border-border">
             <div className="flex items-center justify-between px-5 py-4 border-b border-border">
