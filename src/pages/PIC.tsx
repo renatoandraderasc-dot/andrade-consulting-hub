@@ -31,6 +31,14 @@ interface DayMetric {
   realizado_volume: number;
 }
 
+interface KpiData {
+  acumulado: number;
+  realizado: number;
+  meta: number;
+  hasMeta: boolean;
+  daily: { day: number; pct: number; realizado: number; meta: number; hasMeta: boolean }[];
+}
+
 const pctFmt = (v: number) => `${v.toFixed(2).replace(".", ",")}%`;
 
 const PIC = () => {
@@ -160,27 +168,27 @@ const PIC = () => {
 
   // Build KPI data per department
   const deptKpis = useMemo(() => {
-    const result: Record<string, Record<string, { acumulado: number; daily: { day: number; pct: number }[] }>> = {};
+    const result: Record<string, Record<string, KpiData>> = {};
     for (const dept of DEPARTMENTS) {
       const rows = rawData[dept] || [];
       result[dept] = {};
 
       const calcKpi = (metaKey: keyof DayMetric, realKey: keyof DayMetric) => {
         let metaAcum = 0, realAcum = 0;
-        const daily: { day: number; pct: number }[] = [];
+        const daily: KpiData["daily"] = [];
         for (const r of rows) {
           metaAcum += Number(r[metaKey]) || 0;
           realAcum += Number(r[realKey]) || 0;
           const pct = metaAcum > 0 ? (realAcum / metaAcum) * 100 : 0;
-          daily.push({ day: r.day, pct });
+          daily.push({ day: r.day, pct, realizado: Number(r[realKey]) || 0, meta: Number(r[metaKey]) || 0, hasMeta: (Number(r[metaKey]) || 0) > 0 });
         }
         const acumulado = metaAcum > 0 ? (realAcum / metaAcum) * 100 : 0;
-        return { acumulado, daily };
+        return { acumulado, realizado: realAcum, meta: metaAcum, hasMeta: metaAcum > 0, daily };
       };
 
       const calcMargemKpi = () => {
         let metaAcum = 0, realAcum = 0, count = 0;
-        const daily: { day: number; pct: number }[] = [];
+        const daily: KpiData["daily"] = [];
         for (const r of rows) {
           if (r.meta_margem_pct > 0) {
             metaAcum += r.meta_margem_pct;
@@ -190,12 +198,12 @@ const PIC = () => {
           const avgMeta = count > 0 ? metaAcum / count : 0;
           const avgReal = count > 0 ? realAcum / count : 0;
           const pct = avgMeta > 0 ? (avgReal / avgMeta) * 100 : 0;
-          daily.push({ day: r.day, pct });
+          daily.push({ day: r.day, pct, realizado: r.realizado_margem_pct, meta: r.meta_margem_pct, hasMeta: r.meta_margem_pct > 0 });
         }
         const avgMeta = count > 0 ? metaAcum / count : 0;
         const avgReal = count > 0 ? realAcum / count : 0;
         const acumulado = avgMeta > 0 ? (avgReal / avgMeta) * 100 : 0;
-        return { acumulado, daily };
+        return { acumulado, realizado: avgReal, meta: avgMeta, hasMeta: avgMeta > 0, daily };
       };
 
       result[dept].faturamento = calcKpi("meta_vendas", "realizado_vendas");
@@ -296,7 +304,7 @@ const PIC = () => {
 // ========== DEPARTMENT CARD ==========
 interface DeptCardProps {
   dept: string;
-  kpis: Record<string, { acumulado: number; daily: { day: number; pct: number }[] }>;
+  kpis: Record<string, KpiData>;
   viewMode: "mes" | "dia";
   delay: number;
   today: number;
@@ -320,7 +328,7 @@ const DepartmentCard = ({ dept, kpis, viewMode, delay, today }: DeptCardProps) =
             const val = kpis[k]?.acumulado || 0;
             return (
               <span key={k} className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${val >= 100 ? "bg-emerald-500/20 text-emerald-400" : val >= 80 ? "bg-amber-500/20 text-amber-400" : "bg-red-500/20 text-red-400"}`}>
-                {KPI_LABELS[k]?.charAt(0)}: {val > 0 ? pctFmt(val) : "—"}
+                {KPI_LABELS[k]?.charAt(0)}: {kpis[k]?.hasMeta ? pctFmt(val) : kpis[k]?.realizado > 0 ? "Real." : "—"}
               </span>
             );
           })}
@@ -344,7 +352,7 @@ const DepartmentCard = ({ dept, kpis, viewMode, delay, today }: DeptCardProps) =
 // ========== KPI SECTION (Horizontal Bar Chart) ==========
 interface KpiSectionProps {
   label: string;
-  kpi: { acumulado: number; daily: { day: number; pct: number }[] };
+  kpi: KpiData;
   viewMode: "mes" | "dia";
   today: number;
 }
@@ -352,6 +360,12 @@ interface KpiSectionProps {
 const KpiSection = ({ label, kpi, viewMode, today }: KpiSectionProps) => {
   const [expanded, setExpanded] = useState(false);
   const acumColor = kpi.acumulado >= 100 ? "bg-emerald-500" : kpi.acumulado >= 80 ? "bg-blue-500" : "bg-red-500";
+  const isCurrency = label !== "Margem" && label !== "Mix";
+  const valueFmt = (value: number) => {
+    if (label === "Margem") return pctFmt(value);
+    if (label === "Mix") return value.toLocaleString("pt-BR", { maximumFractionDigits: 3 });
+    return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+  };
 
   return (
     <div>
@@ -364,20 +378,33 @@ const KpiSection = ({ label, kpi, viewMode, today }: KpiSectionProps) => {
       <div className="flex items-center gap-2 mb-1">
         <span className="text-[10px] text-muted-foreground font-mono w-16 shrink-0">ACUMUL.</span>
         <div className="flex-1 h-5 bg-muted/40 rounded-sm overflow-hidden relative">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${Math.min(kpi.acumulado, 120)}%` }}
-            transition={{ duration: 1, ease: "easeOut" }}
-            className={`h-full ${acumColor} rounded-sm`}
-            style={{ maxWidth: "100%" }}
-          />
+          {kpi.hasMeta ? (
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.min(kpi.acumulado, 120)}%` }}
+              transition={{ duration: 1, ease: "easeOut" }}
+              className={`h-full ${acumColor} rounded-sm`}
+              style={{ maxWidth: "100%" }}
+            />
+          ) : kpi.realizado > 0 ? (
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: "100%" }}
+              transition={{ duration: 1, ease: "easeOut" }}
+              className="h-full bg-blue-500 rounded-sm"
+            />
+          ) : null}
           {/* 100% mark */}
-          <div className="absolute top-0 bottom-0 left-[83.3%] w-px bg-foreground/20" style={{ left: `${Math.min(100, 100)}%` }} />
+          {kpi.hasMeta && <div className="absolute top-0 bottom-0 left-[83.3%] w-px bg-foreground/20" style={{ left: `${Math.min(100, 100)}%` }} />}
         </div>
-        <span className={`text-xs font-mono font-bold w-16 text-right ${kpi.acumulado >= 100 ? "text-emerald-500" : kpi.acumulado >= 80 ? "text-blue-500" : "text-red-500"}`}>
-          {kpi.acumulado > 0 ? pctFmt(kpi.acumulado) : "—"}
+        <span className={`text-xs font-mono font-bold w-20 text-right ${kpi.hasMeta ? kpi.acumulado >= 100 ? "text-emerald-500" : kpi.acumulado >= 80 ? "text-blue-500" : "text-red-500" : kpi.realizado > 0 ? "text-blue-500" : "text-muted-foreground"}`}>
+          {kpi.hasMeta ? pctFmt(kpi.acumulado) : kpi.realizado > 0 ? valueFmt(kpi.realizado) : "—"}
         </span>
       </div>
+
+      {!kpi.hasMeta && kpi.realizado > 0 && !isCurrency && (
+        <p className="ml-[4.5rem] text-[10px] text-muted-foreground font-mono">sem meta cadastrada</p>
+      )}
 
       {/* Daily bars (expandable) */}
       <AnimatePresence>
@@ -391,7 +418,7 @@ const KpiSection = ({ label, kpi, viewMode, today }: KpiSectionProps) => {
           >
             <div className="space-y-0.5 mt-1">
               {kpi.daily.map((d, i) => {
-                const barColor = d.pct >= 100 ? "bg-emerald-500" : d.pct >= 80 ? "bg-blue-500" : "bg-red-500";
+                const barColor = d.hasMeta ? d.pct >= 100 ? "bg-emerald-500" : d.pct >= 80 ? "bg-blue-500" : "bg-red-500" : "bg-blue-500";
                 const isToday = d.day === today;
                 return (
                   <motion.div
@@ -407,14 +434,14 @@ const KpiSection = ({ label, kpi, viewMode, today }: KpiSectionProps) => {
                     <div className="flex-1 h-4 bg-muted/30 rounded-sm overflow-hidden">
                       <motion.div
                         initial={{ width: 0 }}
-                        animate={{ width: `${Math.min(d.pct, 120)}%` }}
+                        animate={{ width: d.hasMeta ? `${Math.min(d.pct, 120)}%` : d.realizado > 0 ? "100%" : "0%" }}
                         transition={{ duration: 0.6, delay: i * 0.02 }}
                         className={`h-full ${barColor} rounded-sm`}
                         style={{ maxWidth: "100%" }}
                       />
                     </div>
-                    <span className={`text-[10px] font-mono w-16 text-right ${d.pct >= 100 ? "text-emerald-500" : d.pct >= 80 ? "text-blue-500" : "text-red-500"}`}>
-                      {d.pct > 0 ? pctFmt(d.pct) : "—"}
+                    <span className={`text-[10px] font-mono w-20 text-right ${d.hasMeta ? d.pct >= 100 ? "text-emerald-500" : d.pct >= 80 ? "text-blue-500" : "text-red-500" : d.realizado > 0 ? "text-blue-500" : "text-muted-foreground"}`}>
+                      {d.hasMeta ? pctFmt(d.pct) : d.realizado > 0 ? valueFmt(d.realizado) : "—"}
                     </span>
                   </motion.div>
                 );
@@ -428,7 +455,7 @@ const KpiSection = ({ label, kpi, viewMode, today }: KpiSectionProps) => {
 };
 
 // ========== FINISH LINE ANIMATION ==========
-const FinishLineAnimation = ({ deptKpis }: { deptKpis: Record<string, Record<string, { acumulado: number }>> }) => {
+const FinishLineAnimation = ({ deptKpis }: { deptKpis: Record<string, Record<string, KpiData>> }) => {
   const rankings = useMemo(() => {
     return DEPARTMENTS.map((dept) => {
       const kpis = deptKpis[dept] || {};
