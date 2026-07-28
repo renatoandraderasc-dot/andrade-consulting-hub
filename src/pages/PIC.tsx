@@ -398,12 +398,38 @@ interface KpiSectionProps {
 const KpiSection = ({ label, kpi, viewMode, today }: KpiSectionProps) => {
   const [expanded, setExpanded] = useState(false);
   const acumColor = kpi.pctAcumulado >= 100 ? "bg-emerald-500" : kpi.pctAcumulado >= 80 ? "bg-blue-500" : "bg-red-500";
+  const totalColor = kpi.pctTotal >= 100 ? "bg-emerald-500" : kpi.pctTotal >= 80 ? "bg-blue-500" : "bg-amber-500";
   const isCurrency = label !== "Margem" && label !== "Mix";
   const valueFmt = (value: number) => {
     if (label === "Margem") return pctFmt(value);
     if (label === "Mix") return value.toLocaleString("pt-BR", { maximumFractionDigits: 3 });
     return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
   };
+
+  const renderBar = (
+    labelBar: string,
+    pct: number,
+    barColor: string,
+    tooltipTitle: string,
+    tooltipSub: string,
+  ) => (
+    <div className="flex items-center gap-2 mb-1" title={`${tooltipTitle}\n${tooltipSub}`}>
+      <span className="text-[10px] text-muted-foreground font-mono w-16 shrink-0">{labelBar}</span>
+      <div className="flex-1 h-5 bg-muted/40 rounded-sm overflow-hidden relative">
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${Math.min(pct, 120)}%` }}
+          transition={{ duration: 1, ease: "easeOut" }}
+          className={`h-full ${barColor} rounded-sm`}
+          style={{ maxWidth: "100%" }}
+        />
+        <div className="absolute top-0 bottom-0 w-px bg-foreground/20" style={{ left: "100%" }} />
+      </div>
+      <span className={`text-xs font-mono font-bold w-20 text-right ${pct >= 100 ? "text-emerald-500" : pct >= 80 ? "text-blue-500" : "text-red-500"}`}>
+        {pctFmt(pct)}
+      </span>
+    </div>
+  );
 
   return (
     <div>
@@ -412,37 +438,50 @@ const KpiSection = ({ label, kpi, viewMode, today }: KpiSectionProps) => {
         <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
       </button>
 
-      {/* Acumulado bar */}
-      <div className="flex items-center gap-2 mb-1">
-        <span className="text-[10px] text-muted-foreground font-mono w-16 shrink-0">ACUMUL.</span>
-        <div className="flex-1 h-5 bg-muted/40 rounded-sm overflow-hidden relative">
-          {kpi.hasMeta ? (
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${Math.min(kpi.pctAcumulado, 120)}%` }}
-              transition={{ duration: 1, ease: "easeOut" }}
-              className={`h-full ${acumColor} rounded-sm`}
-              style={{ maxWidth: "100%" }}
-            />
-          ) : kpi.realizado > 0 ? (
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: "100%" }}
-              transition={{ duration: 1, ease: "easeOut" }}
-              className="h-full bg-blue-500 rounded-sm"
-            />
-          ) : null}
-          {/* 100% mark */}
-          {kpi.hasMeta && <div className="absolute top-0 bottom-0 left-[83.3%] w-px bg-foreground/20" style={{ left: `${Math.min(100, 100)}%` }} />}
-        </div>
-        <span className={`text-xs font-mono font-bold w-20 text-right ${kpi.hasMeta ? kpi.pctAcumulado >= 100 ? "text-emerald-500" : kpi.pctAcumulado >= 80 ? "text-blue-500" : "text-red-500" : kpi.realizado > 0 ? "text-blue-500" : "text-muted-foreground"}`}>
-          {kpi.hasMeta ? pctFmt(kpi.pctAcumulado) : kpi.realizado > 0 ? valueFmt(kpi.realizado) : "—"}
-        </span>
-      </div>
-
-      {!kpi.hasMeta && kpi.realizado > 0 && !isCurrency && (
-        <p className="ml-[4.5rem] text-[10px] text-muted-foreground font-mono">sem meta cadastrada</p>
+      {kpi.hasMeta ? (
+        <>
+          {renderBar(
+            "ACUMUL.",
+            kpi.pctAcumulado,
+            acumColor,
+            `Progresso da Meta Acumulada até hoje`,
+            `Realizado ${valueFmt(kpi.realizado)} / Meta acum. ${valueFmt(kpi.metaAcumulada)}`,
+          )}
+          {renderBar(
+            "TOTAL",
+            kpi.pctTotal,
+            totalColor,
+            `Progresso Total do mês`,
+            `Realizado ${valueFmt(kpi.realizado)} / Meta mensal ${valueFmt(kpi.metaMensal)}`,
+          )}
+          <p className="ml-[4.5rem] text-[10px] text-muted-foreground font-mono">
+            Meta acum. {valueFmt(kpi.metaAcumulada)} · Meta mês {valueFmt(kpi.metaMensal)} · Realizado {valueFmt(kpi.realizado)}
+          </p>
+        </>
+      ) : (
+        <>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[10px] text-muted-foreground font-mono w-16 shrink-0">REALIZ.</span>
+            <div className="flex-1 h-5 bg-muted/40 rounded-sm overflow-hidden relative">
+              {kpi.realizado > 0 && (
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: "100%" }}
+                  transition={{ duration: 1, ease: "easeOut" }}
+                  className="h-full bg-blue-500 rounded-sm"
+                />
+              )}
+            </div>
+            <span className={`text-xs font-mono font-bold w-20 text-right ${kpi.realizado > 0 ? "text-blue-500" : "text-muted-foreground"}`}>
+              {kpi.realizado > 0 ? valueFmt(kpi.realizado) : "—"}
+            </span>
+          </div>
+          {kpi.realizado > 0 && (
+            <p className="ml-[4.5rem] text-[10px] text-muted-foreground font-mono">sem meta cadastrada</p>
+          )}
+        </>
       )}
+
 
       {/* Daily bars (expandable) */}
       <AnimatePresence>
