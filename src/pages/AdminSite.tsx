@@ -95,6 +95,7 @@ const AdminSite = () => {
     if (!user) return navigate("/login");
     if (!isAdmin) return navigate("/dashboard");
     (async () => {
+      const { data } = await supabase.from("site_content").select("data").eq("id", "home").maybeSingle();
       const raw = (data?.data as Partial<SiteContent>) || {};
       const merged = { ...DEFAULT_CONTENT, ...raw } as SiteContent;
       setContent({
