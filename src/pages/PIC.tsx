@@ -171,6 +171,17 @@ const PIC = () => {
     if (storeId) fetchData();
   }, [storeId, selectedMonth, selectedYear]);
 
+  // Determina o "dia de hoje" para cálculo de meta acumulada.
+  // Se o mês selecionado é o mês atual → dia corrente.
+  // Se for mês passado → último dia com dados; se futuro → 0.
+  const today = new Date();
+  const isCurrentMonth =
+    today.getFullYear() === selectedYear && today.getMonth() + 1 === selectedMonth;
+  const isPastMonth =
+    selectedYear < today.getFullYear() ||
+    (selectedYear === today.getFullYear() && selectedMonth < today.getMonth() + 1);
+  const cutoffDay = isCurrentMonth ? today.getDate() : isPastMonth ? 31 : 0;
+
   // Build KPI data per department
   const deptKpis = useMemo(() => {
     const result: Record<string, Record<string, KpiData>> = {};
@@ -179,36 +190,56 @@ const PIC = () => {
       result[dept] = {};
 
       const calcKpi = (metaKey: keyof DayMetric, realKey: keyof DayMetric) => {
-        let metaAcum = 0, realAcum = 0;
+        let metaMensal = 0, metaAcumulada = 0, realizado = 0;
+        let accMetaRun = 0, accRealRun = 0;
         const daily: KpiData["daily"] = [];
         for (const r of rows) {
-          metaAcum += Number(r[metaKey]) || 0;
-          realAcum += Number(r[realKey]) || 0;
-          const pct = metaAcum > 0 ? (realAcum / metaAcum) * 100 : 0;
-          daily.push({ day: r.day, pct, realizado: Number(r[realKey]) || 0, meta: Number(r[metaKey]) || 0, hasMeta: (Number(r[metaKey]) || 0) > 0 });
+          const m = Number(r[metaKey]) || 0;
+          const v = Number(r[realKey]) || 0;
+          metaMensal += m;
+          accMetaRun += m;
+          accRealRun += v;
+          if (r.day <= cutoffDay) {
+            metaAcumulada += m;
+            realizado += v;
+          }
+          const pct = accMetaRun > 0 ? (accRealRun / accMetaRun) * 100 : 0;
+          daily.push({ day: r.day, pct, realizado: v, meta: m, hasMeta: m > 0 });
         }
-        const acumulado = metaAcum > 0 ? (realAcum / metaAcum) * 100 : 0;
-        return { acumulado, realizado: realAcum, meta: metaAcum, hasMeta: metaAcum > 0, daily };
+        const pctTotal = metaMensal > 0 ? (realizado / metaMensal) * 100 : 0;
+        const pctAcumulado = metaAcumulada > 0 ? (realizado / metaAcumulada) * 100 : 0;
+        return { pctTotal, pctAcumulado, realizado, metaMensal, metaAcumulada, hasMeta: metaMensal > 0, daily };
       };
 
-      const calcMargemKpi = () => {
-        let metaAcum = 0, realAcum = 0, count = 0;
+      const calcMargemKpi = (): KpiData => {
+        let metaMensalSum = 0, metaMensalCount = 0;
+        let metaAcumSum = 0, realAcumSum = 0, count = 0;
+        let runMeta = 0, runReal = 0, runCount = 0;
         const daily: KpiData["daily"] = [];
         for (const r of rows) {
           if (r.meta_margem_pct > 0) {
-            metaAcum += r.meta_margem_pct;
-            realAcum += r.realizado_margem_pct;
-            count++;
+            metaMensalSum += r.meta_margem_pct;
+            metaMensalCount++;
+            if (r.day <= cutoffDay) {
+              metaAcumSum += r.meta_margem_pct;
+              realAcumSum += r.realizado_margem_pct;
+              count++;
+            }
+            runMeta += r.meta_margem_pct;
+            runReal += r.realizado_margem_pct;
+            runCount++;
           }
-          const avgMeta = count > 0 ? metaAcum / count : 0;
-          const avgReal = count > 0 ? realAcum / count : 0;
-          const pct = avgMeta > 0 ? (avgReal / avgMeta) * 100 : 0;
+          const avgMetaRun = runCount > 0 ? runMeta / runCount : 0;
+          const avgRealRun = runCount > 0 ? runReal / runCount : 0;
+          const pct = avgMetaRun > 0 ? (avgRealRun / avgMetaRun) * 100 : 0;
           daily.push({ day: r.day, pct, realizado: r.realizado_margem_pct, meta: r.meta_margem_pct, hasMeta: r.meta_margem_pct > 0 });
         }
-        const avgMeta = count > 0 ? metaAcum / count : 0;
-        const avgReal = count > 0 ? realAcum / count : 0;
-        const acumulado = avgMeta > 0 ? (avgReal / avgMeta) * 100 : 0;
-        return { acumulado, realizado: avgReal, meta: avgMeta, hasMeta: avgMeta > 0, daily };
+        const metaMensal = metaMensalCount > 0 ? metaMensalSum / metaMensalCount : 0;
+        const metaAcumulada = count > 0 ? metaAcumSum / count : 0;
+        const realizado = count > 0 ? realAcumSum / count : 0;
+        const pctTotal = metaMensal > 0 ? (realizado / metaMensal) * 100 : 0;
+        const pctAcumulado = metaAcumulada > 0 ? (realizado / metaAcumulada) * 100 : 0;
+        return { pctTotal, pctAcumulado, realizado, metaMensal, metaAcumulada, hasMeta: metaMensal > 0, daily };
       };
 
       result[dept].faturamento = calcKpi("meta_vendas", "realizado_vendas");
@@ -217,7 +248,8 @@ const PIC = () => {
       result[dept].volume = calcKpi("meta_volume", "realizado_volume");
     }
     return result;
-  }, [rawData]);
+  }, [rawData, cutoffDay]);
+
 
   // AI Analysis
   const aiAnalysis = useMemo(() => {
