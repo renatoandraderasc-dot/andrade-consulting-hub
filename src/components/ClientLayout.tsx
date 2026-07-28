@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import {
   BarChart3, CheckSquare, Settings, Users, LogOut, Menu, X, ArrowLeft,
-  Target, ClipboardList, DollarSign, Database, RefreshCw, Trophy, Store, ShoppingCart,
+  Target, ClipboardList, DollarSign, Database, RefreshCw, Trophy, Store, ShoppingCart, LayoutTemplate,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import andradeLogo from "@/assets/andrade-logo.png";
@@ -28,6 +28,7 @@ const adminItems = [
   { key: "admin_metas", path: "/admin/metas", label: "Metas", icon: Target },
   { key: "admin_questions", path: "/admin/questions", label: "Perguntas", icon: Settings },
   { key: "admin_users", path: "/admin/users", label: "Usuários", icon: Users },
+  { key: "admin_site", path: "/admin/site", label: "Página Inicial", icon: LayoutTemplate },
   { key: "vtex_collector", path: "/vtex-collector", label: "Coletor VTEX", icon: Database },
   { key: "websac_sync", path: "/websac-sync", label: "Sync WebSac", icon: RefreshCw },
 ];

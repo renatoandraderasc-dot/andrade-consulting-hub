@@ -12,6 +12,7 @@ export const APP_MODULES = [
   { key: "metas_gerador", label: "Gerador de Metas", path: "/metas-gerador" },
   { key: "admin_questions", label: "Admin: Perguntas", path: "/admin/questions" },
   { key: "admin_users", label: "Admin: Usuários", path: "/admin/users" },
+  { key: "admin_site", label: "Admin: Página Inicial", path: "/admin/site" },
   { key: "vtex_collector", label: "Coletor VTEX", path: "/vtex-collector" },
   { key: "websac_sync", label: "Sync WebSac", path: "/websac-sync" },
   { key: "produtos", label: "Produtos", path: "/produtos" },
