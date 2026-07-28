@@ -258,8 +258,8 @@ const PIC = () => {
     for (const dept of DEPARTMENTS) {
       const kpis = deptKpis[dept];
       if (!kpis) continue;
-      const fat = kpis.faturamento?.acumulado || 0;
-      const marg = kpis.margem?.acumulado || 0;
+      const fat = kpis.faturamento?.pctAcumulado || 0;
+      const marg = kpis.margem?.pctAcumulado || 0;
 
       if (fat >= 100) insights.push(`🏆 ${dept} superou a meta de faturamento com ${pctFmt(fat)}!`);
       else if (fat >= 90) insights.push(`📈 ${dept} está próximo da meta de faturamento (${pctFmt(fat)}).`);
@@ -363,7 +363,7 @@ const DepartmentCard = ({ dept, kpis, viewMode, delay, today }: DeptCardProps) =
         <h2 className="text-white font-heading font-bold text-lg tracking-wide">{dept}</h2>
         <div className="flex items-center gap-1.5">
           {kpiKeys.map((k) => {
-            const val = kpis[k]?.acumulado || 0;
+            const val = kpis[k]?.pctAcumulado || 0;
             return (
               <span key={k} className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${val >= 100 ? "bg-emerald-500/20 text-emerald-400" : val >= 80 ? "bg-amber-500/20 text-amber-400" : "bg-red-500/20 text-red-400"}`}>
                 {KPI_LABELS[k]?.charAt(0)}: {kpis[k]?.hasMeta ? pctFmt(val) : kpis[k]?.realizado > 0 ? "Real." : "—"}
@@ -397,7 +397,7 @@ interface KpiSectionProps {
 
 const KpiSection = ({ label, kpi, viewMode, today }: KpiSectionProps) => {
   const [expanded, setExpanded] = useState(false);
-  const acumColor = kpi.acumulado >= 100 ? "bg-emerald-500" : kpi.acumulado >= 80 ? "bg-blue-500" : "bg-red-500";
+  const acumColor = kpi.pctAcumulado >= 100 ? "bg-emerald-500" : kpi.pctAcumulado >= 80 ? "bg-blue-500" : "bg-red-500";
   const isCurrency = label !== "Margem" && label !== "Mix";
   const valueFmt = (value: number) => {
     if (label === "Margem") return pctFmt(value);
@@ -419,7 +419,7 @@ const KpiSection = ({ label, kpi, viewMode, today }: KpiSectionProps) => {
           {kpi.hasMeta ? (
             <motion.div
               initial={{ width: 0 }}
-              animate={{ width: `${Math.min(kpi.acumulado, 120)}%` }}
+              animate={{ width: `${Math.min(kpi.pctAcumulado, 120)}%` }}
               transition={{ duration: 1, ease: "easeOut" }}
               className={`h-full ${acumColor} rounded-sm`}
               style={{ maxWidth: "100%" }}
@@ -435,8 +435,8 @@ const KpiSection = ({ label, kpi, viewMode, today }: KpiSectionProps) => {
           {/* 100% mark */}
           {kpi.hasMeta && <div className="absolute top-0 bottom-0 left-[83.3%] w-px bg-foreground/20" style={{ left: `${Math.min(100, 100)}%` }} />}
         </div>
-        <span className={`text-xs font-mono font-bold w-20 text-right ${kpi.hasMeta ? kpi.acumulado >= 100 ? "text-emerald-500" : kpi.acumulado >= 80 ? "text-blue-500" : "text-red-500" : kpi.realizado > 0 ? "text-blue-500" : "text-muted-foreground"}`}>
-          {kpi.hasMeta ? pctFmt(kpi.acumulado) : kpi.realizado > 0 ? valueFmt(kpi.realizado) : "—"}
+        <span className={`text-xs font-mono font-bold w-20 text-right ${kpi.hasMeta ? kpi.pctAcumulado >= 100 ? "text-emerald-500" : kpi.pctAcumulado >= 80 ? "text-blue-500" : "text-red-500" : kpi.realizado > 0 ? "text-blue-500" : "text-muted-foreground"}`}>
+          {kpi.hasMeta ? pctFmt(kpi.pctAcumulado) : kpi.realizado > 0 ? valueFmt(kpi.realizado) : "—"}
         </span>
       </div>
 
@@ -498,10 +498,10 @@ const FinishLineAnimation = ({ deptKpis }: { deptKpis: Record<string, Record<str
     return DEPARTMENTS.map((dept) => {
       const kpis = deptKpis[dept] || {};
       const avg = (
-        (kpis.faturamento?.acumulado || 0) +
-        (kpis.margem?.acumulado || 0) +
-        (kpis.arrecadacao?.acumulado || 0) +
-        (kpis.volume?.acumulado || 0)
+        (kpis.faturamento?.pctAcumulado || 0) +
+        (kpis.margem?.pctAcumulado || 0) +
+        (kpis.arrecadacao?.pctAcumulado || 0) +
+        (kpis.volume?.pctAcumulado || 0)
       ) / 4;
       return { dept, avg };
     }).sort((a, b) => b.avg - a.avg);
