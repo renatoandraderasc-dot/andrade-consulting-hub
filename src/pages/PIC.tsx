@@ -32,12 +32,17 @@ interface DayMetric {
 }
 
 interface KpiData {
-  acumulado: number;
-  realizado: number;
-  meta: number;
+  // Percentuais de progresso
+  pctTotal: number;       // Realizado / Meta Mensal
+  pctAcumulado: number;   // Realizado até hoje / Meta Acumulada até hoje
+  // Valores absolutos
+  realizado: number;      // realizado até hoje (ou fim de mês, se mês passado)
+  metaMensal: number;     // meta total do mês
+  metaAcumulada: number;  // meta até o dia de hoje
   hasMeta: boolean;
   daily: { day: number; pct: number; realizado: number; meta: number; hasMeta: boolean }[];
 }
+
 
 const pctFmt = (v: number) => `${v.toFixed(2).replace(".", ",")}%`;
 
