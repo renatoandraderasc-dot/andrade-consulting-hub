@@ -235,3 +235,15 @@
   @keyframes mascot-sway { 0%,100%{transform:none} 50%{transform:none} }
   .animate-mascot-sway { animation: none; }
 }
+
+/* Shopping-cart cursor for the public landing page */
+.cursor-cart,
+.cursor-cart * {
+  cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 24 24' fill='none' stroke='%23F59E0B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='8' cy='21' r='1'/><circle cx='19' cy='21' r='1'/><path d='M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12'/></svg>") 4 4, auto;
+}
+.cursor-cart a,
+.cursor-cart button,
+.cursor-cart [role='button'] {
+  cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 24 24' fill='%23F59E0B' stroke='%23111' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><circle cx='8' cy='21' r='1.5'/><circle cx='19' cy='21' r='1.5'/><path d='M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12'/></svg>") 4 4, pointer;
+}
+
