@@ -174,13 +174,14 @@ const PIC = () => {
   // Determina o "dia de hoje" para cálculo de meta acumulada.
   // Se o mês selecionado é o mês atual → dia corrente.
   // Se for mês passado → último dia com dados; se futuro → 0.
-  const today = new Date();
+  const todayDate = new Date();
   const isCurrentMonth =
-    today.getFullYear() === selectedYear && today.getMonth() + 1 === selectedMonth;
+    todayDate.getFullYear() === selectedYear && todayDate.getMonth() + 1 === selectedMonth;
   const isPastMonth =
-    selectedYear < today.getFullYear() ||
-    (selectedYear === today.getFullYear() && selectedMonth < today.getMonth() + 1);
-  const cutoffDay = isCurrentMonth ? today.getDate() : isPastMonth ? 31 : 0;
+    selectedYear < todayDate.getFullYear() ||
+    (selectedYear === todayDate.getFullYear() && selectedMonth < todayDate.getMonth() + 1);
+  const cutoffDay = isCurrentMonth ? todayDate.getDate() : isPastMonth ? 31 : 0;
+
 
   // Build KPI data per department
   const deptKpis = useMemo(() => {
