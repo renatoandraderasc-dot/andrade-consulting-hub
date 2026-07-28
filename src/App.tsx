@@ -26,6 +26,7 @@ import Produtos from "./pages/Produtos";
 import EncarteEditor from "./pages/EncarteEditor";
 import MeusEncartes from "./pages/MeusEncartes";
 import OAuthConsent from "./pages/OAuthConsent";
+import AdminSite from "./pages/AdminSite";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -56,6 +57,7 @@ const App = () => (
             <Route path="/pic/padaria" element={<DashboardPadaria />} />
             <Route path="/admin/padaria-import" element={<AdminPadariaImport />} />
             <Route path="/admin/stores" element={<AdminStores />} />
+            <Route path="/admin/site" element={<AdminSite />} />
             <Route path="/produtos" element={<Produtos />} />
             <Route path="/encartes" element={<MeusEncartes />} />
             <Route path="/encartes/editor" element={<EncarteEditor />} />
