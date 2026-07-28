@@ -22,6 +22,29 @@ function norm(s: string): string {
     .trim();
 }
 
+function inferirDepartamento(secaoNormalizada: string, mapaLoja: Map<string, string>): string {
+  const mapeadoExato = mapaLoja.get(secaoNormalizada);
+  if (mapeadoExato) return mapeadoExato;
+
+  for (const [secaoMapeada, department] of mapaLoja) {
+    if (secaoMapeada.includes(secaoNormalizada) || secaoNormalizada.includes(secaoMapeada)) {
+      return department;
+    }
+  }
+
+  if (/HORT|FRUTA|VERD|LEGUME|FLV|SACOLAO|BANANA|TOMATE|BATATA|CEBOLA/.test(secaoNormalizada)) {
+    return "HORTIFRUTI";
+  }
+  if (/ACOUG|CARNE|BOVIN|SUIN|AVE|FRANGO|PEIX|LINGUICA|FRIOS|RESFRIADO/.test(secaoNormalizada)) {
+    return "AÇOUGUE";
+  }
+  if (/PADAR| PAO|^PAO|CONFEIT|BOLO|SALGADO/.test(secaoNormalizada)) {
+    return "PADARIA";
+  }
+
+  return "OUTROS";
+}
+
 // Datas de hoje e ontem no fuso de Brasilia
 function datasParaSincronizar(): string[] {
   const agora = new Date(
@@ -59,10 +82,16 @@ Deno.serve(async (req) => {
     });
   }
 
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !serviceRoleKey) {
+    return new Response(JSON.stringify({ erro: "configuracao do backend ausente" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  const supabase = createClient(supabaseUrl, serviceRoleKey);
 
   const { data: configs, error: cfgErr } = await supabase
     .from("store_vr_config")
@@ -93,8 +122,8 @@ Deno.serve(async (req) => {
     let gravadas = 0;
     let erroLoja: string | null = null;
 
-    try {
-      for (const dataDia of datas) {
+    for (const dataDia of datas) {
+      try {
         const relatorio = dataDia === dataHoje ? "vendas_secao_agora" : "vendas_secao_dia";
         const url =
           `${cfg.api_url.replace(/\/+$/, "")}/relatorios/${relatorio}` +
@@ -111,7 +140,7 @@ Deno.serve(async (req) => {
 
         const porDepto = new Map<string, { vendas: number; lucro: number; volume: number; temVolume: boolean }>();
         for (const l of linhas) {
-          const depto = mapaLoja.get(norm(l.secao)) ?? "OUTROS";
+          const depto = inferirDepartamento(norm(l.secao), mapaLoja);
           const atual = porDepto.get(depto) ?? { vendas: 0, lucro: 0, volume: 0, temVolume: false };
           atual.vendas += parseFloat(String(l.total_vendido)) || 0;
           atual.lucro += parseFloat(String(l.lucro)) || 0;
@@ -152,10 +181,10 @@ Deno.serve(async (req) => {
           if (upErr) throw new Error(`upsert ${department} ${dataDia}: ${upErr.message}`);
           gravadas++;
         }
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        erroLoja = erroLoja ? `${erroLoja} | ${msg}` : msg;
       }
-
-    } catch (e) {
-      erroLoja = e instanceof Error ? e.message : String(e);
     }
 
     await supabase
