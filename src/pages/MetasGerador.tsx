@@ -284,11 +284,21 @@ const MetasGerador = () => {
   };
 
   const totals = useMemo(() => {
-    return metasRows.reduce((acc, r) => ({
+    const operantes = metasRows.filter((r) => !isSemOperacao(r));
+    const t = operantes.reduce((acc, r) => ({
       vendas: acc.vendas + Number(r.meta_vendas || 0),
       lucro: acc.lucro + Number(r.meta_lucro || 0),
     }), { vendas: 0, lucro: 0 });
+    const dias = operantes.length;
+    return {
+      ...t,
+      dias,
+      diasIgnorados: metasRows.length - dias,
+      mediaVendas: dias > 0 ? t.vendas / dias : 0,
+      mediaLucro: dias > 0 ? t.lucro / dias : 0,
+    };
   }, [metasRows]);
+
 
   if (authLoading) return (
     <div className="min-h-screen bg-background flex items-center justify-center">
