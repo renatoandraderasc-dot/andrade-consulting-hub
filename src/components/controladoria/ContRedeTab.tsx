@@ -48,7 +48,9 @@ function getStoredAno(): number {
 
 interface Props {
   storeId: string;
+  onGoClassificacao?: () => void;
 }
+
 
 const fmtCurrency = (v: number) => {
   const neg = v < 0;
