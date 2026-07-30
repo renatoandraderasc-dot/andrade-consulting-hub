@@ -876,8 +876,12 @@ export type Database = {
           api_url: string
           created_at: string
           enabled: boolean
+          health_error: string | null
+          last_check_at: string | null
           last_error: string | null
           last_sync_at: string | null
+          latency_ms: number | null
+          online: boolean | null
           store_id: string
         }
         Insert: {
@@ -885,8 +889,12 @@ export type Database = {
           api_url: string
           created_at?: string
           enabled?: boolean
+          health_error?: string | null
+          last_check_at?: string | null
           last_error?: string | null
           last_sync_at?: string | null
+          latency_ms?: number | null
+          online?: boolean | null
           store_id: string
         }
         Update: {
@@ -894,8 +902,12 @@ export type Database = {
           api_url?: string
           created_at?: string
           enabled?: boolean
+          health_error?: string | null
+          last_check_at?: string | null
           last_error?: string | null
           last_sync_at?: string | null
+          latency_ms?: number | null
+          online?: boolean | null
           store_id?: string
         }
         Relationships: [
@@ -1138,17 +1150,29 @@ export type Database = {
       vr_sync_status: {
         Row: {
           enabled: boolean | null
+          health_error: string | null
+          last_check_at: string | null
           last_sync_at: string | null
+          latency_ms: number | null
+          online: boolean | null
           store_id: string | null
         }
         Insert: {
           enabled?: boolean | null
+          health_error?: string | null
+          last_check_at?: string | null
           last_sync_at?: string | null
+          latency_ms?: number | null
+          online?: boolean | null
           store_id?: string | null
         }
         Update: {
           enabled?: boolean | null
+          health_error?: string | null
+          last_check_at?: string | null
           last_sync_at?: string | null
+          latency_ms?: number | null
+          online?: boolean | null
           store_id?: string | null
         }
         Relationships: [
