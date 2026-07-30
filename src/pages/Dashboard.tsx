@@ -367,12 +367,25 @@ const Dashboard = () => {
                   <option key={y} value={y}>{y}</option>
                 ))}
               </select>
+              <button
+                onClick={refresh}
+                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs text-foreground hover:bg-muted/40"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingVr ? "animate-spin" : ""}`} /> Atualizar
+              </button>
+              {!offline && updatedAt && (
+                <span className="text-[11px] text-muted-foreground">
+                  VR ao vivo · {updatedAt.toLocaleTimeString("pt-BR")}
+                </span>
+              )}
             </div>
           </div>
         </motion.div>
 
+        {offline && <VrOfflineNotice message={errorMsg} className="mb-6" />}
+
         {/* KPI Cards */}
-        <DashboardKPIs {...kpiData} />
+        {!offline && <DashboardKPIs {...kpiData} />}
 
         {/* Vendas da Loja (department = LOJA) — independente do filtro */}
         {storeId && (
@@ -380,7 +393,8 @@ const Dashboard = () => {
         )}
 
         <CouponDivider label={`Faturamento x margem por dia${selectedDept ? ` — ${selectedDept}` : ""}`} />
-        <DailyMetricsTable data={dailyData} />
+        {offline ? <VrOfflineNotice message={errorMsg} /> : <DailyMetricsTable data={dailyData} />}
+
 
         {/* Product Comparison */}
         <ProductComparison
