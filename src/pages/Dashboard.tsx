@@ -10,12 +10,16 @@ import DailyMetricsTable, { DailyRow } from "@/components/dashboard/DailyMetrics
 import ProductComparison, { ProductCompRow } from "@/components/dashboard/ProductComparison";
 import CategoryChart, { CategoryChartData } from "@/components/dashboard/CategoryChart";
 import VendasLojaSection from "@/components/dashboard/VendasLojaSection";
+import DashboardFilterBar, { Periodo, periodoFromPreset, TODA_LOJA } from "@/components/dashboard/DashboardFilterBar";
 import VrOfflineNotice from "@/components/VrOfflineNotice";
 import { useVrRealizado } from "@/hooks/useVrRealizado";
 import MascotPersona from "@/components/poster/MascotPersona";
 import CouponDivider from "@/components/poster/CouponDivider";
 
 const MONTHS = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+
+const PERIODO_KEY = "dashboardPeriodo";
+const CATEGORIA_KEY = "dashboardCategoria";
 
 const Dashboard = () => {
   const { user, loading: authLoading } = useAuth();
@@ -24,25 +28,47 @@ const Dashboard = () => {
   const [storeId, setStoreId] = useState("");
   const [departments, setDepartments] = useState<string[]>([]);
   const [selectedDept, setSelectedDept] = useState("");
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [metaRows, setMetaRows] = useState<any[]>([]);
   const [storeMetrics, setStoreMetrics] = useState<any>(null);
   const [productData, setProductData] = useState<ProductCompRow[]>([]);
   const [categoryData, setCategoryData] = useState<CategoryChartData[]>([]);
 
-  const periodStart = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}-01`;
-  const periodEnd = new Date(selectedYear, selectedMonth, 0).toISOString().slice(0, 10);
+  // Filtros globais da tela (persistem entre abas/navegação)
+  const [periodo, setPeriodo] = useState<Periodo>(() => {
+    try {
+      const s = sessionStorage.getItem(PERIODO_KEY);
+      if (s) return JSON.parse(s) as Periodo;
+    } catch { /* ignore */ }
+    return periodoFromPreset("mes");
+  });
+  const [categoria, setCategoria] = useState<string>(
+    () => sessionStorage.getItem(CATEGORIA_KEY) || TODA_LOJA,
+  );
+
+  useEffect(() => {
+    sessionStorage.setItem(PERIODO_KEY, JSON.stringify(periodo));
+  }, [periodo]);
+  useEffect(() => {
+    sessionStorage.setItem(CATEGORIA_KEY, categoria);
+  }, [categoria]);
+
+  const periodStart = periodo.inicio;
+  const periodEnd = periodo.fim;
+  const selectedMonth = Number(periodStart.slice(5, 7));
+  const selectedYear = Number(periodStart.slice(0, 4));
+  const catFiltro = categoria === TODA_LOJA ? null : categoria;
 
   // Realizado ao vivo do VR (nada e lido de realizado_* do banco)
   const {
     data: vr,
+    categorias,
     loading: loadingVr,
     offline,
     errorMsg,
     updatedAt,
     refresh,
-  } = useVrRealizado(storeId, periodStart, periodEnd);
+  } = useVrRealizado(storeId, periodStart, periodEnd, catFiltro);
+
 
 
   useEffect(() => {
@@ -318,6 +344,17 @@ const Dashboard = () => {
   return (
     <ClientLayout storeName={storeName}>
       <div className="container mx-auto px-6 py-6 max-w-[1400px]">
+        {/* Barra de filtros global da tela */}
+        <DashboardFilterBar
+          periodo={periodo}
+          onPeriodoChange={setPeriodo}
+          categoria={categoria}
+          onCategoriaChange={setCategoria}
+          categorias={categorias}
+          onRefresh={refresh}
+          loading={loadingVr}
+        />
+
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -330,13 +367,15 @@ const Dashboard = () => {
                   {storeName || "Dashboard"}
                 </h1>
                 <p className="text-muted-foreground text-xs mt-0.5">
-                  {MONTHS[selectedMonth]} {selectedYear}
+                  {new Date(periodStart + "T12:00:00").toLocaleDateString("pt-BR")} a{" "}
+                  {new Date(periodEnd + "T12:00:00").toLocaleDateString("pt-BR")}
+                  {" · "}
+                  {categoria === TODA_LOJA ? "Loja toda" : categoria}
                   {selectedDept ? ` · ${selectedDept}` : ""}
                 </p>
               </div>
             </div>
 
-            {/* Filters */}
             <div className="flex flex-wrap items-center gap-2">
               {departments.length > 0 && (
                 <select
@@ -349,30 +388,6 @@ const Dashboard = () => {
                   ))}
                 </select>
               )}
-              <select
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                className="bg-card text-foreground border border-border rounded-md px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-              >
-                {MONTHS.slice(1).map((m, i) => (
-                  <option key={i + 1} value={i + 1}>{m}</option>
-                ))}
-              </select>
-              <select
-                value={selectedYear}
-                onChange={(e) => setSelectedYear(Number(e.target.value))}
-                className="bg-card text-foreground border border-border rounded-md px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-              >
-                {[2024, 2025, 2026].map((y) => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
-              </select>
-              <button
-                onClick={refresh}
-                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs text-foreground hover:bg-muted/40"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${loadingVr ? "animate-spin" : ""}`} /> Atualizar
-              </button>
               {!offline && updatedAt && (
                 <span className="text-[11px] text-muted-foreground">
                   VR ao vivo · {updatedAt.toLocaleTimeString("pt-BR")}
@@ -387,10 +402,16 @@ const Dashboard = () => {
         {/* KPI Cards */}
         {!offline && <DashboardKPIs {...kpiData} />}
 
-        {/* Vendas da Loja (department = LOJA) — independente do filtro */}
+        {/* Vendas da Loja (department = LOJA) */}
         {storeId && (
-          <VendasLojaSection storeId={storeId} month={selectedMonth} year={selectedYear} />
+          <VendasLojaSection
+            storeId={storeId}
+            startDate={periodStart}
+            endDate={periodEnd}
+            categoria={catFiltro}
+          />
         )}
+
 
         <CouponDivider label={`Faturamento x margem por dia${selectedDept ? ` — ${selectedDept}` : ""}`} />
         {offline ? <VrOfflineNotice message={errorMsg} /> : <DailyMetricsTable data={dailyData} />}
