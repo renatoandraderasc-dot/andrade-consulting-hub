@@ -1076,7 +1076,8 @@ export interface LancamentoData {
 
 export function calcularDRE(
   structure: DRENode[],
-  lancamentos: LancamentoData[]
+  lancamentos: LancamentoData[],
+  overrides?: Record<string, number>
 ): Map<string, number> {
   const values = new Map<string, number>();
 
@@ -1112,6 +1113,11 @@ export function calcularDRE(
     }
   }
 
+  // Step 1.6: valores vindos de fonte externa (ex.: faturamento = venda do periodo no VR)
+  if (overrides) {
+    for (const [id, val] of Object.entries(overrides)) values.set(id, val);
+  }
+
   // Step 1.5: calculate percentage-based nodes (Depreciação = 0.5% fat, Quebras = 2.5% CMV)
   for (const node of structure) {
     if (node.calcPctOf) {
@@ -1119,6 +1125,8 @@ export function calcularDRE(
       values.set(node.id, Math.abs(baseVal) * node.calcPctOf.pct);
     }
   }
+
+
 
   // Step 2: calculate formula lines
   for (const node of structure) {
