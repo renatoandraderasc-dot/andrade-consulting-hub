@@ -67,7 +67,7 @@ const fmtDate = (d: string) => {
   }
 };
 
-export const ContRedeTab = ({ storeId }: Props) => {
+export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
   const [mes, setMes] = useState(getStoredMes);
   const [ano, setAno] = useState(getStoredAno);
   const [modo, setModo] = useState<"comercial" | "financeiro">("comercial");
