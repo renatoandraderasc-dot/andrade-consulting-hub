@@ -106,18 +106,52 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // Faturamento = Venda do Período (consulta ao vivo na API do VR)
+  const [vendaPeriodo, setVendaPeriodo] = useState<number | null>(null);
+  const [vendaErro, setVendaErro] = useState<string | null>(null);
+
+  const fetchVendaPeriodo = useCallback(async () => {
+    if (!storeId) { setVendaPeriodo(null); return; }
+    const inicio = `${ano}-${String(mes).padStart(2, "0")}-01`;
+    const fim = new Date(ano, mes, 0).toISOString().slice(0, 10);
+    try {
+      const { data, error } = await supabase.functions.invoke("vr-proxy", {
+        body: { store_id: storeId, relatorio: "dre_periodo", params: { inicio, fim } },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.erro) throw new Error(data.erro);
+      const d = data?.dados;
+      const rows: any[] = Array.isArray(d) ? d : Array.isArray(d?.dados) ? d.dados : [];
+      const total = rows.reduce((s, r) => {
+        const v = parseFloat(String(r.receita_bruta ?? 0).replace(",", "."));
+        return s + (isNaN(v) ? 0 : v);
+      }, 0);
+      setVendaPeriodo(total);
+      setVendaErro(null);
+    } catch (e) {
+      setVendaPeriodo(null);
+      setVendaErro(e instanceof Error ? e.message : "Falha ao consultar o VR");
+    }
+  }, [storeId, mes, ano]);
+
+  useEffect(() => { fetchVendaPeriodo(); }, [fetchVendaPeriodo]);
+
   const structure = modo === "comercial" ? DRE_STRUCTURE_COMERCIAL : DRE_STRUCTURE_FINANCEIRO;
 
   const dreValues = useMemo(() => {
+    const overrides = modo === "comercial" && vendaPeriodo !== null
+      ? { faturamento: vendaPeriodo, venda_bruta: vendaPeriodo }
+      : undefined;
     return calcularDRE(structure, lancamentos.map(l => ({
       tipo: l.tipo,
       subtipo: l.subtipo,
       valor: Number(l.valor),
-    })));
-  }, [lancamentos, structure]);
+    })), overrides);
+  }, [lancamentos, structure, modo, vendaPeriodo]);
 
   // For % calculation, use faturamento as base
   const faturamentoBase = dreValues.get("faturamento") || 1;
+
 
   const toggle = (id: string) => {
     setExpanded(prev => {
