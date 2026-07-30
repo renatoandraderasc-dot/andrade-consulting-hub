@@ -332,33 +332,51 @@ const PIC = () => {
                 <TabsTrigger value="dia" className="text-xs">Diário</TabsTrigger>
               </TabsList>
             </Tabs>
+            <button
+              onClick={refresh}
+              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 text-xs text-foreground hover:bg-muted/40"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loadingVr ? "animate-spin" : ""}`} /> Atualizar
+            </button>
+            {!offline && updatedAt && (
+              <span className="text-[11px] text-muted-foreground">
+                VR ao vivo · {updatedAt.toLocaleTimeString("pt-BR")}
+              </span>
+            )}
           </div>
         </motion.div>
 
-        {/* AI Analysis */}
-        <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }}
-          className="bg-gradient-to-r from-card via-card to-amber-500/5 border border-amber-500/20 rounded-2xl p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="w-5 h-5 text-amber-500" />
-            <h3 className="font-heading font-bold text-foreground text-sm">Análise Inteligente</h3>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {aiAnalysis.map((insight, i) => (
-              <motion.p key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 + i * 0.05 }}
-                className="text-sm text-muted-foreground font-body">{insight}</motion.p>
-            ))}
-          </div>
-        </motion.div>
+        {offline ? (
+          <VrOfflineNotice message={errorMsg} />
+        ) : (
+          <>
+            {/* AI Analysis */}
+            <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }}
+              className="bg-gradient-to-r from-card via-card to-amber-500/5 border border-amber-500/20 rounded-2xl p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Sparkles className="w-5 h-5 text-amber-500" />
+                <h3 className="font-heading font-bold text-foreground text-sm">Análise Inteligente</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {aiAnalysis.map((insight, i) => (
+                  <motion.p key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 + i * 0.05 }}
+                    className="text-sm text-muted-foreground font-body">{insight}</motion.p>
+                ))}
+              </div>
+            </motion.div>
 
-        {/* Department Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {DEPARTMENTS.map((dept, deptIdx) => (
-            <DepartmentCard key={dept} dept={dept} kpis={deptKpis[dept] || {}} viewMode={viewMode} delay={deptIdx * 0.1} today={today} />
-          ))}
-        </div>
+            {/* Department Cards */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {DEPARTMENTS.map((dept, deptIdx) => (
+                <DepartmentCard key={dept} dept={dept} kpis={deptKpis[dept] || {}} viewMode={viewMode} delay={deptIdx * 0.1} today={today} />
+              ))}
+            </div>
 
-        {/* Finish Line Animation */}
-        <FinishLineAnimation deptKpis={deptKpis} />
+            {/* Finish Line Animation */}
+            <FinishLineAnimation deptKpis={deptKpis} />
+          </>
+        )}
+
       </div>
     </ClientLayout>
   );
