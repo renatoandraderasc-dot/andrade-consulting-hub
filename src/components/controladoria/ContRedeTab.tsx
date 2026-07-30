@@ -359,6 +359,18 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
         </p>
       )}
 
+      {duplicadosIds.size > 0 && (
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 px-4 py-3 text-sm">
+          <p className="font-semibold text-foreground">
+            {duplicadosIds.size} lançamento(s) duplicado(s) identificado(s)
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Mesmo beneficiário e mesmo valor: apenas 1 é somado no DRE. Total ignorado:{" "}
+            {fmtCurrency(valorDuplicado)}. Os duplicados aparecem marcados como "DUPLICADO" na lista de lançamentos.
+          </p>
+        </div>
+      )}
+
 
       {/* Filters */}
       <Card className="bg-card border-border">
