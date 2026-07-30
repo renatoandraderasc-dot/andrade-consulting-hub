@@ -415,11 +415,19 @@ const MetasGerador = () => {
                   )}
                   {metasRows.map((r) => {
                     const isDirty = dirtyDates.has(r.date);
+                    const semOp = isSemOperacao(r);
                     const inputCls = `w-32 bg-background border rounded-lg px-2 py-1.5 text-right font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 ${isDirty ? "border-amber-500" : "border-border"}`;
                     return (
-                      <tr key={r.date} className="border-b border-border/50">
+                      <tr key={r.date} className={`border-b border-border/50 ${semOp ? "opacity-50" : ""}`}>
                         <td className="py-2 pr-4 font-body">{fmtDate(r.date)}</td>
-                        <td className="py-2 px-2 font-body">{r.tipo_dia}</td>
+                        <td className="py-2 px-2 font-body">
+                          {r.tipo_dia}
+                          {semOp && (
+                            <span className="ml-2 text-[10px] uppercase tracking-wide text-muted-foreground border border-border rounded px-1 py-0.5">
+                              sem operação
+                            </span>
+                          )}
+                        </td>
                         <td className="py-2 px-2 text-right">
                           <input
                             type="text"
@@ -451,8 +459,18 @@ const MetasGerador = () => {
                       <td></td>
                       <td className="py-3 pl-2 text-right font-body">{fmtBRL(totals.lucro)}</td>
                     </tr>
+                    <tr className="text-muted-foreground">
+                      <td className="py-2 pr-4 font-body text-xs" colSpan={2}>
+                        Média diária ({totals.dias} dias com operação
+                        {totals.diasIgnorados > 0 ? ` · ${totals.diasIgnorados} ignorado(s)` : ""})
+                      </td>
+                      <td className="py-2 px-2 text-right font-body text-xs">{fmtBRL(totals.mediaVendas)}</td>
+                      <td></td>
+                      <td className="py-2 pl-2 text-right font-body text-xs">{fmtBRL(totals.mediaLucro)}</td>
+                    </tr>
                   </tfoot>
                 )}
+
               </table>
             </div>
           </TabsContent>
