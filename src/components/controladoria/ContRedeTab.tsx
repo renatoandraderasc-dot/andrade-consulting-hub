@@ -141,6 +141,33 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
 
   const structure = modo === "comercial" ? DRE_STRUCTURE_COMERCIAL : DRE_STRUCTURE_FINANCEIRO;
 
+  // Deduplicação: mesmo Beneficiário + mesmo valor conta apenas 1 vez no DRE
+  const beneficiarioDe = (l: Lancamento) =>
+    (l.descricao || "—").split("·")[0].trim().toUpperCase();
+
+  const duplicadosIds = useMemo(() => {
+    const vistos = new Map<string, string>();
+    const dups = new Set<string>();
+    [...lancamentos]
+      .sort((a, b) => (a.data < b.data ? -1 : a.data > b.data ? 1 : a.id.localeCompare(b.id)))
+      .forEach(l => {
+        const chave = `${beneficiarioDe(l)}|${Number(l.valor).toFixed(2)}`;
+        if (vistos.has(chave)) dups.add(l.id);
+        else vistos.set(chave, l.id);
+      });
+    return dups;
+  }, [lancamentos]);
+
+  const lancamentosUnicos = useMemo(
+    () => lancamentos.filter(l => !duplicadosIds.has(l.id)),
+    [lancamentos, duplicadosIds],
+  );
+
+  const valorDuplicado = useMemo(
+    () => lancamentos.filter(l => duplicadosIds.has(l.id)).reduce((s, l) => s + Number(l.valor), 0),
+    [lancamentos, duplicadosIds],
+  );
+
   const dreValues = useMemo(() => {
     const overrides: Record<string, number> = {};
     if (modo === "comercial" && vendaPeriodo !== null) {
@@ -151,16 +178,17 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
       overrides.cmv = cmvPeriodo;
       overrides.cmv_merc = cmvPeriodo;
     }
-    return calcularDRE(structure, lancamentos.map(l => ({
+    return calcularDRE(structure, lancamentosUnicos.map(l => ({
       tipo: l.tipo,
       subtipo: l.subtipo,
       valor: Number(l.valor),
     })), Object.keys(overrides).length ? overrides : undefined);
-  }, [lancamentos, structure, modo, vendaPeriodo, cmvPeriodo]);
+  }, [lancamentosUnicos, structure, modo, vendaPeriodo, cmvPeriodo]);
 
 
   // For % calculation, use faturamento as base
   const faturamentoBase = dreValues.get("faturamento") || 1;
+
 
 
   const toggle = (id: string) => {
