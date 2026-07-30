@@ -54,8 +54,21 @@ const PIC = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [viewMode, setViewMode] = useState<"mes" | "dia">("mes");
-  const [rawData, setRawData] = useState<Record<string, DayMetric[]>>({});
+  const [metasData, setMetasData] = useState<Record<string, any[]>>({});
   const [loading, setLoading] = useState(true);
+
+  const periodStart = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}-01`;
+  const periodEnd = new Date(selectedYear, selectedMonth, 0).toISOString().slice(0, 10);
+
+  // Realizado sempre ao vivo, via vr-proxy (nada vem de realizado_* do banco)
+  const {
+    data: vr,
+    loading: loadingVr,
+    offline,
+    errorMsg,
+    updatedAt,
+    refresh,
+  } = useVrRealizado(storeId, periodStart, periodEnd);
 
   useEffect(() => {
     if (!authLoading && !user) { navigate("/login"); return; }
@@ -63,33 +76,19 @@ const PIC = () => {
   }, [user, authLoading, isAdmin]);
 
   useEffect(() => {
-    if (storeId) fetchData();
+    if (storeId) fetchMetas();
   }, [storeId, selectedMonth, selectedYear]);
 
   useEffect(() => {
     if (!storeId) return;
-    const interval = setInterval(fetchData, 60_000);
-    const handleFocus = () => fetchData();
+    const interval = setInterval(refresh, 60_000);
+    const handleFocus = () => refresh();
     window.addEventListener("focus", handleFocus);
     return () => {
       clearInterval(interval);
       window.removeEventListener("focus", handleFocus);
     };
-  }, [storeId, selectedMonth, selectedYear]);
-
-  useEffect(() => {
-    if (!storeId) return;
-    const channel = supabase
-      .channel(`pic-sdm-${storeId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "store_daily_metrics", filter: `store_id=eq.${storeId}` },
-        () => fetchData(),
-      )
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [storeId, selectedMonth, selectedYear]);
-
+  }, [storeId, refresh]);
 
   const fetchStoreInfo = async () => {
     if (!user) return;
@@ -132,44 +131,55 @@ const PIC = () => {
     }
   };
 
-  const fetchData = async () => {
+  // Metas continuam vindo de store_daily_metrics (colunas meta_*)
+  const fetchMetas = async () => {
     setLoading(true);
-    const startDate = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}-01`;
-    const endDate = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}-31`;
+    const { data } = await supabase
+      .from("store_daily_metrics")
+      .select("date, department, meta_vendas, meta_lucro, meta_margem_pct, meta_volume")
+      .eq("store_id", storeId)
+      .in("department", DEPARTMENTS)
+      .gte("date", periodStart)
+      .lte("date", periodEnd)
+      .order("date", { ascending: true });
 
-    const results: Record<string, DayMetric[]> = {};
-    for (const dept of DEPARTMENTS) {
-      const { data } = await supabase
-        .from("store_daily_metrics")
-        .select("*")
-        .eq("store_id", storeId)
-        .eq("department", dept)
-        .gte("date", startDate)
-        .lte("date", endDate)
-        .order("date", { ascending: true });
-
-      if (data && data.length > 0) {
-        results[dept] = data.map((d) => ({
-          day: new Date(d.date + "T12:00:00").getDate(),
-          date: d.date,
-          meta_vendas: Number(d.meta_vendas) || 0,
-          realizado_vendas: Number(d.realizado_vendas) || 0,
-          meta_lucro: Number(d.meta_lucro) || 0,
-          realizado_lucro: Number(d.realizado_lucro) || 0,
-          meta_margem_pct: Number(d.meta_margem_pct) || 0,
-          realizado_margem_pct: Number(d.realizado_margem_pct) || 0,
-          meta_volume: Number(d.meta_volume) || 0,
-          realizado_volume: Number(d.realizado_volume) || 0,
-        }));
-      }
-    }
-    setRawData(results);
+    const results: Record<string, any[]> = {};
+    for (const d of data || []) (results[d.department] ||= []).push(d);
+    setMetasData(results);
     setLoading(false);
   };
 
+  // Combina metas (banco) com realizado ao vivo (VR)
+  const rawData = useMemo(() => {
+    const out: Record<string, DayMetric[]> = {};
+    for (const dept of DEPARTMENTS) {
+      const metas = metasData[dept] || [];
+      const real = new Map(((vr?.[dept]) || []).map((r) => [r.date, r]));
+      const dates = [...new Set<string>([...metas.map((m: any) => m.date), ...real.keys()])].sort();
+      out[dept] = dates.map((date) => {
+        const m: any = metas.find((x: any) => x.date === date) || {};
+        const r = real.get(date);
+        return {
+          day: Number(date.slice(8, 10)),
+          date,
+          meta_vendas: Number(m.meta_vendas) || 0,
+          realizado_vendas: r?.vendas || 0,
+          meta_lucro: Number(m.meta_lucro) || 0,
+          realizado_lucro: r?.lucro || 0,
+          meta_margem_pct: Number(m.meta_margem_pct) || 0,
+          realizado_margem_pct: r?.margemPct || 0,
+          meta_volume: Number(m.meta_volume) || 0,
+          realizado_volume: r?.volume || 0,
+        };
+      });
+    }
+    return out;
+  }, [metasData, vr]);
+
   const handleSyncChange = useCallback(() => {
-    if (storeId) fetchData();
-  }, [storeId, selectedMonth, selectedYear]);
+    refresh();
+  }, [refresh]);
+
 
   // Determina o "dia de hoje" para cálculo de meta acumulada.
   // Se o mês selecionado é o mês atual → dia corrente.
