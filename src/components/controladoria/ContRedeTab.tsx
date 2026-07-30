@@ -396,7 +396,16 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
                 ) : (
                   filteredLancamentos.map(l => (
                     <TableRow key={l.id} className="cursor-pointer hover:bg-muted/30" onClick={() => openEditDialog(l)}>
-                      <TableCell className="text-sm font-medium">{l.descricao || "—"}</TableCell>
+                      <TableCell className="text-sm font-medium">
+                        <span className="inline-flex items-center gap-2">
+                          {l.descricao || "—"}
+                          {isVr(l) && (
+                            <span className="text-[10px] uppercase tracking-wide border border-border text-muted-foreground px-1.5 py-0.5 rounded">
+                              VR
+                            </span>
+                          )}
+                        </span>
+                      </TableCell>
                       <TableCell>
                         <span className="text-xs bg-secondary/20 text-secondary-foreground px-2 py-0.5 rounded-full">
                           {l.subtipo}
