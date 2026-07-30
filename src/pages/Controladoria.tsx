@@ -123,7 +123,14 @@ const Controladoria = () => {
             >
               Análise Agenda
             </TabsTrigger>
+            <TabsTrigger
+              value="dados-vr"
+              className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
+            >
+              Dados do VR
+            </TabsTrigger>
           </TabsList>
+
 
           <TabsContent value="contrede">
             <ContRedeTab storeId={storeId} />
