@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { BarChart3 } from "lucide-react";
+import { BarChart3, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import ClientLayout from "@/components/ClientLayout";
@@ -10,6 +10,8 @@ import DailyMetricsTable, { DailyRow } from "@/components/dashboard/DailyMetrics
 import ProductComparison, { ProductCompRow } from "@/components/dashboard/ProductComparison";
 import CategoryChart, { CategoryChartData } from "@/components/dashboard/CategoryChart";
 import VendasLojaSection from "@/components/dashboard/VendasLojaSection";
+import VrOfflineNotice from "@/components/VrOfflineNotice";
+import { useVrRealizado } from "@/hooks/useVrRealizado";
 import MascotPersona from "@/components/poster/MascotPersona";
 import CouponDivider from "@/components/poster/CouponDivider";
 
@@ -24,10 +26,24 @@ const Dashboard = () => {
   const [selectedDept, setSelectedDept] = useState("");
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [dailyData, setDailyData] = useState<DailyRow[]>([]);
+  const [metaRows, setMetaRows] = useState<any[]>([]);
   const [storeMetrics, setStoreMetrics] = useState<any>(null);
   const [productData, setProductData] = useState<ProductCompRow[]>([]);
   const [categoryData, setCategoryData] = useState<CategoryChartData[]>([]);
+
+  const periodStart = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}-01`;
+  const periodEnd = new Date(selectedYear, selectedMonth, 0).toISOString().slice(0, 10);
+
+  // Realizado ao vivo do VR (nada e lido de realizado_* do banco)
+  const {
+    data: vr,
+    loading: loadingVr,
+    offline,
+    errorMsg,
+    updatedAt,
+    refresh,
+  } = useVrRealizado(storeId, periodStart, periodEnd);
+
 
   useEffect(() => {
     if (!authLoading && !user) {
