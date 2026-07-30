@@ -162,21 +162,28 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
     setEditDialogOpen(true);
   };
 
+  const isVr = (l: Lancamento | null) => (l as any)?.origem === "VR";
+
   const handleSaveEdit = async () => {
     if (!editingLancamento) return;
+    const vr = isVr(editingLancamento);
+    const payload: any = {
+      tipo: editForm.tipo,
+      subtipo: editForm.subtipo,
+      descricao: editForm.descricao || null,
+      observacao: editForm.observacao || null,
+      status: editForm.status,
+      updated_at: new Date().toISOString(),
+    };
+    if (!vr) {
+      payload.data = editForm.data;
+      payload.valor = Number(editForm.valor);
+    }
     const { error } = await supabase
       .from("lancamentos")
-      .update({
-        data: editForm.data,
-        tipo: editForm.tipo,
-        subtipo: editForm.subtipo,
-        descricao: editForm.descricao || null,
-        valor: Number(editForm.valor),
-        observacao: editForm.observacao || null,
-        status: editForm.status,
-        updated_at: new Date().toISOString(),
-      } as any)
+      .update(payload)
       .eq("id", editingLancamento.id);
+
 
     if (error) { toast.error("Erro ao atualizar"); return; }
     toast.success("Lançamento atualizado");
