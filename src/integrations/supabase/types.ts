@@ -1266,6 +1266,19 @@ export type Database = {
         }
         Returns: boolean
       }
+      importar_lancamentos_vr: {
+        Args: {
+          p_fim: string
+          p_inicio: string
+          p_store_id: string
+          p_user_id?: string
+        }
+        Returns: {
+          gravados: number
+          linhas: number
+        }[]
+      }
+      importar_lancamentos_vr_auto: { Args: never; Returns: number }
       semear_taxas_padrao: {
         Args: {
           p_department: string
