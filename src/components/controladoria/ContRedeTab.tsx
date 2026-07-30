@@ -300,6 +300,11 @@ export const ContRedeTab = ({ storeId }: Props) => {
         </CardContent>
       </Card>
 
+      <CompetenciasDisponiveis
+        storeId={storeId}
+        onSelect={(m, a) => { setMes(m); setAno(a); }}
+      />
+
       {loading && <p className="text-muted-foreground text-sm">Carregando dados...</p>}
 
       {!loading && lancamentos.length === 0 && (
