@@ -129,12 +129,27 @@ const Controladoria = () => {
             >
               Dados do VR
             </TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger
+                value="classificacao-vr"
+                className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
+              >
+                Classificação VR
+              </TabsTrigger>
+            )}
           </TabsList>
 
 
           <TabsContent value="contrede">
-            <ContRedeTab storeId={storeId} />
+            <ContRedeTab storeId={storeId} onGoClassificacao={() => setTab("classificacao-vr")} />
           </TabsContent>
+
+          {isAdmin && (
+            <TabsContent value="classificacao-vr">
+              <ClassificacaoVrTab storeId={storeId} />
+            </TabsContent>
+          )}
+
 
           <TabsContent value="lancamentos">
             <LancamentosTab storeId={storeId} storeName={storeName} />
