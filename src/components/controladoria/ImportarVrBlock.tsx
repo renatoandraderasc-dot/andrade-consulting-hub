@@ -92,13 +92,13 @@ export const ImportarVrBlock = ({ storeId, onImported, onGoClassificacao }: Prop
       <CardHeader className="pb-3">
         <CardTitle className="text-base font-semibold flex items-center gap-2">
           <Download className="h-4 w-4 text-primary" />
-          Importar do VR
+          Dados do VR (automático)
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Importar últimos:</span>
+            <span className="text-sm text-muted-foreground">Atualizar últimos:</span>
             <Select value={meses} onValueChange={setMeses} disabled={loading}>
               <SelectTrigger className="w-[130px]"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -111,14 +111,16 @@ export const ImportarVrBlock = ({ storeId, onImported, onGoClassificacao }: Prop
           </div>
           <Button onClick={importar} disabled={loading || !storeId}>
             {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            {loading ? "Importando..." : "Importar pagamentos do VR"}
+            {loading ? "Atualizando..." : "Atualizar agora"}
           </Button>
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Os lançamentos vêm das contas a pagar já quitadas no VR, pela data de pagamento.
-          Reimportar o mesmo período atualiza os lançamentos, não duplica.
+          O banco busca sozinho os pagamentos quitados no VR (pela data de pagamento) a cada hora,
+          sempre nas duas últimas competências. Este botão apenas força a leitura na hora — reler o
+          mesmo período atualiza os lançamentos, não duplica.
         </p>
+
 
         {loading && (
           <p className="text-sm text-muted-foreground">
