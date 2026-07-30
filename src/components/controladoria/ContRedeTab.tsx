@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { Lancamento } from "./lancamentosTypes";
 import { CompetenciasDisponiveis } from "./CompetenciasDisponiveis";
+import { ImportarVrBlock } from "./ImportarVrBlock";
 import {
   DRE_STRUCTURE_COMERCIAL, DRE_STRUCTURE_FINANCEIRO,
   calcularDRE, TIPOS_LANCAMENTO_V2, SUBCONTAS_V2,
