@@ -437,7 +437,7 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Data</Label>
-                <Input type="date" value={editForm.data} onChange={e => setEditForm(p => ({ ...p, data: e.target.value }))} />
+                <Input type="date" value={editForm.data} disabled={isVr(editingLancamento)} onChange={e => setEditForm(p => ({ ...p, data: e.target.value }))} />
               </div>
               <div>
                 <Label>Status</Label>
