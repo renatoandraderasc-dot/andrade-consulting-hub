@@ -92,7 +92,7 @@ const MetasGerador = () => {
     const { inicio, fim } = monthRange(year, month);
     const { data } = await supabase
       .from("store_daily_metrics")
-      .select("date, tipo_dia, meta_vendas, meta_margem_pct, meta_lucro")
+      .select("date, tipo_dia, meta_vendas, meta_margem_pct, meta_lucro, realizado_vendas")
       .eq("store_id", storeId)
       .eq("department", department)
       .gte("date", inicio)
@@ -101,6 +101,11 @@ const MetasGerador = () => {
     setMetasRows(data || []);
     setDirtyDates(new Set());
   };
+
+  // Dia sem operação: meta e realizado zerados — ignorado em médias e projeções
+  const isSemOperacao = (r: any) =>
+    (Number(r.meta_vendas) || 0) === 0 && (Number(r.realizado_vendas) || 0) === 0;
+
 
   // Aviso ao sair da página com alterações não salvas
   useEffect(() => {
