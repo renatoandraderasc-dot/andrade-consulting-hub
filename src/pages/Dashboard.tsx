@@ -142,43 +142,45 @@ const Dashboard = () => {
   };
 
   const fetchDailyData = async () => {
-    const startDate = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}-01`;
-    const endDate = selectedMonth === 12
-      ? `${selectedYear + 1}-01-01`
-      : `${selectedYear}-${String(selectedMonth + 1).padStart(2, "0")}-01`;
-
     const { data } = await supabase
       .from("store_daily_metrics")
-      .select("*")
+      .select("date, tipo_dia, meta_vendas, meta_lucro, meta_margem_pct, meta_volume, projecao_vendas, projecao_lucro, projecao_margem_pct, projecao_volume")
       .eq("store_id", storeId)
       .eq("department", selectedDept)
-      .gte("date", startDate)
-      .lt("date", endDate)
+      .gte("date", periodStart)
+      .lte("date", periodEnd)
       .order("date");
 
-    if (data) {
-      setDailyData(
-        data.map((d) => ({
-          date: new Date(d.date + "T12:00:00").toLocaleDateString("pt-BR"),
-          tipoDia: d.tipo_dia,
-          metaVendas: Number(d.meta_vendas) || 0,
-          realizadoVendas: Number(d.realizado_vendas) || 0,
-          projecaoVendas: Number(d.projecao_vendas) || 0,
-          metaLucro: Number(d.meta_lucro) || 0,
-          realizadoLucro: Number(d.realizado_lucro) || 0,
-          projecaoLucro: Number(d.projecao_lucro) || 0,
-          metaMargemPct: Number(d.meta_margem_pct) || 0,
-          realizadoMargemPct: Number(d.realizado_margem_pct) || 0,
-          projecaoMargemPct: Number(d.projecao_margem_pct) || 0,
-          metaVolume: Number(d.meta_volume) || 0,
-          realizadoVolume: Number(d.realizado_volume) || 0,
-          projecaoVolume: Number(d.projecao_volume) || 0,
-        }))
-      );
-    } else {
-      setDailyData([]);
-    }
+    setMetaRows(data || []);
   };
+
+  // Metas (banco) + realizado ao vivo (VR)
+  const dailyData: DailyRow[] = useMemo(() => {
+    if (!vr) return [];
+    const real = new Map((vr[selectedDept] || []).map((r) => [r.date, r]));
+    const dates = [...new Set<string>([...metaRows.map((m: any) => m.date), ...real.keys()])].sort();
+    return dates.map((date) => {
+      const d: any = metaRows.find((m: any) => m.date === date) || {};
+      const r = real.get(date);
+      return {
+        date: new Date(date + "T12:00:00").toLocaleDateString("pt-BR"),
+        tipoDia: d.tipo_dia,
+        metaVendas: Number(d.meta_vendas) || 0,
+        realizadoVendas: r?.vendas || 0,
+        projecaoVendas: Number(d.projecao_vendas) || 0,
+        metaLucro: Number(d.meta_lucro) || 0,
+        realizadoLucro: r?.lucro || 0,
+        projecaoLucro: Number(d.projecao_lucro) || 0,
+        metaMargemPct: Number(d.meta_margem_pct) || 0,
+        realizadoMargemPct: r?.margemPct || 0,
+        projecaoMargemPct: Number(d.projecao_margem_pct) || 0,
+        metaVolume: Number(d.meta_volume) || 0,
+        realizadoVolume: r?.volume || 0,
+        projecaoVolume: Number(d.projecao_volume) || 0,
+      };
+    });
+  }, [metaRows, vr, selectedDept]);
+
 
   const fetchStoreMetrics = async () => {
     const { data } = await supabase
