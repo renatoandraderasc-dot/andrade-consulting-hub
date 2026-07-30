@@ -253,21 +253,33 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
     >
       <CouponDivider label="Vendas da loja — Supermercado total" />
 
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <Store className="w-4 h-4 text-muted-foreground" />
           <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">
             Vendas da loja
           </h2>
-          <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            <span className="w-1.5 h-1.5 rounded-full bg-success animate-live-pulse" />
-            Ao vivo
-          </span>
+          {!offline && (
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <span className="w-1.5 h-1.5 rounded-full bg-success animate-live-pulse" />
+              Ao vivo{updatedAt ? ` · ${updatedAt.toLocaleTimeString("pt-BR")}` : ""}
+            </span>
+          )}
         </div>
-        <StatusStamp pct={totals.pctMeta} />
+        <div className="flex items-center gap-3">
+          <button
+            onClick={refresh}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs text-foreground hover:bg-muted/40"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loadingVr ? "animate-spin" : ""}`} /> Atualizar
+          </button>
+          {!offline && <StatusStamp pct={totals.pctMeta} />}
+        </div>
       </div>
 
-      {loading && rows.length === 0 ? (
+      {offline ? (
+        <VrOfflineNotice message={errorMsg} />
+      ) : loading && rows.length === 0 ? (
         <div className="text-sm text-muted-foreground py-8 text-center">Carregando...</div>
       ) : rows.length === 0 ? (
         <div className="rounded-lg bg-card border border-border py-8 text-center">
@@ -276,6 +288,7 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
           </p>
         </div>
       ) : (
+
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             {cards.map((c) => (
