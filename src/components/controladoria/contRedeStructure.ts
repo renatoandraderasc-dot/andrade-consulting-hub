@@ -1076,7 +1076,8 @@ export interface LancamentoData {
 
 export function calcularDRE(
   structure: DRENode[],
-  lancamentos: LancamentoData[]
+  lancamentos: LancamentoData[],
+  overrides?: Record<string, number>
 ): Map<string, number> {
   const values = new Map<string, number>();
 
