@@ -376,7 +376,9 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
                 Evolução diária — Realizado × Meta
               </h3>
               <div className="text-[11px] text-muted-foreground">
-                Projeção {fmtBRL(totals.projecaoMes)} · {totals.diasComRealizado}/{totals.totalDias} dias
+                Projeção {fmtBRL(totals.projecaoMes)} · Média/dia {fmtBRL(totals.mediaDiaria)} · {totals.diasComRealizado}/{totals.totalDias} dias
+                {totals.diasIgnorados > 0 && ` · ${totals.diasIgnorados} sem operação ignorado(s)`}
+
               </div>
             </div>
             <div className="p-5">
