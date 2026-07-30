@@ -266,6 +266,14 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
         </p>
       </div>
 
+      <ImportarVrBlock
+        storeId={storeId}
+        onImported={fetchData}
+        onGoClassificacao={onGoClassificacao}
+      />
+
+
+
       {/* Filters */}
       <Card className="bg-card border-border">
         <CardContent className="p-4 flex flex-wrap gap-3 items-center">
