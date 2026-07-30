@@ -471,7 +471,12 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
             </div>
             <div>
               <Label>Valor (R$)</Label>
-              <Input type="number" step="0.01" value={editForm.valor} onChange={e => setEditForm(p => ({ ...p, valor: e.target.value }))} />
+              <Input type="number" step="0.01" value={editForm.valor} disabled={isVr(editingLancamento)} onChange={e => setEditForm(p => ({ ...p, valor: e.target.value }))} />
+              {isVr(editingLancamento) && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Lançamento importado do VR: data e valor são sobrescritos a cada importação e não podem ser editados.
+                </p>
+              )}
             </div>
             <div>
               <Label>Descrição / Beneficiário</Label>
