@@ -302,6 +302,18 @@ export const ContRedeTab = ({ storeId }: Props) => {
 
       {loading && <p className="text-muted-foreground text-sm">Carregando dados...</p>}
 
+      {!loading && lancamentos.length === 0 && (
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 px-4 py-4 text-sm">
+          <p className="font-semibold text-foreground">
+            Nenhum lançamento em {mesesOptions.find(m => m.value === mes)?.label}/{ano}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            A estrutura do DRE aparece zerada porque não há lançamentos desta loja nesta competência.
+            Escolha outro mês/ano ou importe os lançamentos na aba de entrada de dados.
+          </p>
+        </div>
+      )}
+
       {/* DRE Table */}
       <Card className="bg-card border-border overflow-hidden">
         <CardHeader className="pb-0">
