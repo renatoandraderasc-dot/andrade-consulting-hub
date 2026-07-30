@@ -517,7 +517,7 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
                         </Button>
                       </TableCell>
                     </TableRow>
-                  ))
+                  );})
                 )}
               </TableBody>
             </Table>
