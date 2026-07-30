@@ -11,6 +11,7 @@ import { ClassificacoesConfigTab } from "@/components/controladoria/Classificaco
 import { CategoriasConfigTab } from "@/components/controladoria/CategoriasConfigTab";
 import { AgendaFinanceiraTab } from "@/components/controladoria/AgendaFinanceiraTab";
 import { AgendaAnaliseTab } from "@/components/controladoria/AgendaAnaliseTab";
+import { DadosVrTab } from "@/components/controladoria/DadosVrTab";
 import { ClipboardList } from "lucide-react";
 import { motion } from "framer-motion";
 
