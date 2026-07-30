@@ -17,6 +17,9 @@ import CouponDivider from "@/components/poster/CouponDivider";
 
 const MONTHS = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
+const PERIODO_KEY = "dashboardPeriodo";
+const CATEGORIA_KEY = "dashboardCategoria";
+
 const Dashboard = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -24,25 +27,47 @@ const Dashboard = () => {
   const [storeId, setStoreId] = useState("");
   const [departments, setDepartments] = useState<string[]>([]);
   const [selectedDept, setSelectedDept] = useState("");
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [metaRows, setMetaRows] = useState<any[]>([]);
   const [storeMetrics, setStoreMetrics] = useState<any>(null);
   const [productData, setProductData] = useState<ProductCompRow[]>([]);
   const [categoryData, setCategoryData] = useState<CategoryChartData[]>([]);
 
-  const periodStart = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}-01`;
-  const periodEnd = new Date(selectedYear, selectedMonth, 0).toISOString().slice(0, 10);
+  // Filtros globais da tela (persistem entre abas/navegação)
+  const [periodo, setPeriodo] = useState<Periodo>(() => {
+    try {
+      const s = sessionStorage.getItem(PERIODO_KEY);
+      if (s) return JSON.parse(s) as Periodo;
+    } catch { /* ignore */ }
+    return periodoFromPreset("mes");
+  });
+  const [categoria, setCategoria] = useState<string>(
+    () => sessionStorage.getItem(CATEGORIA_KEY) || TODA_LOJA,
+  );
+
+  useEffect(() => {
+    sessionStorage.setItem(PERIODO_KEY, JSON.stringify(periodo));
+  }, [periodo]);
+  useEffect(() => {
+    sessionStorage.setItem(CATEGORIA_KEY, categoria);
+  }, [categoria]);
+
+  const periodStart = periodo.inicio;
+  const periodEnd = periodo.fim;
+  const selectedMonth = Number(periodStart.slice(5, 7));
+  const selectedYear = Number(periodStart.slice(0, 4));
+  const catFiltro = categoria === TODA_LOJA ? null : categoria;
 
   // Realizado ao vivo do VR (nada e lido de realizado_* do banco)
   const {
     data: vr,
+    categorias,
     loading: loadingVr,
     offline,
     errorMsg,
     updatedAt,
     refresh,
-  } = useVrRealizado(storeId, periodStart, periodEnd);
+  } = useVrRealizado(storeId, periodStart, periodEnd, catFiltro);
+
 
 
   useEffect(() => {
