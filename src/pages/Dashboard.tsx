@@ -10,6 +10,7 @@ import DailyMetricsTable, { DailyRow } from "@/components/dashboard/DailyMetrics
 import ProductComparison, { ProductCompRow } from "@/components/dashboard/ProductComparison";
 import CategoryChart, { CategoryChartData } from "@/components/dashboard/CategoryChart";
 import VendasLojaSection from "@/components/dashboard/VendasLojaSection";
+import DashboardFilterBar, { Periodo, periodoFromPreset, TODA_LOJA } from "@/components/dashboard/DashboardFilterBar";
 import VrOfflineNotice from "@/components/VrOfflineNotice";
 import { useVrRealizado } from "@/hooks/useVrRealizado";
 import MascotPersona from "@/components/poster/MascotPersona";
