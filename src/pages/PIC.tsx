@@ -157,7 +157,7 @@ const PIC = () => {
     const out: Record<string, DayMetric[]> = {};
     for (const dept of DEPARTMENTS) {
       const metas = metasData[dept] || [];
-      const real = new Map(((vr?.[dept]) || []).map((r) => [r.date, r]));
+      const real = new Map<string, VrDia>(((vr?.[dept]) || []).map((r) => [r.date, r] as [string, VrDia]));
       const dates = [...new Set<string>([...metas.map((m: any) => m.date), ...real.keys()])].sort();
       out[dept] = dates.map((date) => {
         const m: any = metas.find((x: any) => x.date === date) || {};
