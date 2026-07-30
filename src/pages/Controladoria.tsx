@@ -11,6 +11,7 @@ import { ClassificacoesConfigTab } from "@/components/controladoria/Classificaco
 import { CategoriasConfigTab } from "@/components/controladoria/CategoriasConfigTab";
 import { AgendaFinanceiraTab } from "@/components/controladoria/AgendaFinanceiraTab";
 import { AgendaAnaliseTab } from "@/components/controladoria/AgendaAnaliseTab";
+import { DadosVrTab } from "@/components/controladoria/DadosVrTab";
 import { ClipboardList } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -122,7 +123,14 @@ const Controladoria = () => {
             >
               Análise Agenda
             </TabsTrigger>
+            <TabsTrigger
+              value="dados-vr"
+              className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
+            >
+              Dados do VR
+            </TabsTrigger>
           </TabsList>
+
 
           <TabsContent value="contrede">
             <ContRedeTab storeId={storeId} />
@@ -151,6 +159,11 @@ const Controladoria = () => {
           <TabsContent value="agenda-analise">
             <AgendaAnaliseTab storeId={storeId} />
           </TabsContent>
+
+          <TabsContent value="dados-vr">
+            <DadosVrTab storeId={storeId} />
+          </TabsContent>
+
         </Tabs>
       </div>
     </ClientLayout>
