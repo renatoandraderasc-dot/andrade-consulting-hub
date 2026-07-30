@@ -6,8 +6,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import ClientLayout from "@/components/ClientLayout";
 import SyncStatusBadge from "@/components/SyncStatusBadge";
+import VrOfflineNotice from "@/components/VrOfflineNotice";
+import { useVrRealizado, VrDia } from "@/hooks/useVrRealizado";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 
 const MONTHS = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const DEPARTMENTS = ["PADARIA", "AÇOUGUE", "HORTIFRUTI"];
