@@ -12,14 +12,17 @@ import { CategoriasConfigTab } from "@/components/controladoria/CategoriasConfig
 import { AgendaFinanceiraTab } from "@/components/controladoria/AgendaFinanceiraTab";
 import { AgendaAnaliseTab } from "@/components/controladoria/AgendaAnaliseTab";
 import { DadosVrTab } from "@/components/controladoria/DadosVrTab";
+import { ClassificacaoVrTab } from "@/components/controladoria/ClassificacaoVrTab";
 import { ClipboardList } from "lucide-react";
 import { motion } from "framer-motion";
 
 const Controladoria = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [storeName, setStoreName] = useState("");
   const [storeId, setStoreId] = useState("");
+  const [tab, setTab] = useState("contrede");
+
 
   useEffect(() => {
     if (!authLoading && !user) {
