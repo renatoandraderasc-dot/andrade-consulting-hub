@@ -22,8 +22,9 @@ import {
 
 interface Props {
   storeId: string;
-  month: number;
-  year: number;
+  startDate: string;
+  endDate: string;
+  categoria?: string | null;
 }
 
 interface DailyLoja {
@@ -47,18 +48,17 @@ const fmtShort = (v: number) =>
     ? `${(v / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}k`
     : String(v || 0);
 
-export default function VendasLojaSection({ storeId, month, year }: Props) {
+export default function VendasLojaSection({ storeId, startDate, endDate, categoria }: Props) {
   const [metas, setMetas] = useState<any[]>([]);
   const [loadingMetas, setLoadingMetas] = useState(false);
 
-  const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
-  const endDate = new Date(year, month, 0).toISOString().slice(0, 10);
 
   // Realizado sempre ao vivo, direto do VR (nada vem do banco)
   const { data: vr, loading: loadingVr, offline, errorMsg, updatedAt, refresh } = useVrRealizado(
     storeId,
     startDate,
     endDate,
+    categoria,
   );
 
   const fetchMetas = async () => {
@@ -78,7 +78,7 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
 
   useEffect(() => {
     fetchMetas();
-  }, [storeId, month, year]);
+  }, [storeId, startDate, endDate]);
 
   const loading = loadingMetas || loadingVr;
 
@@ -284,7 +284,7 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
       ) : rows.length === 0 ? (
         <div className="rounded-lg bg-card border border-border py-8 text-center">
           <p className="text-sm text-muted-foreground">
-            Sem dados de <strong className="text-foreground">LOJA</strong> para este mês.
+            Sem dados de <strong className="text-foreground">LOJA</strong> para o período selecionado.
           </p>
         </div>
       ) : (
