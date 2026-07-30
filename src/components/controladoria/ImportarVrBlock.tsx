@@ -55,22 +55,34 @@ export const ImportarVrBlock = ({ storeId, onImported, onGoClassificacao }: Prop
     if (!storeId || !user) { toast.error("Selecione uma loja"); return; }
     setLoading(true);
     setResultado(null);
-    const { data, error } = await supabase.functions.invoke("importar-lancamentos-vr", {
-      body: { store_id: storeId, user_id: user.id, meses_atras: Number(meses) },
+
+    const hoje = new Date();
+    const fim = hoje.toISOString().slice(0, 10);
+    const ini = new Date(Date.UTC(hoje.getUTCFullYear(), hoje.getUTCMonth() - Number(meses) + 1, 1))
+      .toISOString().slice(0, 10);
+
+    const { data, error } = await supabase.rpc("importar_lancamentos_vr", {
+      p_store_id: storeId,
+      p_inicio: ini,
+      p_fim: fim,
+      p_user_id: user.id,
     });
     setLoading(false);
     if (error) {
       setResultado({ erro: error.message });
-      toast.error("Falha ao importar do VR");
+      toast.error("Falha ao ler o VR");
       return;
     }
-    const res = data as Resultado;
-    setResultado(res);
-    if (res?.erro) toast.error(res.erro);
-    else {
-      toast.success(`${res?.gravados ?? 0} lançamento(s) importados`);
-      onImported?.();
-    }
+    const row = (Array.isArray(data) ? data[0] : data) as { linhas?: number; gravados?: number } | null;
+    setResultado({
+      ok: true,
+      inicio: ini,
+      fim,
+      gravados: row?.gravados ?? 0,
+      detalhe: [{ periodo: ini.slice(0, 7), linhas_api: row?.linhas ?? 0, gravados: row?.gravados ?? 0 }],
+    });
+    toast.success(`${row?.gravados ?? 0} lançamento(s) atualizados`);
+    onImported?.();
   };
 
   const pendentes = resultado?.pendentes ?? [];
