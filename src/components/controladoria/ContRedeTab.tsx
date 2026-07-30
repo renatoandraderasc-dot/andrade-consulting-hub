@@ -485,14 +485,21 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredLancamentos.map(l => (
-                    <TableRow key={l.id} className="cursor-pointer hover:bg-muted/30" onClick={() => openEditDialog(l)}>
+                  filteredLancamentos.map(l => {
+                    const dup = duplicadosIds.has(l.id);
+                    return (
+                    <TableRow key={l.id} className={`cursor-pointer hover:bg-muted/30 ${dup ? "opacity-60" : ""}`} onClick={() => openEditDialog(l)}>
                       <TableCell className="text-sm font-medium">
                         <span className="inline-flex items-center gap-2">
                           {l.descricao || "—"}
                           {isVr(l) && (
                             <span className="text-[10px] uppercase tracking-wide border border-border text-muted-foreground px-1.5 py-0.5 rounded">
                               VR
+                            </span>
+                          )}
+                          {dup && (
+                            <span className="text-[10px] uppercase tracking-wide border border-amber-500/50 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded">
+                              Duplicado · não somado
                             </span>
                           )}
                         </span>
