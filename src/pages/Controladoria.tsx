@@ -12,14 +12,17 @@ import { CategoriasConfigTab } from "@/components/controladoria/CategoriasConfig
 import { AgendaFinanceiraTab } from "@/components/controladoria/AgendaFinanceiraTab";
 import { AgendaAnaliseTab } from "@/components/controladoria/AgendaAnaliseTab";
 import { DadosVrTab } from "@/components/controladoria/DadosVrTab";
+import { ClassificacaoVrTab } from "@/components/controladoria/ClassificacaoVrTab";
 import { ClipboardList } from "lucide-react";
 import { motion } from "framer-motion";
 
 const Controladoria = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [storeName, setStoreName] = useState("");
   const [storeId, setStoreId] = useState("");
+  const [tab, setTab] = useState("contrede");
+
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -79,7 +82,7 @@ const Controladoria = () => {
           </div>
         </motion.div>
 
-        <Tabs defaultValue="contrede" className="w-full">
+        <Tabs value={tab} onValueChange={setTab} className="w-full">
           <TabsList className="mb-6 bg-card border border-border h-11 flex-wrap">
             <TabsTrigger
               value="contrede"
@@ -129,12 +132,27 @@ const Controladoria = () => {
             >
               Dados do VR
             </TabsTrigger>
+            {isAdmin && (
+              <TabsTrigger
+                value="classificacao-vr"
+                className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
+              >
+                Classificação VR
+              </TabsTrigger>
+            )}
           </TabsList>
 
 
           <TabsContent value="contrede">
-            <ContRedeTab storeId={storeId} />
+            <ContRedeTab storeId={storeId} onGoClassificacao={() => setTab("classificacao-vr")} />
           </TabsContent>
+
+          {isAdmin && (
+            <TabsContent value="classificacao-vr">
+              <ClassificacaoVrTab storeId={storeId} />
+            </TabsContent>
+          )}
+
 
           <TabsContent value="lancamentos">
             <LancamentosTab storeId={storeId} storeName={storeName} />

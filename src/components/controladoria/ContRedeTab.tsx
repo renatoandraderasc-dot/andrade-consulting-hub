@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { Lancamento } from "./lancamentosTypes";
 import { CompetenciasDisponiveis } from "./CompetenciasDisponiveis";
+import { ImportarVrBlock } from "./ImportarVrBlock";
 import {
   DRE_STRUCTURE_COMERCIAL, DRE_STRUCTURE_FINANCEIRO,
   calcularDRE, TIPOS_LANCAMENTO_V2, SUBCONTAS_V2,
@@ -48,7 +49,9 @@ function getStoredAno(): number {
 
 interface Props {
   storeId: string;
+  onGoClassificacao?: () => void;
 }
+
 
 const fmtCurrency = (v: number) => {
   const neg = v < 0;
@@ -65,7 +68,7 @@ const fmtDate = (d: string) => {
   }
 };
 
-export const ContRedeTab = ({ storeId }: Props) => {
+export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
   const [mes, setMes] = useState(getStoredMes);
   const [ano, setAno] = useState(getStoredAno);
   const [modo, setModo] = useState<"comercial" | "financeiro">("comercial");
@@ -159,21 +162,28 @@ export const ContRedeTab = ({ storeId }: Props) => {
     setEditDialogOpen(true);
   };
 
+  const isVr = (l: Lancamento | null) => (l as any)?.origem === "VR";
+
   const handleSaveEdit = async () => {
     if (!editingLancamento) return;
+    const vr = isVr(editingLancamento);
+    const payload: any = {
+      tipo: editForm.tipo,
+      subtipo: editForm.subtipo,
+      descricao: editForm.descricao || null,
+      observacao: editForm.observacao || null,
+      status: editForm.status,
+      updated_at: new Date().toISOString(),
+    };
+    if (!vr) {
+      payload.data = editForm.data;
+      payload.valor = Number(editForm.valor);
+    }
     const { error } = await supabase
       .from("lancamentos")
-      .update({
-        data: editForm.data,
-        tipo: editForm.tipo,
-        subtipo: editForm.subtipo,
-        descricao: editForm.descricao || null,
-        valor: Number(editForm.valor),
-        observacao: editForm.observacao || null,
-        status: editForm.status,
-        updated_at: new Date().toISOString(),
-      } as any)
+      .update(payload)
       .eq("id", editingLancamento.id);
+
 
     if (error) { toast.error("Erro ao atualizar"); return; }
     toast.success("Lançamento atualizado");
@@ -262,6 +272,14 @@ export const ContRedeTab = ({ storeId }: Props) => {
           Painel consolidado de controladoria — estrutura fixa, cálculos determinísticos
         </p>
       </div>
+
+      <ImportarVrBlock
+        storeId={storeId}
+        onImported={fetchData}
+        onGoClassificacao={onGoClassificacao}
+      />
+
+
 
       {/* Filters */}
       <Card className="bg-card border-border">
@@ -378,7 +396,16 @@ export const ContRedeTab = ({ storeId }: Props) => {
                 ) : (
                   filteredLancamentos.map(l => (
                     <TableRow key={l.id} className="cursor-pointer hover:bg-muted/30" onClick={() => openEditDialog(l)}>
-                      <TableCell className="text-sm font-medium">{l.descricao || "—"}</TableCell>
+                      <TableCell className="text-sm font-medium">
+                        <span className="inline-flex items-center gap-2">
+                          {l.descricao || "—"}
+                          {isVr(l) && (
+                            <span className="text-[10px] uppercase tracking-wide border border-border text-muted-foreground px-1.5 py-0.5 rounded">
+                              VR
+                            </span>
+                          )}
+                        </span>
+                      </TableCell>
                       <TableCell>
                         <span className="text-xs bg-secondary/20 text-secondary-foreground px-2 py-0.5 rounded-full">
                           {l.subtipo}
@@ -410,7 +437,7 @@ export const ContRedeTab = ({ storeId }: Props) => {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Data</Label>
-                <Input type="date" value={editForm.data} onChange={e => setEditForm(p => ({ ...p, data: e.target.value }))} />
+                <Input type="date" value={editForm.data} disabled={isVr(editingLancamento)} onChange={e => setEditForm(p => ({ ...p, data: e.target.value }))} />
               </div>
               <div>
                 <Label>Status</Label>
@@ -444,7 +471,12 @@ export const ContRedeTab = ({ storeId }: Props) => {
             </div>
             <div>
               <Label>Valor (R$)</Label>
-              <Input type="number" step="0.01" value={editForm.valor} onChange={e => setEditForm(p => ({ ...p, valor: e.target.value }))} />
+              <Input type="number" step="0.01" value={editForm.valor} disabled={isVr(editingLancamento)} onChange={e => setEditForm(p => ({ ...p, valor: e.target.value }))} />
+              {isVr(editingLancamento) && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Lançamento importado do VR: data e valor são sobrescritos a cada importação e não podem ser editados.
+                </p>
+              )}
             </div>
             <div>
               <Label>Descrição / Beneficiário</Label>

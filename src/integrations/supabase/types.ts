@@ -438,6 +438,8 @@ export type Database = {
           descricao: string | null
           id: string
           observacao: string | null
+          origem: string
+          origem_ref: string | null
           status: string
           store_id: string
           subtipo: string
@@ -454,6 +456,8 @@ export type Database = {
           descricao?: string | null
           id?: string
           observacao?: string | null
+          origem?: string
+          origem_ref?: string | null
           status?: string
           store_id: string
           subtipo: string
@@ -470,6 +474,8 @@ export type Database = {
           descricao?: string | null
           id?: string
           observacao?: string | null
+          origem?: string
+          origem_ref?: string | null
           status?: string
           store_id?: string
           subtipo?: string
@@ -1109,6 +1115,47 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "vr_calendario_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vr_lancamento_map: {
+        Row: {
+          created_at: string
+          descricao_vr: string | null
+          id: string
+          id_tipo: number
+          store_id: string | null
+          subtipo: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          descricao_vr?: string | null
+          id?: string
+          id_tipo: number
+          store_id?: string | null
+          subtipo: string
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          descricao_vr?: string | null
+          id?: string
+          id_tipo?: number
+          store_id?: string | null
+          subtipo?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vr_lancamento_map_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
