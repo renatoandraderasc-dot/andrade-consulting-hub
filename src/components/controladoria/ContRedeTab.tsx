@@ -313,6 +313,13 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
         onGoClassificacao={onGoClassificacao}
       />
 
+      {modo === "comercial" && (
+        <p className="text-xs text-muted-foreground">
+          {vendaPeriodo !== null
+            ? `Faturamento = Venda do Período (VR, ao vivo): ${fmtCurrency(vendaPeriodo)}`
+            : `Faturamento via VR indisponível${vendaErro ? ` — ${vendaErro}` : ""}; usando lançamentos.`}
+        </p>
+      )}
 
 
       {/* Filters */}
