@@ -17,6 +17,7 @@ import { ChevronRight, ChevronDown, Pencil, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { Lancamento } from "./lancamentosTypes";
+import { CompetenciasDisponiveis } from "./CompetenciasDisponiveis";
 import {
   DRE_STRUCTURE_COMERCIAL, DRE_STRUCTURE_FINANCEIRO,
   calcularDRE, TIPOS_LANCAMENTO_V2, SUBCONTAS_V2,
@@ -299,6 +300,11 @@ export const ContRedeTab = ({ storeId }: Props) => {
           </div>
         </CardContent>
       </Card>
+
+      <CompetenciasDisponiveis
+        storeId={storeId}
+        onSelect={(m, a) => { setMes(m); setAno(a); }}
+      />
 
       {loading && <p className="text-muted-foreground text-sm">Carregando dados...</p>}
 
