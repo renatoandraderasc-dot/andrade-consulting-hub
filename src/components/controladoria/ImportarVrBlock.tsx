@@ -124,7 +124,7 @@ export const ImportarVrBlock = ({ storeId, onImported, onGoClassificacao }: Prop
 
         {loading && (
           <p className="text-sm text-muted-foreground">
-            Consultando o VR mês a mês — isso pode levar alguns minutos.
+            Lendo o VR direto do banco — pode levar alguns segundos.
           </p>
         )}
 
