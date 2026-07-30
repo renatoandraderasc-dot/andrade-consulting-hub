@@ -106,12 +106,13 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Faturamento = Venda do Período (consulta ao vivo na API do VR)
+  // Faturamento = Venda do Período e CMV LOJA = CMV do Período (ao vivo na API do VR)
   const [vendaPeriodo, setVendaPeriodo] = useState<number | null>(null);
+  const [cmvPeriodo, setCmvPeriodo] = useState<number | null>(null);
   const [vendaErro, setVendaErro] = useState<string | null>(null);
 
   const fetchVendaPeriodo = useCallback(async () => {
-    if (!storeId) { setVendaPeriodo(null); return; }
+    if (!storeId) { setVendaPeriodo(null); setCmvPeriodo(null); return; }
     const inicio = `${ano}-${String(mes).padStart(2, "0")}-01`;
     const fim = new Date(ano, mes, 0).toISOString().slice(0, 10);
     try {
@@ -122,14 +123,16 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
       if (data?.erro) throw new Error(data.erro);
       const d = data?.dados;
       const rows: any[] = Array.isArray(d) ? d : Array.isArray(d?.dados) ? d.dados : [];
-      const total = rows.reduce((s, r) => {
-        const v = parseFloat(String(r.receita_bruta ?? 0).replace(",", "."));
-        return s + (isNaN(v) ? 0 : v);
-      }, 0);
-      setVendaPeriodo(total);
+      const num = (v: unknown) => {
+        const p = parseFloat(String(v ?? 0).replace(",", "."));
+        return isNaN(p) ? 0 : p;
+      };
+      setVendaPeriodo(rows.reduce((s, r) => s + num(r.receita_bruta), 0));
+      setCmvPeriodo(rows.reduce((s, r) => s + Math.abs(num(r.cmv)), 0));
       setVendaErro(null);
     } catch (e) {
       setVendaPeriodo(null);
+      setCmvPeriodo(null);
       setVendaErro(e instanceof Error ? e.message : "Falha ao consultar o VR");
     }
   }, [storeId, mes, ano]);
@@ -139,15 +142,22 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
   const structure = modo === "comercial" ? DRE_STRUCTURE_COMERCIAL : DRE_STRUCTURE_FINANCEIRO;
 
   const dreValues = useMemo(() => {
-    const overrides = modo === "comercial" && vendaPeriodo !== null
-      ? { faturamento: vendaPeriodo, venda_bruta: vendaPeriodo }
-      : undefined;
+    const overrides: Record<string, number> = {};
+    if (modo === "comercial" && vendaPeriodo !== null) {
+      overrides.faturamento = vendaPeriodo;
+      overrides.venda_bruta = vendaPeriodo;
+    }
+    if (modo === "comercial" && cmvPeriodo !== null) {
+      overrides.cmv = cmvPeriodo;
+      overrides.cmv_merc = cmvPeriodo;
+    }
     return calcularDRE(structure, lancamentos.map(l => ({
       tipo: l.tipo,
       subtipo: l.subtipo,
       valor: Number(l.valor),
-    })), overrides);
-  }, [lancamentos, structure, modo, vendaPeriodo]);
+    })), Object.keys(overrides).length ? overrides : undefined);
+  }, [lancamentos, structure, modo, vendaPeriodo, cmvPeriodo]);
+
 
   // For % calculation, use faturamento as base
   const faturamentoBase = dreValues.get("faturamento") || 1;
