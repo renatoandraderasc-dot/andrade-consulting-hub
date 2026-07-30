@@ -326,8 +326,8 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
       {modo === "comercial" && (
         <p className="text-xs text-muted-foreground">
           {vendaPeriodo !== null
-            ? `Faturamento = Venda do Período (VR, ao vivo): ${fmtCurrency(vendaPeriodo)}`
-            : `Faturamento via VR indisponível${vendaErro ? ` — ${vendaErro}` : ""}; usando lançamentos.`}
+            ? `VR ao vivo — Faturamento (Venda do Período): ${fmtCurrency(vendaPeriodo)} · CMV LOJA (CMV do Período): ${fmtCurrency(cmvPeriodo ?? 0)}`
+            : `Dados do VR indisponíveis${vendaErro ? ` — ${vendaErro}` : ""}; usando lançamentos.`}
         </p>
       )}
 
