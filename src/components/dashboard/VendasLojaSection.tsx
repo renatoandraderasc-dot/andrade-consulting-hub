@@ -106,11 +106,25 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
     };
   }, [storeId, month, year]);
 
+  // Dias sem operação (meta e realizado zerados) são ignorados em médias,
+  // projeções e nos gráficos de evolução.
+  const opRows = useMemo(
+    () =>
+      rows.filter(
+        (r) =>
+          r.metaVendas > 0 ||
+          r.realizadoVendas > 0 ||
+          r.metaLucro > 0 ||
+          r.realizadoLucro > 0,
+      ),
+    [rows],
+  );
+
   const totals = useMemo(() => {
-    const metaVendas = rows.reduce((s, r) => s + r.metaVendas, 0);
-    const realVendas = rows.reduce((s, r) => s + r.realizadoVendas, 0);
-    const metaLucro = rows.reduce((s, r) => s + r.metaLucro, 0);
-    const realLucro = rows.reduce((s, r) => s + r.realizadoLucro, 0);
+    const metaVendas = opRows.reduce((s, r) => s + r.metaVendas, 0);
+    const realVendas = opRows.reduce((s, r) => s + r.realizadoVendas, 0);
+    const metaLucro = opRows.reduce((s, r) => s + r.metaLucro, 0);
+    const realLucro = opRows.reduce((s, r) => s + r.realizadoLucro, 0);
     // Standardized: realized profit ÷ realized revenue
     const margemReal = realVendas > 0 ? (realLucro / realVendas) * 100 : 0;
     const margemMeta = metaVendas > 0 ? (metaLucro / metaVendas) * 100 : 0;
@@ -119,13 +133,14 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
     const hoje = new Date();
     const hojeStr = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(hoje.getDate()).padStart(2, "0")}`;
     const isCurrentMonth =
-      rows.length > 0 &&
-      rows[0].date.slice(0, 7) === hojeStr.slice(0, 7);
-    const diasComRealizado = rows.filter((r) => r.realizadoVendas > 0).length;
-    const totalDias = rows.length;
+      opRows.length > 0 &&
+      opRows[0].date.slice(0, 7) === hojeStr.slice(0, 7);
+    const diasComRealizado = opRows.filter((r) => r.realizadoVendas > 0).length;
+    const totalDias = opRows.length;
+    const diasIgnorados = rows.length - opRows.length;
 
     // Meta acumulada = soma das metas até hoje (ou mês todo, se mês fechado)
-    const rowsAteHoje = isCurrentMonth ? rows.filter((r) => r.date <= hojeStr) : rows;
+    const rowsAteHoje = isCurrentMonth ? opRows.filter((r) => r.date <= hojeStr) : opRows;
     const metaAcumVendas = rowsAteHoje.reduce((s, r) => s + r.metaVendas, 0);
     const metaAcumLucro = rowsAteHoje.reduce((s, r) => s + r.metaLucro, 0);
     const realAcumVendas = rowsAteHoje.reduce((s, r) => s + r.realizadoVendas, 0);
@@ -134,10 +149,13 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
     const pctAcumVendas = metaAcumVendas > 0 ? (realAcumVendas / metaAcumVendas) * 100 : 0;
     const pctAcumLucro = metaAcumLucro > 0 ? (realAcumLucro / metaAcumLucro) * 100 : 0;
 
-    const metasRestantesVendas = rows
+    // Média diária considerando apenas dias com operação já realizados
+    const mediaDiaria = diasComRealizado > 0 ? realVendas / diasComRealizado : 0;
+
+    const metasRestantesVendas = opRows
       .filter((r) => r.date > hojeStr)
       .reduce((s, r) => s + r.metaVendas, 0);
-    const metasRestantesLucro = rows
+    const metasRestantesLucro = opRows
       .filter((r) => r.date > hojeStr)
       .reduce((s, r) => s + r.metaLucro, 0);
 
@@ -158,16 +176,18 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
       pctAcumLucro,
       projecaoMes,
       projecaoLucro,
+      mediaDiaria,
       diasComRealizado,
       totalDias,
+      diasIgnorados,
       isCurrentMonth,
     };
-  }, [rows]);
+  }, [rows, opRows]);
 
   const chartData = useMemo(() => {
     let accReal = 0;
     let accMeta = 0;
-    return rows.map((r) => {
+    return opRows.map((r) => {
       accReal += r.realizadoVendas;
       accMeta += r.metaVendas;
       return {
@@ -179,7 +199,8 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
         "Realizado acumulado": accReal,
       };
     });
-  }, [rows]);
+  }, [opRows]);
+
 
   const toneFromPct = (p: number): "success" | "warning" | "danger" =>
     p >= 100 ? "success" : p >= 80 ? "warning" : "danger";
@@ -355,7 +376,9 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
                 Evolução diária — Realizado × Meta
               </h3>
               <div className="text-[11px] text-muted-foreground">
-                Projeção {fmtBRL(totals.projecaoMes)} · {totals.diasComRealizado}/{totals.totalDias} dias
+                Projeção {fmtBRL(totals.projecaoMes)} · Média/dia {fmtBRL(totals.mediaDiaria)} · {totals.diasComRealizado}/{totals.totalDias} dias
+                {totals.diasIgnorados > 0 && ` · ${totals.diasIgnorados} sem operação ignorado(s)`}
+
               </div>
             </div>
             <div className="p-5">

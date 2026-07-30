@@ -92,7 +92,7 @@ const MetasGerador = () => {
     const { inicio, fim } = monthRange(year, month);
     const { data } = await supabase
       .from("store_daily_metrics")
-      .select("date, tipo_dia, meta_vendas, meta_margem_pct, meta_lucro")
+      .select("date, tipo_dia, meta_vendas, meta_margem_pct, meta_lucro, realizado_vendas")
       .eq("store_id", storeId)
       .eq("department", department)
       .gte("date", inicio)
@@ -101,6 +101,11 @@ const MetasGerador = () => {
     setMetasRows(data || []);
     setDirtyDates(new Set());
   };
+
+  // Dia sem operação: meta e realizado zerados — ignorado em médias e projeções
+  const isSemOperacao = (r: any) =>
+    (Number(r.meta_vendas) || 0) === 0 && (Number(r.realizado_vendas) || 0) === 0;
+
 
   // Aviso ao sair da página com alterações não salvas
   useEffect(() => {
@@ -279,11 +284,21 @@ const MetasGerador = () => {
   };
 
   const totals = useMemo(() => {
-    return metasRows.reduce((acc, r) => ({
+    const operantes = metasRows.filter((r) => !isSemOperacao(r));
+    const t = operantes.reduce((acc, r) => ({
       vendas: acc.vendas + Number(r.meta_vendas || 0),
       lucro: acc.lucro + Number(r.meta_lucro || 0),
     }), { vendas: 0, lucro: 0 });
+    const dias = operantes.length;
+    return {
+      ...t,
+      dias,
+      diasIgnorados: metasRows.length - dias,
+      mediaVendas: dias > 0 ? t.vendas / dias : 0,
+      mediaLucro: dias > 0 ? t.lucro / dias : 0,
+    };
   }, [metasRows]);
+
 
   if (authLoading) return (
     <div className="min-h-screen bg-background flex items-center justify-center">
@@ -400,11 +415,19 @@ const MetasGerador = () => {
                   )}
                   {metasRows.map((r) => {
                     const isDirty = dirtyDates.has(r.date);
+                    const semOp = isSemOperacao(r);
                     const inputCls = `w-32 bg-background border rounded-lg px-2 py-1.5 text-right font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 ${isDirty ? "border-amber-500" : "border-border"}`;
                     return (
-                      <tr key={r.date} className="border-b border-border/50">
+                      <tr key={r.date} className={`border-b border-border/50 ${semOp ? "opacity-50" : ""}`}>
                         <td className="py-2 pr-4 font-body">{fmtDate(r.date)}</td>
-                        <td className="py-2 px-2 font-body">{r.tipo_dia}</td>
+                        <td className="py-2 px-2 font-body">
+                          {r.tipo_dia}
+                          {semOp && (
+                            <span className="ml-2 text-[10px] uppercase tracking-wide text-muted-foreground border border-border rounded px-1 py-0.5">
+                              sem operação
+                            </span>
+                          )}
+                        </td>
                         <td className="py-2 px-2 text-right">
                           <input
                             type="text"
@@ -436,8 +459,18 @@ const MetasGerador = () => {
                       <td></td>
                       <td className="py-3 pl-2 text-right font-body">{fmtBRL(totals.lucro)}</td>
                     </tr>
+                    <tr className="text-muted-foreground">
+                      <td className="py-2 pr-4 font-body text-xs" colSpan={2}>
+                        Média diária ({totals.dias} dias com operação
+                        {totals.diasIgnorados > 0 ? ` · ${totals.diasIgnorados} ignorado(s)` : ""})
+                      </td>
+                      <td className="py-2 px-2 text-right font-body text-xs">{fmtBRL(totals.mediaVendas)}</td>
+                      <td></td>
+                      <td className="py-2 pl-2 text-right font-body text-xs">{fmtBRL(totals.mediaLucro)}</td>
+                    </tr>
                   </tfoot>
                 )}
+
               </table>
             </div>
           </TabsContent>

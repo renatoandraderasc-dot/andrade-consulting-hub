@@ -187,7 +187,19 @@ const PIC = () => {
   const deptKpis = useMemo(() => {
     const result: Record<string, Record<string, KpiData>> = {};
     for (const dept of DEPARTMENTS) {
-      const rows = rawData[dept] || [];
+      // Ignora dias sem operação (meta e realizado zerados em todos os indicadores)
+      const rows = (rawData[dept] || []).filter(
+        (r) =>
+          r.meta_vendas > 0 ||
+          r.realizado_vendas > 0 ||
+          r.meta_lucro > 0 ||
+          r.realizado_lucro > 0 ||
+          r.meta_volume > 0 ||
+          r.realizado_volume > 0 ||
+          r.meta_margem_pct > 0 ||
+          r.realizado_margem_pct > 0,
+      );
+
       result[dept] = {};
 
       const calcKpi = (metaKey: keyof DayMetric, realKey: keyof DayMetric) => {
