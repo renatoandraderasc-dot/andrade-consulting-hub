@@ -1,10 +1,12 @@
 import { useEffect, useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Store, TrendingUp, DollarSign, Percent, Target } from "lucide-react";
+import { Store, TrendingUp, DollarSign, Percent, Target, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import PriceTagCard from "@/components/poster/PriceTagCard";
 import CouponDivider from "@/components/poster/CouponDivider";
 import StatusStamp from "@/components/poster/StatusStamp";
+import VrOfflineNotice from "@/components/VrOfflineNotice";
+import { useVrRealizado, LOJA } from "@/hooks/useVrRealizado";
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -46,65 +48,62 @@ const fmtShort = (v: number) =>
     : String(v || 0);
 
 export default function VendasLojaSection({ storeId, month, year }: Props) {
-  const [rows, setRows] = useState<DailyLoja[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [metas, setMetas] = useState<any[]>([]);
+  const [loadingMetas, setLoadingMetas] = useState(false);
 
-  const fetchData = async () => {
+  const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
+  const endDate = new Date(year, month, 0).toISOString().slice(0, 10);
+
+  // Realizado sempre ao vivo, direto do VR (nada vem do banco)
+  const { data: vr, loading: loadingVr, offline, errorMsg, updatedAt, refresh } = useVrRealizado(
+    storeId,
+    startDate,
+    endDate,
+  );
+
+  const fetchMetas = async () => {
     if (!storeId) return;
-    setLoading(true);
-    const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
-    const endDate =
-      month === 12
-        ? `${year + 1}-01-01`
-        : `${year}-${String(month + 1).padStart(2, "0")}-01`;
-
+    setLoadingMetas(true);
     const { data } = await supabase
       .from("store_daily_metrics")
-      .select("*")
+      .select("date, meta_vendas, meta_lucro, meta_margem_pct")
       .eq("store_id", storeId)
-      .eq("department", "LOJA")
+      .eq("department", LOJA)
       .gte("date", startDate)
-      .lt("date", endDate)
+      .lte("date", endDate)
       .order("date");
-
-    setRows(
-      (data || []).map((d: any) => ({
-        date: d.date,
-        day: Number(d.date.slice(8, 10)),
-        metaVendas: Number(d.meta_vendas) || 0,
-        realizadoVendas: Number(d.realizado_vendas) || 0,
-        metaLucro: Number(d.meta_lucro) || 0,
-        realizadoLucro: Number(d.realizado_lucro) || 0,
-        metaMargemPct: Number(d.meta_margem_pct) || 0,
-        realizadoMargemPct: Number(d.realizado_margem_pct) || 0,
-      })),
-    );
-    setLoading(false);
+    setMetas(data || []);
+    setLoadingMetas(false);
   };
 
   useEffect(() => {
-    fetchData();
+    fetchMetas();
   }, [storeId, month, year]);
 
-  useEffect(() => {
-    if (!storeId) return;
-    const channel = supabase
-      .channel(`dash-loja-${storeId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "store_daily_metrics",
-          filter: `store_id=eq.${storeId}`,
-        },
-        () => fetchData(),
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [storeId, month, year]);
+  const loading = loadingMetas || loadingVr;
+
+  // Junta metas (banco) com realizado (ao vivo)
+  const rows: DailyLoja[] = useMemo(() => {
+    if (!vr) return [];
+    const real = new Map((vr[LOJA] || []).map((r) => [r.date, r]));
+    const dates = new Set<string>([...metas.map((m: any) => m.date), ...real.keys()]);
+    return [...dates]
+      .sort()
+      .map((date) => {
+        const m: any = metas.find((x: any) => x.date === date) || {};
+        const r = real.get(date);
+        return {
+          date,
+          day: Number(date.slice(8, 10)),
+          metaVendas: Number(m.meta_vendas) || 0,
+          realizadoVendas: r?.vendas || 0,
+          metaLucro: Number(m.meta_lucro) || 0,
+          realizadoLucro: r?.lucro || 0,
+          metaMargemPct: Number(m.meta_margem_pct) || 0,
+          realizadoMargemPct: r?.margemPct || 0,
+        };
+      });
+  }, [metas, vr]);
 
   // Dias sem operação (meta e realizado zerados) são ignorados em médias,
   // projeções e nos gráficos de evolução.
@@ -119,6 +118,7 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
       ),
     [rows],
   );
+
 
   const totals = useMemo(() => {
     const metaVendas = opRows.reduce((s, r) => s + r.metaVendas, 0);
@@ -253,21 +253,33 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
     >
       <CouponDivider label="Vendas da loja — Supermercado total" />
 
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <Store className="w-4 h-4 text-muted-foreground" />
           <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">
             Vendas da loja
           </h2>
-          <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            <span className="w-1.5 h-1.5 rounded-full bg-success animate-live-pulse" />
-            Ao vivo
-          </span>
+          {!offline && (
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <span className="w-1.5 h-1.5 rounded-full bg-success animate-live-pulse" />
+              Ao vivo{updatedAt ? ` · ${updatedAt.toLocaleTimeString("pt-BR")}` : ""}
+            </span>
+          )}
         </div>
-        <StatusStamp pct={totals.pctMeta} />
+        <div className="flex items-center gap-3">
+          <button
+            onClick={refresh}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs text-foreground hover:bg-muted/40"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loadingVr ? "animate-spin" : ""}`} /> Atualizar
+          </button>
+          {!offline && <StatusStamp pct={totals.pctMeta} />}
+        </div>
       </div>
 
-      {loading && rows.length === 0 ? (
+      {offline ? (
+        <VrOfflineNotice message={errorMsg} />
+      ) : loading && rows.length === 0 ? (
         <div className="text-sm text-muted-foreground py-8 text-center">Carregando...</div>
       ) : rows.length === 0 ? (
         <div className="rounded-lg bg-card border border-border py-8 text-center">
@@ -276,6 +288,7 @@ export default function VendasLojaSection({ storeId, month, year }: Props) {
           </p>
         </div>
       ) : (
+
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             {cards.map((c) => (

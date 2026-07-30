@@ -1,13 +1,16 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Trophy, TrendingUp, TrendingDown, Calendar, Filter, Sparkles, Flag, ChevronDown } from "lucide-react";
+import { Trophy, TrendingUp, TrendingDown, Calendar, Filter, Sparkles, Flag, ChevronDown, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import ClientLayout from "@/components/ClientLayout";
 import SyncStatusBadge from "@/components/SyncStatusBadge";
+import VrOfflineNotice from "@/components/VrOfflineNotice";
+import { useVrRealizado, VrDia } from "@/hooks/useVrRealizado";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 
 const MONTHS = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const DEPARTMENTS = ["PADARIA", "AÇOUGUE", "HORTIFRUTI"];
@@ -54,8 +57,21 @@ const PIC = () => {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [viewMode, setViewMode] = useState<"mes" | "dia">("mes");
-  const [rawData, setRawData] = useState<Record<string, DayMetric[]>>({});
+  const [metasData, setMetasData] = useState<Record<string, any[]>>({});
   const [loading, setLoading] = useState(true);
+
+  const periodStart = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}-01`;
+  const periodEnd = new Date(selectedYear, selectedMonth, 0).toISOString().slice(0, 10);
+
+  // Realizado sempre ao vivo, via vr-proxy (nada vem de realizado_* do banco)
+  const {
+    data: vr,
+    loading: loadingVr,
+    offline,
+    errorMsg,
+    updatedAt,
+    refresh,
+  } = useVrRealizado(storeId, periodStart, periodEnd);
 
   useEffect(() => {
     if (!authLoading && !user) { navigate("/login"); return; }
@@ -63,33 +79,19 @@ const PIC = () => {
   }, [user, authLoading, isAdmin]);
 
   useEffect(() => {
-    if (storeId) fetchData();
+    if (storeId) fetchMetas();
   }, [storeId, selectedMonth, selectedYear]);
 
   useEffect(() => {
     if (!storeId) return;
-    const interval = setInterval(fetchData, 60_000);
-    const handleFocus = () => fetchData();
+    const interval = setInterval(refresh, 60_000);
+    const handleFocus = () => refresh();
     window.addEventListener("focus", handleFocus);
     return () => {
       clearInterval(interval);
       window.removeEventListener("focus", handleFocus);
     };
-  }, [storeId, selectedMonth, selectedYear]);
-
-  useEffect(() => {
-    if (!storeId) return;
-    const channel = supabase
-      .channel(`pic-sdm-${storeId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "store_daily_metrics", filter: `store_id=eq.${storeId}` },
-        () => fetchData(),
-      )
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [storeId, selectedMonth, selectedYear]);
-
+  }, [storeId, refresh]);
 
   const fetchStoreInfo = async () => {
     if (!user) return;
@@ -132,44 +134,55 @@ const PIC = () => {
     }
   };
 
-  const fetchData = async () => {
+  // Metas continuam vindo de store_daily_metrics (colunas meta_*)
+  const fetchMetas = async () => {
     setLoading(true);
-    const startDate = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}-01`;
-    const endDate = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}-31`;
+    const { data } = await supabase
+      .from("store_daily_metrics")
+      .select("date, department, meta_vendas, meta_lucro, meta_margem_pct, meta_volume")
+      .eq("store_id", storeId)
+      .in("department", DEPARTMENTS)
+      .gte("date", periodStart)
+      .lte("date", periodEnd)
+      .order("date", { ascending: true });
 
-    const results: Record<string, DayMetric[]> = {};
-    for (const dept of DEPARTMENTS) {
-      const { data } = await supabase
-        .from("store_daily_metrics")
-        .select("*")
-        .eq("store_id", storeId)
-        .eq("department", dept)
-        .gte("date", startDate)
-        .lte("date", endDate)
-        .order("date", { ascending: true });
-
-      if (data && data.length > 0) {
-        results[dept] = data.map((d) => ({
-          day: new Date(d.date + "T12:00:00").getDate(),
-          date: d.date,
-          meta_vendas: Number(d.meta_vendas) || 0,
-          realizado_vendas: Number(d.realizado_vendas) || 0,
-          meta_lucro: Number(d.meta_lucro) || 0,
-          realizado_lucro: Number(d.realizado_lucro) || 0,
-          meta_margem_pct: Number(d.meta_margem_pct) || 0,
-          realizado_margem_pct: Number(d.realizado_margem_pct) || 0,
-          meta_volume: Number(d.meta_volume) || 0,
-          realizado_volume: Number(d.realizado_volume) || 0,
-        }));
-      }
-    }
-    setRawData(results);
+    const results: Record<string, any[]> = {};
+    for (const d of data || []) (results[d.department] ||= []).push(d);
+    setMetasData(results);
     setLoading(false);
   };
 
+  // Combina metas (banco) com realizado ao vivo (VR)
+  const rawData = useMemo(() => {
+    const out: Record<string, DayMetric[]> = {};
+    for (const dept of DEPARTMENTS) {
+      const metas = metasData[dept] || [];
+      const real = new Map<string, VrDia>(((vr?.[dept]) || []).map((r) => [r.date, r] as [string, VrDia]));
+      const dates = [...new Set<string>([...metas.map((m: any) => m.date), ...real.keys()])].sort();
+      out[dept] = dates.map((date) => {
+        const m: any = metas.find((x: any) => x.date === date) || {};
+        const r = real.get(date);
+        return {
+          day: Number(date.slice(8, 10)),
+          date,
+          meta_vendas: Number(m.meta_vendas) || 0,
+          realizado_vendas: r?.vendas || 0,
+          meta_lucro: Number(m.meta_lucro) || 0,
+          realizado_lucro: r?.lucro || 0,
+          meta_margem_pct: Number(m.meta_margem_pct) || 0,
+          realizado_margem_pct: r?.margemPct || 0,
+          meta_volume: Number(m.meta_volume) || 0,
+          realizado_volume: r?.volume || 0,
+        };
+      });
+    }
+    return out;
+  }, [metasData, vr]);
+
   const handleSyncChange = useCallback(() => {
-    if (storeId) fetchData();
-  }, [storeId, selectedMonth, selectedYear]);
+    refresh();
+  }, [refresh]);
+
 
   // Determina o "dia de hoje" para cálculo de meta acumulada.
   // Se o mês selecionado é o mês atual → dia corrente.
@@ -319,33 +332,51 @@ const PIC = () => {
                 <TabsTrigger value="dia" className="text-xs">Diário</TabsTrigger>
               </TabsList>
             </Tabs>
+            <button
+              onClick={refresh}
+              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 text-xs text-foreground hover:bg-muted/40"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loadingVr ? "animate-spin" : ""}`} /> Atualizar
+            </button>
+            {!offline && updatedAt && (
+              <span className="text-[11px] text-muted-foreground">
+                VR ao vivo · {updatedAt.toLocaleTimeString("pt-BR")}
+              </span>
+            )}
           </div>
         </motion.div>
 
-        {/* AI Analysis */}
-        <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }}
-          className="bg-gradient-to-r from-card via-card to-amber-500/5 border border-amber-500/20 rounded-2xl p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="w-5 h-5 text-amber-500" />
-            <h3 className="font-heading font-bold text-foreground text-sm">Análise Inteligente</h3>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {aiAnalysis.map((insight, i) => (
-              <motion.p key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 + i * 0.05 }}
-                className="text-sm text-muted-foreground font-body">{insight}</motion.p>
-            ))}
-          </div>
-        </motion.div>
+        {offline ? (
+          <VrOfflineNotice message={errorMsg} />
+        ) : (
+          <>
+            {/* AI Analysis */}
+            <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }}
+              className="bg-gradient-to-r from-card via-card to-amber-500/5 border border-amber-500/20 rounded-2xl p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Sparkles className="w-5 h-5 text-amber-500" />
+                <h3 className="font-heading font-bold text-foreground text-sm">Análise Inteligente</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {aiAnalysis.map((insight, i) => (
+                  <motion.p key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 + i * 0.05 }}
+                    className="text-sm text-muted-foreground font-body">{insight}</motion.p>
+                ))}
+              </div>
+            </motion.div>
 
-        {/* Department Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {DEPARTMENTS.map((dept, deptIdx) => (
-            <DepartmentCard key={dept} dept={dept} kpis={deptKpis[dept] || {}} viewMode={viewMode} delay={deptIdx * 0.1} today={today} />
-          ))}
-        </div>
+            {/* Department Cards */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {DEPARTMENTS.map((dept, deptIdx) => (
+                <DepartmentCard key={dept} dept={dept} kpis={deptKpis[dept] || {}} viewMode={viewMode} delay={deptIdx * 0.1} today={today} />
+              ))}
+            </div>
 
-        {/* Finish Line Animation */}
-        <FinishLineAnimation deptKpis={deptKpis} />
+            {/* Finish Line Animation */}
+            <FinishLineAnimation deptKpis={deptKpis} />
+          </>
+        )}
+
       </div>
     </ClientLayout>
   );

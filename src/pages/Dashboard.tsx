@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { BarChart3 } from "lucide-react";
+import { BarChart3, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import ClientLayout from "@/components/ClientLayout";
@@ -10,6 +10,8 @@ import DailyMetricsTable, { DailyRow } from "@/components/dashboard/DailyMetrics
 import ProductComparison, { ProductCompRow } from "@/components/dashboard/ProductComparison";
 import CategoryChart, { CategoryChartData } from "@/components/dashboard/CategoryChart";
 import VendasLojaSection from "@/components/dashboard/VendasLojaSection";
+import VrOfflineNotice from "@/components/VrOfflineNotice";
+import { useVrRealizado } from "@/hooks/useVrRealizado";
 import MascotPersona from "@/components/poster/MascotPersona";
 import CouponDivider from "@/components/poster/CouponDivider";
 
@@ -24,10 +26,24 @@ const Dashboard = () => {
   const [selectedDept, setSelectedDept] = useState("");
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [dailyData, setDailyData] = useState<DailyRow[]>([]);
+  const [metaRows, setMetaRows] = useState<any[]>([]);
   const [storeMetrics, setStoreMetrics] = useState<any>(null);
   const [productData, setProductData] = useState<ProductCompRow[]>([]);
   const [categoryData, setCategoryData] = useState<CategoryChartData[]>([]);
+
+  const periodStart = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}-01`;
+  const periodEnd = new Date(selectedYear, selectedMonth, 0).toISOString().slice(0, 10);
+
+  // Realizado ao vivo do VR (nada e lido de realizado_* do banco)
+  const {
+    data: vr,
+    loading: loadingVr,
+    offline,
+    errorMsg,
+    updatedAt,
+    refresh,
+  } = useVrRealizado(storeId, periodStart, periodEnd);
+
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -126,43 +142,45 @@ const Dashboard = () => {
   };
 
   const fetchDailyData = async () => {
-    const startDate = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}-01`;
-    const endDate = selectedMonth === 12
-      ? `${selectedYear + 1}-01-01`
-      : `${selectedYear}-${String(selectedMonth + 1).padStart(2, "0")}-01`;
-
     const { data } = await supabase
       .from("store_daily_metrics")
-      .select("*")
+      .select("date, tipo_dia, meta_vendas, meta_lucro, meta_margem_pct, meta_volume, projecao_vendas, projecao_lucro, projecao_margem_pct, projecao_volume")
       .eq("store_id", storeId)
       .eq("department", selectedDept)
-      .gte("date", startDate)
-      .lt("date", endDate)
+      .gte("date", periodStart)
+      .lte("date", periodEnd)
       .order("date");
 
-    if (data) {
-      setDailyData(
-        data.map((d) => ({
-          date: new Date(d.date + "T12:00:00").toLocaleDateString("pt-BR"),
-          tipoDia: d.tipo_dia,
-          metaVendas: Number(d.meta_vendas) || 0,
-          realizadoVendas: Number(d.realizado_vendas) || 0,
-          projecaoVendas: Number(d.projecao_vendas) || 0,
-          metaLucro: Number(d.meta_lucro) || 0,
-          realizadoLucro: Number(d.realizado_lucro) || 0,
-          projecaoLucro: Number(d.projecao_lucro) || 0,
-          metaMargemPct: Number(d.meta_margem_pct) || 0,
-          realizadoMargemPct: Number(d.realizado_margem_pct) || 0,
-          projecaoMargemPct: Number(d.projecao_margem_pct) || 0,
-          metaVolume: Number(d.meta_volume) || 0,
-          realizadoVolume: Number(d.realizado_volume) || 0,
-          projecaoVolume: Number(d.projecao_volume) || 0,
-        }))
-      );
-    } else {
-      setDailyData([]);
-    }
+    setMetaRows(data || []);
   };
+
+  // Metas (banco) + realizado ao vivo (VR)
+  const dailyData: DailyRow[] = useMemo(() => {
+    if (!vr) return [];
+    const real = new Map((vr[selectedDept] || []).map((r) => [r.date, r]));
+    const dates = [...new Set<string>([...metaRows.map((m: any) => m.date), ...real.keys()])].sort();
+    return dates.map((date) => {
+      const d: any = metaRows.find((m: any) => m.date === date) || {};
+      const r = real.get(date);
+      return {
+        date: new Date(date + "T12:00:00").toLocaleDateString("pt-BR"),
+        tipoDia: d.tipo_dia,
+        metaVendas: Number(d.meta_vendas) || 0,
+        realizadoVendas: r?.vendas || 0,
+        projecaoVendas: Number(d.projecao_vendas) || 0,
+        metaLucro: Number(d.meta_lucro) || 0,
+        realizadoLucro: r?.lucro || 0,
+        projecaoLucro: Number(d.projecao_lucro) || 0,
+        metaMargemPct: Number(d.meta_margem_pct) || 0,
+        realizadoMargemPct: r?.margemPct || 0,
+        projecaoMargemPct: Number(d.projecao_margem_pct) || 0,
+        metaVolume: Number(d.meta_volume) || 0,
+        realizadoVolume: r?.volume || 0,
+        projecaoVolume: Number(d.projecao_volume) || 0,
+      };
+    });
+  }, [metaRows, vr, selectedDept]);
+
 
   const fetchStoreMetrics = async () => {
     const { data } = await supabase
@@ -349,12 +367,25 @@ const Dashboard = () => {
                   <option key={y} value={y}>{y}</option>
                 ))}
               </select>
+              <button
+                onClick={refresh}
+                className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs text-foreground hover:bg-muted/40"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingVr ? "animate-spin" : ""}`} /> Atualizar
+              </button>
+              {!offline && updatedAt && (
+                <span className="text-[11px] text-muted-foreground">
+                  VR ao vivo · {updatedAt.toLocaleTimeString("pt-BR")}
+                </span>
+              )}
             </div>
           </div>
         </motion.div>
 
+        {offline && <VrOfflineNotice message={errorMsg} className="mb-6" />}
+
         {/* KPI Cards */}
-        <DashboardKPIs {...kpiData} />
+        {!offline && <DashboardKPIs {...kpiData} />}
 
         {/* Vendas da Loja (department = LOJA) — independente do filtro */}
         {storeId && (
@@ -362,7 +393,8 @@ const Dashboard = () => {
         )}
 
         <CouponDivider label={`Faturamento x margem por dia${selectedDept ? ` — ${selectedDept}` : ""}`} />
-        <DailyMetricsTable data={dailyData} />
+        {offline ? <VrOfflineNotice message={errorMsg} /> : <DailyMetricsTable data={dailyData} />}
+
 
         {/* Product Comparison */}
         <ProductComparison
