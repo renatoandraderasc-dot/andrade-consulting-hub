@@ -82,7 +82,7 @@ const Controladoria = () => {
           </div>
         </motion.div>
 
-        <Tabs defaultValue="contrede" className="w-full">
+        <Tabs value={tab} onValueChange={setTab} className="w-full">
           <TabsList className="mb-6 bg-card border border-border h-11 flex-wrap">
             <TabsTrigger
               value="contrede"
