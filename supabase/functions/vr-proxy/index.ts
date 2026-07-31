@@ -47,7 +47,8 @@ Deno.serve(async (req) => {
 
     const { data: cfg } = await service.from("store_vr_config")
       .select("api_url, api_key").eq("store_id", store_id).single();
-    if (!cfg) return json({ erro: "loja sem conexao VR cadastrada" }, 400);
+    // Loja sem VR: responde 200 vazio para nao quebrar as telas
+    if (!cfg) return json({ ok: true, relatorio, dados: [], aviso: "loja sem conexao VR cadastrada" });
 
     const qs = new URLSearchParams();
     for (const [k, v] of Object.entries(params ?? {})) {
