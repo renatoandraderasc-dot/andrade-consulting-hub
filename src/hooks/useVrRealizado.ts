@@ -64,13 +64,29 @@ async function loadRaw(storeId: string, inicio: string, fim: string): Promise<Ra
     }),
   ]);
 
-  if (error) throw new Error(error.message);
-  if (!proxy || (proxy as any).erro) throw new Error((proxy as any)?.erro || "Sem resposta do VR");
-
   const mapa: Record<string, string> = {};
   for (const m of mapas ?? []) mapa[norm(m.secao_vr)] = m.department;
 
+  if (error) {
+    // Le o corpo do erro para diferenciar "loja sem VR" de falha real
+    let corpo: any = null;
+    try {
+      corpo = await (error as any)?.context?.json?.();
+    } catch {
+      corpo = null;
+    }
+    const msg = String(corpo?.erro ?? "");
+    if (/sem conexao vr/i.test(msg)) return { linhas: [], mapa };
+    throw new Error(msg || error.message);
+  }
+  if (!proxy || (proxy as any).erro) {
+    const msg = String((proxy as any)?.erro ?? "");
+    if (/sem conexao vr/i.test(msg)) return { linhas: [], mapa };
+    throw new Error(msg || "Sem resposta do VR");
+  }
+
   const brutas: any[] = Array.isArray((proxy as any).dados) ? (proxy as any).dados : [];
+
   const linhas: VrLinha[] = [];
   for (const l of brutas) {
     const date = String(l.data ?? "").slice(0, 10);
