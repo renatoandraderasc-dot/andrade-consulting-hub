@@ -56,6 +56,16 @@ const norm = (s: string) =>
     .replace(/\s+/g, " ")
     .trim();
 
+// Fallback: quando nao existe mapeamento cadastrado para a loja,
+// deduz o departamento pelo texto da secao/categoria.
+function inferirDepartamento(secao: string, categoria: string): string | null {
+  const t = `${norm(categoria)} ${norm(secao)}`;
+  if (/\bACOUGUE\b|CARNE|AVES|SUINO|BOVIN|FRIGORIFIC/.test(t)) return "AÇOUGUE";
+  if (/HORTIFRUTI|HORTI|FLV|FRUTA|VERDURA|LEGUME/.test(t)) return "HORTIFRUTI";
+  if (/PADARIA|PANIFIC|CONFEITAR/.test(t)) return "PADARIA";
+  return null;
+}
+
 async function loadRaw(storeId: string, inicio: string, fim: string): Promise<RawResult> {
   const [{ data: mapas }, { data: proxy, error }] = await Promise.all([
     supabase.from("vr_secao_departamento").select("secao_vr, department").eq("store_id", storeId),
@@ -117,7 +127,7 @@ function agregar(raw: RawResult, categoria?: string | null): VrRealizado {
 
   for (const l of raw.linhas) {
     if (categoria && l.categoria !== categoria) continue;
-    const dep = raw.mapa[norm(l.secao)];
+    const dep = raw.mapa[norm(l.secao)] ?? inferirDepartamento(l.secao, l.categoria);
     add(LOJA, l.date, l.vendas, l.lucro, l.volume);
     if (dep && dep !== LOJA) add(dep, l.date, l.vendas, l.lucro, l.volume);
   }
