@@ -46,9 +46,29 @@ Deno.serve(async (req) => {
     if (!isAdmin && (accessRows?.length ?? 0) === 0) return json({ erro: "sem acesso a esta loja" }, 403);
 
     const { data: cfg } = await service.from("store_vr_config")
-      .select("api_url, api_key").eq("store_id", store_id).single();
+      .select("api_url, api_key, sistema").eq("store_id", store_id).single();
     // Loja sem VR: responde 200 vazio para nao quebrar as telas
     if (!cfg) return json({ ok: true, relatorio, dados: [], aviso: "loja sem conexao VR cadastrada" });
+
+    // Loja no WebSac: delega para a websac-proxy (mesmo formato de retorno)
+    if ((cfg.sistema ?? "VR") === "WEBSAC") {
+      const resp = await fetch(`${supabaseUrl}/functions/v1/websac-proxy`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${serviceKey}`,
+          apikey: serviceKey,
+        },
+        body: JSON.stringify({ store_id, relatorio, params }),
+        signal: AbortSignal.timeout(120000),
+      });
+      const body = await resp.json().catch(() => null);
+      if (!resp.ok || (body && (body as any).erro)) {
+        return json({ erro: `WebSac: ${(body as any)?.erro ?? resp.status}` }, 502);
+      }
+      return json({ ok: true, relatorio, dados: Array.isArray(body) ? body : [] });
+    }
+
 
     const qs = new URLSearchParams();
     for (const [k, v] of Object.entries(params ?? {})) {
