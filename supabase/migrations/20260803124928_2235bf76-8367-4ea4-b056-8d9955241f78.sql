@@ -1,0 +1,1 @@
+UPDATE public.store_vr_config SET api_key = 'Consultor:123' WHERE sistema = 'WEBSAC';
