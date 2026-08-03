@@ -238,35 +238,42 @@ const PIC = () => {
       };
 
       const calcMargemKpi = (): KpiData => {
+        // Realizado = lucro / vendas (nao depende de existir meta cadastrada)
         let metaMensalSum = 0, metaMensalCount = 0;
-        let metaAcumSum = 0, realAcumSum = 0, count = 0;
-        let runMeta = 0, runReal = 0, runCount = 0;
+        let metaAcumSum = 0, metaAcumCount = 0;
+        let vendasAcum = 0, lucroAcum = 0;
+        let runVendas = 0, runLucro = 0, runMeta = 0, runMetaCount = 0;
         const daily: KpiData["daily"] = [];
         for (const r of rows) {
           if (r.meta_margem_pct > 0) {
             metaMensalSum += r.meta_margem_pct;
             metaMensalCount++;
+            runMeta += r.meta_margem_pct;
+            runMetaCount++;
             if (r.day <= cutoffDay) {
               metaAcumSum += r.meta_margem_pct;
-              realAcumSum += r.realizado_margem_pct;
-              count++;
+              metaAcumCount++;
             }
-            runMeta += r.meta_margem_pct;
-            runReal += r.realizado_margem_pct;
-            runCount++;
           }
-          const avgMetaRun = runCount > 0 ? runMeta / runCount : 0;
-          const avgRealRun = runCount > 0 ? runReal / runCount : 0;
-          const pct = avgMetaRun > 0 ? (avgRealRun / avgMetaRun) * 100 : 0;
+          if (r.day <= cutoffDay) {
+            vendasAcum += r.realizado_vendas;
+            lucroAcum += r.realizado_lucro;
+          }
+          runVendas += r.realizado_vendas;
+          runLucro += r.realizado_lucro;
+          const avgMetaRun = runMetaCount > 0 ? runMeta / runMetaCount : 0;
+          const margemRun = runVendas > 0 ? (runLucro / runVendas) * 100 : 0;
+          const pct = avgMetaRun > 0 ? (margemRun / avgMetaRun) * 100 : 0;
           daily.push({ day: r.day, pct, realizado: r.realizado_margem_pct, meta: r.meta_margem_pct, hasMeta: r.meta_margem_pct > 0 });
         }
         const metaMensal = metaMensalCount > 0 ? metaMensalSum / metaMensalCount : 0;
-        const metaAcumulada = count > 0 ? metaAcumSum / count : 0;
-        const realizado = count > 0 ? realAcumSum / count : 0;
+        const metaAcumulada = metaAcumCount > 0 ? metaAcumSum / metaAcumCount : 0;
+        const realizado = vendasAcum > 0 ? (lucroAcum / vendasAcum) * 100 : 0;
         const pctTotal = metaMensal > 0 ? (realizado / metaMensal) * 100 : 0;
         const pctAcumulado = metaAcumulada > 0 ? (realizado / metaAcumulada) * 100 : 0;
         return { pctTotal, pctAcumulado, realizado, metaMensal, metaAcumulada, hasMeta: metaMensal > 0, daily };
       };
+
 
       result[dept].faturamento = calcKpi("meta_vendas", "realizado_vendas");
       result[dept].margem = calcMargemKpi();
