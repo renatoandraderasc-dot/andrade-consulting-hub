@@ -333,7 +333,11 @@ const Dashboard = () => {
     };
   }, [dailyData, storeMetrics]);
 
+  // Lojas Nascimento: exibir apenas o bloco "Vendas da Loja"
+  const soLoja = /nascimento/i.test(storeName);
+
   if (authLoading) {
+
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p className="text-muted-foreground font-body">Carregando...</p>
@@ -377,7 +381,7 @@ const Dashboard = () => {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              {departments.length > 0 && (
+              {!soLoja && departments.length > 0 && (
                 <select
                   value={selectedDept}
                   onChange={(e) => setSelectedDept(e.target.value)}
@@ -400,7 +404,7 @@ const Dashboard = () => {
         {offline && <VrOfflineNotice message={errorMsg} className="mb-6" />}
 
         {/* KPI Cards */}
-        {!offline && <DashboardKPIs {...kpiData} />}
+        {!soLoja && !offline && <DashboardKPIs {...kpiData} />}
 
         {/* Vendas da Loja (department = LOJA) */}
         {storeId && (
@@ -412,27 +416,30 @@ const Dashboard = () => {
           />
         )}
 
+        {!soLoja && (
+          <>
+            <CouponDivider label={`Faturamento x margem por dia${selectedDept ? ` — ${selectedDept}` : ""}`} />
+            {offline ? <VrOfflineNotice message={errorMsg} /> : <DailyMetricsTable data={dailyData} />}
 
-        <CouponDivider label={`Faturamento x margem por dia${selectedDept ? ` — ${selectedDept}` : ""}`} />
-        {offline ? <VrOfflineNotice message={errorMsg} /> : <DailyMetricsTable data={dailyData} />}
+            {/* Product Comparison */}
+            <ProductComparison
+              data={productData}
+              title={`Comparativo de produtos — ${MONTHS[selectedMonth]} ${selectedYear}`}
+            />
 
-
-        {/* Product Comparison */}
-        <ProductComparison
-          data={productData}
-          title={`Comparativo de produtos — ${MONTHS[selectedMonth]} ${selectedYear}`}
-        />
-
-        {/* Category Chart */}
-        <div className="mt-6">
-          <CategoryChart
-            data={categoryData}
-            title="Vendas por seção (comparado com mês anterior e ano anterior)"
-          />
-        </div>
+            {/* Category Chart */}
+            <div className="mt-6">
+              <CategoryChart
+                data={categoryData}
+                title="Vendas por seção (comparado com mês anterior e ano anterior)"
+              />
+            </div>
+          </>
+        )}
       </div>
     </ClientLayout>
   );
 };
+
 
 export default Dashboard;
