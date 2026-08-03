@@ -92,6 +92,18 @@ Deno.serve(async (req) => {
     const ua = "Mozilla/5.0 (compatible; AndradeHub/1.0)";
     let cookie = "";
     if (usuario && senha) {
+      // 1) abre a tela de login para receber o PHPSESSID
+      const pre = await fetch(`${base}/v3/login`, {
+        headers: { "User-Agent": ua },
+        redirect: "follow",
+        signal: AbortSignal.timeout(60000),
+      });
+      const preCookie = pre.headers.get("set-cookie") ?? "";
+      cookie = preCookie.split(",").map((c) => c.split(";")[0].trim())
+        .filter((c) => c.includes("=")).join("; ");
+      await pre.text();
+
+      // 2) autentica reutilizando a mesma sessao
       const form = new URLSearchParams({ login: usuario, senha });
       const loginResp = await fetch(`${base}/v3/ajax/view/login/entrar.php`, {
         method: "POST",
@@ -99,17 +111,20 @@ Deno.serve(async (req) => {
           "X-Requested-With": "XMLHttpRequest",
           "Content-Type": "application/x-www-form-urlencoded",
           "User-Agent": ua,
+          ...(cookie ? { Cookie: cookie } : {}),
         },
         body: form.toString(),
         signal: AbortSignal.timeout(60000),
       });
-      const setCookie = loginResp.headers.get("set-cookie") ?? "";
-      cookie = setCookie.split(",").map((c) => c.split(";")[0].trim())
+      const novoCookie = (loginResp.headers.get("set-cookie") ?? "")
+        .split(",").map((c) => c.split(";")[0].trim())
         .filter((c) => c.includes("=")).join("; ");
+      if (novoCookie) cookie = novoCookie;
       const loginTxt = (await loginResp.text()).slice(0, 300);
-      if (!cookie || /não encontrado|nao encontrado|"status":"2"/i.test(loginTxt)) {
+      if (!/"status"\s*:\s*"?0/.test(loginTxt)) {
         return json({ erro: `falha no login WebSac: ${loginTxt}` }, 401);
       }
+      if (!cookie) return json({ erro: "WebSac nao devolveu sessao" }, 401);
     }
 
     const url = `${base}/ajax/pgadmin_executar.php?query=${encodeURIComponent(consulta)}`;
