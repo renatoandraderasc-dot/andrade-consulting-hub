@@ -80,21 +80,50 @@ Deno.serve(async (req) => {
     }
 
     const base = cfg.api_url.replace(/\/+$/, "");
-    const url = `${base}/ajax/pgadmin_executar.php?query=${encodeURIComponent(consulta)}`;
 
-    // credenciais opcionais em api_key no formato "usuario:senha"
+    // ---- login para obter PHPSESSID ------------------------------
+    let usuario = Deno.env.get("WEBSAC_USERNAME") ?? "";
+    let senha = Deno.env.get("WEBSAC_PASSWORD") ?? "";
+    if (cfg.api_key && cfg.api_key.includes(":")) {
+      const [u, ...rest] = cfg.api_key.split(":");
+      usuario = u; senha = rest.join(":");
+    }
+
+    const ua = "Mozilla/5.0 (compatible; AndradeHub/1.0)";
+    let cookie = "";
+    if (usuario && senha) {
+      const form = new URLSearchParams({ login: usuario, senha });
+      const loginResp = await fetch(`${base}/v3/ajax/view/login/entrar.php`, {
+        method: "POST",
+        headers: {
+          "X-Requested-With": "XMLHttpRequest",
+          "Content-Type": "application/x-www-form-urlencoded",
+          "User-Agent": ua,
+        },
+        body: form.toString(),
+        signal: AbortSignal.timeout(60000),
+      });
+      const setCookie = loginResp.headers.get("set-cookie") ?? "";
+      cookie = setCookie.split(",").map((c) => c.split(";")[0].trim())
+        .filter((c) => c.includes("=")).join("; ");
+      const loginTxt = (await loginResp.text()).slice(0, 300);
+      if (!cookie || /não encontrado|nao encontrado|"status":"2"/i.test(loginTxt)) {
+        return json({ erro: `falha no login WebSac: ${loginTxt}` }, 401);
+      }
+    }
+
+    const url = `${base}/ajax/pgadmin_executar.php?query=${encodeURIComponent(consulta)}`;
     const headers: Record<string, string> = {
       "X-Requested-With": "XMLHttpRequest",
-      "User-Agent": "Mozilla/5.0 (compatible; AndradeHub/1.0)",
+      "User-Agent": ua,
     };
-    if (cfg.api_key && cfg.api_key.includes(":")) {
-      headers["Authorization"] = "Basic " + btoa(cfg.api_key);
-    }
+    if (cookie) headers["Cookie"] = cookie;
 
     const resp = await fetch(url, { headers, signal: AbortSignal.timeout(120000) });
     if (!resp.ok) {
       return json({ erro: `WebSac respondeu ${resp.status}` }, 502);
     }
+
     const html = await resp.text();
 
     // o console devolve o erro do Postgres em texto, sem tabela
