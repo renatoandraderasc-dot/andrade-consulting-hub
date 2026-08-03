@@ -943,6 +943,7 @@ export type Database = {
         Row: {
           api_key: string
           api_url: string
+          codigo_loja: number | null
           created_at: string
           enabled: boolean
           health_error: string | null
@@ -951,11 +952,13 @@ export type Database = {
           last_sync_at: string | null
           latency_ms: number | null
           online: boolean | null
+          sistema: string
           store_id: string
         }
         Insert: {
           api_key: string
           api_url: string
+          codigo_loja?: number | null
           created_at?: string
           enabled?: boolean
           health_error?: string | null
@@ -964,11 +967,13 @@ export type Database = {
           last_sync_at?: string | null
           latency_ms?: number | null
           online?: boolean | null
+          sistema?: string
           store_id: string
         }
         Update: {
           api_key?: string
           api_url?: string
+          codigo_loja?: number | null
           created_at?: string
           enabled?: boolean
           health_error?: string | null
@@ -977,6 +982,7 @@ export type Database = {
           last_sync_at?: string | null
           latency_ms?: number | null
           online?: boolean | null
+          sistema?: string
           store_id?: string
         }
         Relationships: [
@@ -1254,6 +1260,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      websac_relatorios: {
+        Row: {
+          atualizado_em: string
+          descricao: string | null
+          nome: string
+          sql: string
+        }
+        Insert: {
+          atualizado_em?: string
+          descricao?: string | null
+          nome: string
+          sql: string
+        }
+        Update: {
+          atualizado_em?: string
+          descricao?: string | null
+          nome?: string
+          sql?: string
+        }
+        Relationships: []
       }
     }
     Views: {
