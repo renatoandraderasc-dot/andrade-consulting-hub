@@ -333,7 +333,11 @@ const Dashboard = () => {
     };
   }, [dailyData, storeMetrics]);
 
+  // Lojas Nascimento: exibir apenas o bloco "Vendas da Loja"
+  const soLoja = /nascimento/i.test(storeName);
+
   if (authLoading) {
+
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p className="text-muted-foreground font-body">Carregando...</p>
