@@ -82,10 +82,20 @@ Deno.serve(async (req) => {
       signal: AbortSignal.timeout(120000),
     });
     const texto = await resp.text();
-    if (!resp.ok) return json({ erro: `API VR ${resp.status}: ${texto.slice(0, 300)}` }, 502);
+    // Tunel ngrok fora do ar / pagina HTML de erro => tratar como "sem conexao VR"
+    const pareceHtml = /^\s*<(!doctype|html)/i.test(texto) || /ngrok/i.test(texto.slice(0, 500));
+    if (!resp.ok) {
+      if (pareceHtml) return json({ erro: `sem conexao VR (servidor respondeu ${resp.status})` }, 200);
+      return json({ erro: `API VR ${resp.status}: ${texto.slice(0, 300)}` }, 502);
+    }
 
     let dados: unknown;
-    try { dados = JSON.parse(texto); } catch { return json({ erro: "resposta VR nao e JSON", corpo: texto.slice(0, 300) }, 502); }
+    try {
+      dados = JSON.parse(texto);
+    } catch {
+      if (pareceHtml) return json({ erro: "sem conexao VR (resposta invalida do tunel)" }, 200);
+      return json({ erro: "resposta VR nao e JSON", corpo: texto.slice(0, 300) }, 502);
+    }
 
     return json({ ok: true, relatorio, dados });
   } catch (e) {
