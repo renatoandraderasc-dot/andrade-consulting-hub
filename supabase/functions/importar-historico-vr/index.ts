@@ -58,31 +58,27 @@ Deno.serve(async (req) => {
     const mapa = new Map<string, string>();
     for (const m of mapas ?? []) mapa.set(norm(m.secao_vr), m.department);
 
-    // --- busca as vendas por secao no periodo -----------------
-    let linhas: Record<string, string>[] = [];
-
-    if ((cfg.sistema ?? "VR") === "WEBSAC") {
-      const resp = await fetch(`${supabaseUrl}/functions/v1/websac-proxy`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${serviceKey}`,
-          apikey: serviceKey,
-        },
-        body: JSON.stringify({
-          store_id,
-          relatorio: "vendas_secao_periodo",
-          params: { inicio, fim },
-        }),
-        signal: AbortSignal.timeout(120000),
-      });
-      const body = await resp.json().catch(() => null);
-      if (!resp.ok || (body && (body as { erro?: string }).erro)) {
-        return json({ erro: `WebSac: ${(body as { erro?: string })?.erro ?? resp.status}` }, 502);
+    // --- busca um relatorio no sistema da loja (VR ou WebSac) ---
+    async function buscar(relatorio: string, obrigatorio: boolean): Promise<Record<string, string>[]> {
+      if ((cfg.sistema ?? "VR") === "WEBSAC") {
+        const resp = await fetch(`${supabaseUrl}/functions/v1/websac-proxy`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${serviceKey}`,
+            apikey: serviceKey,
+          },
+          body: JSON.stringify({ store_id, relatorio, params: { inicio, fim } }),
+          signal: AbortSignal.timeout(120000),
+        });
+        const body = await resp.json().catch(() => null);
+        if (!resp.ok || (body && (body as { erro?: string }).erro)) {
+          if (!obrigatorio) return [];
+          throw new Error(`WebSac: ${(body as { erro?: string })?.erro ?? resp.status}`);
+        }
+        return Array.isArray(body) ? body : (body?.dados ?? []);
       }
-      linhas = Array.isArray(body) ? body : (body?.dados ?? []);
-    } else {
-      const url = `${cfg.api_url.replace(/\/+$/, "")}/relatorios/vendas_secao_periodo` +
+      const url = `${cfg.api_url.replace(/\/+$/, "")}/relatorios/${relatorio}` +
         `?inicio=${inicio}&fim=${fim}&chave=${encodeURIComponent(cfg.api_key)}`;
       const resp = await fetch(url, {
         headers: { "ngrok-skip-browser-warning": "true" },
@@ -91,10 +87,26 @@ Deno.serve(async (req) => {
       const texto = await resp.text();
       const pareceHtml = /^\s*<(!doctype|html)/i.test(texto) || /ngrok/i.test(texto.slice(0, 500));
       if (!resp.ok || pareceHtml) {
-        return json({ erro: `sem conexao VR (servidor respondeu ${resp.status})` }, 502);
+        if (!obrigatorio) return [];
+        throw new Error(`sem conexao VR (servidor respondeu ${resp.status})`);
       }
-      linhas = JSON.parse(texto);
+      try {
+        return JSON.parse(texto);
+      } catch {
+        if (!obrigatorio) return [];
+        throw new Error("resposta invalida do servidor");
+      }
     }
+
+    let linhas: Record<string, string>[] = [];
+    let mixLinhas: Record<string, string>[] = [];
+    try {
+      linhas = await buscar("vendas_secao_periodo", true);
+    } catch (e) {
+      return json({ erro: e instanceof Error ? e.message : String(e) }, 502);
+    }
+    // Positivacao de mix: produtos distintos vendidos pela 1a vez no dia
+    mixLinhas = await buscar("mix_positivacao_periodo", false).catch(() => []);
 
     // --- agrega por (data, departamento) + total da LOJA -------
     const acc = new Map<string, { date: string; department: string; vendas: number; lucro: number; volume: number; mix: number }>();
@@ -105,6 +117,8 @@ Deno.serve(async (req) => {
       acc.set(k, cur);
     };
 
+    const temPositivacao = mixLinhas.length > 0;
+
     for (const l of linhas) {
       const secao = String(l.secao ?? "");
       const dep = mapa.get(norm(secao)) ??
@@ -113,10 +127,20 @@ Deno.serve(async (req) => {
       const vendas = parseFloat(String(l.total_vendido)) || 0;
       const lucro = parseFloat(String(l.lucro)) || 0;
       const volume = parseFloat(String(l.volume)) || 0;
-      const mix = parseFloat(String(l.mix)) || 0;
+      const mix = temPositivacao ? 0 : (parseFloat(String(l.mix)) || 0);
       somar(date, dep, vendas, lucro, volume, mix);
       somar(date, "LOJA", vendas, lucro, volume, mix);
     }
+
+    for (const l of mixLinhas) {
+      const secao = String(l.secao ?? l.categoria ?? "");
+      const dep = mapa.get(norm(secao)) ?? inferirDepartamento(`${secao} ${l.categoria ?? ""}`);
+      const date = String(l.data).slice(0, 10);
+      const mix = parseFloat(String(l.mix)) || 0;
+      somar(date, dep, 0, 0, 0, mix);
+      somar(date, "LOJA", 0, 0, 0, mix);
+    }
+
 
     const registros = [...acc.values()].map((r) => ({
       store_id,

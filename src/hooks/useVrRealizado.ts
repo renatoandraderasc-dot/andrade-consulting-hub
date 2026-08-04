@@ -39,6 +39,8 @@ export interface VrLinha {
 
 interface RawResult {
   linhas: VrLinha[];
+  // Positivacao: produtos distintos vendidos pela 1a vez no dia (mix continuo)
+  mixLinhas: VrLinha[];
   mapa: Record<string, string>;
 }
 
@@ -69,11 +71,18 @@ function inferirDepartamento(secao: string, categoria: string): string | null {
 }
 
 async function loadRaw(storeId: string, inicio: string, fim: string): Promise<RawResult> {
-  const [{ data: mapas }, { data: proxy, error }] = await Promise.all([
+  const [{ data: mapas }, { data: proxy, error }, posv] = await Promise.all([
     supabase.from("vr_secao_departamento").select("secao_vr, department").eq("store_id", storeId),
     supabase.functions.invoke("vr-proxy", {
       body: { store_id: storeId, relatorio: "vendas_secao_periodo", params: { inicio, fim } },
     }),
+    // Positivacao de mix: produtos distintos vendidos pela primeira vez no dia.
+    // Somados no mes dao a quantidade de produtos diferentes vendidos (mix continuo).
+    supabase.functions
+      .invoke("vr-proxy", {
+        body: { store_id: storeId, relatorio: "mix_positivacao_periodo", params: { inicio, fim } },
+      })
+      .catch(() => ({ data: null, error: null })),
   ]);
 
   const mapa: Record<string, string> = {};
@@ -88,12 +97,12 @@ async function loadRaw(storeId: string, inicio: string, fim: string): Promise<Ra
       corpo = null;
     }
     const msg = String(corpo?.erro ?? "");
-    if (/sem conexao vr/i.test(msg)) return { linhas: [], mapa };
+    if (/sem conexao vr/i.test(msg)) return { linhas: [], mixLinhas: [], mapa };
     throw new Error(msg || error.message);
   }
   if (!proxy || (proxy as any).erro) {
     const msg = String((proxy as any)?.erro ?? "");
-    if (/sem conexao vr/i.test(msg)) return { linhas: [], mapa };
+    if (/sem conexao vr/i.test(msg)) return { linhas: [], mixLinhas: [], mapa };
     throw new Error(msg || "Sem resposta do VR");
   }
 
@@ -114,7 +123,25 @@ async function loadRaw(storeId: string, inicio: string, fim: string): Promise<Ra
       mix: parseFloat(String(l.mix)) || 0,
     });
   }
-  return { linhas, mapa };
+
+  const mixBrutas: any[] = Array.isArray((posv as any)?.data?.dados) ? (posv as any).data.dados : [];
+  const mixLinhas: VrLinha[] = [];
+  for (const l of mixBrutas) {
+    const date = String(l.data ?? "").slice(0, 10);
+    if (!date) continue;
+    mixLinhas.push({
+      date,
+      secao: String(l.secao ?? l.categoria ?? ""),
+      categoria: String(l.categoria ?? "").trim(),
+      grupo: "",
+      vendas: 0,
+      lucro: 0,
+      volume: 0,
+      mix: parseFloat(String(l.mix)) || 0,
+    });
+  }
+
+  return { linhas, mixLinhas, mapa };
 }
 
 function agregar(raw: RawResult, categoria?: string | null): VrRealizado {
@@ -129,12 +156,26 @@ function agregar(raw: RawResult, categoria?: string | null): VrRealizado {
     acc.set(k, cur);
   };
 
+  // Quando ha positivacao real, o mix das linhas de venda (distintos por dia)
+  // e ignorado para nao contar o mesmo produto varias vezes no mes.
+  const temPositivacao = raw.mixLinhas.length > 0;
+
   for (const l of raw.linhas) {
     if (categoria && l.categoria !== categoria) continue;
     const dep = raw.mapa[norm(l.secao)] ?? inferirDepartamento(l.secao, l.categoria);
-    add(LOJA, l.date, l.vendas, l.lucro, l.volume, l.mix);
-    if (dep && dep !== LOJA) add(dep, l.date, l.vendas, l.lucro, l.volume, l.mix);
+    const mix = temPositivacao ? 0 : l.mix;
+    add(LOJA, l.date, l.vendas, l.lucro, l.volume, mix);
+    if (dep && dep !== LOJA) add(dep, l.date, l.vendas, l.lucro, l.volume, mix);
   }
+
+  for (const l of raw.mixLinhas) {
+    if (categoria && l.categoria !== categoria) continue;
+    const dep = raw.mapa[norm(l.secao)] ?? inferirDepartamento(l.secao, l.categoria);
+    add(LOJA, l.date, 0, 0, 0, l.mix);
+    if (dep && dep !== LOJA) add(dep, l.date, 0, 0, 0, l.mix);
+  }
+
+
 
   const out: VrRealizado = {};
   for (const [k, v] of acc) {

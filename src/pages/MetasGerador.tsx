@@ -315,6 +315,12 @@ const MetasGerador = () => {
     };
   }, [metasRows]);
 
+  // Mix é contínuo: acumulado de produtos diferentes positivados no mês
+  const mixAcum = useMemo(() => {
+    let soma = 0;
+    return metasRows.map((r) => (soma += Number(r.meta_mix) || 0));
+  }, [metasRows]);
+
 
   if (authLoading) return (
     <div className="min-h-screen bg-background flex items-center justify-center">
@@ -336,7 +342,7 @@ const MetasGerador = () => {
               Gerador de <span className="text-gradient-gold">Metas</span>
             </h1>
           </div>
-          <p className="text-muted-foreground font-body">Geração automática de metas com base no histórico VR</p>
+          <p className="text-muted-foreground font-body">Geração automática de metas com base no histórico do sistema da loja</p>
         </motion.div>
 
         {/* Filtros */}
@@ -388,7 +394,7 @@ const MetasGerador = () => {
                   </select>
                 </div>
                 <button onClick={handleImportarHistorico} disabled={loading} className={btnGhost}>
-                  <Download className="w-4 h-4" /> Importar histórico do VR
+                  <Download className="w-4 h-4" /> Importar histórico
                 </button>
                 <button onClick={handleGerarMetas} disabled={loading} className={btnPrimary}>
                   <Wand2 className="w-4 h-4" /> Gerar metas
@@ -424,14 +430,18 @@ const MetasGerador = () => {
                     <th className="text-right py-2 px-2 font-body text-muted-foreground">Margem %</th>
                     <th className="text-right py-2 px-2 font-body text-muted-foreground">Meta Lucro</th>
                     <th className="text-right py-2 px-2 font-body text-muted-foreground">Meta Volume</th>
-                    <th className="text-right py-2 pl-2 font-body text-muted-foreground">Meta Mix</th>
+                    <th className="text-right py-2 pl-2 font-body text-muted-foreground">
+                      Mix novos/dia
+                      <span className="block text-[10px] normal-case">acumulado = positivação</span>
+                    </th>
+
                   </tr>
                 </thead>
                 <tbody>
                   {metasRows.length === 0 && (
                     <tr><td colSpan={7} className="py-6 text-center text-muted-foreground font-body">Nenhuma meta gerada ainda.</td></tr>
                   )}
-                  {metasRows.map((r) => {
+                  {metasRows.map((r, idx) => {
                     const isDirty = dirtyDates.has(r.date);
                     const semOp = isSemOperacao(r);
                     const inputCls = `w-32 bg-background border rounded-lg px-2 py-1.5 text-right font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 ${isDirty ? "border-amber-500" : "border-border"}`;
@@ -482,7 +492,11 @@ const MetasGerador = () => {
                             onChange={(e) => handleEditMeta(r.date, "meta_mix", e.target.value)}
                             className={inputCls + " w-24"}
                           />
+                          <span className="block text-[10px] text-muted-foreground mt-0.5">
+                            acum. {fmtNum(mixAcum[idx] || 0, 0)}
+                          </span>
                         </td>
+
                       </tr>
                     );
                   })}

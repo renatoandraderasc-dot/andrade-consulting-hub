@@ -155,16 +155,18 @@ const Compras = () => {
       for (const m of mapas ?? []) mapa.set(norm(m.secao_vr), m.department);
       const acc: Record<string, { compra: number; venda: number; cmv: number }> = {};
       for (const l of linhas) {
-        const dep = mapa.get(norm(l.secao)) ?? "OUTROS";
+        // departamento nivel 1 vindo do relatorio; mapeamento so como fallback
+        const dep = String(l.departamento ?? "").trim() || mapa.get(norm(l.secao)) || "SEM DEPARTAMENTO";
         const cur = acc[dep] || { compra: 0, venda: 0, cmv: 0 };
         cur.compra += parseFloat(String(l.total_compra)) || 0;
         cur.venda += parseFloat(String(l.total_venda)) || 0;
         cur.cmv += parseFloat(String(l.cmv)) || 0;
         acc[dep] = cur;
       }
+
       setRealizadoDep(acc);
     } catch (err: any) {
-      toast({ title: "Falha ao consultar VR", description: err.message, variant: "destructive" });
+      toast({ title: "Falha ao consultar o sistema da loja", description: err.message, variant: "destructive" });
       setRealizadoDep({});
     } finally { setLoadingPainel(false); }
   };
@@ -302,25 +304,28 @@ const Compras = () => {
   }, [painelRows]);
 
   // ============ Derived (Aba 2) ============
+  // Agrupado por departamento nivel 1
   const cvRows = useMemo(() => {
-    return cvLinhas.map((l) => {
-      const venda = parseFloat(String(l.total_venda)) || 0;
-      const cmv = parseFloat(String(l.cmv)) || 0;
-      const compra = parseFloat(String(l.total_compra)) || 0;
-      const margem = venda > 0 ? ((venda - cmv) / venda) * 100 : 0;
-      const cv = venda > 0 ? (compra / venda) * 100 : 0;
-      const ccmv = cmv > 0 ? (compra / cmv) * 100 : 0;
-      return {
-        secao: l.secao,
-        qtde_venda: parseFloat(String(l.qtde_venda ?? l.qtde_vendida ?? 0)) || 0,
-        venda, cmv, margem,
-        qtde_compra: parseFloat(String(l.qtde_compra ?? l.qtde_comprada ?? 0)) || 0,
-        compra,
-        saldo_cmv: cmv - compra,
-        cv, ccmv,
-      };
-    }).sort((a, b) => b.venda - a.venda);
+    const acc = new Map<string, { secao: string; qtde_venda: number; venda: number; cmv: number; qtde_compra: number; compra: number }>();
+    for (const l of cvLinhas) {
+      const dep = String(l.departamento ?? "").trim() || String(l.secao ?? "").split("/")[0].trim() || "SEM DEPARTAMENTO";
+      const cur = acc.get(dep) ?? { secao: dep, qtde_venda: 0, venda: 0, cmv: 0, qtde_compra: 0, compra: 0 };
+      cur.qtde_venda += parseFloat(String(l.qtde_venda ?? l.qtde_vendida ?? 0)) || 0;
+      cur.venda += parseFloat(String(l.total_venda)) || 0;
+      cur.cmv += parseFloat(String(l.cmv)) || 0;
+      cur.qtde_compra += parseFloat(String(l.qtde_compra ?? l.qtde_comprada ?? 0)) || 0;
+      cur.compra += parseFloat(String(l.total_compra)) || 0;
+      acc.set(dep, cur);
+    }
+    return [...acc.values()].map((r) => ({
+      ...r,
+      margem: r.venda > 0 ? ((r.venda - r.cmv) / r.venda) * 100 : 0,
+      saldo_cmv: r.cmv - r.compra,
+      cv: r.venda > 0 ? (r.compra / r.venda) * 100 : 0,
+      ccmv: r.cmv > 0 ? (r.compra / r.cmv) * 100 : 0,
+    })).sort((a, b) => b.venda - a.venda);
   }, [cvLinhas]);
+
 
   const cvTotais = useMemo(() => {
     return cvRows.reduce((acc, r) => ({
@@ -513,7 +518,7 @@ const Compras = () => {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-border text-muted-foreground">
-                        <th className="text-left py-2">Seção</th>
+                        <th className="text-left py-2">Departamento</th>
                         <th className="text-right py-2 px-2">Qtd venda</th>
                         <th className="text-right py-2 px-2">Venda</th>
                         <th className="text-right py-2 px-2">CMV</th>
@@ -627,7 +632,7 @@ const Compras = () => {
                     <Save className="w-4 h-4" /> Salvar
                   </button>
                   <button onClick={importarHistorico} disabled={importando || !cfg.hist_inicio} className={btnGhost}>
-                    <Download className={`w-4 h-4 ${importando ? "animate-pulse" : ""}`} /> Importar histórico do VR
+                    <Download className={`w-4 h-4 ${importando ? "animate-pulse" : ""}`} /> Importar histórico
                   </button>
                   <button onClick={gerarMetas} disabled={gerando} className={btnPrimary}>
                     <Wand2 className="w-4 h-4" /> Gerar metas de compra

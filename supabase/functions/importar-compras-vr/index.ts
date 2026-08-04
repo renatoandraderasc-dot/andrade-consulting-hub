@@ -48,34 +48,68 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
     const { data: cfg } = await supabase.from("store_vr_config")
-      .select("api_url, api_key").eq("store_id", store_id).single();
-    if (!cfg) return json({ erro: "loja sem conexao VR cadastrada" }, 400);
+      .select("api_url, api_key, sistema").eq("store_id", store_id).single();
+    if (!cfg) return json({ erro: "loja sem conexao cadastrada" }, 400);
 
     const { data: mapas } = await supabase.from("vr_secao_departamento")
       .select("secao_vr, department").eq("store_id", store_id);
     const mapa = new Map<string, string>();
     for (const m of mapas ?? []) mapa.set(norm(m.secao_vr), m.department);
 
-    const registros: Record<string, unknown>[] = [];
-    const meses = mesesDoPeriodo(inicio, fim);
-
-    for (const m of meses) {
+    // busca compras x vendas no sistema da loja (VR ou WebSac)
+    async function buscar(ini: string, fim: string): Promise<Record<string, string>[]> {
+      if ((cfg.sistema ?? "VR") === "WEBSAC") {
+        const resp = await fetch(`${supabaseUrl}/functions/v1/websac-proxy`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${serviceKey}`,
+            apikey: serviceKey,
+          },
+          body: JSON.stringify({
+            store_id, relatorio: "compras_vendas_periodo", params: { inicio: ini, fim },
+          }),
+          signal: AbortSignal.timeout(120000),
+        });
+        const body = await resp.json().catch(() => null);
+        if (!resp.ok || (body && (body as { erro?: string }).erro)) {
+          throw new Error(`WebSac: ${(body as { erro?: string })?.erro ?? resp.status}`);
+        }
+        return Array.isArray(body) ? body : ((body as { dados?: [] })?.dados ?? []);
+      }
       const url = `${cfg.api_url.replace(/\/+$/, "")}/relatorios/compras_vendas_periodo` +
-        `?inicio=${m.ini}&fim=${m.fim}&chave=${encodeURIComponent(cfg.api_key)}`;
+        `?inicio=${ini}&fim=${fim}&chave=${encodeURIComponent(cfg.api_key)}`;
       const resp = await fetch(url, {
         headers: { "ngrok-skip-browser-warning": "true" },
         signal: AbortSignal.timeout(120000),
       });
-      if (!resp.ok) {
-        const corpo = await resp.text();
-        return json({ erro: `API VR ${resp.status} em ${m.ini}: ${corpo.slice(0, 300)}` }, 502);
+      const texto = await resp.text();
+      if (!resp.ok || /^\s*<(!doctype|html)/i.test(texto)) {
+        throw new Error(`sem conexao com o servidor (${resp.status}) em ${ini}`);
       }
-      const linhas: Record<string, string>[] = await resp.json();
+      return JSON.parse(texto);
+    }
+
+    const registros: Record<string, unknown>[] = [];
+    const meses = mesesDoPeriodo(inicio, fim);
+
+    for (const m of meses) {
+      let linhas: Record<string, string>[] = [];
+      try {
+        linhas = await buscar(m.ini, m.fim);
+      } catch (e) {
+        return json({ erro: e instanceof Error ? e.message : String(e) }, 502);
+      }
 
       const acc = new Map<string, { venda: number; cmv: number; compra: number }>();
       for (const l of linhas) {
-        const dep = mapa.get(norm(l.secao)) ?? "OUTROS";
+        // departamento nivel 1 vindo do proprio relatorio; mapeamento so como fallback
+        const dep = String(l.departamento ?? "").trim() ||
+          mapa.get(norm(l.secao)) || "SEM DEPARTAMENTO";
         const cur = acc.get(dep) ?? { venda: 0, cmv: 0, compra: 0 };
         cur.venda += parseFloat(String(l.total_venda)) || 0;
         cur.cmv += parseFloat(String(l.cmv)) || 0;
@@ -92,6 +126,7 @@ Deno.serve(async (req) => {
         });
       }
     }
+
 
     let gravadas = 0;
     for (let i = 0; i < registros.length; i += 500) {
