@@ -7,6 +7,8 @@ import { useAuth } from "@/hooks/useAuth";
 import ClientLayout from "@/components/ClientLayout";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import CapilaridadeMixTab from "@/components/metas/CapilaridadeMixTab";
+
 
 interface Store { id: string; name: string; }
 
