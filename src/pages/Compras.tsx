@@ -313,82 +313,108 @@ const Compras = () => {
   }, [painelRows]);
 
   // ============ Derived (Aba 2) ============
-  // Normaliza cada linha na hierarquia Nivel 1 / Nivel 2 / Nivel 3 / Produto
+  // Uma linha por departamento + secao vinda do relatorio compras_vendas_periodo
   const cvItens = useMemo(() => {
-    return cvLinhas.map((l: any) => {
-      const partes = String(l.secao ?? "").split("/").map((s: string) => s.trim());
-      const n1 = String(l.nivel1 ?? l.departamento ?? partes[0] ?? "").trim() || "SEM DEPARTAMENTO";
-      const n2 = String(l.nivel2 ?? partes[1] ?? "").trim() || "SEM GRUPO";
-      const n3 = String(l.nivel3 ?? partes[2] ?? "").trim() || "SEM SUBGRUPO";
-      const prod = String(l.produto ?? l.descricao ?? "").trim() || "SEM PRODUTO";
-      return {
-        nivel1: n1, nivel2: n2, nivel3: n3, produto: prod,
-        qtde_venda: parseFloat(String(l.qtde_venda ?? l.qtde_vendida ?? 0)) || 0,
-        venda: parseFloat(String(l.total_venda ?? l.valor_venda ?? l.venda ?? 0)) || 0,
-        cmv: parseFloat(String(l.cmv ?? l.total_cmv ?? l.custo ?? 0)) || 0,
-        qtde_compra: parseFloat(String(l.qtde_compra ?? l.qtde_comprada ?? 0)) || 0,
-        compra: parseFloat(String(l.total_compra ?? l.valor_compra ?? l.compra ?? 0)) || 0,
-      };
-    });
+    return cvLinhas.map((l: any) => ({
+      departamento: String(l.departamento ?? l.nivel1 ?? "").trim() || "SEM DEPARTAMENTO",
+      secao: String(l.secao ?? l.nivel2 ?? "").trim() || "SEM SEÇÃO",
+      qtde_venda: parseFloat(String(l.qtde_venda ?? 0)) || 0,
+      venda: parseFloat(String(l.total_venda ?? 0)) || 0,
+      cmv: parseFloat(String(l.cmv ?? 0)) || 0,
+      qtde_compra: parseFloat(String(l.qtde_compra ?? 0)) || 0,
+      compra: parseFloat(String(l.total_compra ?? 0)) || 0,
+    }));
   }, [cvLinhas]);
 
   const cvOpcoes = useMemo(() => {
-    const n1 = new Set<string>(), n2 = new Set<string>(), n3 = new Set<string>();
-    for (const i of cvItens) {
-      n1.add(i.nivel1);
-      if (fN1 === "__all__" || i.nivel1 === fN1) n2.add(i.nivel2);
-      if ((fN1 === "__all__" || i.nivel1 === fN1) && (fN2 === "__all__" || i.nivel2 === fN2)) n3.add(i.nivel3);
-    }
-    const ord = (s: Set<string>) => [...s].sort((a, b) => a.localeCompare(b, "pt-BR"));
-    return { n1: ord(n1), n2: ord(n2), n3: ord(n3) };
-  }, [cvItens, fN1, fN2]);
+    const n1 = new Set<string>(cvItens.map((i) => i.departamento));
+    return { n1: [...n1].sort((a, b) => a.localeCompare(b, "pt-BR")) };
+  }, [cvItens]);
 
-  const cvRows = useMemo(() => {
-    const filtrados = cvItens.filter((i) =>
-      (fN1 === "__all__" || i.nivel1 === fN1) &&
-      (fN2 === "__all__" || i.nivel2 === fN2) &&
-      (fN3 === "__all__" || i.nivel3 === fN3));
+  // percentuais SEMPRE recalculados sobre os totais somados
+  const comPct = (r: { venda: number; cmv: number; compra: number }, vendaTotal: number) => ({
+    margem: r.venda > 0 ? ((r.venda - r.cmv) / r.venda) * 100 : 0,
+    markup: r.cmv > 0 ? ((r.venda - r.cmv) / r.cmv) * 100 : 0,
+    saldo_venda: r.venda - r.compra,
+    saldo_cmv: r.cmv - r.compra,
+    cv: r.venda > 0 ? (r.compra / r.venda) * 100 : 0,
+    ccmv: r.cmv > 0 ? (r.compra / r.cmv) * 100 : 0,
+    part: vendaTotal > 0 ? (r.venda / vendaTotal) * 100 : 0,
+  });
 
-    const acc = new Map<string, { secao: string; qtde_venda: number; venda: number; cmv: number; qtde_compra: number; compra: number }>();
-    for (const i of filtrados) {
-      const chave = cvNivel === "nivel1"
-        ? i.nivel1
-        : cvNivel === "nivel2"
-          ? `${i.nivel1}|${i.nivel2}`
-          : cvNivel === "nivel3"
-            ? `${i.nivel1}|${i.nivel2}|${i.nivel3}`
-            : `${i.nivel1}|${i.nivel2}|${i.nivel3}|${i.produto}`;
-      const rotulo = i[cvNivel];
-      const cur = acc.get(chave) ?? { secao: rotulo, qtde_venda: 0, venda: 0, cmv: 0, qtde_compra: 0, compra: 0 };
-      cur.qtde_venda += i.qtde_venda;
-      cur.venda += i.venda;
-      cur.cmv += i.cmv;
-      cur.qtde_compra += i.qtde_compra;
-      cur.compra += i.compra;
-      acc.set(chave, cur);
-    }
-    return [...acc.values()].map((r) => ({
-      ...r,
-      // O relatório Compra vs. Venda do WebSac chama de "Margem" o
-      // lucro dividido pelo CMV (markup), e não o lucro dividido pela venda.
-      margem: r.cmv > 0 ? ((r.venda - r.cmv) / r.cmv) * 100 : 0,
-      saldo_venda: r.venda - r.compra,
-      saldo_cmv: r.cmv - r.compra,
-      cv: r.venda > 0 ? (r.compra / r.venda) * 100 : 0,
-      ccmv: r.cmv > 0 ? (r.compra / r.cmv) * 100 : 0,
-    })).sort((a, b) => b.venda - a.venda);
-  }, [cvItens, cvNivel, fN1, fN2, fN3]);
-
+  const cvFiltrados = useMemo(
+    () => cvItens.filter((i) => fN1 === "__all__" || i.departamento === fN1),
+    [cvItens, fN1],
+  );
 
   const cvTotais = useMemo(() => {
-    return cvRows.reduce((acc, r) => ({
+    return cvFiltrados.reduce((acc, r) => ({
       qtde_venda: acc.qtde_venda + r.qtde_venda,
       venda: acc.venda + r.venda,
       cmv: acc.cmv + r.cmv,
       qtde_compra: acc.qtde_compra + r.qtde_compra,
       compra: acc.compra + r.compra,
     }), { qtde_venda: 0, venda: 0, cmv: 0, qtde_compra: 0, compra: 0 });
-  }, [cvRows]);
+  }, [cvFiltrados]);
+
+  const cvGrupos = useMemo(() => {
+    const acc = new Map<string, { departamento: string; qtde_venda: number; venda: number; cmv: number; qtde_compra: number; compra: number; secoes: typeof cvFiltrados }>();
+    for (const i of cvFiltrados) {
+      const cur = acc.get(i.departamento) ?? {
+        departamento: i.departamento, qtde_venda: 0, venda: 0, cmv: 0, qtde_compra: 0, compra: 0, secoes: [] as typeof cvFiltrados,
+      };
+      cur.qtde_venda += i.qtde_venda;
+      cur.venda += i.venda;
+      cur.cmv += i.cmv;
+      cur.qtde_compra += i.qtde_compra;
+      cur.compra += i.compra;
+      cur.secoes.push(i);
+      acc.set(i.departamento, cur);
+    }
+    return [...acc.values()]
+      .map((g) => ({
+        ...g,
+        ...comPct(g, cvTotais.venda),
+        secoes: [...g.secoes]
+          .map((s) => ({ ...s, ...comPct(s, cvTotais.venda) }))
+          .sort((a, b) => b.venda - a.venda),
+      }))
+      .sort((a, b) => b.venda - a.venda);
+  }, [cvFiltrados, cvTotais.venda]);
+
+  // soma dos (CMV - compra) negativos = excesso de compra no periodo
+  const cvExcessoCompra = useMemo(
+    () => cvFiltrados.reduce((s, r) => s + Math.min(r.cmv - r.compra, 0), 0),
+    [cvFiltrados],
+  );
+
+  const exportarComprasVendas = () => {
+    const linhas: any[] = [];
+    for (const g of cvGrupos) {
+      linhas.push({
+        Nível: "Departamento", Departamento: g.departamento, Seção: "",
+        "Qtd venda": g.qtde_venda, Venda: g.venda, CMV: g.cmv,
+        "Margem %": g.margem, "Markup %": g.markup,
+        "Qtd compra": g.qtde_compra, Compra: g.compra,
+        "Venda - Compra": g.saldo_venda, "CMV - Compra": g.saldo_cmv,
+        "Compra/Venda %": g.cv, "Compra/CMV %": g.ccmv, "Participação %": g.part,
+      });
+      for (const s of g.secoes) {
+        linhas.push({
+          Nível: "Seção", Departamento: g.departamento, Seção: s.secao,
+          "Qtd venda": s.qtde_venda, Venda: s.venda, CMV: s.cmv,
+          "Margem %": s.margem, "Markup %": s.markup,
+          "Qtd compra": s.qtde_compra, Compra: s.compra,
+          "Venda - Compra": s.saldo_venda, "CMV - Compra": s.saldo_cmv,
+          "Compra/Venda %": s.cv, "Compra/CMV %": s.ccmv, "Participação %": s.part,
+        });
+      }
+    }
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(linhas), "Compras x Vendas");
+    XLSX.writeFile(wb, `compras-vendas-${cvInicio}-a-${cvFim}.xlsx`);
+  };
+
 
   // ============ Derived (Aba 4) ============
   const historicoFiltrado = useMemo(() => {
