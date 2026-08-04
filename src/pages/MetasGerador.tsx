@@ -492,7 +492,11 @@ const MetasGerador = () => {
                             onChange={(e) => handleEditMeta(r.date, "meta_mix", e.target.value)}
                             className={inputCls + " w-24"}
                           />
+                          <span className="block text-[10px] text-muted-foreground mt-0.5">
+                            acum. {fmtNum(mixAcum[idx] || 0, 0)}
+                          </span>
                         </td>
+
                       </tr>
                     );
                   })}
