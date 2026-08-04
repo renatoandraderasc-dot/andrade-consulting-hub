@@ -166,7 +166,7 @@ const Compras = () => {
 
       setRealizadoDep(acc);
     } catch (err: any) {
-      toast({ title: "Falha ao consultar VR", description: err.message, variant: "destructive" });
+      toast({ title: "Falha ao consultar o sistema da loja", description: err.message, variant: "destructive" });
       setRealizadoDep({});
     } finally { setLoadingPainel(false); }
   };
@@ -518,7 +518,7 @@ const Compras = () => {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-border text-muted-foreground">
-                        <th className="text-left py-2">Seção</th>
+                        <th className="text-left py-2">Departamento</th>
                         <th className="text-right py-2 px-2">Qtd venda</th>
                         <th className="text-right py-2 px-2">Venda</th>
                         <th className="text-right py-2 px-2">CMV</th>
@@ -632,7 +632,7 @@ const Compras = () => {
                     <Save className="w-4 h-4" /> Salvar
                   </button>
                   <button onClick={importarHistorico} disabled={importando || !cfg.hist_inicio} className={btnGhost}>
-                    <Download className={`w-4 h-4 ${importando ? "animate-pulse" : ""}`} /> Importar histórico do VR
+                    <Download className={`w-4 h-4 ${importando ? "animate-pulse" : ""}`} /> Importar histórico
                   </button>
                   <button onClick={gerarMetas} disabled={gerando} className={btnPrimary}>
                     <Wand2 className="w-4 h-4" /> Gerar metas de compra

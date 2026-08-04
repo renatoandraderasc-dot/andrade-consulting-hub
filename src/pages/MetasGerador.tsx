@@ -336,7 +336,7 @@ const MetasGerador = () => {
               Gerador de <span className="text-gradient-gold">Metas</span>
             </h1>
           </div>
-          <p className="text-muted-foreground font-body">Geração automática de metas com base no histórico VR</p>
+          <p className="text-muted-foreground font-body">Geração automática de metas com base no histórico do sistema da loja</p>
         </motion.div>
 
         {/* Filtros */}
@@ -388,7 +388,7 @@ const MetasGerador = () => {
                   </select>
                 </div>
                 <button onClick={handleImportarHistorico} disabled={loading} className={btnGhost}>
-                  <Download className="w-4 h-4" /> Importar histórico do VR
+                  <Download className="w-4 h-4" /> Importar histórico
                 </button>
                 <button onClick={handleGerarMetas} disabled={loading} className={btnPrimary}>
                   <Wand2 className="w-4 h-4" /> Gerar metas
