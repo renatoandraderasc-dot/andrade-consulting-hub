@@ -738,14 +738,17 @@ export type Database = {
           id: string
           meta_lucro: number | null
           meta_margem_pct: number | null
+          meta_mix: number | null
           meta_vendas: number | null
           meta_volume: number | null
           projecao_lucro: number | null
           projecao_margem_pct: number | null
+          projecao_mix: number | null
           projecao_vendas: number | null
           projecao_volume: number | null
           realizado_lucro: number | null
           realizado_margem_pct: number | null
+          realizado_mix: number | null
           realizado_vendas: number | null
           realizado_volume: number | null
           store_id: string
@@ -758,14 +761,17 @@ export type Database = {
           id?: string
           meta_lucro?: number | null
           meta_margem_pct?: number | null
+          meta_mix?: number | null
           meta_vendas?: number | null
           meta_volume?: number | null
           projecao_lucro?: number | null
           projecao_margem_pct?: number | null
+          projecao_mix?: number | null
           projecao_vendas?: number | null
           projecao_volume?: number | null
           realizado_lucro?: number | null
           realizado_margem_pct?: number | null
+          realizado_mix?: number | null
           realizado_vendas?: number | null
           realizado_volume?: number | null
           store_id: string
@@ -778,14 +784,17 @@ export type Database = {
           id?: string
           meta_lucro?: number | null
           meta_margem_pct?: number | null
+          meta_mix?: number | null
           meta_vendas?: number | null
           meta_volume?: number | null
           projecao_lucro?: number | null
           projecao_margem_pct?: number | null
+          projecao_mix?: number | null
           projecao_vendas?: number | null
           projecao_volume?: number | null
           realizado_lucro?: number | null
           realizado_margem_pct?: number | null
+          realizado_mix?: number | null
           realizado_vendas?: number | null
           realizado_volume?: number | null
           store_id?: string

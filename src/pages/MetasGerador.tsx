@@ -98,7 +98,7 @@ const MetasGerador = () => {
     const { inicio, fim } = monthRange(year, month);
     const { data } = await supabase
       .from("store_daily_metrics")
-      .select("date, tipo_dia, meta_vendas, meta_margem_pct, meta_lucro, realizado_vendas")
+      .select("date, tipo_dia, meta_vendas, meta_margem_pct, meta_lucro, meta_volume, meta_mix, realizado_vendas")
       .eq("store_id", storeId)
       .eq("department", department)
       .gte("date", inicio)
@@ -129,7 +129,11 @@ const MetasGerador = () => {
     return window.confirm("Existem alterações de metas não salvas. Deseja descartá-las?");
   };
 
-  const handleEditMeta = (date: string, field: "meta_vendas" | "meta_margem_pct", raw: string) => {
+  const handleEditMeta = (
+    date: string,
+    field: "meta_vendas" | "meta_margem_pct" | "meta_volume" | "meta_mix",
+    raw: string,
+  ) => {
     const num = parseFloat(raw.replace(/\./g, "").replace(",", ".")) || 0;
     setMetasRows((rows) =>
       rows.map((r) => {
@@ -154,6 +158,8 @@ const MetasGerador = () => {
         meta_vendas: Number(r.meta_vendas) || 0,
         meta_margem_pct: Number(r.meta_margem_pct) || 0,
         meta_lucro: ((Number(r.meta_vendas) || 0) * (Number(r.meta_margem_pct) || 0)) / 100,
+        meta_volume: Number(r.meta_volume) || 0,
+        meta_mix: Number(r.meta_mix) || 0,
       }));
       const { error } = await supabase
         .from("store_daily_metrics")
@@ -278,9 +284,9 @@ const MetasGerador = () => {
   };
 
   const exportExcel = () => {
-    const header = "Data\tTipo\tMeta Vendas\tMeta Margem %\tMeta Lucro\n";
+    const header = "Data\tTipo\tMeta Vendas\tMeta Margem %\tMeta Lucro\tMeta Volume\tMeta Mix\n";
     const rows = metasRows.map(r =>
-      `${fmtDate(r.date)}\t${r.tipo_dia}\t${fmtNum(Number(r.meta_vendas))}\t${fmtNum(Number(r.meta_margem_pct))}\t${fmtNum(Number(r.meta_lucro))}`
+      `${fmtDate(r.date)}\t${r.tipo_dia}\t${fmtNum(Number(r.meta_vendas))}\t${fmtNum(Number(r.meta_margem_pct))}\t${fmtNum(Number(r.meta_lucro))}\t${fmtNum(Number(r.meta_volume), 3)}\t${fmtNum(Number(r.meta_mix), 0)}`
     ).join("\n");
     const blob = new Blob([header + rows], { type: "text/tab-separated-values;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -294,7 +300,9 @@ const MetasGerador = () => {
     const t = operantes.reduce((acc, r) => ({
       vendas: acc.vendas + Number(r.meta_vendas || 0),
       lucro: acc.lucro + Number(r.meta_lucro || 0),
-    }), { vendas: 0, lucro: 0 });
+      volume: acc.volume + Number(r.meta_volume || 0),
+      mix: acc.mix + Number(r.meta_mix || 0),
+    }), { vendas: 0, lucro: 0, volume: 0, mix: 0 });
     const dias = operantes.length;
     return {
       ...t,
@@ -302,6 +310,8 @@ const MetasGerador = () => {
       diasIgnorados: metasRows.length - dias,
       mediaVendas: dias > 0 ? t.vendas / dias : 0,
       mediaLucro: dias > 0 ? t.lucro / dias : 0,
+      mediaVolume: dias > 0 ? t.volume / dias : 0,
+      mediaMix: dias > 0 ? t.mix / dias : 0,
     };
   }, [metasRows]);
 
@@ -412,12 +422,14 @@ const MetasGerador = () => {
                     <th className="text-left py-2 px-2 font-body text-muted-foreground">Tipo</th>
                     <th className="text-right py-2 px-2 font-body text-muted-foreground">Meta Vendas</th>
                     <th className="text-right py-2 px-2 font-body text-muted-foreground">Margem %</th>
-                    <th className="text-right py-2 pl-2 font-body text-muted-foreground">Meta Lucro</th>
+                    <th className="text-right py-2 px-2 font-body text-muted-foreground">Meta Lucro</th>
+                    <th className="text-right py-2 px-2 font-body text-muted-foreground">Meta Volume</th>
+                    <th className="text-right py-2 pl-2 font-body text-muted-foreground">Meta Mix</th>
                   </tr>
                 </thead>
                 <tbody>
                   {metasRows.length === 0 && (
-                    <tr><td colSpan={5} className="py-6 text-center text-muted-foreground font-body">Nenhuma meta gerada ainda.</td></tr>
+                    <tr><td colSpan={7} className="py-6 text-center text-muted-foreground font-body">Nenhuma meta gerada ainda.</td></tr>
                   )}
                   {metasRows.map((r) => {
                     const isDirty = dirtyDates.has(r.date);
@@ -452,7 +464,25 @@ const MetasGerador = () => {
                             className={inputCls + " w-24"}
                           />
                         </td>
-                        <td className="py-2 pl-2 text-right font-body">{fmtBRL(Number(r.meta_lucro))}</td>
+                        <td className="py-2 px-2 text-right font-body">{fmtBRL(Number(r.meta_lucro))}</td>
+                        <td className="py-2 px-2 text-right">
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            value={fmtNum(Number(r.meta_volume) || 0, 3)}
+                            onChange={(e) => handleEditMeta(r.date, "meta_volume", e.target.value)}
+                            className={inputCls + " w-28"}
+                          />
+                        </td>
+                        <td className="py-2 pl-2 text-right">
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={fmtNum(Number(r.meta_mix) || 0, 0)}
+                            onChange={(e) => handleEditMeta(r.date, "meta_mix", e.target.value)}
+                            className={inputCls + " w-24"}
+                          />
+                        </td>
                       </tr>
                     );
                   })}
@@ -463,7 +493,9 @@ const MetasGerador = () => {
                       <td className="py-3 pr-4 font-body" colSpan={2}>Totais</td>
                       <td className="py-3 px-2 text-right font-body">{fmtBRL(totals.vendas)}</td>
                       <td></td>
-                      <td className="py-3 pl-2 text-right font-body">{fmtBRL(totals.lucro)}</td>
+                      <td className="py-3 px-2 text-right font-body">{fmtBRL(totals.lucro)}</td>
+                      <td className="py-3 px-2 text-right font-body">{fmtNum(totals.volume, 3)}</td>
+                      <td className="py-3 pl-2 text-right font-body">{fmtNum(totals.mix, 0)}</td>
                     </tr>
                     <tr className="text-muted-foreground">
                       <td className="py-2 pr-4 font-body text-xs" colSpan={2}>
@@ -472,7 +504,9 @@ const MetasGerador = () => {
                       </td>
                       <td className="py-2 px-2 text-right font-body text-xs">{fmtBRL(totals.mediaVendas)}</td>
                       <td></td>
-                      <td className="py-2 pl-2 text-right font-body text-xs">{fmtBRL(totals.mediaLucro)}</td>
+                      <td className="py-2 px-2 text-right font-body text-xs">{fmtBRL(totals.mediaLucro)}</td>
+                      <td className="py-2 px-2 text-right font-body text-xs">{fmtNum(totals.mediaVolume, 3)}</td>
+                      <td className="py-2 pl-2 text-right font-body text-xs">{fmtNum(totals.mediaMix, 0)}</td>
                     </tr>
                   </tfoot>
                 )}
