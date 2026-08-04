@@ -7,6 +7,8 @@ import { useAuth } from "@/hooks/useAuth";
 import ClientLayout from "@/components/ClientLayout";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import CapilaridadeMixTab from "@/components/metas/CapilaridadeMixTab";
+
 
 interface Store { id: string; name: string; }
 
@@ -376,11 +378,17 @@ const MetasGerador = () => {
         </div>
 
         <Tabs defaultValue="metas" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsList className="grid w-full grid-cols-4 mb-6">
             <TabsTrigger value="metas">Gerar Metas</TabsTrigger>
             <TabsTrigger value="calendario">Calendário</TabsTrigger>
             <TabsTrigger value="taxas">Taxas</TabsTrigger>
+            <TabsTrigger value="mix">Capilaridade de Mix</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="mix">
+            <CapilaridadeMixTab storeId={storeId} year={year} month={month} />
+          </TabsContent>
+
 
           {/* ABA 1 */}
           <TabsContent value="metas">
