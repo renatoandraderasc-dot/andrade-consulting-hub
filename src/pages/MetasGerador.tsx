@@ -315,6 +315,12 @@ const MetasGerador = () => {
     };
   }, [metasRows]);
 
+  // Mix é contínuo: acumulado de produtos diferentes positivados no mês
+  const mixAcum = useMemo(() => {
+    let soma = 0;
+    return metasRows.map((r) => (soma += Number(r.meta_mix) || 0));
+  }, [metasRows]);
+
 
   if (authLoading) return (
     <div className="min-h-screen bg-background flex items-center justify-center">
