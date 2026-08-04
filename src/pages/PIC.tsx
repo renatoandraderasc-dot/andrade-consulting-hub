@@ -325,7 +325,7 @@ const PIC = () => {
 
     }
     return result;
-  }, [rawData, cutoffDay]);
+  }, [rawData, cutoffDay, metaMix]);
 
 
   // AI Analysis
