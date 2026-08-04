@@ -32,6 +32,8 @@ interface DayMetric {
   realizado_margem_pct: number;
   meta_volume: number;
   realizado_volume: number;
+  realizado_mix: number;
+
 }
 
 interface KpiData {
