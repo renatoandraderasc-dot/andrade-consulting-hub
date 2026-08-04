@@ -364,7 +364,10 @@ const Compras = () => {
     }
     return [...acc.values()].map((r) => ({
       ...r,
-      margem: r.venda > 0 ? ((r.venda - r.cmv) / r.venda) * 100 : 0,
+      // O relatório Compra vs. Venda do WebSac chama de "Margem" o
+      // lucro dividido pelo CMV (markup), e não o lucro dividido pela venda.
+      margem: r.cmv > 0 ? ((r.venda - r.cmv) / r.cmv) * 100 : 0,
+      saldo_venda: r.venda - r.compra,
       saldo_cmv: r.cmv - r.compra,
       cv: r.venda > 0 ? (r.compra / r.venda) * 100 : 0,
       ccmv: r.cmv > 0 ? (r.compra / r.cmv) * 100 : 0,
@@ -374,8 +377,12 @@ const Compras = () => {
 
   const cvTotais = useMemo(() => {
     return cvRows.reduce((acc, r) => ({
-      venda: acc.venda + r.venda, cmv: acc.cmv + r.cmv, compra: acc.compra + r.compra,
-    }), { venda: 0, cmv: 0, compra: 0 });
+      qtde_venda: acc.qtde_venda + r.qtde_venda,
+      venda: acc.venda + r.venda,
+      cmv: acc.cmv + r.cmv,
+      qtde_compra: acc.qtde_compra + r.qtde_compra,
+      compra: acc.compra + r.compra,
+    }), { qtde_venda: 0, venda: 0, cmv: 0, qtde_compra: 0, compra: 0 });
   }, [cvRows]);
 
   // ============ Derived (Aba 4) ============
@@ -610,9 +617,11 @@ const Compras = () => {
                         <th className="text-right py-2 px-2">Margem %</th>
                         <th className="text-right py-2 px-2">Qtd compra</th>
                         <th className="text-right py-2 px-2">Compra</th>
+                         <th className="text-right py-2 px-2">Venda − Compra</th>
                         <th className="text-right py-2 px-2">CMV − Compra</th>
-                        <th className="text-right py-2 px-2">C/V %</th>
-                        <th className="text-right py-2 px-2">C/CMV %</th>
+                         <th className="text-right py-2 px-2">Compra / Venda</th>
+                         <th className="text-right py-2 px-2">Compra / CMV</th>
+                         <th className="text-right py-2 px-2">Participação</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -627,13 +636,31 @@ const Compras = () => {
                             <td className="py-2 px-2 text-right tabular-nums">{fmtPct(r.margem)}</td>
                             <td className="py-2 px-2 text-right tabular-nums">{fmtNum(r.qtde_compra)}</td>
                             <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(r.compra)}</td>
+                             <td className={`py-2 px-2 text-right tabular-nums ${r.saldo_venda < 0 ? "text-red-500" : ""}`}>{fmtBRL(r.saldo_venda)}</td>
                             <td className={`py-2 px-2 text-right tabular-nums ${r.saldo_cmv < 0 ? "text-red-500" : ""}`}>{fmtBRL(r.saldo_cmv)}</td>
                             <td className={`py-2 px-2 text-right tabular-nums font-medium ${cvTone}`}>{fmtPct(r.cv)}</td>
                             <td className="py-2 px-2 text-right tabular-nums">{fmtPct(r.ccmv)}</td>
+                             <td className="py-2 px-2 text-right tabular-nums">{fmtPct(cvTotais.venda > 0 ? (r.venda / cvTotais.venda) * 100 : 0, 2)}</td>
                           </tr>
                         );
                       })}
                     </tbody>
+                     <tfoot>
+                       <tr className="border-t border-border font-semibold">
+                         <td className="py-3">Total</td>
+                         <td className="py-3 px-2 text-right tabular-nums">{fmtNum(cvTotais.qtde_venda, 2)}</td>
+                         <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(cvTotais.venda)}</td>
+                         <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(cvTotais.cmv)}</td>
+                         <td className="py-3 px-2 text-right tabular-nums">{fmtPct(cvTotais.cmv > 0 ? ((cvTotais.venda - cvTotais.cmv) / cvTotais.cmv) * 100 : 0)}</td>
+                         <td className="py-3 px-2 text-right tabular-nums">{fmtNum(cvTotais.qtde_compra, 2)}</td>
+                         <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(cvTotais.compra)}</td>
+                         <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(cvTotais.venda - cvTotais.compra)}</td>
+                         <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(cvTotais.cmv - cvTotais.compra)}</td>
+                         <td className="py-3 px-2 text-right tabular-nums">{fmtPct(cvTotais.venda > 0 ? (cvTotais.compra / cvTotais.venda) * 100 : 0)}</td>
+                         <td className="py-3 px-2 text-right tabular-nums">{fmtPct(cvTotais.cmv > 0 ? (cvTotais.compra / cvTotais.cmv) * 100 : 0)}</td>
+                         <td className="py-3 px-2 text-right tabular-nums">100,00%</td>
+                       </tr>
+                     </tfoot>
                   </table>
                 </div>
 
