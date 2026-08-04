@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ShoppingCart, TrendingUp, TrendingDown, Wallet, Target, Download, Wand2, Save, RefreshCw, Info,
@@ -647,9 +647,8 @@ const Compras = () => {
                         const aberto = !!expandidos[g.departamento];
                         const toneCcmv = (v: number) => (v > 100 ? "text-red-500" : v < 85 ? "text-amber-500" : "");
                         return (
-                          <>
+                          <Fragment key={g.departamento}>
                             <tr
-                              key={g.departamento}
                               onClick={() => setExpandidos((p) => ({ ...p, [g.departamento]: !p[g.departamento] }))}
                               className="border-b border-border/50 cursor-pointer hover:bg-muted/40 font-medium"
                             >
@@ -690,7 +689,7 @@ const Compras = () => {
                                 <td className="py-2 px-2 text-right tabular-nums">{fmtPct(s.part, 2)}</td>
                               </tr>
                             ))}
-                          </>
+                          </Fragment>
                         );
                       })}
                     </tbody>
