@@ -308,18 +308,52 @@ const Compras = () => {
   }, [painelRows]);
 
   // ============ Derived (Aba 2) ============
-  // Agrupado por departamento nivel 1
+  // Normaliza cada linha na hierarquia Nivel 1 / Nivel 2 / Nivel 3 / Produto
+  const cvItens = useMemo(() => {
+    return cvLinhas.map((l: any) => {
+      const partes = String(l.secao ?? "").split("/").map((s: string) => s.trim());
+      const n1 = String(l.nivel1 ?? l.departamento ?? partes[0] ?? "").trim() || "SEM DEPARTAMENTO";
+      const n2 = String(l.nivel2 ?? partes[1] ?? "").trim() || "SEM GRUPO";
+      const n3 = String(l.nivel3 ?? partes[2] ?? "").trim() || "SEM SUBGRUPO";
+      const prod = String(l.produto ?? l.descricao ?? "").trim() || "SEM PRODUTO";
+      return {
+        nivel1: n1, nivel2: n2, nivel3: n3, produto: prod,
+        qtde_venda: parseFloat(String(l.qtde_venda ?? l.qtde_vendida ?? 0)) || 0,
+        venda: parseFloat(String(l.total_venda)) || 0,
+        cmv: parseFloat(String(l.cmv)) || 0,
+        qtde_compra: parseFloat(String(l.qtde_compra ?? l.qtde_comprada ?? 0)) || 0,
+        compra: parseFloat(String(l.total_compra)) || 0,
+      };
+    });
+  }, [cvLinhas]);
+
+  const cvOpcoes = useMemo(() => {
+    const n1 = new Set<string>(), n2 = new Set<string>(), n3 = new Set<string>();
+    for (const i of cvItens) {
+      n1.add(i.nivel1);
+      if (fN1 === "__all__" || i.nivel1 === fN1) n2.add(i.nivel2);
+      if ((fN1 === "__all__" || i.nivel1 === fN1) && (fN2 === "__all__" || i.nivel2 === fN2)) n3.add(i.nivel3);
+    }
+    const ord = (s: Set<string>) => [...s].sort((a, b) => a.localeCompare(b, "pt-BR"));
+    return { n1: ord(n1), n2: ord(n2), n3: ord(n3) };
+  }, [cvItens, fN1, fN2]);
+
   const cvRows = useMemo(() => {
+    const filtrados = cvItens.filter((i) =>
+      (fN1 === "__all__" || i.nivel1 === fN1) &&
+      (fN2 === "__all__" || i.nivel2 === fN2) &&
+      (fN3 === "__all__" || i.nivel3 === fN3));
+
     const acc = new Map<string, { secao: string; qtde_venda: number; venda: number; cmv: number; qtde_compra: number; compra: number }>();
-    for (const l of cvLinhas) {
-      const dep = String(l.departamento ?? "").trim() || String(l.secao ?? "").split("/")[0].trim() || "SEM DEPARTAMENTO";
-      const cur = acc.get(dep) ?? { secao: dep, qtde_venda: 0, venda: 0, cmv: 0, qtde_compra: 0, compra: 0 };
-      cur.qtde_venda += parseFloat(String(l.qtde_venda ?? l.qtde_vendida ?? 0)) || 0;
-      cur.venda += parseFloat(String(l.total_venda)) || 0;
-      cur.cmv += parseFloat(String(l.cmv)) || 0;
-      cur.qtde_compra += parseFloat(String(l.qtde_compra ?? l.qtde_comprada ?? 0)) || 0;
-      cur.compra += parseFloat(String(l.total_compra)) || 0;
-      acc.set(dep, cur);
+    for (const i of filtrados) {
+      const chave = i[cvNivel];
+      const cur = acc.get(chave) ?? { secao: chave, qtde_venda: 0, venda: 0, cmv: 0, qtde_compra: 0, compra: 0 };
+      cur.qtde_venda += i.qtde_venda;
+      cur.venda += i.venda;
+      cur.cmv += i.cmv;
+      cur.qtde_compra += i.qtde_compra;
+      cur.compra += i.compra;
+      acc.set(chave, cur);
     }
     return [...acc.values()].map((r) => ({
       ...r,
@@ -328,7 +362,7 @@ const Compras = () => {
       cv: r.venda > 0 ? (r.compra / r.venda) * 100 : 0,
       ccmv: r.cmv > 0 ? (r.compra / r.cmv) * 100 : 0,
     })).sort((a, b) => b.venda - a.venda);
-  }, [cvLinhas]);
+  }, [cvItens, cvNivel, fN1, fN2, fN3]);
 
 
   const cvTotais = useMemo(() => {
