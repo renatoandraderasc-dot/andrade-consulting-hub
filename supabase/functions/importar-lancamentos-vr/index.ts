@@ -11,6 +11,7 @@
 // gracas ao indice unico (store_id, origem, origem_ref).
 // ============================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { consultarRelatorioLoja } from "../_shared/consultaLoja.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -78,7 +79,7 @@ Deno.serve(async (req) => {
     );
 
     const { data: cfg } = await supabase.from("store_vr_config")
-      .select("api_url, api_key").eq("store_id", store_id).single();
+      .select("api_url, api_key, sistema").eq("store_id", store_id).single();
     if (!cfg) return json({ erro: "loja sem conexao VR cadastrada" }, 400);
 
     // de-para: excecao da loja tem prioridade sobre o padrao (store_id NULL)
@@ -99,25 +100,20 @@ Deno.serve(async (req) => {
     let gravadosTotal = 0;
 
     for (const b of blocos) {
-      const url = `${cfg.api_url.replace(/\/+$/, "")}/relatorios/pagamentos_periodo` +
-        `?inicio=${b.ini}&fim=${b.fim}&chave=${encodeURIComponent(cfg.api_key)}`;
-
-      let linhas: LinhaVr[] = [];
-      try {
-        const resp = await fetch(url, {
-          headers: { "ngrok-skip-browser-warning": "true" },
-          signal: AbortSignal.timeout(90000),
-        });
-        if (!resp.ok) {
-          const corpo = await resp.text();
-          detalhe.push({ periodo: b.ini, erro: `API ${resp.status}: ${corpo.slice(0, 150)}` });
-          continue;
-        }
-        linhas = await resp.json();
-      } catch (e) {
-        detalhe.push({ periodo: b.ini, erro: e instanceof Error ? e.message : String(e) });
+      const r = await consultarRelatorioLoja({
+        supabaseUrl: Deno.env.get("SUPABASE_URL")!,
+        serviceKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+        storeId: store_id,
+        relatorio: "pagamentos_periodo",
+        params: { inicio: b.ini, fim: b.fim },
+        cfg,
+        timeoutMs: 90000,
+      });
+      if (!r.ok) {
+        detalhe.push({ periodo: b.ini, erro: r.erro });
         continue;
       }
+      const linhas = r.dados as unknown as LinhaVr[];
 
       const registros = [];
       for (const l of linhas) {
