@@ -17,6 +17,13 @@ interface Store { id: string; name: string }
 
 const MONTHS = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
+const NIVEL_LABEL: Record<string, string> = {
+  nivel1: "Nível 1 (Departamento)",
+  nivel2: "Nível 2 (Grupo)",
+  nivel3: "Nível 3 (Subgrupo)",
+  produto: "Produto",
+};
+
 const fmtBRL = (v: number) => (Number(v) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const fmtPct = (v: number, d = 1) => `${(Number(v) || 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d })}%`;
 const fmtNum = (v: number, d = 0) => (Number(v) || 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
