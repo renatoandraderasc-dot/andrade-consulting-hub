@@ -557,6 +557,50 @@ export type Database = {
           },
         ]
       }
+      meta_mix: {
+        Row: {
+          ano: number
+          base_trimestre: number
+          department: string
+          gerado_em: string
+          id: string
+          mes: number
+          meta_mix: number
+          pct_reducao: number
+          store_id: string
+        }
+        Insert: {
+          ano: number
+          base_trimestre?: number
+          department: string
+          gerado_em?: string
+          id?: string
+          mes: number
+          meta_mix?: number
+          pct_reducao?: number
+          store_id: string
+        }
+        Update: {
+          ano?: number
+          base_trimestre?: number
+          department?: string
+          gerado_em?: string
+          id?: string
+          mes?: number
+          meta_mix?: number
+          pct_reducao?: number
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meta_mix_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meta_taxas: {
         Row: {
           department: string
@@ -1336,6 +1380,19 @@ export type Database = {
       gerar_calendario: {
         Args: { p_fim: string; p_inicio: string; p_store_id: string }
         Returns: number
+      }
+      gerar_meta_mix: {
+        Args: {
+          p_ano: number
+          p_bases: Json
+          p_mes: number
+          p_pct?: number
+          p_store_id: string
+        }
+        Returns: {
+          departamentos: number
+          total_meta: number
+        }[]
       }
       gerar_metas: {
         Args: {
