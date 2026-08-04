@@ -429,7 +429,7 @@ const MetasGerador = () => {
                 </thead>
                 <tbody>
                   {metasRows.length === 0 && (
-                    <tr><td colSpan={5} className="py-6 text-center text-muted-foreground font-body">Nenhuma meta gerada ainda.</td></tr>
+                    <tr><td colSpan={7} className="py-6 text-center text-muted-foreground font-body">Nenhuma meta gerada ainda.</td></tr>
                   )}
                   {metasRows.map((r) => {
                     const isDirty = dirtyDates.has(r.date);
