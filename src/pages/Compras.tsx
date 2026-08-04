@@ -541,6 +541,46 @@ const Compras = () => {
                   <RefreshCw className={`w-4 h-4 ${fornLoading ? "animate-spin" : ""}`} /> Top fornecedores
                 </button>
               </div>
+
+              {cvItens.length > 0 && (
+                <div className="flex flex-wrap items-end gap-4 mt-4 pt-4 border-t border-border">
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Agrupar por</label>
+                    <select value={cvNivel} onChange={(e) => setCvNivel(e.target.value as any)} className={inputCls}>
+                      <option value="nivel1">Nível 1 (Departamento)</option>
+                      <option value="nivel2">Nível 2 (Grupo)</option>
+                      <option value="nivel3">Nível 3 (Subgrupo)</option>
+                      <option value="produto">Produto</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Nível 1</label>
+                    <select value={fN1} onChange={(e) => { setFN1(e.target.value); setFN2("__all__"); setFN3("__all__"); }} className={inputCls}>
+                      <option value="__all__">Todos</option>
+                      {cvOpcoes.n1.map((o) => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Nível 2</label>
+                    <select value={fN2} onChange={(e) => { setFN2(e.target.value); setFN3("__all__"); }} className={inputCls}>
+                      <option value="__all__">Todos</option>
+                      {cvOpcoes.n2.map((o) => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Nível 3</label>
+                    <select value={fN3} onChange={(e) => setFN3(e.target.value)} className={inputCls}>
+                      <option value="__all__">Todos</option>
+                      {cvOpcoes.n3.map((o) => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  </div>
+                  {(fN1 !== "__all__" || fN2 !== "__all__" || fN3 !== "__all__") && (
+                    <button onClick={() => { setFN1("__all__"); setFN2("__all__"); setFN3("__all__"); }} className={btnGhost}>
+                      Limpar filtros
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             {cvRows.length > 0 && (
