@@ -304,25 +304,28 @@ const Compras = () => {
   }, [painelRows]);
 
   // ============ Derived (Aba 2) ============
+  // Agrupado por departamento nivel 1
   const cvRows = useMemo(() => {
-    return cvLinhas.map((l) => {
-      const venda = parseFloat(String(l.total_venda)) || 0;
-      const cmv = parseFloat(String(l.cmv)) || 0;
-      const compra = parseFloat(String(l.total_compra)) || 0;
-      const margem = venda > 0 ? ((venda - cmv) / venda) * 100 : 0;
-      const cv = venda > 0 ? (compra / venda) * 100 : 0;
-      const ccmv = cmv > 0 ? (compra / cmv) * 100 : 0;
-      return {
-        secao: l.secao,
-        qtde_venda: parseFloat(String(l.qtde_venda ?? l.qtde_vendida ?? 0)) || 0,
-        venda, cmv, margem,
-        qtde_compra: parseFloat(String(l.qtde_compra ?? l.qtde_comprada ?? 0)) || 0,
-        compra,
-        saldo_cmv: cmv - compra,
-        cv, ccmv,
-      };
-    }).sort((a, b) => b.venda - a.venda);
+    const acc = new Map<string, { secao: string; qtde_venda: number; venda: number; cmv: number; qtde_compra: number; compra: number }>();
+    for (const l of cvLinhas) {
+      const dep = String(l.departamento ?? "").trim() || String(l.secao ?? "").split("/")[0].trim() || "SEM DEPARTAMENTO";
+      const cur = acc.get(dep) ?? { secao: dep, qtde_venda: 0, venda: 0, cmv: 0, qtde_compra: 0, compra: 0 };
+      cur.qtde_venda += parseFloat(String(l.qtde_venda ?? l.qtde_vendida ?? 0)) || 0;
+      cur.venda += parseFloat(String(l.total_venda)) || 0;
+      cur.cmv += parseFloat(String(l.cmv)) || 0;
+      cur.qtde_compra += parseFloat(String(l.qtde_compra ?? l.qtde_comprada ?? 0)) || 0;
+      cur.compra += parseFloat(String(l.total_compra)) || 0;
+      acc.set(dep, cur);
+    }
+    return [...acc.values()].map((r) => ({
+      ...r,
+      margem: r.venda > 0 ? ((r.venda - r.cmv) / r.venda) * 100 : 0,
+      saldo_cmv: r.cmv - r.compra,
+      cv: r.venda > 0 ? (r.compra / r.venda) * 100 : 0,
+      ccmv: r.cmv > 0 ? (r.compra / r.cmv) * 100 : 0,
+    })).sort((a, b) => b.venda - a.venda);
   }, [cvLinhas]);
+
 
   const cvTotais = useMemo(() => {
     return cvRows.reduce((acc, r) => ({
