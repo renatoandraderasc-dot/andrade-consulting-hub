@@ -98,7 +98,7 @@ const MetasGerador = () => {
     const { inicio, fim } = monthRange(year, month);
     const { data } = await supabase
       .from("store_daily_metrics")
-      .select("date, tipo_dia, meta_vendas, meta_margem_pct, meta_lucro, realizado_vendas")
+      .select("date, tipo_dia, meta_vendas, meta_margem_pct, meta_lucro, meta_volume, meta_mix, realizado_vendas")
       .eq("store_id", storeId)
       .eq("department", department)
       .gte("date", inicio)
