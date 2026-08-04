@@ -155,13 +155,15 @@ const Compras = () => {
       for (const m of mapas ?? []) mapa.set(norm(m.secao_vr), m.department);
       const acc: Record<string, { compra: number; venda: number; cmv: number }> = {};
       for (const l of linhas) {
-        const dep = mapa.get(norm(l.secao)) ?? "OUTROS";
+        // departamento nivel 1 vindo do relatorio; mapeamento so como fallback
+        const dep = String(l.departamento ?? "").trim() || mapa.get(norm(l.secao)) || "SEM DEPARTAMENTO";
         const cur = acc[dep] || { compra: 0, venda: 0, cmv: 0 };
         cur.compra += parseFloat(String(l.total_compra)) || 0;
         cur.venda += parseFloat(String(l.total_venda)) || 0;
         cur.cmv += parseFloat(String(l.cmv)) || 0;
         acc[dep] = cur;
       }
+
       setRealizadoDep(acc);
     } catch (err: any) {
       toast({ title: "Falha ao consultar VR", description: err.message, variant: "destructive" });
