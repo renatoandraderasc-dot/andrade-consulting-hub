@@ -39,6 +39,8 @@ export interface VrLinha {
 
 interface RawResult {
   linhas: VrLinha[];
+  // Positivacao: produtos distintos vendidos pela 1a vez no dia (mix continuo)
+  mixLinhas: VrLinha[];
   mapa: Record<string, string>;
 }
 
