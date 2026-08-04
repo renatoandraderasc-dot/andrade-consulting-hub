@@ -596,7 +596,7 @@ const Compras = () => {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-border text-muted-foreground">
-                        <th className="text-left py-2">Departamento</th>
+                        <th className="text-left py-2">{NIVEL_LABEL[cvNivel]}</th>
                         <th className="text-right py-2 px-2">Qtd venda</th>
                         <th className="text-right py-2 px-2">Venda</th>
                         <th className="text-right py-2 px-2">CMV</th>
