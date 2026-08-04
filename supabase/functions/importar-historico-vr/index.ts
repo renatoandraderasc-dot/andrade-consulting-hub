@@ -97,11 +97,11 @@ Deno.serve(async (req) => {
     }
 
     // --- agrega por (data, departamento) + total da LOJA -------
-    const acc = new Map<string, { date: string; department: string; vendas: number; lucro: number; volume: number }>();
-    const somar = (date: string, department: string, vendas: number, lucro: number, volume: number) => {
+    const acc = new Map<string, { date: string; department: string; vendas: number; lucro: number; volume: number; mix: number }>();
+    const somar = (date: string, department: string, vendas: number, lucro: number, volume: number, mix: number) => {
       const k = `${date}|${department}`;
-      const cur = acc.get(k) ?? { date, department, vendas: 0, lucro: 0, volume: 0 };
-      cur.vendas += vendas; cur.lucro += lucro; cur.volume += volume;
+      const cur = acc.get(k) ?? { date, department, vendas: 0, lucro: 0, volume: 0, mix: 0 };
+      cur.vendas += vendas; cur.lucro += lucro; cur.volume += volume; cur.mix += mix;
       acc.set(k, cur);
     };
 
@@ -113,8 +113,9 @@ Deno.serve(async (req) => {
       const vendas = parseFloat(String(l.total_vendido)) || 0;
       const lucro = parseFloat(String(l.lucro)) || 0;
       const volume = parseFloat(String(l.volume)) || 0;
-      somar(date, dep, vendas, lucro, volume);
-      somar(date, "LOJA", vendas, lucro, volume);
+      const mix = parseFloat(String(l.mix)) || 0;
+      somar(date, dep, vendas, lucro, volume, mix);
+      somar(date, "LOJA", vendas, lucro, volume, mix);
     }
 
     const registros = [...acc.values()].map((r) => ({
@@ -125,6 +126,7 @@ Deno.serve(async (req) => {
       realizado_lucro: Math.round(r.lucro * 100) / 100,
       realizado_margem_pct: r.vendas > 0 ? Math.round((r.lucro / r.vendas) * 10000) / 100 : 0,
       realizado_volume: Math.round(r.volume * 1000) / 1000,
+      realizado_mix: Math.round(r.mix),
     }));
 
     let gravadas = 0;

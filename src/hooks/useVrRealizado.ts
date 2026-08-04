@@ -20,6 +20,7 @@ export interface VrDia {
   vendas: number;
   lucro: number;
   volume: number;
+  mix: number;
   margemPct: number;
 }
 
@@ -33,6 +34,7 @@ export interface VrLinha {
   vendas: number;
   lucro: number;
   volume: number;
+  mix: number;
 }
 
 interface RawResult {
@@ -109,27 +111,29 @@ async function loadRaw(storeId: string, inicio: string, fim: string): Promise<Ra
       vendas: parseFloat(String(l.total_vendido)) || 0,
       lucro: parseFloat(String(l.lucro)) || 0,
       volume: parseFloat(String(l.volume)) || 0,
+      mix: parseFloat(String(l.mix)) || 0,
     });
   }
   return { linhas, mapa };
 }
 
 function agregar(raw: RawResult, categoria?: string | null): VrRealizado {
-  const acc = new Map<string, { date: string; vendas: number; lucro: number; volume: number }>();
-  const add = (dep: string, date: string, vendas: number, lucro: number, volume: number) => {
+  const acc = new Map<string, { date: string; vendas: number; lucro: number; volume: number; mix: number }>();
+  const add = (dep: string, date: string, vendas: number, lucro: number, volume: number, mix: number) => {
     const k = `${dep}|${date}`;
-    const cur = acc.get(k) ?? { date, vendas: 0, lucro: 0, volume: 0 };
+    const cur = acc.get(k) ?? { date, vendas: 0, lucro: 0, volume: 0, mix: 0 };
     cur.vendas += vendas;
     cur.lucro += lucro;
     cur.volume += volume;
+    cur.mix += mix;
     acc.set(k, cur);
   };
 
   for (const l of raw.linhas) {
     if (categoria && l.categoria !== categoria) continue;
     const dep = raw.mapa[norm(l.secao)] ?? inferirDepartamento(l.secao, l.categoria);
-    add(LOJA, l.date, l.vendas, l.lucro, l.volume);
-    if (dep && dep !== LOJA) add(dep, l.date, l.vendas, l.lucro, l.volume);
+    add(LOJA, l.date, l.vendas, l.lucro, l.volume, l.mix);
+    if (dep && dep !== LOJA) add(dep, l.date, l.vendas, l.lucro, l.volume, l.mix);
   }
 
   const out: VrRealizado = {};
@@ -141,6 +145,7 @@ function agregar(raw: RawResult, categoria?: string | null): VrRealizado {
       vendas: v.vendas,
       lucro: v.lucro,
       volume: v.volume,
+      mix: v.mix,
       margemPct: v.vendas > 0 ? (v.lucro / v.vendas) * 100 : 0,
     });
   }
