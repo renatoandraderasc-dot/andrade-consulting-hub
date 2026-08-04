@@ -139,20 +139,30 @@ const PIC = () => {
   // Metas continuam vindo de store_daily_metrics (colunas meta_*)
   const fetchMetas = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from("store_daily_metrics")
-      .select("date, department, meta_vendas, meta_lucro, meta_margem_pct, meta_volume")
-      .eq("store_id", storeId)
-      .in("department", DEPARTMENTS)
-      .gte("date", periodStart)
-      .lte("date", periodEnd)
-      .order("date", { ascending: true });
+    const [{ data }, { data: mixRows }] = await Promise.all([
+      supabase
+        .from("store_daily_metrics")
+        .select("date, department, meta_vendas, meta_lucro, meta_margem_pct, meta_volume")
+        .eq("store_id", storeId)
+        .in("department", DEPARTMENTS)
+        .gte("date", periodStart)
+        .lte("date", periodEnd)
+        .order("date", { ascending: true }),
+      supabase
+        .from("meta_mix")
+        .select("department, meta_mix")
+        .eq("store_id", storeId)
+        .eq("ano", selectedYear)
+        .eq("mes", selectedMonth),
+    ]);
 
     const results: Record<string, any[]> = {};
     for (const d of data || []) (results[d.department] ||= []).push(d);
     setMetasData(results);
+    setMetaMix(Object.fromEntries((mixRows || []).map((m: any) => [m.department, Number(m.meta_mix) || 0])));
     setLoading(false);
   };
+
 
   // Combina metas (banco) com realizado ao vivo (VR)
   const rawData = useMemo(() => {
