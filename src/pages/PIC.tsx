@@ -175,7 +175,9 @@ const PIC = () => {
           realizado_margem_pct: r?.margemPct || 0,
           meta_volume: Number(m.meta_volume) || 0,
           realizado_volume: r?.volume || 0,
+          realizado_mix: r?.mix || 0,
         };
+
       });
     }
     return out;
