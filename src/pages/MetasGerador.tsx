@@ -284,9 +284,9 @@ const MetasGerador = () => {
   };
 
   const exportExcel = () => {
-    const header = "Data\tTipo\tMeta Vendas\tMeta Margem %\tMeta Lucro\n";
+    const header = "Data\tTipo\tMeta Vendas\tMeta Margem %\tMeta Lucro\tMeta Volume\tMeta Mix\n";
     const rows = metasRows.map(r =>
-      `${fmtDate(r.date)}\t${r.tipo_dia}\t${fmtNum(Number(r.meta_vendas))}\t${fmtNum(Number(r.meta_margem_pct))}\t${fmtNum(Number(r.meta_lucro))}`
+      `${fmtDate(r.date)}\t${r.tipo_dia}\t${fmtNum(Number(r.meta_vendas))}\t${fmtNum(Number(r.meta_margem_pct))}\t${fmtNum(Number(r.meta_lucro))}\t${fmtNum(Number(r.meta_volume), 3)}\t${fmtNum(Number(r.meta_mix), 0)}`
     ).join("\n");
     const blob = new Blob([header + rows], { type: "text/tab-separated-values;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -300,7 +300,9 @@ const MetasGerador = () => {
     const t = operantes.reduce((acc, r) => ({
       vendas: acc.vendas + Number(r.meta_vendas || 0),
       lucro: acc.lucro + Number(r.meta_lucro || 0),
-    }), { vendas: 0, lucro: 0 });
+      volume: acc.volume + Number(r.meta_volume || 0),
+      mix: acc.mix + Number(r.meta_mix || 0),
+    }), { vendas: 0, lucro: 0, volume: 0, mix: 0 });
     const dias = operantes.length;
     return {
       ...t,
@@ -308,6 +310,8 @@ const MetasGerador = () => {
       diasIgnorados: metasRows.length - dias,
       mediaVendas: dias > 0 ? t.vendas / dias : 0,
       mediaLucro: dias > 0 ? t.lucro / dias : 0,
+      mediaVolume: dias > 0 ? t.volume / dias : 0,
+      mediaMix: dias > 0 ? t.mix / dias : 0,
     };
   }, [metasRows]);
 
