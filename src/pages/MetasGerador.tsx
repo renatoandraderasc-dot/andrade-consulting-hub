@@ -464,7 +464,25 @@ const MetasGerador = () => {
                             className={inputCls + " w-24"}
                           />
                         </td>
-                        <td className="py-2 pl-2 text-right font-body">{fmtBRL(Number(r.meta_lucro))}</td>
+                        <td className="py-2 px-2 text-right font-body">{fmtBRL(Number(r.meta_lucro))}</td>
+                        <td className="py-2 px-2 text-right">
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            value={fmtNum(Number(r.meta_volume) || 0, 3)}
+                            onChange={(e) => handleEditMeta(r.date, "meta_volume", e.target.value)}
+                            className={inputCls + " w-28"}
+                          />
+                        </td>
+                        <td className="py-2 pl-2 text-right">
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={fmtNum(Number(r.meta_mix) || 0, 0)}
+                            onChange={(e) => handleEditMeta(r.date, "meta_mix", e.target.value)}
+                            className={inputCls + " w-24"}
+                          />
+                        </td>
                       </tr>
                     );
                   })}
