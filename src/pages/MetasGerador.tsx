@@ -441,7 +441,7 @@ const MetasGerador = () => {
                   {metasRows.length === 0 && (
                     <tr><td colSpan={7} className="py-6 text-center text-muted-foreground font-body">Nenhuma meta gerada ainda.</td></tr>
                   )}
-                  {metasRows.map((r) => {
+                  {metasRows.map((r, idx) => {
                     const isDirty = dirtyDates.has(r.date);
                     const semOp = isSemOperacao(r);
                     const inputCls = `w-32 bg-background border rounded-lg px-2 py-1.5 text-right font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 ${isDirty ? "border-amber-500" : "border-border"}`;
