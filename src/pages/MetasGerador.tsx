@@ -424,7 +424,11 @@ const MetasGerador = () => {
                     <th className="text-right py-2 px-2 font-body text-muted-foreground">Margem %</th>
                     <th className="text-right py-2 px-2 font-body text-muted-foreground">Meta Lucro</th>
                     <th className="text-right py-2 px-2 font-body text-muted-foreground">Meta Volume</th>
-                    <th className="text-right py-2 pl-2 font-body text-muted-foreground">Meta Mix</th>
+                    <th className="text-right py-2 pl-2 font-body text-muted-foreground">
+                      Mix novos/dia
+                      <span className="block text-[10px] normal-case">acumulado = positivação</span>
+                    </th>
+
                   </tr>
                 </thead>
                 <tbody>
