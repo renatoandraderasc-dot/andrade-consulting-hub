@@ -493,7 +493,9 @@ const MetasGerador = () => {
                       <td className="py-3 pr-4 font-body" colSpan={2}>Totais</td>
                       <td className="py-3 px-2 text-right font-body">{fmtBRL(totals.vendas)}</td>
                       <td></td>
-                      <td className="py-3 pl-2 text-right font-body">{fmtBRL(totals.lucro)}</td>
+                      <td className="py-3 px-2 text-right font-body">{fmtBRL(totals.lucro)}</td>
+                      <td className="py-3 px-2 text-right font-body">{fmtNum(totals.volume, 3)}</td>
+                      <td className="py-3 pl-2 text-right font-body">{fmtNum(totals.mix, 0)}</td>
                     </tr>
                     <tr className="text-muted-foreground">
                       <td className="py-2 pr-4 font-body text-xs" colSpan={2}>
@@ -502,7 +504,9 @@ const MetasGerador = () => {
                       </td>
                       <td className="py-2 px-2 text-right font-body text-xs">{fmtBRL(totals.mediaVendas)}</td>
                       <td></td>
-                      <td className="py-2 pl-2 text-right font-body text-xs">{fmtBRL(totals.mediaLucro)}</td>
+                      <td className="py-2 px-2 text-right font-body text-xs">{fmtBRL(totals.mediaLucro)}</td>
+                      <td className="py-2 px-2 text-right font-body text-xs">{fmtNum(totals.mediaVolume, 3)}</td>
+                      <td className="py-2 pl-2 text-right font-body text-xs">{fmtNum(totals.mediaMix, 0)}</td>
                     </tr>
                   </tfoot>
                 )}
