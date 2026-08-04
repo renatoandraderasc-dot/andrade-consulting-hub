@@ -294,7 +294,34 @@ const PIC = () => {
       result[dept].faturamento = calcKpi("meta_vendas", "realizado_vendas");
       result[dept].margem = calcMargemKpi();
       result[dept].arrecadacao = calcKpi("meta_lucro", "realizado_lucro");
-      result[dept].volume = calcKpi("meta_volume", "realizado_volume");
+      // Mix: realizado ao vivo (positivação acumulada) x meta mensal de meta_mix
+      const metaMensalMix = Number(metaMix[dept]) || 0;
+      {
+        let realizado = 0, acumulado = 0;
+        const daily: KpiData["daily"] = [];
+        for (const r of rows) {
+          acumulado += Number(r.realizado_mix) || 0;
+          if (r.day <= cutoffDay) realizado = acumulado;
+          daily.push({
+            day: r.day,
+            pct: metaMensalMix > 0 ? (acumulado / metaMensalMix) * 100 : 0,
+            realizado: acumulado,
+            meta: metaMensalMix,
+            hasMeta: metaMensalMix > 0,
+          });
+        }
+        const pct = metaMensalMix > 0 ? (realizado / metaMensalMix) * 100 : 0;
+        result[dept].volume = {
+          pctTotal: pct,
+          pctAcumulado: pct,
+          realizado,
+          metaMensal: metaMensalMix,
+          metaAcumulada: metaMensalMix,
+          hasMeta: metaMensalMix > 0,
+          daily,
+        };
+      }
+
     }
     return result;
   }, [rawData, cutoffDay]);
