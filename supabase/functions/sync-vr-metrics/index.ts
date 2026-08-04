@@ -6,6 +6,7 @@
 // Protegida pelo header x-sync-secret (env SYNC_VR_SECRET).
 // ============================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { consultarRelatorioLoja } from "../_shared/consultaLoja.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -95,7 +96,7 @@ Deno.serve(async (req) => {
 
   const { data: configs, error: cfgErr } = await supabase
     .from("store_vr_config")
-    .select("store_id, api_url, api_key")
+    .select("store_id, api_url, api_key, sistema")
     .eq("enabled", true);
   if (cfgErr) {
     return new Response(JSON.stringify({ erro: cfgErr.message }), {
@@ -125,18 +126,12 @@ Deno.serve(async (req) => {
     for (const dataDia of datas) {
       try {
         const relatorio = dataDia === dataHoje ? "vendas_secao_agora" : "vendas_secao_dia";
-        const url =
-          `${cfg.api_url.replace(/\/+$/, "")}/relatorios/${relatorio}` +
-          `?data=${dataDia}&chave=${encodeURIComponent(cfg.api_key)}`;
-        const resp = await fetch(url, {
-          headers: { "ngrok-skip-browser-warning": "true" },
-          signal: AbortSignal.timeout(60000),
+        const r = await consultarRelatorioLoja({
+          supabaseUrl, serviceKey: serviceRoleKey, storeId: cfg.store_id,
+          relatorio, params: { data: dataDia }, cfg, timeoutMs: 60000,
         });
-        if (!resp.ok) {
-          const corpo = await resp.text();
-          throw new Error(`API VR respondeu ${resp.status} em ${dataDia}: ${corpo.slice(0, 200)}`);
-        }
-        const linhas: LinhaVr[] = await resp.json();
+        if (!r.ok) throw new Error(`${r.erro ?? "falha"} em ${dataDia}`);
+        const linhas = r.dados as unknown as LinhaVr[];
 
         const porDepto = new Map<string, { vendas: number; lucro: number; volume: number; temVolume: boolean }>();
         for (const l of linhas) {

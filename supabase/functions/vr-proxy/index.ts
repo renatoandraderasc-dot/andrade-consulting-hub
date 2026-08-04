@@ -6,6 +6,7 @@
 // Body: { store_id, relatorio, params: Record<string,string> }
 // ============================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { consultarRelatorioLoja } from "../_shared/consultaLoja.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -45,59 +46,17 @@ Deno.serve(async (req) => {
     const isAdmin = (roleRows?.length ?? 0) > 0;
     if (!isAdmin && (accessRows?.length ?? 0) === 0) return json({ erro: "sem acesso a esta loja" }, 403);
 
-    const { data: cfg } = await service.from("store_vr_config")
-      .select("api_url, api_key, sistema").eq("store_id", store_id).single();
-    // Loja sem VR: responde 200 vazio para nao quebrar as telas
-    if (!cfg) return json({ ok: true, relatorio, dados: [], aviso: "loja sem conexao VR cadastrada" });
-
-    // Loja no WebSac: delega para a websac-proxy (mesmo formato de retorno)
-    if ((cfg.sistema ?? "VR") === "WEBSAC") {
-      const resp = await fetch(`${supabaseUrl}/functions/v1/websac-proxy`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${serviceKey}`,
-          apikey: serviceKey,
-        },
-        body: JSON.stringify({ store_id, relatorio, params }),
-        signal: AbortSignal.timeout(120000),
-      });
-      const body = await resp.json().catch(() => null);
-      if (!resp.ok || (body && (body as any).erro)) {
-        return json({ erro: `WebSac: ${(body as any)?.erro ?? resp.status}` }, 502);
-      }
-      return json({ ok: true, relatorio, dados: Array.isArray(body) ? body : [] });
-    }
-
-
-    const qs = new URLSearchParams();
-    for (const [k, v] of Object.entries(params ?? {})) {
-      if (v !== undefined && v !== null) qs.set(k, String(v));
-    }
-    qs.set("chave", cfg.api_key);
-
-    const url = `${cfg.api_url.replace(/\/+$/, "")}/relatorios/${relatorio}?${qs.toString()}`;
-    const resp = await fetch(url, {
-      headers: { "ngrok-skip-browser-warning": "true" },
-      signal: AbortSignal.timeout(120000),
+    const r = await consultarRelatorioLoja({
+      supabaseUrl, serviceKey, storeId: store_id, relatorio, params,
     });
-    const texto = await resp.text();
-    // Tunel ngrok fora do ar / pagina HTML de erro => tratar como "sem conexao VR"
-    const pareceHtml = /^\s*<(!doctype|html)/i.test(texto) || /ngrok/i.test(texto.slice(0, 500));
-    if (!resp.ok) {
-      if (pareceHtml) return json({ erro: `sem conexao VR (servidor respondeu ${resp.status})` }, 200);
-      return json({ erro: `API VR ${resp.status}: ${texto.slice(0, 300)}` }, 502);
-    }
 
-    let dados: unknown;
-    try {
-      dados = JSON.parse(texto);
-    } catch {
-      if (pareceHtml) return json({ erro: "sem conexao VR (resposta invalida do tunel)" }, 200);
-      return json({ erro: "resposta VR nao e JSON", corpo: texto.slice(0, 300) }, 502);
+    // Loja sem conexao cadastrada: responde 200 vazio para nao quebrar as telas
+    if (r.semConfig) {
+      return json({ ok: true, relatorio, dados: [], aviso: "loja sem conexao VR cadastrada" });
     }
+    if (!r.ok) return json({ erro: r.erro }, r.semConexao ? 200 : 502);
 
-    return json({ ok: true, relatorio, dados });
+    return json({ ok: true, relatorio, dados: r.dados });
   } catch (e) {
     return json({ erro: e instanceof Error ? e.message : String(e) }, 500);
   }
