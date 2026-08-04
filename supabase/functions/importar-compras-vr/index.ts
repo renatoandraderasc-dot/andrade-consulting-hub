@@ -6,6 +6,7 @@
 // (o periodo e quebrado mes a mes automaticamente)
 // ============================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { consultarRelatorioLoja } from "../_shared/consultaLoja.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -61,37 +62,15 @@ Deno.serve(async (req) => {
     for (const m of mapas ?? []) mapa.set(norm(m.secao_vr), m.department);
 
     // busca compras x vendas no sistema da loja (VR ou WebSac)
-    async function buscar(ini: string, fim: string): Promise<Record<string, string>[]> {
-      if ((cfg.sistema ?? "VR") === "WEBSAC") {
-        const resp = await fetch(`${supabaseUrl}/functions/v1/websac-proxy`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${serviceKey}`,
-            apikey: serviceKey,
-          },
-          body: JSON.stringify({
-            store_id, relatorio: "compras_vendas_periodo", params: { inicio: ini, fim },
-          }),
-          signal: AbortSignal.timeout(120000),
-        });
-        const body = await resp.json().catch(() => null);
-        if (!resp.ok || (body && (body as { erro?: string }).erro)) {
-          throw new Error(`WebSac: ${(body as { erro?: string })?.erro ?? resp.status}`);
-        }
-        return Array.isArray(body) ? body : ((body as { dados?: [] })?.dados ?? []);
-      }
-      const url = `${cfg.api_url.replace(/\/+$/, "")}/relatorios/compras_vendas_periodo` +
-        `?inicio=${ini}&fim=${fim}&chave=${encodeURIComponent(cfg.api_key)}`;
-      const resp = await fetch(url, {
-        headers: { "ngrok-skip-browser-warning": "true" },
-        signal: AbortSignal.timeout(120000),
+    async function buscar(ini: string, fimM: string): Promise<Record<string, string>[]> {
+      const r = await consultarRelatorioLoja({
+        supabaseUrl, serviceKey, storeId: store_id,
+        relatorio: "compras_vendas_periodo",
+        params: { inicio: ini, fim: fimM },
+        cfg,
       });
-      const texto = await resp.text();
-      if (!resp.ok || /^\s*<(!doctype|html)/i.test(texto)) {
-        throw new Error(`sem conexao com o servidor (${resp.status}) em ${ini}`);
-      }
-      return JSON.parse(texto);
+      if (!r.ok) throw new Error(r.erro ?? "falha ao consultar o sistema da loja");
+      return r.dados as Record<string, string>[];
     }
 
     const registros: Record<string, unknown>[] = [];

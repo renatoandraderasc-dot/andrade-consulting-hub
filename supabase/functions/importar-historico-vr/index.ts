@@ -6,6 +6,7 @@
 // Body: { store_id, inicio: "AAAA-MM-DD", fim: "AAAA-MM-DD" }
 // ============================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { consultarRelatorioLoja } from "../_shared/consultaLoja.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -60,42 +61,15 @@ Deno.serve(async (req) => {
 
     // --- busca um relatorio no sistema da loja (VR ou WebSac) ---
     async function buscar(relatorio: string, obrigatorio: boolean): Promise<Record<string, string>[]> {
-      if ((cfg.sistema ?? "VR") === "WEBSAC") {
-        const resp = await fetch(`${supabaseUrl}/functions/v1/websac-proxy`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${serviceKey}`,
-            apikey: serviceKey,
-          },
-          body: JSON.stringify({ store_id, relatorio, params: { inicio, fim } }),
-          signal: AbortSignal.timeout(120000),
-        });
-        const body = await resp.json().catch(() => null);
-        if (!resp.ok || (body && (body as { erro?: string }).erro)) {
-          if (!obrigatorio) return [];
-          throw new Error(`WebSac: ${(body as { erro?: string })?.erro ?? resp.status}`);
-        }
-        return Array.isArray(body) ? body : (body?.dados ?? []);
-      }
-      const url = `${cfg.api_url.replace(/\/+$/, "")}/relatorios/${relatorio}` +
-        `?inicio=${inicio}&fim=${fim}&chave=${encodeURIComponent(cfg.api_key)}`;
-      const resp = await fetch(url, {
-        headers: { "ngrok-skip-browser-warning": "true" },
-        signal: AbortSignal.timeout(120000),
+      const r = await consultarRelatorioLoja({
+        supabaseUrl, serviceKey, storeId: store_id, relatorio,
+        params: { inicio, fim }, cfg,
       });
-      const texto = await resp.text();
-      const pareceHtml = /^\s*<(!doctype|html)/i.test(texto) || /ngrok/i.test(texto.slice(0, 500));
-      if (!resp.ok || pareceHtml) {
+      if (!r.ok) {
         if (!obrigatorio) return [];
-        throw new Error(`sem conexao VR (servidor respondeu ${resp.status})`);
+        throw new Error(r.erro ?? "falha ao consultar o sistema da loja");
       }
-      try {
-        return JSON.parse(texto);
-      } catch {
-        if (!obrigatorio) return [];
-        throw new Error("resposta invalida do servidor");
-      }
+      return r.dados as Record<string, string>[];
     }
 
     let linhas: Record<string, string>[] = [];
