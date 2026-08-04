@@ -129,7 +129,11 @@ const MetasGerador = () => {
     return window.confirm("Existem alterações de metas não salvas. Deseja descartá-las?");
   };
 
-  const handleEditMeta = (date: string, field: "meta_vendas" | "meta_margem_pct", raw: string) => {
+  const handleEditMeta = (
+    date: string,
+    field: "meta_vendas" | "meta_margem_pct" | "meta_volume" | "meta_mix",
+    raw: string,
+  ) => {
     const num = parseFloat(raw.replace(/\./g, "").replace(",", ".")) || 0;
     setMetasRows((rows) =>
       rows.map((r) => {
@@ -154,6 +158,8 @@ const MetasGerador = () => {
         meta_vendas: Number(r.meta_vendas) || 0,
         meta_margem_pct: Number(r.meta_margem_pct) || 0,
         meta_lucro: ((Number(r.meta_vendas) || 0) * (Number(r.meta_margem_pct) || 0)) / 100,
+        meta_volume: Number(r.meta_volume) || 0,
+        meta_mix: Number(r.meta_mix) || 0,
       }));
       const { error } = await supabase
         .from("store_daily_metrics")
