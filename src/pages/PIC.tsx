@@ -60,6 +60,8 @@ const PIC = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [viewMode, setViewMode] = useState<"mes" | "dia">("mes");
   const [metasData, setMetasData] = useState<Record<string, any[]>>({});
+  const [metaMix, setMetaMix] = useState<Record<string, number>>({});
+
   const [loading, setLoading] = useState(true);
 
   const periodStart = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}-01`;
