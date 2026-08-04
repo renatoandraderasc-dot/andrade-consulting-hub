@@ -17,6 +17,13 @@ interface Store { id: string; name: string }
 
 const MONTHS = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
+const NIVEL_LABEL: Record<string, string> = {
+  nivel1: "Nível 1 (Departamento)",
+  nivel2: "Nível 2 (Grupo)",
+  nivel3: "Nível 3 (Subgrupo)",
+  produto: "Produto",
+};
+
 const fmtBRL = (v: number) => (Number(v) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const fmtPct = (v: number, d = 1) => `${(Number(v) || 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d })}%`;
 const fmtNum = (v: number, d = 0) => (Number(v) || 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -49,6 +56,10 @@ const Compras = () => {
   const [cvFim, setCvFim] = useState("");
   const [cvLinhas, setCvLinhas] = useState<any[]>([]);
   const [cvLoading, setCvLoading] = useState(false);
+  const [cvNivel, setCvNivel] = useState<"nivel1" | "nivel2" | "nivel3" | "produto">("nivel1");
+  const [fN1, setFN1] = useState("__all__");
+  const [fN2, setFN2] = useState("__all__");
+  const [fN3, setFN3] = useState("__all__");
   const [fornecedores, setFornecedores] = useState<any[]>([]);
   const [fornLoading, setFornLoading] = useState(false);
 
@@ -304,18 +315,52 @@ const Compras = () => {
   }, [painelRows]);
 
   // ============ Derived (Aba 2) ============
-  // Agrupado por departamento nivel 1
+  // Normaliza cada linha na hierarquia Nivel 1 / Nivel 2 / Nivel 3 / Produto
+  const cvItens = useMemo(() => {
+    return cvLinhas.map((l: any) => {
+      const partes = String(l.secao ?? "").split("/").map((s: string) => s.trim());
+      const n1 = String(l.nivel1 ?? l.departamento ?? partes[0] ?? "").trim() || "SEM DEPARTAMENTO";
+      const n2 = String(l.nivel2 ?? partes[1] ?? "").trim() || "SEM GRUPO";
+      const n3 = String(l.nivel3 ?? partes[2] ?? "").trim() || "SEM SUBGRUPO";
+      const prod = String(l.produto ?? l.descricao ?? "").trim() || "SEM PRODUTO";
+      return {
+        nivel1: n1, nivel2: n2, nivel3: n3, produto: prod,
+        qtde_venda: parseFloat(String(l.qtde_venda ?? l.qtde_vendida ?? 0)) || 0,
+        venda: parseFloat(String(l.total_venda)) || 0,
+        cmv: parseFloat(String(l.cmv)) || 0,
+        qtde_compra: parseFloat(String(l.qtde_compra ?? l.qtde_comprada ?? 0)) || 0,
+        compra: parseFloat(String(l.total_compra)) || 0,
+      };
+    });
+  }, [cvLinhas]);
+
+  const cvOpcoes = useMemo(() => {
+    const n1 = new Set<string>(), n2 = new Set<string>(), n3 = new Set<string>();
+    for (const i of cvItens) {
+      n1.add(i.nivel1);
+      if (fN1 === "__all__" || i.nivel1 === fN1) n2.add(i.nivel2);
+      if ((fN1 === "__all__" || i.nivel1 === fN1) && (fN2 === "__all__" || i.nivel2 === fN2)) n3.add(i.nivel3);
+    }
+    const ord = (s: Set<string>) => [...s].sort((a, b) => a.localeCompare(b, "pt-BR"));
+    return { n1: ord(n1), n2: ord(n2), n3: ord(n3) };
+  }, [cvItens, fN1, fN2]);
+
   const cvRows = useMemo(() => {
+    const filtrados = cvItens.filter((i) =>
+      (fN1 === "__all__" || i.nivel1 === fN1) &&
+      (fN2 === "__all__" || i.nivel2 === fN2) &&
+      (fN3 === "__all__" || i.nivel3 === fN3));
+
     const acc = new Map<string, { secao: string; qtde_venda: number; venda: number; cmv: number; qtde_compra: number; compra: number }>();
-    for (const l of cvLinhas) {
-      const dep = String(l.departamento ?? "").trim() || String(l.secao ?? "").split("/")[0].trim() || "SEM DEPARTAMENTO";
-      const cur = acc.get(dep) ?? { secao: dep, qtde_venda: 0, venda: 0, cmv: 0, qtde_compra: 0, compra: 0 };
-      cur.qtde_venda += parseFloat(String(l.qtde_venda ?? l.qtde_vendida ?? 0)) || 0;
-      cur.venda += parseFloat(String(l.total_venda)) || 0;
-      cur.cmv += parseFloat(String(l.cmv)) || 0;
-      cur.qtde_compra += parseFloat(String(l.qtde_compra ?? l.qtde_comprada ?? 0)) || 0;
-      cur.compra += parseFloat(String(l.total_compra)) || 0;
-      acc.set(dep, cur);
+    for (const i of filtrados) {
+      const chave = i[cvNivel];
+      const cur = acc.get(chave) ?? { secao: chave, qtde_venda: 0, venda: 0, cmv: 0, qtde_compra: 0, compra: 0 };
+      cur.qtde_venda += i.qtde_venda;
+      cur.venda += i.venda;
+      cur.cmv += i.cmv;
+      cur.qtde_compra += i.qtde_compra;
+      cur.compra += i.compra;
+      acc.set(chave, cur);
     }
     return [...acc.values()].map((r) => ({
       ...r,
@@ -324,7 +369,7 @@ const Compras = () => {
       cv: r.venda > 0 ? (r.compra / r.venda) * 100 : 0,
       ccmv: r.cmv > 0 ? (r.compra / r.cmv) * 100 : 0,
     })).sort((a, b) => b.venda - a.venda);
-  }, [cvLinhas]);
+  }, [cvItens, cvNivel, fN1, fN2, fN3]);
 
 
   const cvTotais = useMemo(() => {
@@ -503,6 +548,46 @@ const Compras = () => {
                   <RefreshCw className={`w-4 h-4 ${fornLoading ? "animate-spin" : ""}`} /> Top fornecedores
                 </button>
               </div>
+
+              {cvItens.length > 0 && (
+                <div className="flex flex-wrap items-end gap-4 mt-4 pt-4 border-t border-border">
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Agrupar por</label>
+                    <select value={cvNivel} onChange={(e) => setCvNivel(e.target.value as any)} className={inputCls}>
+                      <option value="nivel1">Nível 1 (Departamento)</option>
+                      <option value="nivel2">Nível 2 (Grupo)</option>
+                      <option value="nivel3">Nível 3 (Subgrupo)</option>
+                      <option value="produto">Produto</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Nível 1</label>
+                    <select value={fN1} onChange={(e) => { setFN1(e.target.value); setFN2("__all__"); setFN3("__all__"); }} className={inputCls}>
+                      <option value="__all__">Todos</option>
+                      {cvOpcoes.n1.map((o) => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Nível 2</label>
+                    <select value={fN2} onChange={(e) => { setFN2(e.target.value); setFN3("__all__"); }} className={inputCls}>
+                      <option value="__all__">Todos</option>
+                      {cvOpcoes.n2.map((o) => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">Nível 3</label>
+                    <select value={fN3} onChange={(e) => setFN3(e.target.value)} className={inputCls}>
+                      <option value="__all__">Todos</option>
+                      {cvOpcoes.n3.map((o) => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  </div>
+                  {(fN1 !== "__all__" || fN2 !== "__all__" || fN3 !== "__all__") && (
+                    <button onClick={() => { setFN1("__all__"); setFN2("__all__"); setFN3("__all__"); }} className={btnGhost}>
+                      Limpar filtros
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             {cvRows.length > 0 && (
@@ -518,7 +603,7 @@ const Compras = () => {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-border text-muted-foreground">
-                        <th className="text-left py-2">Departamento</th>
+                        <th className="text-left py-2">{NIVEL_LABEL[cvNivel]}</th>
                         <th className="text-right py-2 px-2">Qtd venda</th>
                         <th className="text-right py-2 px-2">Venda</th>
                         <th className="text-right py-2 px-2">CMV</th>
@@ -553,9 +638,9 @@ const Compras = () => {
                 </div>
 
                 <div className="bg-card border border-border rounded-xl p-5">
-                  <h3 className="text-sm font-semibold mb-4">Venda × Compra por seção</h3>
-                  <ResponsiveContainer width="100%" height={Math.max(260, cvRows.length * 26)}>
-                    <BarChart data={cvRows} layout="vertical" margin={{ left: 20, right: 30 }}>
+                  <h3 className="text-sm font-semibold mb-4">Venda × Compra por {NIVEL_LABEL[cvNivel].toLowerCase()}</h3>
+                  <ResponsiveContainer width="100%" height={Math.max(260, Math.min(cvRows.length, 25) * 26)}>
+                    <BarChart data={cvRows.slice(0, 25)} layout="vertical" margin={{ left: 20, right: 30 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
                       <XAxis type="number" tickFormatter={(v) => fmtBRL(v)} stroke="hsl(var(--muted-foreground))" fontSize={11} />
                       <YAxis type="category" dataKey="secao" stroke="hsl(var(--muted-foreground))" fontSize={11} width={140} />
