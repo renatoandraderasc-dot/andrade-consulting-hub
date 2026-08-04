@@ -638,7 +638,7 @@ const Compras = () => {
                 </div>
 
                 <div className="bg-card border border-border rounded-xl p-5">
-                  <h3 className="text-sm font-semibold mb-4">Venda × Compra por seção</h3>
+                  <h3 className="text-sm font-semibold mb-4">Venda × Compra por {NIVEL_LABEL[cvNivel].toLowerCase()}</h3>
                   <ResponsiveContainer width="100%" height={Math.max(260, cvRows.length * 26)}>
                     <BarChart data={cvRows} layout="vertical" margin={{ left: 20, right: 30 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
