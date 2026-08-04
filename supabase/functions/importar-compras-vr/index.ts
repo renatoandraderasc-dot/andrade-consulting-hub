@@ -107,13 +107,24 @@ Deno.serve(async (req) => {
     }
 
 
+    // O histórico é um retrato mensal. Remova o retrato anterior antes de
+    // gravar o atual para não manter departamentos/valores de consultas antigas.
     let gravadas = 0;
-    for (let i = 0; i < registros.length; i += 500) {
-      const lote = registros.slice(i, i + 500);
-      const { error } = await supabase.from("compras_historico")
-        .upsert(lote, { onConflict: "store_id,departamento,ano,mes" });
-      if (error) return json({ erro: error.message, gravadas }, 500);
-      gravadas += lote.length;
+    for (const m of meses) {
+      const { error: deleteError } = await supabase.from("compras_historico")
+        .delete()
+        .eq("store_id", store_id)
+        .eq("ano", m.ano)
+        .eq("mes", m.mes);
+      if (deleteError) return json({ erro: deleteError.message, gravadas }, 500);
+
+      const registrosMes = registros.filter((r) => r.ano === m.ano && r.mes === m.mes);
+      for (let i = 0; i < registrosMes.length; i += 500) {
+        const lote = registrosMes.slice(i, i + 500);
+        const { error } = await supabase.from("compras_historico").insert(lote);
+        if (error) return json({ erro: error.message, gravadas }, 500);
+        gravadas += lote.length;
+      }
     }
 
     return json({ ok: true, meses: meses.length, gravadas });
