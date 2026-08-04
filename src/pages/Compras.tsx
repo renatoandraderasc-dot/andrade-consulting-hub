@@ -639,8 +639,8 @@ const Compras = () => {
 
                 <div className="bg-card border border-border rounded-xl p-5">
                   <h3 className="text-sm font-semibold mb-4">Venda × Compra por {NIVEL_LABEL[cvNivel].toLowerCase()}</h3>
-                  <ResponsiveContainer width="100%" height={Math.max(260, cvRows.length * 26)}>
-                    <BarChart data={cvRows} layout="vertical" margin={{ left: 20, right: 30 }}>
+                  <ResponsiveContainer width="100%" height={Math.max(260, Math.min(cvRows.length, 25) * 26)}>
+                    <BarChart data={cvRows.slice(0, 25)} layout="vertical" margin={{ left: 20, right: 30 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
                       <XAxis type="number" tickFormatter={(v) => fmtBRL(v)} stroke="hsl(var(--muted-foreground))" fontSize={11} />
                       <YAxis type="category" dataKey="secao" stroke="hsl(var(--muted-foreground))" fontSize={11} width={140} />
