@@ -14,7 +14,13 @@ const DEPARTMENTS_PIC = ["PADARIA", "AÇOUGUE", "HORTIFRUTI"];
 const DEPARTMENTS = [...DEPARTMENTS_PIC, "LOJA"];
 const deptLabel = (d: string) => (d === "LOJA" ? "Supermercado — Total" : d);
 const MONTHS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const DIAS_SEM: [string, string][] = [
+  ["SEG", "D"], ["TER", "D"], ["QUA", "D"], ["QUI", "D"], ["SEX", "D"], ["SAB", "F"], ["DOM", "F"],
+];
 const TIPO_OPTIONS = [
+  // por semana do mês: SEG 1, TER 1, ... SEG 2, TER 2 ...
+  ...[1, 2, 3, 4, 5, 6].flatMap((s) => DIAS_SEM.map(([d, suf]) => `${d} ${s} ${suf}`)),
+  // genéricos e dias especiais
   "SEG D","TER D","QUA D","QUI D","SEX D","SAB F","DOM F",
   "PRIMEIRO DIA D","PRIMEIRO DIA F","ULTIMO DIA D","ULTIMO DIA F",
   "4o DIA UTIL D","5o DIA UTIL D","VALE D","VALE F","FERIADO D","FERIADO F",
