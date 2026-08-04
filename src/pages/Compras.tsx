@@ -326,10 +326,10 @@ const Compras = () => {
       return {
         nivel1: n1, nivel2: n2, nivel3: n3, produto: prod,
         qtde_venda: parseFloat(String(l.qtde_venda ?? l.qtde_vendida ?? 0)) || 0,
-        venda: parseFloat(String(l.total_venda)) || 0,
-        cmv: parseFloat(String(l.cmv)) || 0,
+        venda: parseFloat(String(l.total_venda ?? l.valor_venda ?? l.venda ?? 0)) || 0,
+        cmv: parseFloat(String(l.cmv ?? l.total_cmv ?? l.custo ?? 0)) || 0,
         qtde_compra: parseFloat(String(l.qtde_compra ?? l.qtde_comprada ?? 0)) || 0,
-        compra: parseFloat(String(l.total_compra)) || 0,
+        compra: parseFloat(String(l.total_compra ?? l.valor_compra ?? l.compra ?? 0)) || 0,
       };
     });
   }, [cvLinhas]);
@@ -353,8 +353,15 @@ const Compras = () => {
 
     const acc = new Map<string, { secao: string; qtde_venda: number; venda: number; cmv: number; qtde_compra: number; compra: number }>();
     for (const i of filtrados) {
-      const chave = i[cvNivel];
-      const cur = acc.get(chave) ?? { secao: chave, qtde_venda: 0, venda: 0, cmv: 0, qtde_compra: 0, compra: 0 };
+      const chave = cvNivel === "nivel1"
+        ? i.nivel1
+        : cvNivel === "nivel2"
+          ? `${i.nivel1}|${i.nivel2}`
+          : cvNivel === "nivel3"
+            ? `${i.nivel1}|${i.nivel2}|${i.nivel3}`
+            : `${i.nivel1}|${i.nivel2}|${i.nivel3}|${i.produto}`;
+      const rotulo = i[cvNivel];
+      const cur = acc.get(chave) ?? { secao: rotulo, qtde_venda: 0, venda: 0, cmv: 0, qtde_compra: 0, compra: 0 };
       cur.qtde_venda += i.qtde_venda;
       cur.venda += i.venda;
       cur.cmv += i.cmv;
@@ -630,11 +637,11 @@ const Compras = () => {
                         return (
                           <tr key={i} className="border-b border-border/50">
                             <td className="py-2">{r.secao}</td>
-                            <td className="py-2 px-2 text-right tabular-nums">{fmtNum(r.qtde_venda)}</td>
+                             <td className="py-2 px-2 text-right tabular-nums">{fmtNum(r.qtde_venda, 2)}</td>
                             <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(r.venda)}</td>
                             <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(r.cmv)}</td>
                             <td className="py-2 px-2 text-right tabular-nums">{fmtPct(r.margem)}</td>
-                            <td className="py-2 px-2 text-right tabular-nums">{fmtNum(r.qtde_compra)}</td>
+                             <td className="py-2 px-2 text-right tabular-nums">{fmtNum(r.qtde_compra, 2)}</td>
                             <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(r.compra)}</td>
                              <td className={`py-2 px-2 text-right tabular-nums ${r.saldo_venda < 0 ? "text-red-500" : ""}`}>{fmtBRL(r.saldo_venda)}</td>
                             <td className={`py-2 px-2 text-right tabular-nums ${r.saldo_cmv < 0 ? "text-red-500" : ""}`}>{fmtBRL(r.saldo_cmv)}</td>
