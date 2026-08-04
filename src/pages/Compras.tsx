@@ -590,118 +590,135 @@ const Compras = () => {
               {cvItens.length > 0 && (
                 <div className="flex flex-wrap items-end gap-4 mt-4 pt-4 border-t border-border">
                   <div>
-                    <label className="text-xs text-muted-foreground mb-1 block">Agrupar por</label>
-                    <select value={cvNivel} onChange={(e) => setCvNivel(e.target.value as any)} className={inputCls}>
-                      <option value="nivel1">Nível 1 (Departamento)</option>
-                      <option value="nivel2">Nível 2 (Grupo)</option>
-                      <option value="nivel3">Nível 3 (Subgrupo)</option>
-                      <option value="produto">Produto</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs text-muted-foreground mb-1 block">Nível 1</label>
-                    <select value={fN1} onChange={(e) => { setFN1(e.target.value); setFN2("__all__"); setFN3("__all__"); }} className={inputCls}>
+                    <label className="text-xs text-muted-foreground mb-1 block">Departamento</label>
+                    <select value={fN1} onChange={(e) => setFN1(e.target.value)} className={inputCls}>
                       <option value="__all__">Todos</option>
                       {cvOpcoes.n1.map((o) => <option key={o} value={o}>{o}</option>)}
                     </select>
                   </div>
-                  <div>
-                    <label className="text-xs text-muted-foreground mb-1 block">Nível 2</label>
-                    <select value={fN2} onChange={(e) => { setFN2(e.target.value); setFN3("__all__"); }} className={inputCls}>
-                      <option value="__all__">Todos</option>
-                      {cvOpcoes.n2.map((o) => <option key={o} value={o}>{o}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs text-muted-foreground mb-1 block">Nível 3</label>
-                    <select value={fN3} onChange={(e) => setFN3(e.target.value)} className={inputCls}>
-                      <option value="__all__">Todos</option>
-                      {cvOpcoes.n3.map((o) => <option key={o} value={o}>{o}</option>)}
-                    </select>
-                  </div>
-                  {(fN1 !== "__all__" || fN2 !== "__all__" || fN3 !== "__all__") && (
-                    <button onClick={() => { setFN1("__all__"); setFN2("__all__"); setFN3("__all__"); }} className={btnGhost}>
-                      Limpar filtros
-                    </button>
+                  {fN1 !== "__all__" && (
+                    <button onClick={() => setFN1("__all__")} className={btnGhost}>Limpar filtro</button>
                   )}
+                  <button onClick={exportarComprasVendas} className={btnGhost}>
+                    <Download className="w-4 h-4" /> Exportar Excel
+                  </button>
                 </div>
               )}
             </div>
 
-            {cvRows.length > 0 && (
+            {cvGrupos.length > 0 && (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
                   <KpiCard label="Total venda" value={fmtBRL(cvTotais.venda)} />
                   <KpiCard label="CMV" value={fmtBRL(cvTotais.cmv)} />
                   <KpiCard label="Total compra" value={fmtBRL(cvTotais.compra)} />
                   <KpiCard label="Compra/Venda" value={fmtPct(cvTotais.venda > 0 ? (cvTotais.compra / cvTotais.venda) * 100 : 0)} />
+                  <KpiCard
+                    label="Excesso de compra no período"
+                    value={fmtBRL(Math.abs(cvExcessoCompra))}
+                    tone={cvExcessoCompra < 0 ? "danger" : "success"}
+                    emphasis
+                  />
                 </div>
 
                 <div className="bg-card border border-border rounded-xl p-5 overflow-x-auto mb-6">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-border text-muted-foreground">
-                        <th className="text-left py-2">{NIVEL_LABEL[cvNivel]}</th>
+                        <th className="text-left py-2">Departamento / Seção</th>
                         <th className="text-right py-2 px-2">Qtd venda</th>
                         <th className="text-right py-2 px-2">Venda</th>
                         <th className="text-right py-2 px-2">CMV</th>
                         <th className="text-right py-2 px-2">Margem %</th>
+                        <th className="text-right py-2 px-2">Markup %</th>
                         <th className="text-right py-2 px-2">Qtd compra</th>
                         <th className="text-right py-2 px-2">Compra</th>
-                         <th className="text-right py-2 px-2">Venda − Compra</th>
+                        <th className="text-right py-2 px-2">Venda − Compra</th>
                         <th className="text-right py-2 px-2">CMV − Compra</th>
-                         <th className="text-right py-2 px-2">Compra / Venda</th>
-                         <th className="text-right py-2 px-2">Compra / CMV</th>
-                         <th className="text-right py-2 px-2">Participação</th>
+                        <th className="text-right py-2 px-2">Compra / Venda</th>
+                        <th className="text-right py-2 px-2">Compra / CMV</th>
+                        <th className="text-right py-2 px-2">Participação</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {cvRows.map((r, i) => {
-                        const cvTone = r.cv > 100 ? "text-red-500" : r.cv < 60 ? "text-amber-500" : "";
+                      {cvGrupos.map((g) => {
+                        const aberto = !!expandidos[g.departamento];
+                        const toneCcmv = (v: number) => (v > 100 ? "text-red-500" : v < 85 ? "text-amber-500" : "");
                         return (
-                          <tr key={i} className="border-b border-border/50">
-                            <td className="py-2">{r.secao}</td>
-                             <td className="py-2 px-2 text-right tabular-nums">{fmtNum(r.qtde_venda, 2)}</td>
-                            <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(r.venda)}</td>
-                            <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(r.cmv)}</td>
-                            <td className="py-2 px-2 text-right tabular-nums">{fmtPct(r.margem)}</td>
-                             <td className="py-2 px-2 text-right tabular-nums">{fmtNum(r.qtde_compra, 2)}</td>
-                            <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(r.compra)}</td>
-                             <td className={`py-2 px-2 text-right tabular-nums ${r.saldo_venda < 0 ? "text-red-500" : ""}`}>{fmtBRL(r.saldo_venda)}</td>
-                            <td className={`py-2 px-2 text-right tabular-nums ${r.saldo_cmv < 0 ? "text-red-500" : ""}`}>{fmtBRL(r.saldo_cmv)}</td>
-                            <td className={`py-2 px-2 text-right tabular-nums font-medium ${cvTone}`}>{fmtPct(r.cv)}</td>
-                            <td className="py-2 px-2 text-right tabular-nums">{fmtPct(r.ccmv)}</td>
-                             <td className="py-2 px-2 text-right tabular-nums">{fmtPct(cvTotais.venda > 0 ? (r.venda / cvTotais.venda) * 100 : 0, 2)}</td>
-                          </tr>
+                          <>
+                            <tr
+                              key={g.departamento}
+                              onClick={() => setExpandidos((p) => ({ ...p, [g.departamento]: !p[g.departamento] }))}
+                              className="border-b border-border/50 cursor-pointer hover:bg-muted/40 font-medium"
+                            >
+                              <td className="py-2">
+                                <span className="inline-flex items-center gap-1">
+                                  {aberto ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                                  {g.departamento}
+                                  <span className="text-xs text-muted-foreground">({g.secoes.length})</span>
+                                </span>
+                              </td>
+                              <td className="py-2 px-2 text-right tabular-nums">{fmtNum(g.qtde_venda, 2)}</td>
+                              <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(g.venda)}</td>
+                              <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(g.cmv)}</td>
+                              <td className="py-2 px-2 text-right tabular-nums">{fmtPct(g.margem)}</td>
+                              <td className="py-2 px-2 text-right tabular-nums">{fmtPct(g.markup)}</td>
+                              <td className="py-2 px-2 text-right tabular-nums">{fmtNum(g.qtde_compra, 2)}</td>
+                              <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(g.compra)}</td>
+                              <td className={`py-2 px-2 text-right tabular-nums ${g.saldo_venda < 0 ? "text-red-500" : ""}`}>{fmtBRL(g.saldo_venda)}</td>
+                              <td className={`py-2 px-2 text-right tabular-nums ${g.saldo_cmv < 0 ? "text-red-500" : ""}`}>{fmtBRL(g.saldo_cmv)}</td>
+                              <td className="py-2 px-2 text-right tabular-nums">{fmtPct(g.cv)}</td>
+                              <td className={`py-2 px-2 text-right tabular-nums font-medium ${toneCcmv(g.ccmv)}`}>{fmtPct(g.ccmv)}</td>
+                              <td className="py-2 px-2 text-right tabular-nums">{fmtPct(g.part, 2)}</td>
+                            </tr>
+                            {aberto && g.secoes.map((s) => (
+                              <tr key={`${g.departamento}|${s.secao}`} className="border-b border-border/30 bg-muted/20">
+                                <td className="py-2 pl-9 text-muted-foreground">{s.secao}</td>
+                                <td className="py-2 px-2 text-right tabular-nums">{fmtNum(s.qtde_venda, 2)}</td>
+                                <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(s.venda)}</td>
+                                <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(s.cmv)}</td>
+                                <td className="py-2 px-2 text-right tabular-nums">{fmtPct(s.margem)}</td>
+                                <td className="py-2 px-2 text-right tabular-nums">{fmtPct(s.markup)}</td>
+                                <td className="py-2 px-2 text-right tabular-nums">{fmtNum(s.qtde_compra, 2)}</td>
+                                <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(s.compra)}</td>
+                                <td className={`py-2 px-2 text-right tabular-nums ${s.saldo_venda < 0 ? "text-red-500" : ""}`}>{fmtBRL(s.saldo_venda)}</td>
+                                <td className={`py-2 px-2 text-right tabular-nums ${s.saldo_cmv < 0 ? "text-red-500" : ""}`}>{fmtBRL(s.saldo_cmv)}</td>
+                                <td className="py-2 px-2 text-right tabular-nums">{fmtPct(s.cv)}</td>
+                                <td className={`py-2 px-2 text-right tabular-nums ${toneCcmv(s.ccmv)}`}>{fmtPct(s.ccmv)}</td>
+                                <td className="py-2 px-2 text-right tabular-nums">{fmtPct(s.part, 2)}</td>
+                              </tr>
+                            ))}
+                          </>
                         );
                       })}
                     </tbody>
-                     <tfoot>
-                       <tr className="border-t border-border font-semibold">
-                         <td className="py-3">Total</td>
-                         <td className="py-3 px-2 text-right tabular-nums">{fmtNum(cvTotais.qtde_venda, 2)}</td>
-                         <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(cvTotais.venda)}</td>
-                         <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(cvTotais.cmv)}</td>
-                         <td className="py-3 px-2 text-right tabular-nums">{fmtPct(cvTotais.cmv > 0 ? ((cvTotais.venda - cvTotais.cmv) / cvTotais.cmv) * 100 : 0)}</td>
-                         <td className="py-3 px-2 text-right tabular-nums">{fmtNum(cvTotais.qtde_compra, 2)}</td>
-                         <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(cvTotais.compra)}</td>
-                         <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(cvTotais.venda - cvTotais.compra)}</td>
-                         <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(cvTotais.cmv - cvTotais.compra)}</td>
-                         <td className="py-3 px-2 text-right tabular-nums">{fmtPct(cvTotais.venda > 0 ? (cvTotais.compra / cvTotais.venda) * 100 : 0)}</td>
-                         <td className="py-3 px-2 text-right tabular-nums">{fmtPct(cvTotais.cmv > 0 ? (cvTotais.compra / cvTotais.cmv) * 100 : 0)}</td>
-                         <td className="py-3 px-2 text-right tabular-nums">100,00%</td>
-                       </tr>
-                     </tfoot>
+                    <tfoot>
+                      <tr className="border-t border-border font-semibold">
+                        <td className="py-3">Total</td>
+                        <td className="py-3 px-2 text-right tabular-nums">{fmtNum(cvTotais.qtde_venda, 2)}</td>
+                        <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(cvTotais.venda)}</td>
+                        <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(cvTotais.cmv)}</td>
+                        <td className="py-3 px-2 text-right tabular-nums">{fmtPct(cvTotais.venda > 0 ? ((cvTotais.venda - cvTotais.cmv) / cvTotais.venda) * 100 : 0)}</td>
+                        <td className="py-3 px-2 text-right tabular-nums">{fmtPct(cvTotais.cmv > 0 ? ((cvTotais.venda - cvTotais.cmv) / cvTotais.cmv) * 100 : 0)}</td>
+                        <td className="py-3 px-2 text-right tabular-nums">{fmtNum(cvTotais.qtde_compra, 2)}</td>
+                        <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(cvTotais.compra)}</td>
+                        <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(cvTotais.venda - cvTotais.compra)}</td>
+                        <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(cvTotais.cmv - cvTotais.compra)}</td>
+                        <td className="py-3 px-2 text-right tabular-nums">{fmtPct(cvTotais.venda > 0 ? (cvTotais.compra / cvTotais.venda) * 100 : 0)}</td>
+                        <td className="py-3 px-2 text-right tabular-nums">{fmtPct(cvTotais.cmv > 0 ? (cvTotais.compra / cvTotais.cmv) * 100 : 0)}</td>
+                        <td className="py-3 px-2 text-right tabular-nums">100,00%</td>
+                      </tr>
+                    </tfoot>
                   </table>
                 </div>
 
                 <div className="bg-card border border-border rounded-xl p-5">
-                  <h3 className="text-sm font-semibold mb-4">Venda × Compra por {NIVEL_LABEL[cvNivel].toLowerCase()}</h3>
-                  <ResponsiveContainer width="100%" height={Math.max(260, Math.min(cvRows.length, 25) * 26)}>
-                    <BarChart data={cvRows.slice(0, 25)} layout="vertical" margin={{ left: 20, right: 30 }}>
+                  <h3 className="text-sm font-semibold mb-4">Venda × Compra por departamento</h3>
+                  <ResponsiveContainer width="100%" height={Math.max(260, Math.min(cvGrupos.length, 25) * 26)}>
+                    <BarChart data={cvGrupos.slice(0, 25)} layout="vertical" margin={{ left: 20, right: 30 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
                       <XAxis type="number" tickFormatter={(v) => fmtBRL(v)} stroke="hsl(var(--muted-foreground))" fontSize={11} />
-                      <YAxis type="category" dataKey="secao" stroke="hsl(var(--muted-foreground))" fontSize={11} width={140} />
+                      <YAxis type="category" dataKey="departamento" stroke="hsl(var(--muted-foreground))" fontSize={11} width={140} />
                       <Tooltip formatter={(v: any) => fmtBRL(v)} contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
                       <Legend wrapperStyle={{ fontSize: 12 }} />
                       <Bar dataKey="venda" name="Venda" fill="#2D7FF9" radius={[0, 3, 3, 0]} />
@@ -711,6 +728,7 @@ const Compras = () => {
                 </div>
               </>
             )}
+
 
             {fornecedores.length > 0 && (
               <div className="bg-card border border-border rounded-xl p-5 mt-6 overflow-x-auto">
