@@ -56,10 +56,8 @@ const Compras = () => {
   const [cvFim, setCvFim] = useState("");
   const [cvLinhas, setCvLinhas] = useState<any[]>([]);
   const [cvLoading, setCvLoading] = useState(false);
-  const [cvNivel, setCvNivel] = useState<"nivel1" | "nivel2" | "nivel3" | "produto">("nivel1");
   const [fN1, setFN1] = useState("__all__");
-  const [fN2, setFN2] = useState("__all__");
-  const [fN3, setFN3] = useState("__all__");
+  const [expandidos, setExpandidos] = useState<Record<string, boolean>>({});
   const [fornecedores, setFornecedores] = useState<any[]>([]);
   const [fornLoading, setFornLoading] = useState(false);
 
