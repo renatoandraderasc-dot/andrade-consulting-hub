@@ -226,7 +226,8 @@ const PIC = () => {
           r.meta_volume > 0 ||
           r.realizado_volume > 0 ||
           r.meta_margem_pct > 0 ||
-          r.realizado_margem_pct > 0,
+          r.realizado_margem_pct > 0 ||
+          r.realizado_mix > 0,
       );
 
       result[dept] = {};
