@@ -91,8 +91,11 @@ Deno.serve(async (req) => {
     for (const m of mapas ?? []) {
       (m.store_id ? daLoja : padrao).set(m.id_tipo, { tipo: m.tipo, subtipo: m.subtipo });
     }
-    const classificar = (idTipo: number | null) =>
-      (idTipo === null ? undefined : (daLoja.get(idTipo) ?? padrao.get(idTipo)));
+    const classificar = (idTipo: number | string | null) => {
+      const n = idTipo === null || idTipo === "" ? NaN : Number(idTipo);
+      if (Number.isNaN(n)) return undefined;
+      return daLoja.get(n) ?? padrao.get(n);
+    };
 
     const blocos = blocosMensais(inicio, fim);
     const detalhe: Record<string, unknown>[] = [];
@@ -116,7 +119,11 @@ Deno.serve(async (req) => {
       const linhas = r.dados as unknown as LinhaVr[];
 
       const registros = [];
+      const vistos = new Set<string>();
       for (const l of linhas) {
+        const ref = String(l.ref ?? "");
+        if (!ref || vistos.has(ref)) continue;
+        vistos.add(ref);
         // transferencias entre lojas nao sao despesa nem compra
         if (l.origem === "TRANSFERENCIA") continue;
 
@@ -126,10 +133,10 @@ Deno.serve(async (req) => {
         const valor = parseFloat(String(l.valor_pago)) || 0;
 
         if (!cls) {
-          const at = naoClassificados.get(l.id_tipo ?? -1) ??
+          const at = naoClassificados.get(Number(l.id_tipo ?? -1)) ??
             { qtd: 0, valor: 0, exemplo: l.fornecedor ?? "" };
           at.qtd++; at.valor += valor;
-          naoClassificados.set(l.id_tipo ?? -1, at);
+          naoClassificados.set(Number(l.id_tipo ?? -1), at);
         }
 
         const partes = [l.fornecedor, l.documento ? `Doc ${l.documento}` : null, l.observacao]
@@ -145,10 +152,10 @@ Deno.serve(async (req) => {
           subtipo: cls?.subtipo ?? "OUTROS",
           descricao: partes.slice(0, 300) || "Pagamento VR",
           valor: Math.round(valor * 100) / 100,
-          observacao: cls ? null : `NAO CLASSIFICADO — tipo VR ${l.id_tipo}`,
+          observacao: cls ? null : `NAO CLASSIFICADO — tipo ${l.id_tipo}`,
           status: "ativo",
           origem: "VR",
-          origem_ref: String(l.ref),
+          origem_ref: ref,
         });
       }
 
