@@ -149,13 +149,18 @@ const AnaliseAnual = () => {
   ) => {
     const totalDe = (linha: { meses: number[] }) => soma(linha.meses);
     const acumDe = (linha: { meses: number[] }) => acum(linha.meses);
-    const l = (ano: number) => matriz.find(m => m.ano === ano)!;
+    const l = (ano: number) =>
+      matriz.find(m => m.ano === ano) ?? { ano, meses: MESES.map(() => 0) };
 
     const linhasComp = tipo === "valor"
-      ? [
-          { label: "YTD 25 x 24", a: 2025, b: 2024 },
-          { label: "YTD 26 x 25", a: 2026, b: 2025 },
-        ]
+      ? matriz
+          .slice(1)
+          .map(m => ({
+            label: `YTD ${String(m.ano).slice(2)} x ${String(m.ano - 1).slice(2)}`,
+            a: m.ano,
+            b: m.ano - 1,
+          }))
+          .filter(c => matriz.some(m => m.ano === c.b))
       : [];
 
     return (
