@@ -96,26 +96,43 @@ const AnaliseAnual = () => {
     if (storeId) carregar(storeId);
   }, [storeId]);
 
+  // ---- filtros ----
+  const departamentos = useMemo(
+    () => Array.from(new Set(rows.map(r => r.departamento).filter(Boolean))).sort(),
+    [rows],
+  );
+  const anosDisponiveis = useMemo(() => {
+    const a = Array.from(new Set(rows.map(r => r.ano))).sort((x, y) => x - y);
+    return a.length ? a : ANOS;
+  }, [rows]);
 
-  const val = (ano: number, mes: number, campo: keyof Row) => {
-    const r = rows.find(x => x.ano === ano && x.mes === mes);
-    const v = r ? Number(r[campo]) : 0;
-    return v || 0;
-  };
+  const anosSel = useMemo(
+    () => anosDisponiveis.filter(a => a >= anoIni && a <= anoFim),
+    [anosDisponiveis, anoIni, anoFim],
+  );
+
+  const rowsFiltradas = useMemo(
+    () => rows.filter(r => (deptos.length === 0 ? true : deptos.includes(r.departamento))),
+    [rows, deptos],
+  );
+
+  const val = (ano: number, mes: number, campo: "faturamento" | "lucro" | "volume") =>
+    rowsFiltradas
+      .filter(x => x.ano === ano && x.mes === mes)
+      .reduce((s, x) => s + Number(x[campo] || 0), 0);
 
   const blocos = useMemo(() => {
-    const build = (campo: "faturamento" | "lucro" | "volume") => {
-      const matriz = ANOS.map(ano => ({ ano, meses: MESES.map((_, i) => val(ano, i + 1, campo)) }));
-      return matriz;
-    };
+    const build = (campo: "faturamento" | "lucro" | "volume") =>
+      anosSel.map(ano => ({ ano, meses: MESES.map((_, i) => val(ano, i + 1, campo)) }));
     return { faturamento: build("faturamento"), lucro: build("lucro"), volume: build("volume") };
-  }, [rows]);
+  }, [rowsFiltradas, anosSel]);
 
-  // Último mês com dado em 2026 (para acumulados comparáveis)
+  // Último mês com dado no ano mais recente selecionado (para acumulados comparáveis)
   const mesCorte = useMemo(() => {
-    const m = rows.filter(r => r.ano === 2026 && r.faturamento > 0).map(r => r.mes);
+    const ultimo = anosSel[anosSel.length - 1];
+    const m = rowsFiltradas.filter(r => r.ano === ultimo && r.faturamento > 0).map(r => r.mes);
     return m.length ? Math.max(...m) : 12;
-  }, [rows]);
+  }, [rowsFiltradas, anosSel]);
 
   const soma = (arr: number[]) => arr.reduce((s, v) => s + v, 0);
   const acum = (arr: number[]) => soma(arr.slice(0, mesCorte));
