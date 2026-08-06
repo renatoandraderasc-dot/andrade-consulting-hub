@@ -67,6 +67,7 @@ const AnaliseAnual = () => {
             faturamento: Number(r.receita_bruta ?? r.faturamento ?? 0),
             lucro: Number(r.lucro_bruto ?? r.lucro ?? 0),
             volume: Number(r.volume ?? 0),
+            departamento: String(r.departamento ?? r.department ?? r.secao ?? r.nivel1 ?? "TOTAL").toUpperCase(),
           };
         })
         .filter((r) => r.ano && r.mes);
