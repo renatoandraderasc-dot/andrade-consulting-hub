@@ -5,13 +5,15 @@ import { supabase } from "@/integrations/supabase/client";
 import ClientLayout from "@/components/ClientLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TrendingUp, RefreshCw } from "lucide-react";
 import { motion } from "framer-motion";
 
 const MESES = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
 const ANOS = [2022, 2023, 2024, 2025, 2026];
 
-type Row = { ano: number; mes: number; faturamento: number; lucro: number; volume: number };
+type Row = { ano: number; mes: number; faturamento: number; lucro: number; volume: number; departamento: string };
 
 const nfInt = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 });
 const fmtNum = (v: number | null) => (v == null || !isFinite(v) ? "" : nfInt.format(Math.round(v)));
@@ -26,6 +28,9 @@ const AnaliseAnual = () => {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState("");
+  const [anoIni, setAnoIni] = useState(ANOS[0]);
+  const [anoFim, setAnoFim] = useState(ANOS[ANOS.length - 1]);
+  const [deptos, setDeptos] = useState<string[]>([]);
 
   useEffect(() => {
     if (!authLoading && !user) { navigate("/login"); return; }
@@ -67,6 +72,7 @@ const AnaliseAnual = () => {
             faturamento: Number(r.receita_bruta ?? r.faturamento ?? 0),
             lucro: Number(r.lucro_bruto ?? r.lucro ?? 0),
             volume: Number(r.volume ?? 0),
+            departamento: String(r.departamento ?? r.department ?? r.secao ?? r.nivel1 ?? "TOTAL").toUpperCase(),
           };
         })
         .filter((r) => r.ano && r.mes);
@@ -79,9 +85,10 @@ const AnaliseAnual = () => {
       // fallback: histórico gravado no banco
       const { data } = await supabase
         .from("analise_anual").select("ano, mes, faturamento, lucro, volume").eq("store_id", sid);
-      const salvos = ((data as any[]) || []).map(r => ({
+      const salvos: Row[] = ((data as any[]) || []).map(r => ({
         ano: r.ano, mes: r.mes,
         faturamento: Number(r.faturamento), lucro: Number(r.lucro), volume: Number(r.volume),
+        departamento: "TOTAL",
       }));
       setRows(salvos);
       if (!salvos.length) setErro(e?.message || "Não foi possível obter os dados da loja.");
@@ -94,26 +101,43 @@ const AnaliseAnual = () => {
     if (storeId) carregar(storeId);
   }, [storeId]);
 
+  // ---- filtros ----
+  const departamentos = useMemo(
+    () => Array.from(new Set(rows.map(r => r.departamento).filter(Boolean))).sort(),
+    [rows],
+  );
+  const anosDisponiveis = useMemo(() => {
+    const a = Array.from(new Set(rows.map(r => r.ano))).sort((x, y) => x - y);
+    return a.length ? a : ANOS;
+  }, [rows]);
 
-  const val = (ano: number, mes: number, campo: keyof Row) => {
-    const r = rows.find(x => x.ano === ano && x.mes === mes);
-    const v = r ? Number(r[campo]) : 0;
-    return v || 0;
-  };
+  const anosSel = useMemo(
+    () => anosDisponiveis.filter(a => a >= anoIni && a <= anoFim),
+    [anosDisponiveis, anoIni, anoFim],
+  );
+
+  const rowsFiltradas = useMemo(
+    () => rows.filter(r => (deptos.length === 0 ? true : deptos.includes(r.departamento))),
+    [rows, deptos],
+  );
+
+  const val = (ano: number, mes: number, campo: "faturamento" | "lucro" | "volume") =>
+    rowsFiltradas
+      .filter(x => x.ano === ano && x.mes === mes)
+      .reduce((s, x) => s + Number(x[campo] || 0), 0);
 
   const blocos = useMemo(() => {
-    const build = (campo: "faturamento" | "lucro" | "volume") => {
-      const matriz = ANOS.map(ano => ({ ano, meses: MESES.map((_, i) => val(ano, i + 1, campo)) }));
-      return matriz;
-    };
+    const build = (campo: "faturamento" | "lucro" | "volume") =>
+      anosSel.map(ano => ({ ano, meses: MESES.map((_, i) => val(ano, i + 1, campo)) }));
     return { faturamento: build("faturamento"), lucro: build("lucro"), volume: build("volume") };
-  }, [rows]);
+  }, [rowsFiltradas, anosSel]);
 
-  // Último mês com dado em 2026 (para acumulados comparáveis)
+  // Último mês com dado no ano mais recente selecionado (para acumulados comparáveis)
   const mesCorte = useMemo(() => {
-    const m = rows.filter(r => r.ano === 2026 && r.faturamento > 0).map(r => r.mes);
+    const ultimo = anosSel[anosSel.length - 1];
+    const m = rowsFiltradas.filter(r => r.ano === ultimo && r.faturamento > 0).map(r => r.mes);
     return m.length ? Math.max(...m) : 12;
-  }, [rows]);
+  }, [rowsFiltradas, anosSel]);
 
   const soma = (arr: number[]) => arr.reduce((s, v) => s + v, 0);
   const acum = (arr: number[]) => soma(arr.slice(0, mesCorte));
@@ -127,13 +151,18 @@ const AnaliseAnual = () => {
   ) => {
     const totalDe = (linha: { meses: number[] }) => soma(linha.meses);
     const acumDe = (linha: { meses: number[] }) => acum(linha.meses);
-    const l = (ano: number) => matriz.find(m => m.ano === ano)!;
+    const l = (ano: number) =>
+      matriz.find(m => m.ano === ano) ?? { ano, meses: MESES.map(() => 0) };
 
     const linhasComp = tipo === "valor"
-      ? [
-          { label: "YTD 25 x 24", a: 2025, b: 2024 },
-          { label: "YTD 26 x 25", a: 2026, b: 2025 },
-        ]
+      ? matriz
+          .slice(1)
+          .map(m => ({
+            label: `YTD ${String(m.ano).slice(2)} x ${String(m.ano - 1).slice(2)}`,
+            a: m.ano,
+            b: m.ano - 1,
+          }))
+          .filter(c => matriz.some(m => m.ano === c.b))
       : [];
 
     return (
@@ -203,7 +232,8 @@ const AnaliseAnual = () => {
             <tr className="bg-muted/20">
               <td className="px-2 py-1.5 border border-border text-muted-foreground">Mês Atual x Anterior</td>
               {MESES.map((_, i) => {
-                const serie = l(2026).meses.some(Boolean) ? l(2026).meses : l(2025).meses;
+                const ultima = [...matriz].reverse().find(m => m.meses.some(Boolean)) ?? matriz[matriz.length - 1];
+                const serie = ultima?.meses ?? MESES.map(() => 0);
                 const atual = serie[i];
                 const ant = i === 0 ? 0 : serie[i - 1];
                 const v = varPct(atual, ant);
@@ -223,14 +253,14 @@ const AnaliseAnual = () => {
   };
 
   const margemMatriz = useMemo(() =>
-    ANOS.map(ano => ({
+    anosSel.map(ano => ({
       ano,
       meses: MESES.map((_, i) => {
         const f = val(ano, i + 1, "faturamento");
         const lu = val(ano, i + 1, "lucro");
         return f ? (lu / f) * 100 : 0;
       }),
-    })), [rows]);
+    })), [rowsFiltradas, anosSel]);
 
   return (
     <ClientLayout storeName={storeName}>
@@ -243,7 +273,7 @@ const AnaliseAnual = () => {
                 Análise Anual <span className="text-gradient-gold">{storeName}</span>
               </h1>
               <p className="text-muted-foreground font-body text-xs">
-                Faturamento, lucro, margem e volume de {ANOS[0]} a {ANOS[ANOS.length - 1]} — dados da loja logada
+                Faturamento, lucro, margem e volume de {anoIni} a {anoFim} — dados da loja logada
               </p>
             </div>
             <Button variant="outline" size="sm" disabled={loading || !storeId} onClick={() => storeId && carregar(storeId)}>
@@ -252,6 +282,59 @@ const AnaliseAnual = () => {
             </Button>
           </div>
         </motion.div>
+
+        <Card className="mb-6">
+          <CardContent className="p-4 flex flex-wrap items-end gap-4">
+            <div className="flex items-end gap-2">
+              <div>
+                <label className="text-[11px] text-muted-foreground block mb-1">Período de</label>
+                <Select value={String(anoIni)} onValueChange={(v) => setAnoIni(Number(v))}>
+                  <SelectTrigger className="w-[110px] h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {anosDisponiveis.map(a => <SelectItem key={a} value={String(a)}>{a}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-[11px] text-muted-foreground block mb-1">até</label>
+                <Select value={String(anoFim)} onValueChange={(v) => setAnoFim(Number(v))}>
+                  <SelectTrigger className="w-[110px] h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {anosDisponiveis.map(a => <SelectItem key={a} value={String(a)}>{a}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex-1 min-w-[260px]">
+              <label className="text-[11px] text-muted-foreground block mb-1">
+                Departamentos {deptos.length ? `(${deptos.length})` : "(todos)"}
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                <Badge
+                  variant={deptos.length === 0 ? "default" : "outline"}
+                  className="cursor-pointer"
+                  onClick={() => setDeptos([])}
+                >
+                  TODOS
+                </Badge>
+                {departamentos.map(d => (
+                  <Badge
+                    key={d}
+                    variant={deptos.includes(d) ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() =>
+                      setDeptos(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d])
+                    }
+                  >
+                    {d}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
 
         {loading ? (
           <p className="text-sm text-muted-foreground">Carregando dados da loja...</p>
