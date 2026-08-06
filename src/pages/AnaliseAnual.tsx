@@ -116,9 +116,17 @@ const AnaliseAnual = () => {
     [anosDisponiveis, anoIni, anoFim],
   );
 
+  // Mês vigente (e futuros) são sempre excluídos da análise
+  const hoje = new Date();
+  const anoAtual = hoje.getFullYear();
+  const mesAtual = hoje.getMonth() + 1;
+
   const rowsFiltradas = useMemo(
-    () => rows.filter(r => (deptos.length === 0 ? true : deptos.includes(r.departamento))),
-    [rows, deptos],
+    () =>
+      rows
+        .filter(r => r.ano < anoAtual || (r.ano === anoAtual && r.mes < mesAtual))
+        .filter(r => (deptos.length === 0 ? true : deptos.includes(r.departamento))),
+    [rows, deptos, anoAtual, mesAtual],
   );
 
   const val = (ano: number, mes: number, campo: "faturamento" | "lucro" | "volume") =>
