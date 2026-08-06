@@ -251,14 +251,14 @@ const AnaliseAnual = () => {
   };
 
   const margemMatriz = useMemo(() =>
-    ANOS.map(ano => ({
+    anosSel.map(ano => ({
       ano,
       meses: MESES.map((_, i) => {
         const f = val(ano, i + 1, "faturamento");
         const lu = val(ano, i + 1, "lucro");
         return f ? (lu / f) * 100 : 0;
       }),
-    })), [rows]);
+    })), [rowsFiltradas, anosSel]);
 
   return (
     <ClientLayout storeName={storeName}>
