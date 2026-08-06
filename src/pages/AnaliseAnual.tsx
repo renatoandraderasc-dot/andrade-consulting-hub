@@ -5,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import ClientLayout from "@/components/ClientLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TrendingUp, RefreshCw } from "lucide-react";
 import { motion } from "framer-motion";
 
