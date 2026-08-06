@@ -26,6 +26,9 @@ const AnaliseAnual = () => {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState("");
+  const [anoIni, setAnoIni] = useState(ANOS[0]);
+  const [anoFim, setAnoFim] = useState(ANOS[ANOS.length - 1]);
+  const [deptos, setDeptos] = useState<string[]>([]);
 
   useEffect(() => {
     if (!authLoading && !user) { navigate("/login"); return; }
