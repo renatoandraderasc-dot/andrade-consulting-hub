@@ -50,6 +50,8 @@ const App = () => (
             <Route path="/admin/metas" element={<AdminMetas />} />
             <Route path="/metas-gerador" element={<MetasGerador />} />
             <Route path="/controladoria" element={<Controladoria />} />
+            <Route path="/analise-anual" element={<AnaliseAnual />} />
+
             <Route path="/compras" element={<Compras />} />
             <Route path="/repricing" element={<Repricing />} />
             <Route path="/vtex-collector" element={<VtexCollector />} />
