@@ -80,9 +80,10 @@ const AnaliseAnual = () => {
       // fallback: histórico gravado no banco
       const { data } = await supabase
         .from("analise_anual").select("ano, mes, faturamento, lucro, volume").eq("store_id", sid);
-      const salvos = ((data as any[]) || []).map(r => ({
+      const salvos: Row[] = ((data as any[]) || []).map(r => ({
         ano: r.ano, mes: r.mes,
         faturamento: Number(r.faturamento), lucro: Number(r.lucro), volume: Number(r.volume),
+        departamento: "TOTAL",
       }));
       setRows(salvos);
       if (!salvos.length) setErro(e?.message || "Não foi possível obter os dados da loja.");
