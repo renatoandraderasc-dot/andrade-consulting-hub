@@ -230,7 +230,8 @@ const AnaliseAnual = () => {
             <tr className="bg-muted/20">
               <td className="px-2 py-1.5 border border-border text-muted-foreground">Mês Atual x Anterior</td>
               {MESES.map((_, i) => {
-                const serie = l(2026).meses.some(Boolean) ? l(2026).meses : l(2025).meses;
+                const ultima = [...matriz].reverse().find(m => m.meses.some(Boolean)) ?? matriz[matriz.length - 1];
+                const serie = ultima?.meses ?? MESES.map(() => 0);
                 const atual = serie[i];
                 const ant = i === 0 ? 0 : serie[i - 1];
                 const v = varPct(atual, ant);
