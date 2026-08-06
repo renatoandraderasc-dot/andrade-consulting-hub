@@ -237,23 +237,28 @@ const AnaliseAnual = () => {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
           <div className="flex items-center gap-3">
             <TrendingUp className="w-7 h-7 text-primary" />
-            <div>
+            <div className="flex-1">
               <h1 className="font-display text-2xl font-bold">
                 Análise Anual <span className="text-gradient-gold">{storeName}</span>
               </h1>
               <p className="text-muted-foreground font-body text-xs">
-                Faturamento, lucro, margem e volume de 2022 a 2026
+                Faturamento, lucro, margem e volume de {ANOS[0]} a {ANOS[ANOS.length - 1]} — dados da loja logada
               </p>
             </div>
+            <Button variant="outline" size="sm" disabled={loading || !storeId} onClick={() => storeId && carregar(storeId)}>
+              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+              Atualizar
+            </Button>
           </div>
         </motion.div>
 
         {loading ? (
-          <p className="text-sm text-muted-foreground">Carregando...</p>
+          <p className="text-sm text-muted-foreground">Carregando dados da loja...</p>
         ) : rows.length === 0 ? (
           <Card><CardContent className="p-6 text-sm text-muted-foreground">
-            Sem dados históricos cadastrados para esta loja.
+            {erro || "Sem dados disponíveis para esta loja."}
           </CardContent></Card>
+
         ) : (
           <div className="space-y-6">
             <Card><CardContent className="p-0 overflow-x-auto">{renderBloco("FATURAMENTO", blocos.faturamento, "valor")}</CardContent></Card>
