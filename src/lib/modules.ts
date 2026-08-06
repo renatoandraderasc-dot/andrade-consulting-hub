@@ -1,6 +1,7 @@
 export const APP_MODULES = [
   { key: "dashboard", label: "Dashboard", path: "/dashboard" },
   { key: "controladoria", label: "Controladoria", path: "/controladoria" },
+  { key: "analise_anual", label: "Análise Anual", path: "/analise-anual" },
   { key: "compras", label: "Compras", path: "/compras" },
   { key: "pic", label: "PIC", path: "/pic" },
   { key: "pic_padaria", label: "Dashboard Padaria", path: "/pic/padaria" },

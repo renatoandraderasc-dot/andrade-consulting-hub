@@ -14,6 +14,7 @@ import Dashboard from "./pages/Dashboard";
 import AdminMetas from "./pages/AdminMetas";
 import MetasGerador from "./pages/MetasGerador";
 import Controladoria from "./pages/Controladoria";
+import AnaliseAnual from "./pages/AnaliseAnual";
 import Compras from "./pages/Compras";
 import Repricing from "./pages/Repricing";
 import VtexCollector from "./pages/VtexCollector";
@@ -49,6 +50,8 @@ const App = () => (
             <Route path="/admin/metas" element={<AdminMetas />} />
             <Route path="/metas-gerador" element={<MetasGerador />} />
             <Route path="/controladoria" element={<Controladoria />} />
+            <Route path="/analise-anual" element={<AnaliseAnual />} />
+
             <Route path="/compras" element={<Compras />} />
             <Route path="/repricing" element={<Repricing />} />
             <Route path="/vtex-collector" element={<VtexCollector />} />

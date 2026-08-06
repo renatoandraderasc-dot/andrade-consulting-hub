@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      analise_anual: {
+        Row: {
+          ano: number
+          created_at: string
+          faturamento: number
+          id: string
+          lucro: number
+          mes: number
+          store_id: string
+          volume: number
+        }
+        Insert: {
+          ano: number
+          created_at?: string
+          faturamento?: number
+          id?: string
+          lucro?: number
+          mes: number
+          store_id: string
+          volume?: number
+        }
+        Update: {
+          ano?: number
+          created_at?: string
+          faturamento?: number
+          id?: string
+          lucro?: number
+          mes?: number
+          store_id?: string
+          volume?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analise_anual_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       backup_embu_20260731: {
         Row: {
           created_at: string | null
