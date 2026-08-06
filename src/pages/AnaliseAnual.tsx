@@ -42,19 +42,56 @@ const AnaliseAnual = () => {
     })();
   }, [user, authLoading]);
 
-  useEffect(() => {
-    if (!storeId) return;
+  const carregar = async (sid: string) => {
     setLoading(true);
-    supabase.from("analise_anual").select("ano, mes, faturamento, lucro, volume")
-      .eq("store_id", storeId)
-      .then(({ data }) => {
-        setRows(((data as any[]) || []).map(r => ({
-          ano: r.ano, mes: r.mes,
-          faturamento: Number(r.faturamento), lucro: Number(r.lucro), volume: Number(r.volume),
-        })));
-        setLoading(false);
+    setErro("");
+    try {
+      const hoje = new Date();
+      const fim = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(hoje.getDate()).padStart(2, "0")}`;
+      const { data, error } = await supabase.functions.invoke("vr-proxy", {
+        body: { store_id: sid, relatorio: "dre_periodo", params: { inicio: `${ANOS[0]}-01-01`, fim } },
       });
+      if (error) throw new Error(error.message);
+      if (data?.erro) throw new Error(data.erro);
+      const d = data?.dados;
+      const lista: any[] = Array.isArray(d) ? d : Array.isArray(d?.dados) ? d.dados : [];
+      const mapeado: Row[] = lista
+        .map((r) => {
+          const ref = String(r.mes ?? r.competencia ?? "");
+          const [a, m] = ref.split("-");
+          return {
+            ano: Number(a),
+            mes: Number(m),
+            faturamento: Number(r.receita_bruta ?? r.faturamento ?? 0),
+            lucro: Number(r.lucro_bruto ?? r.lucro ?? 0),
+            volume: Number(r.volume ?? 0),
+          };
+        })
+        .filter((r) => r.ano && r.mes);
+      if (mapeado.length) {
+        setRows(mapeado);
+      } else {
+        throw new Error("sem dados no periodo");
+      }
+    } catch (e: any) {
+      // fallback: histórico gravado no banco
+      const { data } = await supabase
+        .from("analise_anual").select("ano, mes, faturamento, lucro, volume").eq("store_id", sid);
+      const salvos = ((data as any[]) || []).map(r => ({
+        ano: r.ano, mes: r.mes,
+        faturamento: Number(r.faturamento), lucro: Number(r.lucro), volume: Number(r.volume),
+      }));
+      setRows(salvos);
+      if (!salvos.length) setErro(e?.message || "Não foi possível obter os dados da loja.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (storeId) carregar(storeId);
   }, [storeId]);
+
 
   const val = (ano: number, mes: number, campo: keyof Row) => {
     const r = rows.find(x => x.ano === ano && x.mes === mes);
