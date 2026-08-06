@@ -24,6 +24,7 @@ const AnaliseAnual = () => {
   const [storeId, setStoreId] = useState("");
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState("");
 
   useEffect(() => {
     if (!authLoading && !user) { navigate("/login"); return; }
