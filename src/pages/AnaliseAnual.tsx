@@ -6,8 +6,10 @@ import ClientLayout from "@/components/ClientLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { TrendingUp, RefreshCw } from "lucide-react";
+import { TrendingUp, RefreshCw, ChevronsUpDown } from "lucide-react";
 import { motion } from "framer-motion";
 
 const MESES = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
@@ -116,9 +118,17 @@ const AnaliseAnual = () => {
     [anosDisponiveis, anoIni, anoFim],
   );
 
+  // Mês vigente (e futuros) são sempre excluídos da análise
+  const hoje = new Date();
+  const anoAtual = hoje.getFullYear();
+  const mesAtual = hoje.getMonth() + 1;
+
   const rowsFiltradas = useMemo(
-    () => rows.filter(r => (deptos.length === 0 ? true : deptos.includes(r.departamento))),
-    [rows, deptos],
+    () =>
+      rows
+        .filter(r => r.ano < anoAtual || (r.ano === anoAtual && r.mes < mesAtual))
+        .filter(r => (deptos.length === 0 ? true : deptos.includes(r.departamento))),
+    [rows, deptos, anoAtual, mesAtual],
   );
 
   const val = (ano: number, mes: number, campo: "faturamento" | "lucro" | "volume") =>
@@ -310,28 +320,42 @@ const AnaliseAnual = () => {
               <label className="text-[11px] text-muted-foreground block mb-1">
                 Departamentos {deptos.length ? `(${deptos.length})` : "(todos)"}
               </label>
-              <div className="flex flex-wrap gap-1.5">
-                <Badge
-                  variant={deptos.length === 0 ? "default" : "outline"}
-                  className="cursor-pointer"
-                  onClick={() => setDeptos([])}
-                >
-                  TODOS
-                </Badge>
-                {departamentos.map(d => (
-                  <Badge
-                    key={d}
-                    variant={deptos.includes(d) ? "default" : "outline"}
-                    className="cursor-pointer"
-                    onClick={() =>
-                      setDeptos(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d])
-                    }
-                  >
-                    {d}
-                  </Badge>
-                ))}
-              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-9 w-full justify-between font-normal">
+                    <span className="truncate">
+                      {deptos.length === 0 ? "Todos os departamentos" : deptos.join(", ")}
+                    </span>
+                    <ChevronsUpDown className="w-4 h-4 opacity-50 shrink-0" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-[280px] p-0">
+                  <div className="max-h-[280px] overflow-y-auto p-2 space-y-1">
+                    <button
+                      className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted"
+                      onClick={() => setDeptos([])}
+                    >
+                      Todos os departamentos
+                    </button>
+                    {departamentos.length === 0 && (
+                      <p className="text-xs text-muted-foreground px-2 py-1.5">Nenhum departamento disponível</p>
+                    )}
+                    {departamentos.map(d => (
+                      <label key={d} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer">
+                        <Checkbox
+                          checked={deptos.includes(d)}
+                          onCheckedChange={() =>
+                            setDeptos(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d])
+                          }
+                        />
+                        <span className="text-xs">{d}</span>
+                      </label>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
+
           </CardContent>
         </Card>
 
