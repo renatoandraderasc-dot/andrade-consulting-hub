@@ -271,7 +271,7 @@ const AnaliseAnual = () => {
                 Análise Anual <span className="text-gradient-gold">{storeName}</span>
               </h1>
               <p className="text-muted-foreground font-body text-xs">
-                Faturamento, lucro, margem e volume de {ANOS[0]} a {ANOS[ANOS.length - 1]} — dados da loja logada
+                Faturamento, lucro, margem e volume de {anoIni} a {anoFim} — dados da loja logada
               </p>
             </div>
             <Button variant="outline" size="sm" disabled={loading || !storeId} onClick={() => storeId && carregar(storeId)}>
@@ -280,6 +280,59 @@ const AnaliseAnual = () => {
             </Button>
           </div>
         </motion.div>
+
+        <Card className="mb-6">
+          <CardContent className="p-4 flex flex-wrap items-end gap-4">
+            <div className="flex items-end gap-2">
+              <div>
+                <label className="text-[11px] text-muted-foreground block mb-1">Período de</label>
+                <Select value={String(anoIni)} onValueChange={(v) => setAnoIni(Number(v))}>
+                  <SelectTrigger className="w-[110px] h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {anosDisponiveis.map(a => <SelectItem key={a} value={String(a)}>{a}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-[11px] text-muted-foreground block mb-1">até</label>
+                <Select value={String(anoFim)} onValueChange={(v) => setAnoFim(Number(v))}>
+                  <SelectTrigger className="w-[110px] h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {anosDisponiveis.map(a => <SelectItem key={a} value={String(a)}>{a}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex-1 min-w-[260px]">
+              <label className="text-[11px] text-muted-foreground block mb-1">
+                Departamentos {deptos.length ? `(${deptos.length})` : "(todos)"}
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                <Badge
+                  variant={deptos.length === 0 ? "default" : "outline"}
+                  className="cursor-pointer"
+                  onClick={() => setDeptos([])}
+                >
+                  TODOS
+                </Badge>
+                {departamentos.map(d => (
+                  <Badge
+                    key={d}
+                    variant={deptos.includes(d) ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() =>
+                      setDeptos(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d])
+                    }
+                  >
+                    {d}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
 
         {loading ? (
           <p className="text-sm text-muted-foreground">Carregando dados da loja...</p>
