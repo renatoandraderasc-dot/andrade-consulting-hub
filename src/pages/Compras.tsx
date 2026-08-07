@@ -14,6 +14,8 @@ import { useAuth } from "@/hooks/useAuth";
 import ClientLayout from "@/components/ClientLayout";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import HierarquiaVendasTable from "@/components/relatorios/HierarquiaVendasTable";
+
 
 interface Store { id: string; name: string }
 
@@ -756,7 +758,20 @@ const Compras = () => {
                 </table>
               </div>
             )}
+
+            {/* Vendas com abertura até produto */}
+            {storeId && (
+              <div className="mt-6">
+                <HierarquiaVendasTable
+                  storeId={storeId}
+                  inicio={cvInicio}
+                  fim={cvFim}
+                  title="Vendas por mercadológico (abre até produto)"
+                />
+              </div>
+            )}
           </TabsContent>
+
 
           {/* ================= ABA 3 - CONFIGURAÇÃO ================= */}
           <TabsContent value="config">

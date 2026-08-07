@@ -10,6 +10,8 @@ import VrOfflineNotice from "@/components/VrOfflineNotice";
 import { useVrRealizado, VrDia } from "@/hooks/useVrRealizado";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import HierarquiaVendasTable from "@/components/relatorios/HierarquiaVendasTable";
+
 
 
 const MONTHS = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -423,8 +425,19 @@ const PIC = () => {
               ))}
             </div>
 
+            {/* Todos os mercadológicos, com abertura até produto */}
+            {storeId && (
+              <HierarquiaVendasTable
+                storeId={storeId}
+                inicio={periodStart}
+                fim={periodEnd}
+                title="Todos os mercadológicos"
+              />
+            )}
+
             {/* Finish Line Animation */}
             <FinishLineAnimation deptKpis={deptKpis} />
+
           </>
         )}
 

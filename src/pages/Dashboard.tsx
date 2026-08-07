@@ -11,6 +11,8 @@ import ProductComparison, { ProductCompRow } from "@/components/dashboard/Produc
 import CategoryChart, { CategoryChartData } from "@/components/dashboard/CategoryChart";
 import VendasLojaSection from "@/components/dashboard/VendasLojaSection";
 import DashboardFilterBar, { Periodo, periodoFromPreset, TODA_LOJA } from "@/components/dashboard/DashboardFilterBar";
+import HierarquiaVendasTable from "@/components/relatorios/HierarquiaVendasTable";
+
 import VrOfflineNotice from "@/components/VrOfflineNotice";
 import { useVrRealizado } from "@/hooks/useVrRealizado";
 import MascotPersona from "@/components/poster/MascotPersona";
@@ -426,16 +428,25 @@ const Dashboard = () => {
               data={productData}
               title={`Comparativo de produtos — ${MONTHS[selectedMonth]} ${selectedYear}`}
             />
-
-            {/* Category Chart */}
-            <div className="mt-6">
-              <CategoryChart
-                data={categoryData}
-                title="Vendas por seção (comparado com mês anterior e ano anterior)"
-              />
-            </div>
           </>
         )}
+
+        {/* Mercadológico com abertura até produto (todos os clientes) */}
+        {storeId && (
+          <div className="mt-6">
+            <HierarquiaVendasTable storeId={storeId} inicio={periodStart} fim={periodEnd} />
+          </div>
+        )}
+
+        {!soLoja && categoryData.length > 0 && (
+          <div className="mt-6">
+            <CategoryChart
+              data={categoryData}
+              title="Vendas por seção (comparado com mês anterior e ano anterior)"
+            />
+          </div>
+        )}
+
       </div>
     </ClientLayout>
   );
