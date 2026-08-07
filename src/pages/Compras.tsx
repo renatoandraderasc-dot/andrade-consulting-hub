@@ -14,6 +14,8 @@ import { useAuth } from "@/hooks/useAuth";
 import ClientLayout from "@/components/ClientLayout";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import HierarquiaVendasTable from "@/components/relatorios/HierarquiaVendasTable";
+
 
 interface Store { id: string; name: string }
 
