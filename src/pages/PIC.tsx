@@ -423,8 +423,19 @@ const PIC = () => {
               ))}
             </div>
 
+            {/* Todos os mercadológicos, com abertura até produto */}
+            {storeId && (
+              <HierarquiaVendasTable
+                storeId={storeId}
+                inicio={periodStart}
+                fim={periodEnd}
+                title="Todos os mercadológicos"
+              />
+            )}
+
             {/* Finish Line Animation */}
             <FinishLineAnimation deptKpis={deptKpis} />
+
           </>
         )}
 
