@@ -426,16 +426,25 @@ const Dashboard = () => {
               data={productData}
               title={`Comparativo de produtos — ${MONTHS[selectedMonth]} ${selectedYear}`}
             />
-
-            {/* Category Chart */}
-            <div className="mt-6">
-              <CategoryChart
-                data={categoryData}
-                title="Vendas por seção (comparado com mês anterior e ano anterior)"
-              />
-            </div>
           </>
         )}
+
+        {/* Mercadológico com abertura até produto (todos os clientes) */}
+        {storeId && (
+          <div className="mt-6">
+            <HierarquiaVendasTable storeId={storeId} inicio={periodStart} fim={periodEnd} />
+          </div>
+        )}
+
+        {!soLoja && categoryData.length > 0 && (
+          <div className="mt-6">
+            <CategoryChart
+              data={categoryData}
+              title="Vendas por seção (comparado com mês anterior e ano anterior)"
+            />
+          </div>
+        )}
+
       </div>
     </ClientLayout>
   );
