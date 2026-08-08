@@ -43,9 +43,14 @@ const Catalogo = () => {
   const [storeName, setStoreName] = useState("");
   const [busca, setBusca] = useState("");
   const [buscaAtiva, setBuscaAtiva] = useState("");
+  const [inicio, setInicio] = useState("");
+  const [fim, setFim] = useState("");
+  const [periodoAtivo, setPeriodoAtivo] = useState<{ inicio: string; fim: string } | null>(null);
   const [pagina, setPagina] = useState(0);
   const [linhas, setLinhas] = useState<Linha[]>([]);
   const [loading, setLoading] = useState(false);
+  const [exportando, setExportando] = useState(false);
+
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/login");
