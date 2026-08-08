@@ -43,9 +43,14 @@ const Catalogo = () => {
   const [storeName, setStoreName] = useState("");
   const [busca, setBusca] = useState("");
   const [buscaAtiva, setBuscaAtiva] = useState("");
+  const [inicio, setInicio] = useState("");
+  const [fim, setFim] = useState("");
+  const [periodoAtivo, setPeriodoAtivo] = useState<{ inicio: string; fim: string } | null>(null);
   const [pagina, setPagina] = useState(0);
   const [linhas, setLinhas] = useState<Linha[]>([]);
   const [loading, setLoading] = useState(false);
+  const [exportando, setExportando] = useState(false);
+
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/login");
@@ -76,20 +81,34 @@ const Catalogo = () => {
     })();
   }, [user, isAdmin]);
 
-  const buscar = async (pg = pagina, termo = buscaAtiva) => {
+  const consultar = async (
+    pg: number,
+    termo: string,
+    periodo: { inicio: string; fim: string } | null,
+    limite = PAGE_SIZE,
+  ): Promise<Linha[]> => {
+    const { data, error } = await supabase.functions.invoke("vr-proxy", {
+      body: {
+        store_id: storeId,
+        relatorio: periodo ? "catalogo_produtos_vendidos" : "catalogo_produtos",
+        params: {
+          busca: termo,
+          limite,
+          offset: pg * limite,
+          ...(periodo ? { inicio: periodo.inicio, fim: periodo.fim } : {}),
+        },
+      },
+    });
+    if (error) throw error;
+    if (data?.erro) throw new Error(String(data.erro));
+    return (data?.dados || data || []) as Linha[];
+  };
+
+  const buscar = async (pg = pagina, termo = buscaAtiva, periodo = periodoAtivo) => {
     if (!storeId) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("vr-proxy", {
-        body: {
-          store_id: storeId,
-          relatorio: "catalogo_produtos",
-          params: { busca: termo, limite: PAGE_SIZE, offset: pg * PAGE_SIZE },
-        },
-      });
-      if (error) throw error;
-      if (data?.erro) throw new Error(String(data.erro));
-      setLinhas((data?.dados || data || []) as Linha[]);
+      setLinhas(await consultar(pg, termo, periodo));
     } catch (err: any) {
       setLinhas([]);
       toast({ title: "Falha ao consultar o catálogo", description: err.message, variant: "destructive" });
@@ -99,33 +118,57 @@ const Catalogo = () => {
   };
 
   useEffect(() => {
-    if (storeId) buscar(pagina, buscaAtiva);
+    if (storeId) buscar(pagina, buscaAtiva, periodoAtivo);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storeId, pagina, buscaAtiva]);
+  }, [storeId, pagina, buscaAtiva, periodoAtivo]);
 
   const aplicarBusca = () => {
     setPagina(0);
     setBuscaAtiva(busca.trim());
+    setPeriodoAtivo(inicio && fim ? { inicio, fim } : null);
   };
 
-  const exportar = () => {
-    const dados = linhas.map((l) => ({
-      Código: l.codigo,
-      Descrição: l.descricao,
-      Custo: parseFloat(String(l.custo ?? "")) || 0,
-      "Preço de Venda": parseFloat(String(l.preco_venda ?? "")) || 0,
-      "Preço Oferta": parseFloat(String(l.preco_oferta ?? "")) || 0,
-      "Cód. Barras": l.codigo_barras ?? "",
-      "M1 Departamento": l.m1_departamento ?? "",
-      "M2 Grupo": l.m2_grupo ?? "",
-      "M3 Subgrupo": l.m3_subgrupo ?? "",
-      "M4 Família": l.m4_familia ?? "",
-    }));
-    const ws = XLSX.utils.json_to_sheet(dados);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Catálogo");
-    XLSX.writeFile(wb, `catalogo-produtos-pagina-${pagina + 1}.xlsx`);
+  const limparPeriodo = () => {
+    setInicio("");
+    setFim("");
+    setPagina(0);
+    setPeriodoAtivo(null);
   };
+
+  const exportar = async () => {
+    setExportando(true);
+    try {
+      const LOTE = 1000;
+      const todas: Linha[] = [];
+      for (let pg = 0; pg < 200; pg++) {
+        const parte = await consultar(pg, buscaAtiva, periodoAtivo, LOTE);
+        todas.push(...parte);
+        if (parte.length < LOTE) break;
+      }
+      const dados = todas.map((l) => ({
+        Código: l.codigo,
+        Descrição: l.descricao,
+        Custo: parseFloat(String(l.custo ?? "")) || 0,
+        "Preço de Venda": parseFloat(String(l.preco_venda ?? "")) || 0,
+        "Preço Oferta": parseFloat(String(l.preco_oferta ?? "")) || 0,
+        "Cód. Barras": l.codigo_barras ?? "",
+        "M1 Departamento": l.m1_departamento ?? "",
+        "M2 Grupo": l.m2_grupo ?? "",
+        "M3 Subgrupo": l.m3_subgrupo ?? "",
+        "M4 Família": l.m4_familia ?? "",
+      }));
+      const ws = XLSX.utils.json_to_sheet(dados);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Catálogo");
+      XLSX.writeFile(wb, `catalogo-produtos.xlsx`);
+      toast({ title: `Exportado`, description: `${dados.length} produto(s) exportado(s).` });
+    } catch (err: any) {
+      toast({ title: "Falha ao exportar", description: err.message, variant: "destructive" });
+    } finally {
+      setExportando(false);
+    }
+  };
+
 
   return (
     <ClientLayout storeName={storeName}>
@@ -161,13 +204,24 @@ const Catalogo = () => {
               className="pl-8"
             />
           </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-muted-foreground">Com venda de</span>
+            <Input type="date" value={inicio} onChange={(e) => setInicio(e.target.value)} className="w-[150px]" />
+            <span className="text-xs text-muted-foreground">até</span>
+            <Input type="date" value={fim} onChange={(e) => setFim(e.target.value)} className="w-[150px]" />
+            {periodoAtivo && (
+              <Button variant="ghost" size="sm" onClick={limparPeriodo}>Limpar</Button>
+            )}
+          </div>
           <Button onClick={aplicarBusca} disabled={loading}>Buscar</Button>
           <Button variant="outline" onClick={() => buscar()} disabled={loading}>
             <RefreshCw className={`w-4 h-4 mr-1.5 ${loading ? "animate-spin" : ""}`} /> Atualizar
           </Button>
-          <Button variant="outline" onClick={exportar} disabled={!linhas.length}>
-            <Download className="w-4 h-4 mr-1.5" /> Exportar Excel
+          <Button variant="outline" onClick={exportar} disabled={exportando || !linhas.length}>
+            <Download className={`w-4 h-4 mr-1.5 ${exportando ? "animate-pulse" : ""}`} />
+            {exportando ? "Exportando…" : "Exportar Excel"}
           </Button>
+
         </div>
 
         <div className="rounded-lg border border-border bg-card overflow-x-auto">
