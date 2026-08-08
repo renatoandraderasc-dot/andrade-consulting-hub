@@ -8,6 +8,7 @@ export const APP_MODULES = [
   { key: "admin_padaria_import", label: "Admin: Import Padaria", path: "/admin/padaria-import" },
   { key: "repricing", label: "Re-PRICING", path: "/repricing" },
   { key: "checklist", label: "Checklist", path: "/checklist" },
+  { key: "catalogo", label: "Catálogo de Produtos", path: "/catalogo" },
   { key: "admin_stores", label: "Admin: Lojas", path: "/admin/stores" },
   { key: "admin_metas", label: "Admin: Metas", path: "/admin/metas" },
   { key: "metas_gerador", label: "Gerador de Metas", path: "/metas-gerador" },

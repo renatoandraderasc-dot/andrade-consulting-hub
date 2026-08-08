@@ -10,6 +10,7 @@ import AdminSetup from "./pages/AdminSetup";
 import AdminQuestions from "./pages/AdminQuestions";
 import AdminUsers from "./pages/AdminUsers";
 import Checklist from "./pages/Checklist";
+import Catalogo from "./pages/Catalogo";
 import Dashboard from "./pages/Dashboard";
 import AdminMetas from "./pages/AdminMetas";
 import MetasGerador from "./pages/MetasGerador";
@@ -46,6 +47,7 @@ const App = () => (
             <Route path="/admin/questions" element={<AdminQuestions />} />
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/checklist" element={<Checklist />} />
+            <Route path="/catalogo" element={<Catalogo />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/admin/metas" element={<AdminMetas />} />
             <Route path="/metas-gerador" element={<MetasGerador />} />

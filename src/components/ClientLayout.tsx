@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import {
   BarChart3, CheckSquare, Settings, Users, LogOut, Menu, X, ArrowLeft,
-  Target, ClipboardList, DollarSign, Database, RefreshCw, Trophy, Store, ShoppingCart, LayoutTemplate, TrendingUp,
+  Target, ClipboardList, DollarSign, Database, RefreshCw, Trophy, Store, ShoppingCart, LayoutTemplate, TrendingUp, Package,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import andradeLogo from "@/assets/andrade-logo.png";
@@ -22,6 +22,7 @@ const navItems = [
   { key: "pic", path: "/pic", label: "PIC", icon: Trophy },
   { key: "repricing", path: "/repricing", label: "Re-Pricing", icon: DollarSign },
   { key: "checklist", path: "/checklist", label: "Checklist", icon: CheckSquare },
+  { key: "catalogo", path: "/catalogo", label: "Catálogo", icon: Package },
 ];
 
 const adminItems = [
