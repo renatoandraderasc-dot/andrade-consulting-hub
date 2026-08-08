@@ -204,13 +204,24 @@ const Catalogo = () => {
               className="pl-8"
             />
           </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-muted-foreground">Com venda de</span>
+            <Input type="date" value={inicio} onChange={(e) => setInicio(e.target.value)} className="w-[150px]" />
+            <span className="text-xs text-muted-foreground">até</span>
+            <Input type="date" value={fim} onChange={(e) => setFim(e.target.value)} className="w-[150px]" />
+            {periodoAtivo && (
+              <Button variant="ghost" size="sm" onClick={limparPeriodo}>Limpar</Button>
+            )}
+          </div>
           <Button onClick={aplicarBusca} disabled={loading}>Buscar</Button>
           <Button variant="outline" onClick={() => buscar()} disabled={loading}>
             <RefreshCw className={`w-4 h-4 mr-1.5 ${loading ? "animate-spin" : ""}`} /> Atualizar
           </Button>
-          <Button variant="outline" onClick={exportar} disabled={!linhas.length}>
-            <Download className="w-4 h-4 mr-1.5" /> Exportar Excel
+          <Button variant="outline" onClick={exportar} disabled={exportando || !linhas.length}>
+            <Download className={`w-4 h-4 mr-1.5 ${exportando ? "animate-pulse" : ""}`} />
+            {exportando ? "Exportando…" : "Exportar Excel"}
           </Button>
+
         </div>
 
         <div className="rounded-lg border border-border bg-card overflow-x-auto">
