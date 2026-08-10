@@ -38,7 +38,8 @@ interface CollectorLog {
   tempo_execucao: string;
 }
 
-const BASE_URL = 'https://www.santoantonioemcasa.com.br';
+let BASE_URL = 'https://www.santoantonioemcasa.com.br';
+let MAX_PAGES = 200;
 const BATCH_SIZE = 50;
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 2000;
@@ -189,7 +190,7 @@ async function searchApiFullPagination(log: CollectorLog, coleta: string): Promi
 
   // VTEX public search supports up to 2500 via _from/_to
   // But we can also try higher ranges
-  while (page * BATCH_SIZE < 10000) {
+  while (page < MAX_PAGES && page * BATCH_SIZE < 10000) {
     const from = page * BATCH_SIZE;
     const to = from + BATCH_SIZE - 1;
     
@@ -526,6 +527,9 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const mode = (body as any).mode || 'full'; // 'full' or 'incremental'
     const targetUrl = (body as any).url || BASE_URL;
+    BASE_URL = String(targetUrl).replace(/\/+$/, '');
+    MAX_PAGES = Number((body as any).maxPages) || 200;
+    const onlySearch = (body as any).onlySearch === true;
 
     console.log(`=== VTEX COLLECTOR START (mode: ${mode}) ===`);
     console.log(`Target: ${targetUrl}`);
@@ -535,17 +539,17 @@ Deno.serve(async (req) => {
     console.log(`After Strategy 1: ${products.size} SKUs`);
 
     // ETAPA 2: Category tree enrichment (always run to fill gaps)
-    products = await categoryTreeSearch(products, log, coleta);
+    if (!onlySearch) products = await categoryTreeSearch(products, log, coleta);
     console.log(`After Strategy 2: ${products.size} SKUs`);
 
     // ETAPA 3: Brand search (if we still have room to find more)
-    if (products.size < 5000) {
+    if (!onlySearch && products.size < 5000) {
       products = await brandSearch(products, log, coleta);
       console.log(`After Strategy 3: ${products.size} SKUs`);
     }
 
     // ETAPA 4: Sitemap fallback (if coverage seems low)
-    if (products.size < 100) {
+    if (!onlySearch && products.size < 100) {
       products = await sitemapFallback(products, log, coleta);
       console.log(`After Strategy 4: ${products.size} SKUs`);
     }
