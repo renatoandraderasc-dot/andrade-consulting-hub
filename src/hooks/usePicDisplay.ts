@@ -23,9 +23,34 @@ export async function savePicDisplayMap(map: PicDisplayMap) {
     .upsert({ id: PIC_DISPLAY_ID, data: map as any, updated_at: new Date().toISOString() });
 }
 
+/** Perfil "PIC VISUALIZADOR": usuario que so enxerga percentuais no PIC */
+export const PIC_VIEWER_MODULE = "pic_percentual";
+
+async function isPicViewer(): Promise<boolean> {
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return false;
+  const { data } = await supabase
+    .from("user_module_access")
+    .select("allowed")
+    .eq("user_id", auth.user.id)
+    .eq("module", PIC_VIEWER_MODULE)
+    .eq("allowed", true)
+    .limit(1);
+  return !!data && data.length > 0;
+}
+
 /** Modo de exibicao do PIC para uma loja (padrao: valores + %) */
 export function usePicDisplayMode(storeId: string | undefined) {
   const [mode, setMode] = useState<PicDisplayMode>("valores");
+  const [forcePct, setForcePct] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    isPicViewer().then((v) => mounted && setForcePct(v));
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!storeId) return;
