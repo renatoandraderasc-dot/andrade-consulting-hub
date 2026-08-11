@@ -29,7 +29,7 @@ const Dashboard = () => {
   const [storeName, setStoreName] = useState("");
   const [storeId, setStoreId] = useState("");
   const [departments, setDepartments] = useState<string[]>([]);
-  const [selectedDept, setSelectedDept] = useState("");
+  const [selectedDept, setSelectedDept] = useState("LOJA");
   const [metaRows, setMetaRows] = useState<any[]>([]);
   const [storeMetrics, setStoreMetrics] = useState<any>(null);
   const [productData, setProductData] = useState<ProductCompRow[]>([]);
@@ -43,9 +43,9 @@ const Dashboard = () => {
     } catch { /* ignore */ }
     return periodoFromPreset("mes");
   });
-  const [categoria, setCategoria] = useState<string>(
-    () => sessionStorage.getItem(CATEGORIA_KEY) || TODA_LOJA,
-  );
+  // Sempre inicia sem filtro de categoria (loja toda)
+  const [categoria, setCategoria] = useState<string>(TODA_LOJA);
+
 
   useEffect(() => {
     sessionStorage.setItem(PERIODO_KEY, JSON.stringify(periodo));
@@ -152,7 +152,6 @@ const Dashboard = () => {
     if (data) {
       const unique = [...new Set(data.map((d) => d.department))].sort();
       setDepartments(unique);
-      if (unique.length > 0 && !selectedDept) setSelectedDept(unique[0]);
     }
 
     // Also check store_department_metrics for departments
@@ -164,7 +163,6 @@ const Dashboard = () => {
       if (deptData) {
         const unique = [...new Set(deptData.map((d) => d.department))].sort();
         setDepartments(unique);
-        if (unique.length > 0 && !selectedDept) setSelectedDept(unique[0]);
       }
     }
   };
@@ -389,23 +387,11 @@ const Dashboard = () => {
                   {new Date(periodEnd + "T12:00:00").toLocaleDateString("pt-BR")}
                   {" · "}
                   {categoria === TODA_LOJA ? "Loja toda" : categoria}
-                  {selectedDept ? ` · ${selectedDept}` : ""}
                 </p>
               </div>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              {!soLoja && departments.length > 0 && (
-                <select
-                  value={selectedDept}
-                  onChange={(e) => setSelectedDept(e.target.value)}
-                  className="bg-card text-foreground border border-border rounded-md px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-                >
-                  {departments.map((d) => (
-                    <option key={d} value={d}>{d}</option>
-                  ))}
-                </select>
-              )}
               {!offline && updatedAt && (
                 <span className="text-[11px] text-muted-foreground">
                   VR ao vivo · {updatedAt.toLocaleTimeString("pt-BR")}
@@ -432,7 +418,7 @@ const Dashboard = () => {
 
         {!soLoja && (
           <>
-            <CouponDivider label={`Faturamento x margem por dia${selectedDept ? ` — ${selectedDept}` : ""}`} />
+            <CouponDivider label={"Faturamento x margem por dia"} />
             {offline ? <VrOfflineNotice message={errorMsg} /> : <DailyMetricsTable data={dailyData} />}
 
             {/* Product Comparison */}
