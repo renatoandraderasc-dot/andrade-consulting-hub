@@ -65,6 +65,7 @@ export async function consultarRelatorioLoja(opts: {
 
   // ---------- WebSac ----------
   if (sistema === "WEBSAC") {
+    try {
       const resp = await fetch(`${supabaseUrl}/functions/v1/websac-proxy`, {
         method: "POST",
         headers: {
