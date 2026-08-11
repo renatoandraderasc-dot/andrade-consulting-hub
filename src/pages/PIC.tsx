@@ -529,6 +529,7 @@ const KpiSection = ({ label, kpi, viewMode, today, soPct }: KpiSectionProps) => 
   const totalColor = kpi.pctTotal >= 100 ? "bg-emerald-500" : kpi.pctTotal >= 80 ? "bg-blue-500" : "bg-amber-500";
   const isCurrency = label !== "Margem" && label !== "Mix";
   const valueFmt = (value: number) => {
+    if (soPct && label !== "Margem") return "—";
     if (label === "Margem") return pctFmt(value);
     if (label === "Mix") return value.toLocaleString("pt-BR", { maximumFractionDigits: 3 });
     return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
@@ -582,9 +583,11 @@ const KpiSection = ({ label, kpi, viewMode, today, soPct }: KpiSectionProps) => 
             `Progresso Total do mês`,
             `Realizado ${valueFmt(kpi.realizado)} / Meta mensal ${valueFmt(kpi.metaMensal)}`,
           )}
-          <p className="ml-[4.5rem] text-[10px] text-muted-foreground font-mono">
-            Meta acum. {valueFmt(kpi.metaAcumulada)} · Meta mês {valueFmt(kpi.metaMensal)} · Realizado {valueFmt(kpi.realizado)}
-          </p>
+          {!soPct && (
+            <p className="ml-[4.5rem] text-[10px] text-muted-foreground font-mono">
+              Meta acum. {valueFmt(kpi.metaAcumulada)} · Meta mês {valueFmt(kpi.metaMensal)} · Realizado {valueFmt(kpi.realizado)}
+            </p>
+          )}
         </>
       ) : (
         <>
@@ -601,7 +604,7 @@ const KpiSection = ({ label, kpi, viewMode, today, soPct }: KpiSectionProps) => 
               )}
             </div>
             <span className={`text-xs font-mono font-bold w-20 text-right ${kpi.realizado > 0 ? "text-blue-500" : "text-muted-foreground"}`}>
-              {kpi.realizado > 0 ? valueFmt(kpi.realizado) : "—"}
+              {kpi.realizado > 0 ? (soPct ? "Real." : valueFmt(kpi.realizado)) : "—"}
             </span>
           </div>
           {kpi.realizado > 0 && (
@@ -646,7 +649,7 @@ const KpiSection = ({ label, kpi, viewMode, today, soPct }: KpiSectionProps) => 
                       />
                     </div>
                     <span className={`text-[10px] font-mono w-20 text-right ${d.hasMeta ? d.pct >= 100 ? "text-emerald-500" : d.pct >= 80 ? "text-blue-500" : "text-red-500" : d.realizado > 0 ? "text-blue-500" : "text-muted-foreground"}`}>
-                      {d.hasMeta ? pctFmt(d.pct) : d.realizado > 0 ? valueFmt(d.realizado) : "—"}
+                      {d.hasMeta ? pctFmt(d.pct) : d.realizado > 0 ? (soPct ? "Real." : valueFmt(d.realizado)) : "—"}
                     </span>
                   </motion.div>
                 );
