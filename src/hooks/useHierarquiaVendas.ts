@@ -164,5 +164,12 @@ export function useHierarquiaVendas(storeId: string, inicio: string, fim: string
     [linhas],
   );
 
-  return { linhas, total, loading, errorMsg, updatedAt, refresh };
+  // Falso quando o conector da loja nao publica relatorio de produto e
+  // caimos para a abertura por secao/categoria.
+  const nivelProduto = useMemo(
+    () => (linhas ?? []).some((l) => !!l.codigo),
+    [linhas],
+  );
+
+  return { linhas, total, loading, errorMsg, updatedAt, refresh, nivelProduto };
 }

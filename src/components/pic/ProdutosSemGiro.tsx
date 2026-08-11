@@ -136,6 +136,15 @@ const ProdutosSemGiro = ({ storeId, ano, mes }: Props) => {
         <div className="p-6 text-sm text-muted-foreground font-body">Analisando produtos…</div>
       )}
 
+      {!loading && !atual.nivelProduto && (
+        <div className="px-5 py-4 text-xs font-body text-amber-500 border-b border-border">
+          O conector desta loja não está publicando o relatório de produtos
+          (ranking_produtos), então a análise abaixo sai no nível de
+          seção/categoria. Assim que o relatório de produto for liberado, a
+          abertura passa a ser por item automaticamente.
+        </div>
+      )}
+
       {!loading && categorias.length === 0 && (
         <div className="p-6 text-sm text-muted-foreground font-body">
           Nenhum produto sem giro ou em queda relevante no período.
