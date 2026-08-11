@@ -54,7 +54,14 @@ Deno.serve(async (req) => {
     if (r.semConfig) {
       return json({ ok: true, relatorio, dados: [], aviso: "loja sem conexao VR cadastrada" });
     }
-    if (!r.ok) return json({ erro: r.erro }, r.semConexao ? 200 : 502);
+    // Relatorio inexistente no conector da loja ou erro de bind do Oracle nao
+    // sao falhas do app: devolvemos 200 com o campo `erro` para a UI so avisar.
+    if (!r.ok) {
+      const msg = r.erro ?? "falha ao consultar o sistema da loja";
+      const brando = r.semConexao ||
+        /404|relatorio nao encontrado|not supported|ORA-\d+|illegal variable|invalid identifier/i.test(msg);
+      return json({ erro: msg, dados: [] }, brando ? 200 : 502);
+    }
 
     return json({ ok: true, relatorio, dados: r.dados });
   } catch (e) {
