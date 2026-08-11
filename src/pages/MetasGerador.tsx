@@ -216,7 +216,33 @@ const MetasGerador = () => {
     } finally { setLoading(false); }
   };
 
+  const handleDistribuirMetas = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await (supabase.rpc as any)("distribuir_metas", {
+        p_store_id: storeId,
+        p_department: department,
+        p_ano: year,
+        p_mes: month,
+        p_faturamento: Number(totalInput.faturamento) || 0,
+        p_margem_pct: Number(totalInput.margem) || 0,
+        p_volume: Number(totalInput.volume) || 0,
+        p_mix: Number(totalInput.mix) || 0,
+      });
+      if (error) throw error;
+      const r = data?.[0];
+      toast({
+        title: "Metas distribuídas",
+        description: `${r?.dias_gerados ?? 0} dias · Total: ${fmtBRL(Number(r?.total_meta ?? 0))}`,
+      });
+      fetchMetas();
+    } catch (err: any) {
+      toast({ title: "Erro ao distribuir metas", description: err.message, variant: "destructive" });
+    } finally { setLoading(false); }
+  };
+
   const handleGerarMetas = async () => {
+
     setLoading(true);
     try {
       const { data, error } = await supabase.rpc("gerar_metas", {
