@@ -66,13 +66,34 @@ async function carregar(storeId: string, inicio: string, fim: string): Promise<L
   }
 
   // ---------- VR / ORACLE ----------
-  const [ranking, catalogo] = await Promise.all([
-    chamar(storeId, "ranking_produtos", { inicio, fim, limite: 200000 }).catch(() => [] as any[]),
-    chamar(storeId, "produtos", {}).catch(() => [] as any[]),
-  ]);
+  // Cascata de relatorios ate achar um que abra em nivel produto.
+  const CANDIDATOS: { nome: string; params: Record<string, unknown> }[] = [
+    { nome: "ranking_produtos", params: { inicio, fim, limite: 200000 } },
+    { nome: "catalogo_produtos_vendidos", params: { inicio, fim } },
+    { nome: "vendas_produto_periodo", params: { inicio, fim } },
+    { nome: "compras_vendas_periodo", params: { inicio, fim } },
+    { nome: "mix_positivacao_periodo", params: { inicio, fim } },
+  ];
 
-  // Conectores que nao publicam ranking/catalogo de produtos (ex.: ORACLE)
-  // caem para a abertura por secao/categoria do relatorio de vendas.
+  let ranking: any[] = [];
+  for (const c of CANDIDATOS) {
+    const r = await chamar(storeId, c.nome, c.params).catch(() => [] as any[]);
+    // so aceita se realmente vier abertura por produto
+    const temProduto = r.some(
+      (l: any) => !!pick(l, "codigo", "codigo_produto", "cod_produto", "ean") ||
+        !!pick(l, "produto", "descricao", "descricao_produto"),
+    );
+    if (r.length > 0 && temProduto) {
+      ranking = r;
+      break;
+    }
+  }
+
+  const catalogo = ranking.length
+    ? await chamar(storeId, "produtos", {}).catch(() => [] as any[])
+    : ([] as any[]);
+
+  // Nenhum relatorio de produto disponivel: cai para secao/categoria.
   if (ranking.length === 0) {
     const dados = await chamar(storeId, "vendas_secao_periodo", { inicio, fim });
     const acc = new Map<string, LinhaHierarquia>();
@@ -88,6 +109,7 @@ async function carregar(storeId: string, inicio: string, fim: string): Promise<L
     }
     return [...acc.values()];
   }
+
 
   const cat = new Map<string, { n1: string; n2: string; n3: string; descricao: string }>();
   for (const p of catalogo) {
