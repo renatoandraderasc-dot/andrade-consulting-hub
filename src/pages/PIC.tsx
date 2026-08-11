@@ -103,7 +103,7 @@ const PIC = () => {
       return temLoja ? [LOJA, ...ordenado] : ordenado;
     }
     return [LOJA];
-  }, [vr]);
+  }, [vr, deptsConfig]);
 
 
   useEffect(() => {
