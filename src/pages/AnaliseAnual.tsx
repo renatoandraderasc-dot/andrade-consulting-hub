@@ -570,11 +570,17 @@ const AnaliseAnual = () => {
                   <SelectItem value="tarde">Tarde (13:00–23:59)</SelectItem>
                 </SelectContent>
               </Select>
-              {!temTurno && (
+              {horaOk === false && (
                 <p className="text-[10px] text-muted-foreground mt-1 max-w-[190px]">
                   O relatório desta loja não traz hora da venda.
                 </p>
               )}
+              {horaLoading && (
+                <p className="text-[10px] text-muted-foreground mt-1 max-w-[190px]">
+                  Carregando vendas por hora…
+                </p>
+              )}
+
             </div>
 
 
