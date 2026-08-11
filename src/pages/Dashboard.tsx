@@ -43,9 +43,9 @@ const Dashboard = () => {
     } catch { /* ignore */ }
     return periodoFromPreset("mes");
   });
-  const [categoria, setCategoria] = useState<string>(
-    () => sessionStorage.getItem(CATEGORIA_KEY) || TODA_LOJA,
-  );
+  // Sempre inicia sem filtro de categoria (loja toda)
+  const [categoria, setCategoria] = useState<string>(TODA_LOJA);
+
 
   useEffect(() => {
     sessionStorage.setItem(PERIODO_KEY, JSON.stringify(periodo));
