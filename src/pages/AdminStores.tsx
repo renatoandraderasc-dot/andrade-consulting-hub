@@ -33,6 +33,8 @@ const AdminStores = () => {
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
+  const [picDisplay, setPicDisplay] = useState<PicDisplayMap>({});
+  const [savingPic, setSavingPic] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && (!user || !isAdmin)) {
@@ -41,8 +43,22 @@ const AdminStores = () => {
   }, [user, isAdmin, authLoading]);
 
   useEffect(() => {
-    if (isAdmin) fetchStores();
+    if (isAdmin) {
+      fetchStores();
+      fetchPicDisplayMap().then(setPicDisplay);
+    }
   }, [isAdmin]);
+
+  const changePicDisplay = async (storeId: string, mode: PicDisplayMode) => {
+    const next = { ...picDisplay, [storeId]: mode };
+    setPicDisplay(next);
+    setSavingPic(storeId);
+    const { error } = await savePicDisplayMap(next);
+    setSavingPic(null);
+    if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
+    else toast({ title: "Exibição do PIC atualizada!" });
+  };
+
 
   const fetchStores = async () => {
     const { data } = await supabase
