@@ -93,7 +93,7 @@ export async function consultarRelatorioLoja(opts: {
     }
   }
 
-  // ---------- VR (comportamento original) ----------
+  // ---------- VR / ORACLE (mesmo contrato HTTP) ----------
   const qs = new URLSearchParams();
   for (const [k, v] of Object.entries(params ?? {})) {
     if (v !== undefined && v !== null) qs.set(k, String(v));
