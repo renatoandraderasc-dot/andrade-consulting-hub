@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
 
     const { data: cfg, error: cfgErr } = await supabase
       .from("store_vr_config")
-      .select("api_url, api_key, sistema")
+      .select("api_url, api_key, sistema, codigo_loja")
       .eq("store_id", store_id)
       .single();
     if (cfgErr || !cfg) return json({ erro: "loja sem conexao cadastrada" }, 400);
