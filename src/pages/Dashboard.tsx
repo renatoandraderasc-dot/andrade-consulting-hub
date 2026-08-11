@@ -35,14 +35,8 @@ const Dashboard = () => {
   const [productData, setProductData] = useState<ProductCompRow[]>([]);
   const [categoryData, setCategoryData] = useState<CategoryChartData[]>([]);
 
-  // Filtros globais da tela (persistem entre abas/navegação)
-  const [periodo, setPeriodo] = useState<Periodo>(() => {
-    try {
-      const s = sessionStorage.getItem(PERIODO_KEY);
-      if (s) return JSON.parse(s) as Periodo;
-    } catch { /* ignore */ }
-    return periodoFromPreset("mes");
-  });
+  // Sempre inicia no mês corrente (dia 1 até D-1)
+  const [periodo, setPeriodo] = useState<Periodo>(() => periodoFromPreset("mes"));
   // Sempre inicia sem filtro de categoria (loja toda)
   const [categoria, setCategoria] = useState<string>(TODA_LOJA);
 
