@@ -167,7 +167,7 @@ const PIC = () => {
     const [{ data }, { data: mixRows }] = await Promise.all([
       supabase
         .from("store_daily_metrics")
-        .select("date, department, meta_vendas, meta_lucro, meta_margem_pct, meta_volume")
+        .select("date, department, meta_vendas, meta_lucro, meta_margem_pct, meta_volume, meta_mix")
         .eq("store_id", storeId)
         .gte("date", periodStart)
         .lte("date", periodEnd)
