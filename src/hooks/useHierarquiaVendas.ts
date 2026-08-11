@@ -75,38 +75,57 @@ async function carregar(storeId: string, inicio: string, fim: string): Promise<L
     }));
   }
 
-  // ---------- VR ----------
+  // ---------- VR / ORACLE ----------
   const [ranking, catalogo] = await Promise.all([
-    chamar(storeId, "ranking_produtos", { inicio, fim, limite: 200000 }),
+    chamar(storeId, "ranking_produtos", { inicio, fim, limite: 200000 }).catch(() => [] as any[]),
     chamar(storeId, "produtos", {}).catch(() => [] as any[]),
   ]);
 
+  // Conectores que nao publicam ranking/catalogo de produtos (ex.: ORACLE)
+  // caem para a abertura por secao/categoria do relatorio de vendas.
+  if (ranking.length === 0) {
+    const dados = await chamar(storeId, "vendas_secao_periodo", { inicio, fim });
+    const acc = new Map<string, LinhaHierarquia>();
+    for (const l of dados) {
+      const n1 = txt(pick(l, "secao", "departamento"), "SEM DEPARTAMENTO").toUpperCase();
+      const n2 = txt(pick(l, "categoria", "grupo"), "SEM GRUPO").toUpperCase();
+      const k = `${n1}|${n2}`;
+      const cur = acc.get(k) ?? { n1, n2, n3: "SEM SUBGRUPO", produto: n2, codigo: "", vendas: 0, lucro: 0, volume: 0 };
+      cur.vendas += num(pick(l, "total_vendido", "venda", "vendas"));
+      cur.lucro += num(pick(l, "lucro"));
+      cur.volume += num(pick(l, "volume", "qtde", "quantidade"));
+      acc.set(k, cur);
+    }
+    return [...acc.values()];
+  }
+
   const cat = new Map<string, { n1: string; n2: string; n3: string; descricao: string }>();
   for (const p of catalogo) {
-    cat.set(String(p.codigo ?? ""), {
-      n1: txt(p.secao, "SEM DEPARTAMENTO").toUpperCase(),
-      n2: txt(p.grupo, "SEM GRUPO").toUpperCase(),
-      n3: txt(p.subgrupo, "SEM SUBGRUPO").toUpperCase(),
-      descricao: txt(p.descricao, "SEM DESCRIÇÃO").toUpperCase(),
+    cat.set(String(pick(p, "codigo") ?? ""), {
+      n1: txt(pick(p, "secao"), "SEM DEPARTAMENTO").toUpperCase(),
+      n2: txt(pick(p, "grupo"), "SEM GRUPO").toUpperCase(),
+      n3: txt(pick(p, "subgrupo"), "SEM SUBGRUPO").toUpperCase(),
+      descricao: txt(pick(p, "descricao"), "SEM DESCRIÇÃO").toUpperCase(),
     });
   }
 
   return ranking.map((l) => {
-    const codigo = String(l.codigo ?? "");
+    const codigo = String(pick(l, "codigo") ?? "");
     const c = cat.get(codigo);
-    const vendas = num(l.total_vendido);
+    const vendas = num(pick(l, "total_vendido", "venda", "vendas"));
     return {
-      n1: c?.n1 ?? txt(l.secao, "SEM DEPARTAMENTO").toUpperCase(),
+      n1: c?.n1 ?? txt(pick(l, "secao"), "SEM DEPARTAMENTO").toUpperCase(),
       n2: c?.n2 ?? "SEM GRUPO",
       n3: c?.n3 ?? "SEM SUBGRUPO",
-      produto: c?.descricao ?? txt(l.produto, "SEM DESCRIÇÃO").toUpperCase(),
+      produto: c?.descricao ?? txt(pick(l, "produto", "descricao"), "SEM DESCRIÇÃO").toUpperCase(),
       codigo,
       vendas,
-      lucro: (vendas * num(l.margem_pct)) / 100,
-      volume: num(l.quantidade),
+      lucro: num(pick(l, "lucro")) || (vendas * num(pick(l, "margem_pct"))) / 100,
+      volume: num(pick(l, "quantidade", "volume", "qtde")),
     };
   });
 }
+
 
 export function useHierarquiaVendas(storeId: string, inicio: string, fim: string) {
   const [linhas, setLinhas] = useState<LinhaHierarquia[] | null>(null);
