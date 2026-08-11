@@ -11,6 +11,7 @@ import { useVrRealizado, VrDia, LOJA } from "@/hooks/useVrRealizado";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import HierarquiaVendasTable from "@/components/relatorios/HierarquiaVendasTable";
+import { usePicDisplayMode } from "@/hooks/usePicDisplay";
 
 
 
@@ -63,6 +64,8 @@ const PIC = () => {
   const [viewMode, setViewMode] = useState<"mes" | "dia">("mes");
   const [metasData, setMetasData] = useState<Record<string, any[]>>({});
   const [metaMix, setMetaMix] = useState<Record<string, number>>({});
+  const picMode = usePicDisplayMode(storeId);
+  const soPct = picMode === "percentual";
 
   const [loading, setLoading] = useState(true);
 
@@ -437,7 +440,7 @@ const PIC = () => {
             {/* Department Cards */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {DEPARTMENTS.map((dept, deptIdx) => (
-                <DepartmentCard key={dept} dept={dept} kpis={deptKpis[dept] || {}} viewMode={viewMode} delay={deptIdx * 0.1} today={today} />
+                <DepartmentCard key={dept} dept={dept} kpis={deptKpis[dept] || {}} viewMode={viewMode} delay={deptIdx * 0.1} today={today} soPct={soPct} />
               ))}
             </div>
 
@@ -469,9 +472,10 @@ interface DeptCardProps {
   viewMode: "mes" | "dia";
   delay: number;
   today: number;
+  soPct: boolean;
 }
 
-const DepartmentCard = ({ dept, kpis, viewMode, delay, today }: DeptCardProps) => {
+const DepartmentCard = ({ dept, kpis, viewMode, delay, today, soPct }: DeptCardProps) => {
   const kpiKeys = ["faturamento", "margem", "arrecadacao", "volume"];
 
   return (
@@ -502,7 +506,7 @@ const DepartmentCard = ({ dept, kpis, viewMode, delay, today }: DeptCardProps) =
           const kpiData = kpis[kpiKey];
           if (!kpiData) return null;
           return (
-            <KpiSection key={kpiKey} label={KPI_LABELS[kpiKey]} kpi={kpiData} viewMode={viewMode} today={today} />
+            <KpiSection key={kpiKey} label={KPI_LABELS[kpiKey]} kpi={kpiData} viewMode={viewMode} today={today} soPct={soPct} />
           );
         })}
       </div>
@@ -516,9 +520,10 @@ interface KpiSectionProps {
   kpi: KpiData;
   viewMode: "mes" | "dia";
   today: number;
+  soPct: boolean;
 }
 
-const KpiSection = ({ label, kpi, viewMode, today }: KpiSectionProps) => {
+const KpiSection = ({ label, kpi, viewMode, today, soPct }: KpiSectionProps) => {
   const [expanded, setExpanded] = useState(false);
   const acumColor = kpi.pctAcumulado >= 100 ? "bg-emerald-500" : kpi.pctAcumulado >= 80 ? "bg-blue-500" : "bg-red-500";
   const totalColor = kpi.pctTotal >= 100 ? "bg-emerald-500" : kpi.pctTotal >= 80 ? "bg-blue-500" : "bg-amber-500";
