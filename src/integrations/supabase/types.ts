@@ -431,6 +431,195 @@ export type Database = {
         }
         Relationships: []
       }
+      encarte_calendario: {
+        Row: {
+          agressivo: boolean
+          agv_pct: number
+          created_at: string
+          dia_fim: number
+          dia_inicio: number
+          id: string
+          nome: string
+          ordem: number
+          tipo_faixa: string
+          updated_at: string
+        }
+        Insert: {
+          agressivo?: boolean
+          agv_pct?: number
+          created_at?: string
+          dia_fim: number
+          dia_inicio: number
+          id?: string
+          nome: string
+          ordem?: number
+          tipo_faixa?: string
+          updated_at?: string
+        }
+        Update: {
+          agressivo?: boolean
+          agv_pct?: number
+          created_at?: string
+          dia_fim?: number
+          dia_inicio?: number
+          id?: string
+          nome?: string
+          ordem?: number
+          tipo_faixa?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      encarte_config_loja: {
+        Row: {
+          created_at: string
+          fecha_domingo: boolean
+          id: string
+          janela_nao_repetir_semanas: number
+          split_capa: number
+          split_verso: number
+          store_id: string
+          total_itens: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          fecha_domingo?: boolean
+          id?: string
+          janela_nao_repetir_semanas?: number
+          split_capa?: number
+          split_verso?: number
+          store_id: string
+          total_itens?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          fecha_domingo?: boolean
+          id?: string
+          janela_nao_repetir_semanas?: number
+          split_capa?: number
+          split_verso?: number
+          store_id?: string
+          total_itens?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "encarte_config_loja_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      encarte_gerado: {
+        Row: {
+          agv_pct: number | null
+          criado_em: string
+          criado_por: string | null
+          data_fim: string | null
+          data_inicio: string | null
+          id: string
+          nome: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          agv_pct?: number | null
+          criado_em?: string
+          criado_por?: string | null
+          data_fim?: string | null
+          data_inicio?: string | null
+          id?: string
+          nome: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          agv_pct?: number | null
+          criado_em?: string
+          criado_por?: string | null
+          data_fim?: string | null
+          data_inicio?: string | null
+          id?: string
+          nome?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "encarte_gerado_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      encarte_item: {
+        Row: {
+          codigo: string | null
+          created_at: string
+          custo: number | null
+          departamento: string | null
+          descricao: string | null
+          encarte_id: string
+          estoque: number | null
+          giro_90d: number | null
+          id: string
+          indice_elast: number | null
+          margem_oferta: number | null
+          ordem: number
+          preco_oferta: number | null
+          tipo_faixa: string | null
+          venda_atual: number | null
+        }
+        Insert: {
+          codigo?: string | null
+          created_at?: string
+          custo?: number | null
+          departamento?: string | null
+          descricao?: string | null
+          encarte_id: string
+          estoque?: number | null
+          giro_90d?: number | null
+          id?: string
+          indice_elast?: number | null
+          margem_oferta?: number | null
+          ordem?: number
+          preco_oferta?: number | null
+          tipo_faixa?: string | null
+          venda_atual?: number | null
+        }
+        Update: {
+          codigo?: string | null
+          created_at?: string
+          custo?: number | null
+          departamento?: string | null
+          descricao?: string | null
+          encarte_id?: string
+          estoque?: number | null
+          giro_90d?: number | null
+          id?: string
+          indice_elast?: number | null
+          margem_oferta?: number | null
+          ordem?: number
+          preco_oferta?: number | null
+          tipo_faixa?: string | null
+          venda_atual?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "encarte_item_encarte_id_fkey"
+            columns: ["encarte_id"]
+            isOneToOne: false
+            referencedRelation: "encarte_gerado"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       encarte_itens: {
         Row: {
           created_at: string
