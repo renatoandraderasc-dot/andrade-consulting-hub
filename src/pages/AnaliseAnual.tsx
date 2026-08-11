@@ -76,6 +76,50 @@ const AnaliseAnual = () => {
     setErro("");
     const hoje0 = new Date();
     const fim = `${hoje0.getFullYear()}-${String(hoje0.getMonth() + 1).padStart(2, "0")}-${String(hoje0.getDate()).padStart(2, "0")}`;
+    // 0) relatorio por hora (Intersolid/Oracle) — habilita o filtro de turno
+    try {
+      const anosBusca: number[] = [];
+      for (let a = ANOS[0]; a <= hoje0.getFullYear(); a++) anosBusca.push(a);
+      const partes = await Promise.all(
+        anosBusca.map((a) =>
+          chamarRelatorio(sid, "vendas_hora_periodo", {
+            inicio: `${a}-01-01`,
+            fim: a === hoje0.getFullYear() ? fim : `${a}-12-31`,
+          }),
+        ),
+      );
+      if (!partes.some((p) => p.indisponivel || p.offline || p.erro)) {
+        const acc = new Map<string, Row>();
+        for (const p of partes) {
+          for (const l of p.dados) {
+            const dia = String(pick(l, "dia", "data") ?? "");
+            const ano = Number(dia.slice(0, 4));
+            const mes = Number(dia.slice(5, 7));
+            if (!ano || !mes) continue;
+            const secao = String(pick(l, "secao", "departamento", "nivel1") ?? "TOTAL").toUpperCase();
+            const categoria = String(pick(l, "categoria", "nivel2") ?? secao).toUpperCase();
+            const turnoL = extrairTurno(l);
+            const k = `${ano}-${mes}-${secao}-${categoria}-${turnoL}`;
+            const cur = acc.get(k) ?? {
+              ano, mes, faturamento: 0, lucro: 0, volume: 0,
+              departamento: secao, secao, categoria, turno: turnoL,
+            };
+            cur.faturamento += num(pick(l, "total_vendido", "faturamento", "venda"));
+            cur.lucro += num(pick(l, "lucro", "lucro_bruto"));
+            cur.volume += num(pick(l, "volume", "quantidade", "qtde"));
+            acc.set(k, cur);
+          }
+        }
+        const porHora = Array.from(acc.values());
+        if (porHora.some((r) => r.turno)) {
+          setRows(porHora);
+          setLoading(false);
+          return;
+        }
+      }
+    } catch {
+      /* segue para os demais relatorios */
+    }
     try {
       // 1) DRE mensal (quando o conector publica)
       const r = await chamarRelatorio(sid, "dre_periodo", { inicio: `${ANOS[0]}-01-01`, fim });
