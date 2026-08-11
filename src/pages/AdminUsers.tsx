@@ -245,7 +245,16 @@ const CreateUserDialog = ({ stores, onClose, onCreated, call }: any) => {
           </div>
 
           <div>
-            <p className="font-body text-sm font-semibold mb-2 flex items-center gap-2"><KeySquare className="w-4 h-4" /> Módulos visíveis</p>
+            <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
+              <p className="font-body text-sm font-semibold flex items-center gap-2"><KeySquare className="w-4 h-4" /> Módulos visíveis</p>
+              <button
+                type="button"
+                onClick={() => setModules(["pic", "pic_percentual"])}
+                className="px-3 py-1.5 rounded-lg border border-border text-xs font-body font-semibold hover:bg-accent"
+              >
+                Perfil PIC VISUALIZADOR
+              </button>
+            </div>
             <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 border border-border rounded-lg">
               {APP_MODULES.map((m) => (
                 <label key={m.key} className="flex items-center gap-2 cursor-pointer text-sm font-body">
