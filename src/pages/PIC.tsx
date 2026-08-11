@@ -461,6 +461,12 @@ const PIC = () => {
             {/* Finish Line Animation */}
             <FinishLineAnimation deptKpis={deptKpis} departments={DEPARTMENTS} />
 
+            {/* Produtos sem giro / em queda por categoria */}
+            {storeId && (
+              <ProdutosSemGiro storeId={storeId} ano={selectedYear} mes={selectedMonth} />
+            )}
+
+
           </>
         )}
 
