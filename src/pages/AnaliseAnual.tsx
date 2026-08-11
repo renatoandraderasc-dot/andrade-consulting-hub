@@ -122,10 +122,11 @@ const AnaliseAnual = () => {
             if (!ano || !mes) continue;
             const secao = String(pick(l, "secao", "departamento", "nivel1") ?? "TOTAL").toUpperCase();
             const categoria = String(pick(l, "categoria", "nivel2") ?? secao).toUpperCase();
-            const k = `${ano}-${mes}-${secao}-${categoria}`;
+            const turno = extrairTurno(l);
+            const k = `${ano}-${mes}-${secao}-${categoria}-${turno}`;
             const cur = acc.get(k) ?? {
               ano, mes, faturamento: 0, lucro: 0, volume: 0,
-              departamento: secao, secao, categoria,
+              departamento: secao, secao, categoria, turno,
             };
             cur.faturamento += num(pick(l, "total_vendido", "faturamento", "venda"));
             cur.lucro += num(pick(l, "lucro", "lucro_bruto"));
