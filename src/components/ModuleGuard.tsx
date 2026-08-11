@@ -49,7 +49,14 @@ const ModuleGuard = ({ module, children }: ModuleGuardProps) => {
     return <Navigate to={`/login?next=${encodeURIComponent(location.pathname)}`} replace />;
   }
 
-  if (allowed === null || allowed.has(module)) return <>{children}</>;
+  // módulos que dão acesso à mesma rota (ex.: visualizador só de %)
+  const ALIASES: Record<string, string[]> = {
+    pic: ["pic", "pic_percentual"],
+    pic_percentual: ["pic", "pic_percentual"],
+  };
+  const keys = ALIASES[module] || [module];
+
+  if (allowed === null || keys.some((k) => allowed.has(k))) return <>{children}</>;
 
   const first = APP_MODULES.find((m) => allowed.has(m.key));
   if (!first || first.path === location.pathname) {
