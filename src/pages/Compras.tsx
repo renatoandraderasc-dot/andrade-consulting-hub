@@ -155,11 +155,10 @@ const Compras = () => {
     setLoadingPainel(true);
     try {
       const { inicio, fim } = monthRange(year, month);
-      const { data, error } = await supabase.functions.invoke("vr-proxy", {
-        body: { store_id: storeId, relatorio: "compras_vendas_periodo", params: { inicio, fim } },
-      });
-      if (error) throw error;
-      const linhas: any[] = data?.dados || [];
+      const r = await chamarRelatorio(storeId, "compras_vendas_periodo", { inicio, fim });
+      const aviso = avisoRelatorio(r);
+      setCvAviso(aviso);
+      const linhas = r.dados;
       // agrupa por departamento via vr_secao_departamento
       const { data: mapas } = await supabase.from("vr_secao_departamento")
         .select("secao_vr, department").eq("store_id", storeId);
@@ -169,17 +168,19 @@ const Compras = () => {
       const acc: Record<string, { compra: number; venda: number; cmv: number }> = {};
       for (const l of linhas) {
         // departamento nivel 1 vindo do relatorio; mapeamento so como fallback
-        const dep = String(l.departamento ?? "").trim() || mapa.get(norm(l.secao)) || "SEM DEPARTAMENTO";
+        const dep = String(col(l, "departamento", "nivel1") ?? "").trim()
+          || mapa.get(norm(String(col(l, "secao") ?? "")))
+          || "SEM DEPARTAMENTO";
         const cur = acc[dep] || { compra: 0, venda: 0, cmv: 0 };
-        cur.compra += parseFloat(String(l.total_compra)) || 0;
-        cur.venda += parseFloat(String(l.total_venda)) || 0;
-        cur.cmv += parseFloat(String(l.cmv)) || 0;
+        cur.compra += num(col(l, "total_compra", "compra"));
+        cur.venda += num(col(l, "total_venda", "venda", "total_vendido"));
+        cur.cmv += num(col(l, "cmv", "custo"));
         acc[dep] = cur;
       }
 
       setRealizadoDep(acc);
     } catch (err: any) {
-      toast({ title: "Falha ao consultar o sistema da loja", description: err.message, variant: "destructive" });
+      setCvAviso(err.message);
       setRealizadoDep({});
     } finally { setLoadingPainel(false); }
   };
@@ -188,13 +189,12 @@ const Compras = () => {
     if (!storeId || !cvInicio || !cvFim) return;
     setCvLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("vr-proxy", {
-        body: { store_id: storeId, relatorio: "compras_vendas_periodo", params: { inicio: cvInicio, fim: cvFim } },
-      });
-      if (error) throw error;
-      setCvLinhas(data?.dados || []);
+      const r = await chamarRelatorio(storeId, "compras_vendas_periodo", { inicio: cvInicio, fim: cvFim });
+      setCvAviso(avisoRelatorio(r));
+      setCvLinhas(r.dados);
     } catch (err: any) {
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
+      setCvAviso(err.message);
+      setCvLinhas([]);
     } finally { setCvLoading(false); }
   };
 
@@ -202,15 +202,13 @@ const Compras = () => {
     if (!storeId || !cvInicio || !cvFim) return;
     setFornLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("vr-proxy", {
-        body: { store_id: storeId, relatorio: "compras_por_fornecedor", params: { inicio: cvInicio, fim: cvFim } },
-      });
-      if (error) throw error;
-      const linhas: any[] = data?.dados || [];
-      linhas.sort((a, b) => (parseFloat(String(b.total_compra)) || 0) - (parseFloat(String(a.total_compra)) || 0));
+      const r = await chamarRelatorio(storeId, "compras_por_fornecedor", { inicio: cvInicio, fim: cvFim });
+      const linhas = [...r.dados].sort(
+        (a, b) => num(col(b, "total_compra", "compra")) - num(col(a, "total_compra", "compra")),
+      );
       setFornecedores(linhas.slice(0, 20));
-    } catch (err: any) {
-      toast({ title: "Erro fornecedores", description: err.message, variant: "destructive" });
+    } catch {
+      setFornecedores([]);
     } finally { setFornLoading(false); }
   };
 
