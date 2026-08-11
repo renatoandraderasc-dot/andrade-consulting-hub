@@ -374,7 +374,7 @@ const AnaliseAnual = () => {
 
             <div className="flex-1 min-w-[260px]">
               <label className="text-[11px] text-muted-foreground block mb-1">
-                Departamentos {deptos.length ? `(${deptos.length})` : "(todos)"}
+                Departamentos / Seções {deptos.length ? `(${deptos.length})` : "(todos)"}
               </label>
               <Popover>
                 <PopoverTrigger asChild>
@@ -411,6 +411,48 @@ const AnaliseAnual = () => {
                 </PopoverContent>
               </Popover>
             </div>
+
+            <div className="flex-1 min-w-[260px]">
+              <label className="text-[11px] text-muted-foreground block mb-1">
+                Categorias {cats.length ? `(${cats.length})` : "(todas)"}
+              </label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-9 w-full justify-between font-normal">
+                    <span className="truncate">
+                      {cats.length === 0 ? "Todas as categorias" : cats.join(", ")}
+                    </span>
+                    <ChevronsUpDown className="w-4 h-4 opacity-50 shrink-0" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-[280px] p-0">
+                  <div className="max-h-[280px] overflow-y-auto p-2 space-y-1">
+                    <button
+                      className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted"
+                      onClick={() => setCats([])}
+                    >
+                      Todas as categorias
+                    </button>
+                    {categorias.length === 0 && (
+                      <p className="text-xs text-muted-foreground px-2 py-1.5">Nenhuma categoria disponível</p>
+                    )}
+                    {categorias.map(c => (
+                      <label key={c} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer">
+                        <Checkbox
+                          checked={cats.includes(c)}
+                          onCheckedChange={() =>
+                            setCats(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c])
+                          }
+                        />
+                        <span className="text-xs">{c}</span>
+                      </label>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+
+
 
           </CardContent>
         </Card>
