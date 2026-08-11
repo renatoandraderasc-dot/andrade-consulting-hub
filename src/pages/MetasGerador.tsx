@@ -66,6 +66,22 @@ const MetasGerador = () => {
   const [loading, setLoading] = useState(false);
   const [totalInput, setTotalInput] = useState({ faturamento: "", margem: "", volume: "", mix: "" });
 
+  // Persiste os totais informados por loja/departamento/competência
+  const totaisKey = storeId ? `metas-totais:${storeId}:${department}:${year}-${month}` : "";
+  useEffect(() => {
+    if (!totaisKey) return;
+    try {
+      const raw = localStorage.getItem(totaisKey);
+      setTotalInput(raw ? JSON.parse(raw) : { faturamento: "", margem: "", volume: "", mix: "" });
+    } catch {
+      setTotalInput({ faturamento: "", margem: "", volume: "", mix: "" });
+    }
+  }, [totaisKey]);
+  useEffect(() => {
+    if (!totaisKey) return;
+    try { localStorage.setItem(totaisKey, JSON.stringify(totalInput)); } catch { /* ignore */ }
+  }, [totaisKey, totalInput]);
+
   const [metasRows, setMetasRows] = useState<any[]>([]);
   const [dirtyDates, setDirtyDates] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
