@@ -64,6 +64,8 @@ const MetasGerador = () => {
   const [base, setBase] = useState<"ano_anterior" | "mes_anterior">("ano_anterior");
 
   const [loading, setLoading] = useState(false);
+  const [totalInput, setTotalInput] = useState({ faturamento: "", margem: "", volume: "", mix: "" });
+
   const [metasRows, setMetasRows] = useState<any[]>([]);
   const [dirtyDates, setDirtyDates] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
@@ -216,7 +218,33 @@ const MetasGerador = () => {
     } finally { setLoading(false); }
   };
 
+  const handleDistribuirMetas = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await (supabase.rpc as any)("distribuir_metas", {
+        p_store_id: storeId,
+        p_department: department,
+        p_ano: year,
+        p_mes: month,
+        p_faturamento: Number(totalInput.faturamento) || 0,
+        p_margem_pct: Number(totalInput.margem) || 0,
+        p_volume: Number(totalInput.volume) || 0,
+        p_mix: Number(totalInput.mix) || 0,
+      });
+      if (error) throw error;
+      const r = data?.[0];
+      toast({
+        title: "Metas distribuídas",
+        description: `${r?.dias_gerados ?? 0} dias · Total: ${fmtBRL(Number(r?.total_meta ?? 0))}`,
+      });
+      fetchMetas();
+    } catch (err: any) {
+      toast({ title: "Erro ao distribuir metas", description: err.message, variant: "destructive" });
+    } finally { setLoading(false); }
+  };
+
   const handleGerarMetas = async () => {
+
     setLoading(true);
     try {
       const { data, error } = await supabase.rpc("gerar_metas", {
@@ -427,6 +455,45 @@ const MetasGerador = () => {
                 )}
               </div>
             </div>
+
+            {/* Distribuição por valores totais do mês */}
+            <div className="bg-card border border-border rounded-2xl p-6 mb-6">
+              <h3 className="font-display font-bold text-foreground mb-1">Metas por valor total do mês</h3>
+              <p className="font-body text-xs text-muted-foreground mb-4">
+                Informe os totais desejados. O sistema distribui dia a dia usando o peso histórico do mês anterior e do mesmo mês do ano anterior.
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                <div>
+                  <label className="font-body text-xs text-muted-foreground mb-1 block">Faturamento (R$)</label>
+                  <input type="number" step="0.01" value={totalInput.faturamento}
+                    onChange={(e) => setTotalInput((s) => ({ ...s, faturamento: e.target.value }))}
+                    className={selectCls} />
+                </div>
+                <div>
+                  <label className="font-body text-xs text-muted-foreground mb-1 block">Margem (%)</label>
+                  <input type="number" step="0.01" value={totalInput.margem}
+                    onChange={(e) => setTotalInput((s) => ({ ...s, margem: e.target.value }))}
+                    className={selectCls} />
+                </div>
+                <div>
+                  <label className="font-body text-xs text-muted-foreground mb-1 block">Volume</label>
+                  <input type="number" step="0.001" value={totalInput.volume}
+                    onChange={(e) => setTotalInput((s) => ({ ...s, volume: e.target.value }))}
+                    className={selectCls} />
+                </div>
+                <div>
+                  <label className="font-body text-xs text-muted-foreground mb-1 block">Mix (produtos)</label>
+                  <input type="number" step="1" value={totalInput.mix}
+                    onChange={(e) => setTotalInput((s) => ({ ...s, mix: e.target.value }))}
+                    className={selectCls} />
+                </div>
+              </div>
+              <button onClick={handleDistribuirMetas} disabled={loading} className={btnPrimary}>
+                <Wand2 className="w-4 h-4" /> Distribuir nos dias do mês
+              </button>
+            </div>
+
+
 
             <div className="bg-card border border-border rounded-2xl p-6 overflow-x-auto">
               <table className="w-full text-sm">

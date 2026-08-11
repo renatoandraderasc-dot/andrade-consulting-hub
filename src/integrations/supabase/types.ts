@@ -1418,6 +1418,22 @@ export type Database = {
       }
     }
     Functions: {
+      distribuir_metas: {
+        Args: {
+          p_ano: number
+          p_department: string
+          p_faturamento: number
+          p_margem_pct: number
+          p_mes: number
+          p_mix: number
+          p_store_id: string
+          p_volume: number
+        }
+        Returns: {
+          dias_gerados: number
+          total_meta: number
+        }[]
+      }
       gerar_calendario: {
         Args: { p_fim: string; p_inicio: string; p_store_id: string }
         Returns: number
