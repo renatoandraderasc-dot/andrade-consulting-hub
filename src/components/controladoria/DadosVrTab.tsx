@@ -240,6 +240,11 @@ export const DadosVrTab = ({ storeId }: Props) => {
 
   return (
     <div className="space-y-6">
+      {aviso && (
+        <div className="rounded-lg border border-border bg-secondary/40 px-4 py-3 text-sm text-muted-foreground">
+          {aviso}
+        </div>
+      )}
       <Card className="p-4">
         <div className="flex flex-col md:flex-row md:items-end gap-3">
           <div className="flex items-center gap-3">
