@@ -37,7 +37,7 @@ export async function carregarConfigLoja(
   const service = createClient(supabaseUrl, serviceKey);
   const { data } = await service
     .from("store_vr_config")
-    .select("api_url, api_key, sistema")
+    .select("api_url, api_key, sistema, codigo_loja")
     .eq("store_id", storeId)
     .single();
   return (data as ConfigLoja) ?? null;
