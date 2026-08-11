@@ -428,6 +428,45 @@ const MetasGerador = () => {
               </div>
             </div>
 
+            {/* Distribuição por valores totais do mês */}
+            <div className="bg-card border border-border rounded-2xl p-6 mb-6">
+              <h3 className="font-display font-bold text-foreground mb-1">Metas por valor total do mês</h3>
+              <p className="font-body text-xs text-muted-foreground mb-4">
+                Informe os totais desejados. O sistema distribui dia a dia usando o peso histórico do mês anterior e do mesmo mês do ano anterior.
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                <div>
+                  <label className="font-body text-xs text-muted-foreground mb-1 block">Faturamento (R$)</label>
+                  <input type="number" step="0.01" value={totalInput.faturamento}
+                    onChange={(e) => setTotalInput((s) => ({ ...s, faturamento: e.target.value }))}
+                    className={selectCls} />
+                </div>
+                <div>
+                  <label className="font-body text-xs text-muted-foreground mb-1 block">Margem (%)</label>
+                  <input type="number" step="0.01" value={totalInput.margem}
+                    onChange={(e) => setTotalInput((s) => ({ ...s, margem: e.target.value }))}
+                    className={selectCls} />
+                </div>
+                <div>
+                  <label className="font-body text-xs text-muted-foreground mb-1 block">Volume</label>
+                  <input type="number" step="0.001" value={totalInput.volume}
+                    onChange={(e) => setTotalInput((s) => ({ ...s, volume: e.target.value }))}
+                    className={selectCls} />
+                </div>
+                <div>
+                  <label className="font-body text-xs text-muted-foreground mb-1 block">Mix (produtos)</label>
+                  <input type="number" step="1" value={totalInput.mix}
+                    onChange={(e) => setTotalInput((s) => ({ ...s, mix: e.target.value }))}
+                    className={selectCls} />
+                </div>
+              </div>
+              <button onClick={handleDistribuirMetas} disabled={loading} className={btnPrimary}>
+                <Wand2 className="w-4 h-4" /> Distribuir nos dias do mês
+              </button>
+            </div>
+
+
+
             <div className="bg-card border border-border rounded-2xl p-6 overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
