@@ -80,50 +80,7 @@ const AnaliseAnual = () => {
     setErro("");
     const hoje0 = new Date();
     const fim = `${hoje0.getFullYear()}-${String(hoje0.getMonth() + 1).padStart(2, "0")}-${String(hoje0.getDate()).padStart(2, "0")}`;
-    // 0) relatorio por hora (Intersolid/Oracle) — habilita o filtro de turno
-    try {
-      const anosBusca: number[] = [];
-      for (let a = ANOS[0]; a <= hoje0.getFullYear(); a++) anosBusca.push(a);
-      const partes = await Promise.all(
-        anosBusca.map((a) =>
-          chamarRelatorio(sid, "vendas_hora_periodo", {
-            inicio: `${a}-01-01`,
-            fim: a === hoje0.getFullYear() ? fim : `${a}-12-31`,
-          }),
-        ),
-      );
-      if (!partes.some((p) => p.indisponivel || p.offline || p.erro)) {
-        const acc = new Map<string, Row>();
-        for (const p of partes) {
-          for (const l of p.dados) {
-            const dia = String(pick(l, "dia", "data") ?? "");
-            const ano = Number(dia.slice(0, 4));
-            const mes = Number(dia.slice(5, 7));
-            if (!ano || !mes) continue;
-            const secao = String(pick(l, "secao", "departamento", "nivel1") ?? "TOTAL").toUpperCase();
-            const categoria = String(pick(l, "categoria", "nivel2") ?? secao).toUpperCase();
-            const turnoL = extrairTurno(l);
-            const k = `${ano}-${mes}-${secao}-${categoria}-${turnoL}`;
-            const cur = acc.get(k) ?? {
-              ano, mes, faturamento: 0, lucro: 0, volume: 0,
-              departamento: secao, secao, categoria, turno: turnoL,
-            };
-            cur.faturamento += num(pick(l, "total_vendido", "faturamento", "venda"));
-            cur.lucro += num(pick(l, "lucro", "lucro_bruto"));
-            cur.volume += num(pick(l, "volume", "quantidade", "qtde"));
-            acc.set(k, cur);
-          }
-        }
-        const porHora = Array.from(acc.values());
-        if (porHora.some((r) => r.turno)) {
-          setRows(porHora);
-          setLoading(false);
-          return;
-        }
-      }
-    } catch {
-      /* segue para os demais relatorios */
-    }
+
     try {
       // 1) DRE mensal (quando o conector publica)
       const r = await chamarRelatorio(sid, "dre_periodo", { inicio: `${ANOS[0]}-01-01`, fim });
@@ -210,6 +167,79 @@ const AnaliseAnual = () => {
     if (storeId) carregar(storeId);
   }, [storeId]);
 
+  // ---- dados por hora (sob demanda, mês a mês) ----
+  const [horaRows, setHoraRows] = useState<Row[]>([]);
+  const [horaAnos, setHoraAnos] = useState<number[]>([]);
+  const [horaLoading, setHoraLoading] = useState(false);
+  const [horaOk, setHoraOk] = useState<boolean | null>(null);
+
+  // sonda leve: verifica se a loja publica o relatorio por hora
+  useEffect(() => {
+    if (!storeId) return;
+    let cancel = false;
+    (async () => {
+      const h = new Date();
+      const d1 = new Date(h.getTime() - 2 * 86400000).toISOString().slice(0, 10);
+      const d2 = new Date(h.getTime() - 1 * 86400000).toISOString().slice(0, 10);
+      try {
+        const r = await chamarRelatorio(storeId, "vendas_hora_periodo", { inicio: d1, fim: d2 });
+        const disp = !r.indisponivel && !r.offline && !r.erro && r.dados.some((l) => extrairTurno(l));
+        if (!cancel) setHoraOk(disp);
+      } catch {
+        if (!cancel) setHoraOk(false);
+      }
+    })();
+    return () => { cancel = true; };
+  }, [storeId]);
+
+  const carregarHoras = async (sid: string, anos: number[]) => {
+    setHoraLoading(true);
+    const hoje0 = new Date();
+    const acc = new Map<string, Row>();
+    for (const r of horaRows) acc.set(`${r.ano}-${r.mes}-${r.secao}-${r.categoria}-${r.turno}`, { ...r });
+    const tarefas: { ano: number; mes: number }[] = [];
+    for (const a of anos) {
+      const ultMes = a === hoje0.getFullYear() ? hoje0.getMonth() + 1 : 12;
+      for (let m = 1; m <= ultMes; m++) tarefas.push({ ano: a, mes: m });
+    }
+    const lote = 3;
+    for (let i = 0; i < tarefas.length; i += lote) {
+      const partes = await Promise.all(
+        tarefas.slice(i, i + lote).map((t) => {
+          const ini = `${t.ano}-${String(t.mes).padStart(2, "0")}-01`;
+          const ultDia = new Date(t.ano, t.mes, 0).getDate();
+          const f = `${t.ano}-${String(t.mes).padStart(2, "0")}-${ultDia}`;
+          return chamarRelatorio(sid, "vendas_hora_periodo", { inicio: ini, fim: f }).catch(() => null);
+        }),
+      );
+      for (const p of partes) {
+        if (!p || p.indisponivel || p.offline || p.erro) continue;
+        for (const l of p.dados) {
+          const dia = String(pick(l, "dia", "data") ?? "");
+          const ano = Number(dia.slice(0, 4));
+          const mes = Number(dia.slice(5, 7));
+          if (!ano || !mes) continue;
+          const secao = String(pick(l, "secao", "departamento", "nivel1") ?? "TOTAL").toUpperCase();
+          const categoria = String(pick(l, "categoria", "nivel2") ?? secao).toUpperCase();
+          const turnoL = extrairTurno(l);
+          const k = `${ano}-${mes}-${secao}-${categoria}-${turnoL}`;
+          const cur = acc.get(k) ?? {
+            ano, mes, faturamento: 0, lucro: 0, volume: 0,
+            departamento: secao, secao, categoria, turno: turnoL,
+          };
+          cur.faturamento += num(pick(l, "total_vendido", "faturamento", "venda"));
+          cur.lucro += num(pick(l, "lucro", "lucro_bruto"));
+          cur.volume += num(pick(l, "volume", "quantidade", "qtde"));
+          acc.set(k, cur);
+        }
+      }
+    }
+    setHoraRows(Array.from(acc.values()));
+    setHoraAnos((prev) => Array.from(new Set([...prev, ...anos])));
+    setHoraLoading(false);
+  };
+
+
   // ---- filtros ----
   const departamentos = useMemo(
     () => Array.from(new Set(rows.map(r => r.departamento).filter(Boolean))).sort(),
@@ -242,17 +272,27 @@ const AnaliseAnual = () => {
   const anoAtual = hoje.getFullYear();
   const mesAtual = hoje.getMonth() + 1;
 
-  const temTurno = useMemo(() => rows.some(r => r.turno), [rows]);
+  const temTurno = horaOk === true;
+
+  // busca os dados por hora apenas quando o usuario escolhe Manha/Tarde
+  useEffect(() => {
+    if (turno === "todos" || !storeId || horaOk !== true || horaLoading) return;
+    const faltando = anosSel.filter(a => a <= anoAtual && !horaAnos.includes(a));
+    if (faltando.length) carregarHoras(storeId, faltando);
+  }, [turno, storeId, horaOk, anosSel, horaAnos, horaLoading]);
+
+  const baseRows = turno === "todos" ? rows : horaRows;
 
   const rowsFiltradas = useMemo(
     () =>
-      rows
+      baseRows
         .filter(r => r.ano < anoAtual || (r.ano === anoAtual && r.mes < mesAtual))
         .filter(r => (deptos.length === 0 ? true : deptos.includes(r.departamento)))
         .filter(r => (cats.length === 0 ? true : cats.includes(r.categoria)))
         .filter(r => (turno === "todos" ? true : r.turno === turno)),
-    [rows, deptos, cats, turno, anoAtual, mesAtual],
+    [baseRows, deptos, cats, turno, anoAtual, mesAtual],
   );
+
 
 
   const val = (ano: number, mes: number, campo: "faturamento" | "lucro" | "volume") =>
@@ -530,11 +570,17 @@ const AnaliseAnual = () => {
                   <SelectItem value="tarde">Tarde (13:00–23:59)</SelectItem>
                 </SelectContent>
               </Select>
-              {!temTurno && (
+              {horaOk === false && (
                 <p className="text-[10px] text-muted-foreground mt-1 max-w-[190px]">
                   O relatório desta loja não traz hora da venda.
                 </p>
               )}
+              {horaLoading && (
+                <p className="text-[10px] text-muted-foreground mt-1 max-w-[190px]">
+                  Carregando vendas por hora…
+                </p>
+              )}
+
             </div>
 
 
