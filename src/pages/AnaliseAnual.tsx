@@ -147,7 +147,7 @@ const AnaliseAnual = () => {
         const salvos: Row[] = ((data as any[]) || []).map(r => ({
           ano: r.ano, mes: r.mes,
           faturamento: Number(r.faturamento), lucro: Number(r.lucro), volume: Number(r.volume),
-          departamento: "TOTAL", secao: "TOTAL", categoria: "TOTAL",
+          departamento: "TOTAL", secao: "TOTAL", categoria: "TOTAL", turno: "" as Turno,
         }));
         setRows(salvos);
         if (!salvos.length) setErro(e?.message || "Não foi possível obter os dados da loja.");
