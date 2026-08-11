@@ -33,6 +33,16 @@ const txt = (v: unknown, fallback: string) => {
   const s = String(v ?? "").trim();
   return s || fallback;
 };
+// Conectores retornam colunas em caixa alta (ORACLE/VR) ou baixa (WebSac).
+const pick = (o: any, ...keys: string[]) => {
+  for (const k of keys) {
+    for (const v of [k, k.toUpperCase(), k.toLowerCase()]) {
+      if (o?.[v] !== undefined && o?.[v] !== null) return o[v];
+    }
+  }
+  return undefined;
+};
+
 
 async function chamar(storeId: string, relatorio: string, params: Record<string, unknown>) {
   const { data, error } = await supabase.functions.invoke("vr-proxy", {
