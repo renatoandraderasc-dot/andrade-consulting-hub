@@ -24,6 +24,7 @@ import PIC from "./pages/PIC";
 import DashboardPadaria from "./pages/DashboardPadaria";
 import AdminPadariaImport from "./pages/AdminPadariaImport";
 import AdminStores from "./pages/AdminStores";
+import AdminPicDepartments from "./pages/AdminPicDepartments";
 import Produtos from "./pages/Produtos";
 import EncarteEditor from "./pages/EncarteEditor";
 import MeusEncartes from "./pages/MeusEncartes";
@@ -66,6 +67,7 @@ const App = () => (
             <Route path="/pic" element={g("pic", <PIC />)} />
             <Route path="/pic/padaria" element={g("pic_padaria", <DashboardPadaria />)} />
             <Route path="/admin/padaria-import" element={g("admin_padaria_import", <AdminPadariaImport />)} />
+            <Route path="/admin/pic-departamentos" element={g("admin_pic_departamentos", <AdminPicDepartments />)} />
             <Route path="/admin/stores" element={g("admin_stores", <AdminStores />)} />
             <Route path="/admin/site" element={g("admin_site", <AdminSite />)} />
             <Route path="/produtos" element={g("produtos", <Produtos />)} />
