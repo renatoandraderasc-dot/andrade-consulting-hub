@@ -472,6 +472,22 @@ const AnaliseAnual = () => {
               </Popover>
             </div>
 
+            <div>
+              <label className="text-[11px] text-muted-foreground block mb-1">Horário</label>
+              <Select value={turno} onValueChange={(v) => setTurno(v as any)} disabled={!temTurno}>
+                <SelectTrigger className="w-[150px] h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Dia inteiro</SelectItem>
+                  <SelectItem value="manha">Manhã (00:00–12:59)</SelectItem>
+                  <SelectItem value="tarde">Tarde (13:00–23:59)</SelectItem>
+                </SelectContent>
+              </Select>
+              {!temTurno && (
+                <p className="text-[10px] text-muted-foreground mt-1 max-w-[190px]">
+                  O relatório desta loja não traz hora da venda.
+                </p>
+              )}
+            </div>
 
 
           </CardContent>
