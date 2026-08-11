@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
 
   const { data: configs, error: cfgErr } = await supabase
     .from("store_vr_config")
-    .select("store_id, api_url, api_key, sistema")
+    .select("store_id, api_url, api_key, sistema, codigo_loja")
     .eq("enabled", true);
   if (cfgErr) {
     return new Response(JSON.stringify({ erro: cfgErr.message }), {

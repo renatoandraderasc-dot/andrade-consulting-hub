@@ -13,6 +13,15 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+function pick(o: Record<string, unknown>, ...keys: string[]): unknown {
+  for (const k of keys) {
+    for (const v of [k, k.toUpperCase(), k.toLowerCase()]) {
+      if (o[v] !== undefined && o[v] !== null) return o[v];
+    }
+  }
+  return undefined;
+}
+
 function norm(s: string): string {
   return (s || "").toUpperCase().normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
@@ -47,7 +56,7 @@ Deno.serve(async (req) => {
 
     const { data: cfg, error: cfgErr } = await supabase
       .from("store_vr_config")
-      .select("api_url, api_key, sistema")
+      .select("api_url, api_key, sistema, codigo_loja")
       .eq("store_id", store_id)
       .single();
     if (cfgErr || !cfg) return json({ erro: "loja sem conexao cadastrada" }, 400);
@@ -94,23 +103,25 @@ Deno.serve(async (req) => {
     const temPositivacao = mixLinhas.length > 0;
 
     for (const l of linhas) {
-      const secao = String(l.secao ?? "");
+      const secao = String(pick(l, "secao", "departamento") ?? "");
       const dep = mapa.get(norm(secao)) ??
-        inferirDepartamento(`${secao} ${l.categoria ?? ""} ${l.grupo ?? ""}`);
-      const date = String(l.data).slice(0, 10);
-      const vendas = parseFloat(String(l.total_vendido)) || 0;
-      const lucro = parseFloat(String(l.lucro)) || 0;
-      const volume = parseFloat(String(l.volume)) || 0;
-      const mix = temPositivacao ? 0 : (parseFloat(String(l.mix)) || 0);
+        inferirDepartamento(`${secao} ${pick(l, "categoria") ?? ""} ${pick(l, "grupo") ?? ""}`);
+      const date = String(pick(l, "data", "dia") ?? "").slice(0, 10);
+      if (!date) continue;
+      const vendas = parseFloat(String(pick(l, "total_vendido", "venda", "vendas") ?? "")) || 0;
+      const lucro = parseFloat(String(pick(l, "lucro") ?? "")) || 0;
+      const volume = parseFloat(String(pick(l, "volume", "qtde", "quantidade") ?? "")) || 0;
+      const mix = temPositivacao ? 0 : (parseFloat(String(pick(l, "mix") ?? "")) || 0);
       somar(date, dep, vendas, lucro, volume, mix);
       somar(date, "LOJA", vendas, lucro, volume, mix);
     }
 
     for (const l of mixLinhas) {
-      const secao = String(l.secao ?? l.categoria ?? "");
-      const dep = mapa.get(norm(secao)) ?? inferirDepartamento(`${secao} ${l.categoria ?? ""}`);
-      const date = String(l.data).slice(0, 10);
-      const mix = parseFloat(String(l.mix)) || 0;
+      const secao = String(pick(l, "secao", "departamento", "categoria") ?? "");
+      const dep = mapa.get(norm(secao)) ?? inferirDepartamento(`${secao} ${pick(l, "categoria") ?? ""}`);
+      const date = String(pick(l, "data", "dia") ?? "").slice(0, 10);
+      if (!date) continue;
+      const mix = parseFloat(String(pick(l, "mix") ?? "")) || 0;
       somar(date, dep, 0, 0, 0, mix);
       somar(date, "LOJA", 0, 0, 0, mix);
     }

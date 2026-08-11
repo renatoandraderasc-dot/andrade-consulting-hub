@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     const { data: cfg } = await supabase.from("store_vr_config")
-      .select("api_url, api_key, sistema").eq("store_id", store_id).single();
+      .select("api_url, api_key, sistema, codigo_loja").eq("store_id", store_id).single();
     if (!cfg) return json({ erro: "loja sem conexao cadastrada" }, 400);
 
     const { data: mapas } = await supabase.from("vr_secao_departamento")

@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
     );
 
     const { data: cfg } = await supabase.from("store_vr_config")
-      .select("api_url, api_key, sistema").eq("store_id", store_id).single();
+      .select("api_url, api_key, sistema, codigo_loja").eq("store_id", store_id).single();
     if (!cfg) return json({ erro: "loja sem conexao VR cadastrada" }, 400);
 
     // de-para: excecao da loja tem prioridade sobre o padrao (store_id NULL)
