@@ -16,9 +16,23 @@ import { motion } from "framer-motion";
 const MESES = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
 const ANOS = [2022, 2023, 2024, 2025, 2026];
 
+type Turno = "manha" | "tarde" | "";
+
 type Row = {
   ano: number; mes: number; faturamento: number; lucro: number; volume: number;
-  departamento: string; secao: string; categoria: string;
+  departamento: string; secao: string; categoria: string; turno: Turno;
+};
+
+/** Extrai o turno (manhã 00:00–12:59:59 / tarde 13:00–23:59:59) de qualquer coluna de hora. */
+const extrairTurno = (l: any): Turno => {
+  const bruto = String(
+    pick(l, "hora", "horario", "hora_venda", "data_hora", "datahora", "emissao", "data") ?? "",
+  );
+  const m = bruto.match(/(\d{1,2}):(\d{2})/);
+  if (!m) return "";
+  const h = Number(m[1]);
+  if (!isFinite(h)) return "";
+  return h < 13 ? "manha" : "tarde";
 };
 
 const nfInt = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 });
@@ -38,6 +52,7 @@ const AnaliseAnual = () => {
   const [anoFim, setAnoFim] = useState(ANOS[ANOS.length - 1]);
   const [deptos, setDeptos] = useState<string[]>([]);
   const [cats, setCats] = useState<string[]>([]);
+  const [turno, setTurno] = useState<"todos" | Turno>("todos");
 
   useEffect(() => {
     if (!authLoading && !user) { navigate("/login"); return; }
@@ -80,6 +95,7 @@ const AnaliseAnual = () => {
             departamento: dep,
             secao: String(pick(l, "secao", "nivel1") ?? dep).toUpperCase(),
             categoria: String(pick(l, "categoria", "nivel2") ?? dep).toUpperCase(),
+            turno: extrairTurno(l),
           };
         })
         .filter((x) => x.ano && x.mes);
@@ -107,10 +123,11 @@ const AnaliseAnual = () => {
             if (!ano || !mes) continue;
             const secao = String(pick(l, "secao", "departamento", "nivel1") ?? "TOTAL").toUpperCase();
             const categoria = String(pick(l, "categoria", "nivel2") ?? secao).toUpperCase();
-            const k = `${ano}-${mes}-${secao}-${categoria}`;
+            const turno = extrairTurno(l);
+            const k = `${ano}-${mes}-${secao}-${categoria}-${turno}`;
             const cur = acc.get(k) ?? {
               ano, mes, faturamento: 0, lucro: 0, volume: 0,
-              departamento: secao, secao, categoria,
+              departamento: secao, secao, categoria, turno,
             };
             cur.faturamento += num(pick(l, "total_vendido", "faturamento", "venda"));
             cur.lucro += num(pick(l, "lucro", "lucro_bruto"));
@@ -131,7 +148,7 @@ const AnaliseAnual = () => {
         const salvos: Row[] = ((data as any[]) || []).map(r => ({
           ano: r.ano, mes: r.mes,
           faturamento: Number(r.faturamento), lucro: Number(r.lucro), volume: Number(r.volume),
-          departamento: "TOTAL", secao: "TOTAL", categoria: "TOTAL",
+          departamento: "TOTAL", secao: "TOTAL", categoria: "TOTAL", turno: "" as Turno,
         }));
         setRows(salvos);
         if (!salvos.length) setErro(e?.message || "Não foi possível obter os dados da loja.");
@@ -177,13 +194,16 @@ const AnaliseAnual = () => {
   const anoAtual = hoje.getFullYear();
   const mesAtual = hoje.getMonth() + 1;
 
+  const temTurno = useMemo(() => rows.some(r => r.turno), [rows]);
+
   const rowsFiltradas = useMemo(
     () =>
       rows
         .filter(r => r.ano < anoAtual || (r.ano === anoAtual && r.mes < mesAtual))
         .filter(r => (deptos.length === 0 ? true : deptos.includes(r.departamento)))
-        .filter(r => (cats.length === 0 ? true : cats.includes(r.categoria))),
-    [rows, deptos, cats, anoAtual, mesAtual],
+        .filter(r => (cats.length === 0 ? true : cats.includes(r.categoria)))
+        .filter(r => (turno === "todos" ? true : r.turno === turno)),
+    [rows, deptos, cats, turno, anoAtual, mesAtual],
   );
 
 
@@ -452,6 +472,22 @@ const AnaliseAnual = () => {
               </Popover>
             </div>
 
+            <div>
+              <label className="text-[11px] text-muted-foreground block mb-1">Horário</label>
+              <Select value={turno} onValueChange={(v) => setTurno(v as any)} disabled={!temTurno}>
+                <SelectTrigger className="w-[150px] h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Dia inteiro</SelectItem>
+                  <SelectItem value="manha">Manhã (00:00–12:59)</SelectItem>
+                  <SelectItem value="tarde">Tarde (13:00–23:59)</SelectItem>
+                </SelectContent>
+              </Select>
+              {!temTurno && (
+                <p className="text-[10px] text-muted-foreground mt-1 max-w-[190px]">
+                  O relatório desta loja não traz hora da venda.
+                </p>
+              )}
+            </div>
 
 
           </CardContent>
