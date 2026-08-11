@@ -573,6 +573,11 @@ const Compras = () => {
 
           {/* ================= ABA 2 - COMPRAS x VENDAS ================= */}
           <TabsContent value="cv">
+            {cvAviso && (
+              <div className="mb-4 rounded-xl border border-border bg-secondary/40 px-4 py-3 text-sm text-muted-foreground">
+                {cvAviso}
+              </div>
+            )}
             <div className="bg-card border border-border rounded-xl p-5 mb-6">
               <div className="flex flex-wrap items-end gap-4">
                 <div>
