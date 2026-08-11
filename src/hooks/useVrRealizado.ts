@@ -108,38 +108,52 @@ async function loadRaw(storeId: string, inicio: string, fim: string): Promise<Ra
 
   const brutas: any[] = Array.isArray((proxy as any).dados) ? (proxy as any).dados : [];
 
+  // Os conectores retornam as colunas em caixa alta (ORACLE/VR) ou baixa (WebSac).
+  const pick = (o: any, ...keys: string[]) => {
+    for (const k of keys) {
+      if (o[k] !== undefined && o[k] !== null) return o[k];
+      const up = k.toUpperCase();
+      if (o[up] !== undefined && o[up] !== null) return o[up];
+      const lo = k.toLowerCase();
+      if (o[lo] !== undefined && o[lo] !== null) return o[lo];
+    }
+    return undefined;
+  };
+  const numOf = (v: unknown) => parseFloat(String(v ?? "")) || 0;
+
   const linhas: VrLinha[] = [];
   for (const l of brutas) {
-    const date = String(l.data ?? "").slice(0, 10);
+    const date = String(pick(l, "data", "dia") ?? "").slice(0, 10);
     if (!date) continue;
     linhas.push({
       date,
-      secao: String(l.secao ?? ""),
-      categoria: String(l.categoria ?? "").trim(),
-      grupo: String(l.grupo ?? ""),
-      vendas: parseFloat(String(l.total_vendido)) || 0,
-      lucro: parseFloat(String(l.lucro)) || 0,
-      volume: parseFloat(String(l.volume)) || 0,
-      mix: parseFloat(String(l.mix)) || 0,
+      secao: String(pick(l, "secao", "departamento") ?? ""),
+      categoria: String(pick(l, "categoria", "secao") ?? "").trim(),
+      grupo: String(pick(l, "grupo") ?? ""),
+      vendas: numOf(pick(l, "total_vendido", "venda", "vendas")),
+      lucro: numOf(pick(l, "lucro")),
+      volume: numOf(pick(l, "volume", "qtde", "quantidade")),
+      mix: numOf(pick(l, "mix")),
     });
   }
 
   const mixBrutas: any[] = Array.isArray((posv as any)?.data?.dados) ? (posv as any).data.dados : [];
   const mixLinhas: VrLinha[] = [];
   for (const l of mixBrutas) {
-    const date = String(l.data ?? "").slice(0, 10);
-    if (!date) continue;
+    // Alguns conectores retornam o mix agregado do periodo (sem data).
+    const date = String(pick(l, "data", "dia") ?? "").slice(0, 10) || inicio;
     mixLinhas.push({
       date,
-      secao: String(l.secao ?? l.categoria ?? ""),
-      categoria: String(l.categoria ?? "").trim(),
+      secao: String(pick(l, "secao", "departamento", "categoria") ?? ""),
+      categoria: String(pick(l, "categoria", "departamento") ?? "").trim(),
       grupo: "",
       vendas: 0,
       lucro: 0,
       volume: 0,
-      mix: parseFloat(String(l.mix)) || 0,
+      mix: numOf(pick(l, "mix")),
     });
   }
+
 
   return { linhas, mixLinhas, mapa };
 }
