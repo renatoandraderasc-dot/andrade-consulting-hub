@@ -61,7 +61,9 @@ export function periodoFromPreset(preset: PresetKey, base = new Date()): Periodo
     case "mes":
     default: {
       const ini = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-      const fim = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+      // termina em D-1 (ontem); se hoje for dia 1, mantém o dia 1
+      const ontem = addDays(hoje, -1);
+      const fim = ontem < ini ? ini : ontem;
       return { preset: "mes", inicio: iso(ini), fim: iso(fim) };
     }
   }
