@@ -193,13 +193,16 @@ const AnaliseAnual = () => {
   const anoAtual = hoje.getFullYear();
   const mesAtual = hoje.getMonth() + 1;
 
+  const temTurno = useMemo(() => rows.some(r => r.turno), [rows]);
+
   const rowsFiltradas = useMemo(
     () =>
       rows
         .filter(r => r.ano < anoAtual || (r.ano === anoAtual && r.mes < mesAtual))
         .filter(r => (deptos.length === 0 ? true : deptos.includes(r.departamento)))
-        .filter(r => (cats.length === 0 ? true : cats.includes(r.categoria))),
-    [rows, deptos, cats, anoAtual, mesAtual],
+        .filter(r => (cats.length === 0 ? true : cats.includes(r.categoria)))
+        .filter(r => (turno === "todos" ? true : r.turno === turno)),
+    [rows, deptos, cats, turno, anoAtual, mesAtual],
   );
 
 
