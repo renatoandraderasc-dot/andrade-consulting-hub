@@ -319,7 +319,9 @@ const PIC = () => {
       result[dept].margem = calcMargemKpi();
       result[dept].arrecadacao = calcKpi("meta_lucro", "realizado_lucro");
       // Mix: realizado ao vivo (positivação acumulada) x meta mensal de meta_mix
-      const metaMensalMix = Number(metaMix[dept]) || 0;
+      const metaMensalMix =
+        Number(metaMix[dept]) ||
+        rows.reduce((a, r) => a + (Number(r.meta_mix) || 0), 0);
       {
         let realizado = 0, acumulado = 0;
         const daily: KpiData["daily"] = [];
