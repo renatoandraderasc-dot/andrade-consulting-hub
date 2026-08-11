@@ -83,12 +83,18 @@ const PIC = () => {
   // departamento; senao, os que vierem do proprio sistema da loja; e,
   // em ultimo caso, o total da loja.
   const DEPARTMENTS = useMemo(() => {
-    const keys = Object.keys(vr ?? {}).filter((k) => k !== LOJA);
+    const todas = Object.keys(vr ?? {});
+    const keys = todas.filter((k) => k !== LOJA);
+    const temLoja = todas.includes(LOJA);
     const presentes = DEFAULT_DEPARTMENTS.filter((d) => keys.includes(d));
-    if (presentes.length) return presentes;
-    if (keys.length) return keys.sort((a, b) => a.localeCompare(b, "pt-BR"));
+    if (presentes.length) return temLoja ? [LOJA, ...presentes] : presentes;
+    if (keys.length) {
+      const ordenado = keys.sort((a, b) => a.localeCompare(b, "pt-BR"));
+      return temLoja ? [LOJA, ...ordenado] : ordenado;
+    }
     return [LOJA];
   }, [vr]);
+
 
   useEffect(() => {
     if (!authLoading && !user) { navigate("/login"); return; }
