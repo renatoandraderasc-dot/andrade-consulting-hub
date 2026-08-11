@@ -112,22 +112,43 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
   const [cmvPeriodo, setCmvPeriodo] = useState<number | null>(null);
   const [vendaErro, setVendaErro] = useState<string | null>(null);
 
+  // Nem toda loja publica o mesmo relatorio: tentamos em cascata ate achar
+  // um que devolva faturamento/CMV do periodo.
   const fetchVendaPeriodo = useCallback(async () => {
     if (!storeId) { setVendaPeriodo(null); setCmvPeriodo(null); return; }
     const inicio = `${ano}-${String(mes).padStart(2, "0")}-01`;
     const fim = new Date(ano, mes, 0).toISOString().slice(0, 10);
-    const r = await chamarRelatorio(storeId, "dre_periodo", { inicio, fim });
-    const aviso = avisoRelatorio(r);
-    if (aviso || !r.dados.length) {
-      setVendaPeriodo(null);
-      setCmvPeriodo(null);
-      setVendaErro(aviso);
+
+    const CANDIDATOS = ["dre_periodo", "kpis_periodo", "vendas_secao_periodo", "vendas_dep_periodo"];
+    let ultimoAviso: string | null = null;
+
+    for (const rel of CANDIDATOS) {
+      const r = await chamarRelatorio(storeId, rel, { inicio, fim });
+      const aviso = avisoRelatorio(r);
+      if (aviso) { ultimoAviso = aviso; continue; }
+      if (!r.dados.length) continue;
+
+      const venda = r.dados.reduce(
+        (s, x) => s + num(pick(x, "receita_bruta", "faturamento", "total_vendido", "venda", "vendas", "valor_venda")),
+        0,
+      );
+      const cmv = r.dados.reduce(
+        (s, x) => s + Math.abs(num(pick(x, "cmv", "custo", "custo_total"))),
+        0,
+      );
+      if (venda === 0 && cmv === 0) continue;
+
+      setVendaPeriodo(venda);
+      setCmvPeriodo(cmv);
+      setVendaErro(null);
       return;
     }
-    setVendaPeriodo(r.dados.reduce((s, x) => s + num(pick(x, "receita_bruta", "faturamento", "total_vendido")), 0));
-    setCmvPeriodo(r.dados.reduce((s, x) => s + Math.abs(num(pick(x, "cmv", "custo"))), 0));
-    setVendaErro(null);
+
+    setVendaPeriodo(null);
+    setCmvPeriodo(null);
+    setVendaErro(ultimoAviso ?? "o sistema da loja não retornou vendas para este período");
   }, [storeId, mes, ano]);
+
 
   useEffect(() => { fetchVendaPeriodo(); }, [fetchVendaPeriodo]);
 
