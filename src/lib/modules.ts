@@ -28,21 +28,26 @@ export type ModuleKey = typeof APP_MODULES[number]["key"];
 
 import { supabase } from "@/integrations/supabase/client";
 
-// Returns the first module the user is allowed to see, following APP_MODULES order.
-// Falls back to /dashboard when the user has no explicit restrictions.
-export async function getLandingPath(userId: string): Promise<string> {
+// Returns the set of allowed modules, or null when the user has no restrictions.
+export async function getAllowedModules(userId: string): Promise<Set<string> | null> {
   const { data } = await supabase
     .from("user_module_access")
     .select("module, allowed")
     .eq("user_id", userId);
 
   const rows = data || [];
-  if (rows.length === 0) return "/dashboard";
+  if (rows.length === 0) return null;
+  return new Set(rows.filter((r) => r.allowed).map((r) => r.module));
+}
 
-  const allowed = new Set(rows.filter((r) => r.allowed).map((r) => r.module));
-  if (allowed.size === 0) return "/dashboard";
+// Returns the first module the user is allowed to see, following APP_MODULES order.
+// Falls back to /dashboard when the user has no explicit restrictions.
+export async function getLandingPath(userId: string): Promise<string> {
+  const allowed = await getAllowedModules(userId);
+  if (allowed === null || allowed.size === 0) return "/dashboard";
   if (allowed.has("dashboard")) return "/dashboard";
 
   const first = APP_MODULES.find((m) => allowed.has(m.key));
   return first?.path ?? "/dashboard";
 }
+

@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LogIn, UserPlus } from "lucide-react";
 import andradeLogo from "@/assets/andrade-logo.png";
-import { getLandingPath } from "@/lib/modules";
+import { getLandingPath, getAllowedModules, APP_MODULES } from "@/lib/modules";
 
 interface Store {
   id: string;
@@ -106,8 +106,14 @@ const Login = () => {
             setError("Você não tem acesso aprovado a esta loja. Aguarde a aprovação do administrador.");
           } else {
             sessionStorage.setItem("selectedStoreId", selectedStore);
+            const allowed = await getAllowedModules(signInData.user.id);
             const landing = await getLandingPath(signInData.user.id);
-            navigate(nextPath ?? landing);
+            const nextAllowed =
+              nextPath &&
+              (allowed === null ||
+                APP_MODULES.some((m) => allowed.has(m.key) && nextPath.startsWith(m.path)));
+            navigate(nextAllowed ? nextPath! : landing);
+
           }
         }
       }
