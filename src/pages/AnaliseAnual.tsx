@@ -272,17 +272,27 @@ const AnaliseAnual = () => {
   const anoAtual = hoje.getFullYear();
   const mesAtual = hoje.getMonth() + 1;
 
-  const temTurno = useMemo(() => rows.some(r => r.turno), [rows]);
+  const temTurno = horaOk === true;
+
+  // busca os dados por hora apenas quando o usuario escolhe Manha/Tarde
+  useEffect(() => {
+    if (turno === "todos" || !storeId || horaOk !== true || horaLoading) return;
+    const faltando = anosSel.filter(a => a <= anoAtual && !horaAnos.includes(a));
+    if (faltando.length) carregarHoras(storeId, faltando);
+  }, [turno, storeId, horaOk, anosSel, horaAnos, horaLoading]);
+
+  const baseRows = turno === "todos" ? rows : horaRows;
 
   const rowsFiltradas = useMemo(
     () =>
-      rows
+      baseRows
         .filter(r => r.ano < anoAtual || (r.ano === anoAtual && r.mes < mesAtual))
         .filter(r => (deptos.length === 0 ? true : deptos.includes(r.departamento)))
         .filter(r => (cats.length === 0 ? true : cats.includes(r.categoria)))
         .filter(r => (turno === "todos" ? true : r.turno === turno)),
-    [rows, deptos, cats, turno, anoAtual, mesAtual],
+    [baseRows, deptos, cats, turno, anoAtual, mesAtual],
   );
+
 
 
   const val = (ano: number, mes: number, campo: "faturamento" | "lucro" | "volume") =>
