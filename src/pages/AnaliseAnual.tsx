@@ -37,6 +37,7 @@ const AnaliseAnual = () => {
   const [anoIni, setAnoIni] = useState(ANOS[0]);
   const [anoFim, setAnoFim] = useState(ANOS[ANOS.length - 1]);
   const [deptos, setDeptos] = useState<string[]>([]);
+  const [cats, setCats] = useState<string[]>([]);
 
   useEffect(() => {
     if (!authLoading && !user) { navigate("/login"); return; }
@@ -58,9 +59,10 @@ const AnaliseAnual = () => {
   const carregar = async (sid: string) => {
     setLoading(true);
     setErro("");
+    const hoje0 = new Date();
+    const fim = `${hoje0.getFullYear()}-${String(hoje0.getMonth() + 1).padStart(2, "0")}-${String(hoje0.getDate()).padStart(2, "0")}`;
     try {
-      const hoje = new Date();
-      const fim = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(hoje.getDate()).padStart(2, "0")}`;
+      // 1) DRE mensal (quando o conector publica)
       const r = await chamarRelatorio(sid, "dre_periodo", { inicio: `${ANOS[0]}-01-01`, fim });
       const aviso = avisoRelatorio(r);
       if (aviso) throw new Error(aviso);
@@ -68,34 +70,72 @@ const AnaliseAnual = () => {
         .map((l) => {
           const ref = String(pick(l, "mes", "competencia", "data") ?? "");
           const [a, m] = ref.split("-");
+          const dep = String(pick(l, "departamento", "department", "secao", "nivel1") ?? "TOTAL").toUpperCase();
           return {
             ano: Number(a),
             mes: Number(m),
             faturamento: num(pick(l, "receita_bruta", "faturamento", "total_vendido")),
             lucro: num(pick(l, "lucro_bruto", "lucro")),
             volume: num(pick(l, "volume", "quantidade", "qtde")),
-            departamento: String(
-              pick(l, "departamento", "department", "secao", "nivel1") ?? "TOTAL",
-            ).toUpperCase(),
+            departamento: dep,
+            secao: String(pick(l, "secao", "nivel1") ?? dep).toUpperCase(),
+            categoria: String(pick(l, "categoria", "nivel2") ?? dep).toUpperCase(),
           };
         })
         .filter((x) => x.ano && x.mes);
-      if (mapeado.length) {
-        setRows(mapeado);
-      } else {
-        throw new Error("sem dados no periodo");
-      }
+      if (!mapeado.length) throw new Error("sem dados no periodo");
+      setRows(mapeado);
     } catch (e: any) {
-      // fallback: histórico gravado no banco
-      const { data } = await supabase
-        .from("analise_anual").select("ano, mes, faturamento, lucro, volume").eq("store_id", sid);
-      const salvos: Row[] = ((data as any[]) || []).map(r => ({
-        ano: r.ano, mes: r.mes,
-        faturamento: Number(r.faturamento), lucro: Number(r.lucro), volume: Number(r.volume),
-        departamento: "TOTAL",
-      }));
-      setRows(salvos);
-      if (!salvos.length) setErro(e?.message || "Não foi possível obter os dados da loja.");
+      // 2) fallback ao vivo: vendas por seção/dia (ano a ano, em paralelo)
+      try {
+        const anosBusca: number[] = [];
+        for (let a = ANOS[0]; a <= hoje0.getFullYear(); a++) anosBusca.push(a);
+        const partes = await Promise.all(
+          anosBusca.map((a) =>
+            chamarRelatorio(sid, "vendas_secao_periodo", {
+              inicio: `${a}-01-01`,
+              fim: a === hoje0.getFullYear() ? fim : `${a}-12-31`,
+            }),
+          ),
+        );
+        const acc = new Map<string, Row>();
+        for (const p of partes) {
+          for (const l of p.dados) {
+            const dia = String(pick(l, "dia", "data") ?? "");
+            const ano = Number(dia.slice(0, 4));
+            const mes = Number(dia.slice(5, 7));
+            if (!ano || !mes) continue;
+            const secao = String(pick(l, "secao", "departamento", "nivel1") ?? "TOTAL").toUpperCase();
+            const categoria = String(pick(l, "categoria", "nivel2") ?? secao).toUpperCase();
+            const k = `${ano}-${mes}-${secao}-${categoria}`;
+            const cur = acc.get(k) ?? {
+              ano, mes, faturamento: 0, lucro: 0, volume: 0,
+              departamento: secao, secao, categoria,
+            };
+            cur.faturamento += num(pick(l, "total_vendido", "faturamento", "venda"));
+            cur.lucro += num(pick(l, "lucro", "lucro_bruto"));
+            cur.volume += num(pick(l, "volume", "quantidade", "qtde"));
+            acc.set(k, cur);
+          }
+        }
+        const vivos = Array.from(acc.values());
+        if (vivos.length) {
+          setRows(vivos);
+          return;
+        }
+        throw new Error("sem dados");
+      } catch {
+        // 3) fallback: histórico gravado no banco
+        const { data } = await supabase
+          .from("analise_anual").select("ano, mes, faturamento, lucro, volume").eq("store_id", sid);
+        const salvos: Row[] = ((data as any[]) || []).map(r => ({
+          ano: r.ano, mes: r.mes,
+          faturamento: Number(r.faturamento), lucro: Number(r.lucro), volume: Number(r.volume),
+          departamento: "TOTAL", secao: "TOTAL", categoria: "TOTAL",
+        }));
+        setRows(salvos);
+        if (!salvos.length) setErro(e?.message || "Não foi possível obter os dados da loja.");
+      }
     } finally {
       setLoading(false);
     }
@@ -109,6 +149,18 @@ const AnaliseAnual = () => {
   const departamentos = useMemo(
     () => Array.from(new Set(rows.map(r => r.departamento).filter(Boolean))).sort(),
     [rows],
+  );
+  const categorias = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          rows
+            .filter(r => (deptos.length === 0 ? true : deptos.includes(r.departamento)))
+            .map(r => r.categoria)
+            .filter(Boolean),
+        ),
+      ).sort(),
+    [rows, deptos],
   );
   const anosDisponiveis = useMemo(() => {
     const a = Array.from(new Set(rows.map(r => r.ano))).sort((x, y) => x - y);
@@ -129,9 +181,11 @@ const AnaliseAnual = () => {
     () =>
       rows
         .filter(r => r.ano < anoAtual || (r.ano === anoAtual && r.mes < mesAtual))
-        .filter(r => (deptos.length === 0 ? true : deptos.includes(r.departamento))),
-    [rows, deptos, anoAtual, mesAtual],
+        .filter(r => (deptos.length === 0 ? true : deptos.includes(r.departamento)))
+        .filter(r => (cats.length === 0 ? true : cats.includes(r.categoria))),
+    [rows, deptos, cats, anoAtual, mesAtual],
   );
+
 
   const val = (ano: number, mes: number, campo: "faturamento" | "lucro" | "volume") =>
     rowsFiltradas
