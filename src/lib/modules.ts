@@ -11,6 +11,7 @@ export const APP_MODULES = [
   { key: "checklist", label: "Checklist", path: "/checklist" },
   { key: "catalogo", label: "Catálogo de Produtos", path: "/catalogo" },
   { key: "admin_stores", label: "Admin: Lojas", path: "/admin/stores" },
+  { key: "admin_pic_departamentos", label: "Admin: Departamentos do PIC", path: "/admin/pic-departamentos" },
   { key: "admin_metas", label: "Admin: Metas", path: "/admin/metas" },
   { key: "metas_gerador", label: "Gerador de Metas", path: "/metas-gerador" },
   { key: "admin_questions", label: "Admin: Perguntas", path: "/admin/questions" },

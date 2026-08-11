@@ -11,6 +11,7 @@ import { useVrRealizado, VrDia, LOJA } from "@/hooks/useVrRealizado";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import HierarquiaVendasTable from "@/components/relatorios/HierarquiaVendasTable";
+import { usePicDepartments } from "@/hooks/usePicDepartments";
 import { usePicDisplayMode } from "@/hooks/usePicDisplay";
 import ProdutosSemGiro from "@/components/pic/ProdutosSemGiro";
 
@@ -85,10 +86,13 @@ const PIC = () => {
     refresh,
   } = useVrRealizado(storeId, periodStart, periodEnd);
 
-  // Departamentos exibidos: os padroes quando a loja tem abertura por
-  // departamento; senao, os que vierem do proprio sistema da loja; e,
-  // em ultimo caso, o total da loja.
+  // Departamentos exibidos: configuracao por cliente (Admin > Departamentos do
+  // PIC) quando existir; senao os padroes; senao os que vierem do sistema da
+  // loja; e, em ultimo caso, o total da loja.
+  const deptsConfig = usePicDepartments(storeId);
   const DEPARTMENTS = useMemo(() => {
+    if (deptsConfig?.length) return deptsConfig;
+
     const todas = Object.keys(vr ?? {});
     const keys = todas.filter((k) => k !== LOJA);
     const temLoja = todas.includes(LOJA);
@@ -99,7 +103,7 @@ const PIC = () => {
       return temLoja ? [LOJA, ...ordenado] : ordenado;
     }
     return [LOJA];
-  }, [vr]);
+  }, [vr, deptsConfig]);
 
 
   useEffect(() => {
