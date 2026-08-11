@@ -185,8 +185,11 @@ const Dashboard = () => {
   // Metas (banco) + realizado ao vivo (VR)
   const dailyData: DailyRow[] = useMemo(() => {
     if (!vr) return [];
-    const real = new Map((vr[selectedDept] || []).map((r) => [r.date, r]));
+    // Sem departamento selecionado (loja sem metas por departamento), usa o total da loja
+    const serie = (selectedDept && vr[selectedDept]) || vr["LOJA"] || [];
+    const real = new Map(serie.map((r) => [r.date, r]));
     const dates = [...new Set<string>([...metaRows.map((m: any) => m.date), ...real.keys()])].sort();
+
     return dates.map((date) => {
       const d: any = metaRows.find((m: any) => m.date === date) || {};
       const r = real.get(date);
