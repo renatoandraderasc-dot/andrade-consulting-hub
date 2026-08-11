@@ -16,7 +16,10 @@ import { motion } from "framer-motion";
 const MESES = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
 const ANOS = [2022, 2023, 2024, 2025, 2026];
 
-type Row = { ano: number; mes: number; faturamento: number; lucro: number; volume: number; departamento: string };
+type Row = {
+  ano: number; mes: number; faturamento: number; lucro: number; volume: number;
+  departamento: string; secao: string; categoria: string;
+};
 
 const nfInt = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 });
 const fmtNum = (v: number | null) => (v == null || !isFinite(v) ? "" : nfInt.format(Math.round(v)));
@@ -34,6 +37,7 @@ const AnaliseAnual = () => {
   const [anoIni, setAnoIni] = useState(ANOS[0]);
   const [anoFim, setAnoFim] = useState(ANOS[ANOS.length - 1]);
   const [deptos, setDeptos] = useState<string[]>([]);
+  const [cats, setCats] = useState<string[]>([]);
 
   useEffect(() => {
     if (!authLoading && !user) { navigate("/login"); return; }
@@ -55,9 +59,10 @@ const AnaliseAnual = () => {
   const carregar = async (sid: string) => {
     setLoading(true);
     setErro("");
+    const hoje0 = new Date();
+    const fim = `${hoje0.getFullYear()}-${String(hoje0.getMonth() + 1).padStart(2, "0")}-${String(hoje0.getDate()).padStart(2, "0")}`;
     try {
-      const hoje = new Date();
-      const fim = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(hoje.getDate()).padStart(2, "0")}`;
+      // 1) DRE mensal (quando o conector publica)
       const r = await chamarRelatorio(sid, "dre_periodo", { inicio: `${ANOS[0]}-01-01`, fim });
       const aviso = avisoRelatorio(r);
       if (aviso) throw new Error(aviso);
@@ -65,34 +70,72 @@ const AnaliseAnual = () => {
         .map((l) => {
           const ref = String(pick(l, "mes", "competencia", "data") ?? "");
           const [a, m] = ref.split("-");
+          const dep = String(pick(l, "departamento", "department", "secao", "nivel1") ?? "TOTAL").toUpperCase();
           return {
             ano: Number(a),
             mes: Number(m),
             faturamento: num(pick(l, "receita_bruta", "faturamento", "total_vendido")),
             lucro: num(pick(l, "lucro_bruto", "lucro")),
             volume: num(pick(l, "volume", "quantidade", "qtde")),
-            departamento: String(
-              pick(l, "departamento", "department", "secao", "nivel1") ?? "TOTAL",
-            ).toUpperCase(),
+            departamento: dep,
+            secao: String(pick(l, "secao", "nivel1") ?? dep).toUpperCase(),
+            categoria: String(pick(l, "categoria", "nivel2") ?? dep).toUpperCase(),
           };
         })
         .filter((x) => x.ano && x.mes);
-      if (mapeado.length) {
-        setRows(mapeado);
-      } else {
-        throw new Error("sem dados no periodo");
-      }
+      if (!mapeado.length) throw new Error("sem dados no periodo");
+      setRows(mapeado);
     } catch (e: any) {
-      // fallback: histórico gravado no banco
-      const { data } = await supabase
-        .from("analise_anual").select("ano, mes, faturamento, lucro, volume").eq("store_id", sid);
-      const salvos: Row[] = ((data as any[]) || []).map(r => ({
-        ano: r.ano, mes: r.mes,
-        faturamento: Number(r.faturamento), lucro: Number(r.lucro), volume: Number(r.volume),
-        departamento: "TOTAL",
-      }));
-      setRows(salvos);
-      if (!salvos.length) setErro(e?.message || "Não foi possível obter os dados da loja.");
+      // 2) fallback ao vivo: vendas por seção/dia (ano a ano, em paralelo)
+      try {
+        const anosBusca: number[] = [];
+        for (let a = ANOS[0]; a <= hoje0.getFullYear(); a++) anosBusca.push(a);
+        const partes = await Promise.all(
+          anosBusca.map((a) =>
+            chamarRelatorio(sid, "vendas_secao_periodo", {
+              inicio: `${a}-01-01`,
+              fim: a === hoje0.getFullYear() ? fim : `${a}-12-31`,
+            }),
+          ),
+        );
+        const acc = new Map<string, Row>();
+        for (const p of partes) {
+          for (const l of p.dados) {
+            const dia = String(pick(l, "dia", "data") ?? "");
+            const ano = Number(dia.slice(0, 4));
+            const mes = Number(dia.slice(5, 7));
+            if (!ano || !mes) continue;
+            const secao = String(pick(l, "secao", "departamento", "nivel1") ?? "TOTAL").toUpperCase();
+            const categoria = String(pick(l, "categoria", "nivel2") ?? secao).toUpperCase();
+            const k = `${ano}-${mes}-${secao}-${categoria}`;
+            const cur = acc.get(k) ?? {
+              ano, mes, faturamento: 0, lucro: 0, volume: 0,
+              departamento: secao, secao, categoria,
+            };
+            cur.faturamento += num(pick(l, "total_vendido", "faturamento", "venda"));
+            cur.lucro += num(pick(l, "lucro", "lucro_bruto"));
+            cur.volume += num(pick(l, "volume", "quantidade", "qtde"));
+            acc.set(k, cur);
+          }
+        }
+        const vivos = Array.from(acc.values());
+        if (vivos.length) {
+          setRows(vivos);
+          return;
+        }
+        throw new Error("sem dados");
+      } catch {
+        // 3) fallback: histórico gravado no banco
+        const { data } = await supabase
+          .from("analise_anual").select("ano, mes, faturamento, lucro, volume").eq("store_id", sid);
+        const salvos: Row[] = ((data as any[]) || []).map(r => ({
+          ano: r.ano, mes: r.mes,
+          faturamento: Number(r.faturamento), lucro: Number(r.lucro), volume: Number(r.volume),
+          departamento: "TOTAL", secao: "TOTAL", categoria: "TOTAL",
+        }));
+        setRows(salvos);
+        if (!salvos.length) setErro(e?.message || "Não foi possível obter os dados da loja.");
+      }
     } finally {
       setLoading(false);
     }
@@ -106,6 +149,18 @@ const AnaliseAnual = () => {
   const departamentos = useMemo(
     () => Array.from(new Set(rows.map(r => r.departamento).filter(Boolean))).sort(),
     [rows],
+  );
+  const categorias = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          rows
+            .filter(r => (deptos.length === 0 ? true : deptos.includes(r.departamento)))
+            .map(r => r.categoria)
+            .filter(Boolean),
+        ),
+      ).sort(),
+    [rows, deptos],
   );
   const anosDisponiveis = useMemo(() => {
     const a = Array.from(new Set(rows.map(r => r.ano))).sort((x, y) => x - y);
@@ -126,9 +181,11 @@ const AnaliseAnual = () => {
     () =>
       rows
         .filter(r => r.ano < anoAtual || (r.ano === anoAtual && r.mes < mesAtual))
-        .filter(r => (deptos.length === 0 ? true : deptos.includes(r.departamento))),
-    [rows, deptos, anoAtual, mesAtual],
+        .filter(r => (deptos.length === 0 ? true : deptos.includes(r.departamento)))
+        .filter(r => (cats.length === 0 ? true : cats.includes(r.categoria))),
+    [rows, deptos, cats, anoAtual, mesAtual],
   );
+
 
   const val = (ano: number, mes: number, campo: "faturamento" | "lucro" | "volume") =>
     rowsFiltradas
@@ -317,7 +374,7 @@ const AnaliseAnual = () => {
 
             <div className="flex-1 min-w-[260px]">
               <label className="text-[11px] text-muted-foreground block mb-1">
-                Departamentos {deptos.length ? `(${deptos.length})` : "(todos)"}
+                Departamentos / Seções {deptos.length ? `(${deptos.length})` : "(todos)"}
               </label>
               <Popover>
                 <PopoverTrigger asChild>
@@ -354,6 +411,48 @@ const AnaliseAnual = () => {
                 </PopoverContent>
               </Popover>
             </div>
+
+            <div className="flex-1 min-w-[260px]">
+              <label className="text-[11px] text-muted-foreground block mb-1">
+                Categorias {cats.length ? `(${cats.length})` : "(todas)"}
+              </label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-9 w-full justify-between font-normal">
+                    <span className="truncate">
+                      {cats.length === 0 ? "Todas as categorias" : cats.join(", ")}
+                    </span>
+                    <ChevronsUpDown className="w-4 h-4 opacity-50 shrink-0" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-[280px] p-0">
+                  <div className="max-h-[280px] overflow-y-auto p-2 space-y-1">
+                    <button
+                      className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted"
+                      onClick={() => setCats([])}
+                    >
+                      Todas as categorias
+                    </button>
+                    {categorias.length === 0 && (
+                      <p className="text-xs text-muted-foreground px-2 py-1.5">Nenhuma categoria disponível</p>
+                    )}
+                    {categorias.map(c => (
+                      <label key={c} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer">
+                        <Checkbox
+                          checked={cats.includes(c)}
+                          onCheckedChange={() =>
+                            setCats(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c])
+                          }
+                        />
+                        <span className="text-xs">{c}</span>
+                      </label>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+
+
 
           </CardContent>
         </Card>
