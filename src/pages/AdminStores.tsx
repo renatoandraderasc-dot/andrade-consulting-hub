@@ -4,10 +4,18 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { Store, Plus, Pencil, Trash2, X, Check } from "lucide-react";
+import { Store, Plus, Pencil, Trash2, X, Check, Eye } from "lucide-react";
 import ClientLayout from "@/components/ClientLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  PicDisplayMap,
+  PicDisplayMode,
+  fetchPicDisplayMap,
+  savePicDisplayMap,
+} from "@/hooks/usePicDisplay";
+
 
 interface StoreItem {
   id: string;
@@ -25,6 +33,8 @@ const AdminStores = () => {
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
+  const [picDisplay, setPicDisplay] = useState<PicDisplayMap>({});
+  const [savingPic, setSavingPic] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && (!user || !isAdmin)) {
@@ -33,8 +43,22 @@ const AdminStores = () => {
   }, [user, isAdmin, authLoading]);
 
   useEffect(() => {
-    if (isAdmin) fetchStores();
+    if (isAdmin) {
+      fetchStores();
+      fetchPicDisplayMap().then(setPicDisplay);
+    }
   }, [isAdmin]);
+
+  const changePicDisplay = async (storeId: string, mode: PicDisplayMode) => {
+    const next = { ...picDisplay, [storeId]: mode };
+    setPicDisplay(next);
+    setSavingPic(storeId);
+    const { error } = await savePicDisplayMap(next);
+    setSavingPic(null);
+    if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
+    else toast({ title: "Exibição do PIC atualizada!" });
+  };
+
 
   const fetchStores = async () => {
     const { data } = await supabase
@@ -186,7 +210,41 @@ const AdminStores = () => {
             </p>
           )}
         </div>
+
+        {/* Exibicao do PIC por cliente */}
+        <div className="mt-10">
+          <div className="flex items-center gap-2 mb-3">
+            <Eye className="w-5 h-5 text-primary" />
+            <h2 className="font-display text-xl font-bold">Exibição do PIC por cliente</h2>
+          </div>
+          <p className="text-sm text-muted-foreground font-body mb-4">
+            Escolha se o painel PIC mostra valores e percentuais ou somente percentuais para cada loja.
+          </p>
+          <div className="space-y-2">
+            {stores.map((store) => (
+              <div
+                key={store.id}
+                className="bg-card border border-border rounded-xl p-4 flex items-center justify-between gap-3"
+              >
+                <span className="font-body font-semibold text-sm">{store.name}</span>
+                <Select
+                  value={picDisplay[store.id] === "percentual" ? "percentual" : "valores"}
+                  onValueChange={(v) => changePicDisplay(store.id, v as PicDisplayMode)}
+                >
+                  <SelectTrigger className="w-[200px]" disabled={savingPic === store.id}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="valores">Valores e %</SelectItem>
+                    <SelectItem value="percentual">Apenas %</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
+
     </ClientLayout>
   );
 };

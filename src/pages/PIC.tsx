@@ -11,6 +11,7 @@ import { useVrRealizado, VrDia, LOJA } from "@/hooks/useVrRealizado";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import HierarquiaVendasTable from "@/components/relatorios/HierarquiaVendasTable";
+import { usePicDisplayMode } from "@/hooks/usePicDisplay";
 
 
 
@@ -63,6 +64,8 @@ const PIC = () => {
   const [viewMode, setViewMode] = useState<"mes" | "dia">("mes");
   const [metasData, setMetasData] = useState<Record<string, any[]>>({});
   const [metaMix, setMetaMix] = useState<Record<string, number>>({});
+  const picMode = usePicDisplayMode(storeId);
+  const soPct = picMode === "percentual";
 
   const [loading, setLoading] = useState(true);
 
@@ -437,12 +440,12 @@ const PIC = () => {
             {/* Department Cards */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {DEPARTMENTS.map((dept, deptIdx) => (
-                <DepartmentCard key={dept} dept={dept} kpis={deptKpis[dept] || {}} viewMode={viewMode} delay={deptIdx * 0.1} today={today} />
+                <DepartmentCard key={dept} dept={dept} kpis={deptKpis[dept] || {}} viewMode={viewMode} delay={deptIdx * 0.1} today={today} soPct={soPct} />
               ))}
             </div>
 
             {/* Todos os mercadológicos, com abertura até produto */}
-            {storeId && (
+            {storeId && !soPct && (
               <HierarquiaVendasTable
                 storeId={storeId}
                 inicio={periodStart}
@@ -469,9 +472,10 @@ interface DeptCardProps {
   viewMode: "mes" | "dia";
   delay: number;
   today: number;
+  soPct: boolean;
 }
 
-const DepartmentCard = ({ dept, kpis, viewMode, delay, today }: DeptCardProps) => {
+const DepartmentCard = ({ dept, kpis, viewMode, delay, today, soPct }: DeptCardProps) => {
   const kpiKeys = ["faturamento", "margem", "arrecadacao", "volume"];
 
   return (
@@ -502,7 +506,7 @@ const DepartmentCard = ({ dept, kpis, viewMode, delay, today }: DeptCardProps) =
           const kpiData = kpis[kpiKey];
           if (!kpiData) return null;
           return (
-            <KpiSection key={kpiKey} label={KPI_LABELS[kpiKey]} kpi={kpiData} viewMode={viewMode} today={today} />
+            <KpiSection key={kpiKey} label={KPI_LABELS[kpiKey]} kpi={kpiData} viewMode={viewMode} today={today} soPct={soPct} />
           );
         })}
       </div>
@@ -516,14 +520,16 @@ interface KpiSectionProps {
   kpi: KpiData;
   viewMode: "mes" | "dia";
   today: number;
+  soPct: boolean;
 }
 
-const KpiSection = ({ label, kpi, viewMode, today }: KpiSectionProps) => {
+const KpiSection = ({ label, kpi, viewMode, today, soPct }: KpiSectionProps) => {
   const [expanded, setExpanded] = useState(false);
   const acumColor = kpi.pctAcumulado >= 100 ? "bg-emerald-500" : kpi.pctAcumulado >= 80 ? "bg-blue-500" : "bg-red-500";
   const totalColor = kpi.pctTotal >= 100 ? "bg-emerald-500" : kpi.pctTotal >= 80 ? "bg-blue-500" : "bg-amber-500";
   const isCurrency = label !== "Margem" && label !== "Mix";
   const valueFmt = (value: number) => {
+    if (soPct && label !== "Margem") return "—";
     if (label === "Margem") return pctFmt(value);
     if (label === "Mix") return value.toLocaleString("pt-BR", { maximumFractionDigits: 3 });
     return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
@@ -568,18 +574,20 @@ const KpiSection = ({ label, kpi, viewMode, today }: KpiSectionProps) => {
             kpi.pctAcumulado,
             acumColor,
             `Progresso da Meta Acumulada até hoje`,
-            `Realizado ${valueFmt(kpi.realizado)} / Meta acum. ${valueFmt(kpi.metaAcumulada)}`,
+            soPct ? "" : `Realizado ${valueFmt(kpi.realizado)} / Meta acum. ${valueFmt(kpi.metaAcumulada)}`,
           )}
           {renderBar(
             "TOTAL",
             kpi.pctTotal,
             totalColor,
             `Progresso Total do mês`,
-            `Realizado ${valueFmt(kpi.realizado)} / Meta mensal ${valueFmt(kpi.metaMensal)}`,
+            soPct ? "" : `Realizado ${valueFmt(kpi.realizado)} / Meta mensal ${valueFmt(kpi.metaMensal)}`,
           )}
-          <p className="ml-[4.5rem] text-[10px] text-muted-foreground font-mono">
-            Meta acum. {valueFmt(kpi.metaAcumulada)} · Meta mês {valueFmt(kpi.metaMensal)} · Realizado {valueFmt(kpi.realizado)}
-          </p>
+          {!soPct && (
+            <p className="ml-[4.5rem] text-[10px] text-muted-foreground font-mono">
+              Meta acum. {valueFmt(kpi.metaAcumulada)} · Meta mês {valueFmt(kpi.metaMensal)} · Realizado {valueFmt(kpi.realizado)}
+            </p>
+          )}
         </>
       ) : (
         <>
@@ -596,7 +604,7 @@ const KpiSection = ({ label, kpi, viewMode, today }: KpiSectionProps) => {
               )}
             </div>
             <span className={`text-xs font-mono font-bold w-20 text-right ${kpi.realizado > 0 ? "text-blue-500" : "text-muted-foreground"}`}>
-              {kpi.realizado > 0 ? valueFmt(kpi.realizado) : "—"}
+              {kpi.realizado > 0 ? (soPct ? "Real." : valueFmt(kpi.realizado)) : "—"}
             </span>
           </div>
           {kpi.realizado > 0 && (
@@ -641,7 +649,7 @@ const KpiSection = ({ label, kpi, viewMode, today }: KpiSectionProps) => {
                       />
                     </div>
                     <span className={`text-[10px] font-mono w-20 text-right ${d.hasMeta ? d.pct >= 100 ? "text-emerald-500" : d.pct >= 80 ? "text-blue-500" : "text-red-500" : d.realizado > 0 ? "text-blue-500" : "text-muted-foreground"}`}>
-                      {d.hasMeta ? pctFmt(d.pct) : d.realizado > 0 ? valueFmt(d.realizado) : "—"}
+                      {d.hasMeta ? pctFmt(d.pct) : d.realizado > 0 ? (soPct ? "Real." : valueFmt(d.realizado)) : "—"}
                     </span>
                   </motion.div>
                 );
