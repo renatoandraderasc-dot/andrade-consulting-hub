@@ -418,7 +418,7 @@ const Dashboard = () => {
 
         {!soLoja && (
           <>
-            <CouponDivider label={`Faturamento x margem por dia${selectedDept ? ` — ${selectedDept}` : ""}`} />
+            <CouponDivider label={"Faturamento x margem por dia"} />
             {offline ? <VrOfflineNotice message={errorMsg} /> : <DailyMetricsTable data={dailyData} />}
 
             {/* Product Comparison */}
