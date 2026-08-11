@@ -259,6 +259,35 @@ const MetasGerador = () => {
     } finally { setLoading(false); }
   };
 
+  const handleDistribuirTodasLojas = async () => {
+    if (!confirm(`Aplicar estes totais em TODAS as lojas (${stores.length}) para ${department} em ${month}/${year}?`)) return;
+    setLoading(true);
+    try {
+      let ok = 0; const falhas: string[] = [];
+      for (const s of stores) {
+        const { error } = await (supabase.rpc as any)("distribuir_metas", {
+          p_store_id: s.id,
+          p_department: department,
+          p_ano: year,
+          p_mes: month,
+          p_faturamento: Number(totalInput.faturamento) || 0,
+          p_margem_pct: Number(totalInput.margem) || 0,
+          p_volume: Number(totalInput.volume) || 0,
+          p_mix: Number(totalInput.mix) || 0,
+        });
+        if (error) falhas.push(s.name); else ok++;
+      }
+      toast({
+        title: "Distribuição concluída",
+        description: `${ok} loja(s) atualizada(s)${falhas.length ? ` · falhas: ${falhas.join(", ")}` : ""}.`,
+        variant: falhas.length ? "destructive" : undefined,
+      });
+      fetchMetas();
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    } finally { setLoading(false); }
+  };
+
   const handleGerarMetas = async () => {
 
     setLoading(true);
@@ -504,9 +533,14 @@ const MetasGerador = () => {
                     className={selectCls} />
                 </div>
               </div>
-              <button onClick={handleDistribuirMetas} disabled={loading} className={btnPrimary}>
-                <Wand2 className="w-4 h-4" /> Distribuir nos dias do mês
-              </button>
+              <div className="flex flex-wrap gap-3">
+                <button onClick={handleDistribuirMetas} disabled={loading} className={btnPrimary}>
+                  <Wand2 className="w-4 h-4" /> Distribuir nos dias do mês
+                </button>
+                <button onClick={handleDistribuirTodasLojas} disabled={loading || stores.length === 0} className={btnGhost}>
+                  <Wand2 className="w-4 h-4" /> Aplicar em todas as lojas
+                </button>
+              </div>
             </div>
 
 
