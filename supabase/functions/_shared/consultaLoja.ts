@@ -1,12 +1,14 @@
 // ============================================================
-// consultaLoja — roteamento por sistema (VR x WebSac)
+// consultaLoja — roteamento por sistema (VR x WEBSAC x ORACLE)
 //
 // Dado um store_id, um nome de relatorio e os parametros:
 //  - le `sistema` em store_vr_config
 //  - sistema = 'WEBSAC' -> invoca a edge function websac-proxy
 //    com { store_id, relatorio, params }
-//  - sistema = 'VR' (ou nulo) -> monta {api_url}/relatorios/{relatorio}
-//    com os parametros + chave e o header ngrok-skip-browser-warning
+//  - sistema = 'VR' | 'ORACLE' (ou nulo) -> monta
+//    {api_url}/relatorios/{relatorio} com os parametros + chave
+//    (GET) e o header ngrok-skip-browser-warning. O JSON de retorno
+//    do ORACLE e identico ao do VR, entao nada mais muda.
 // ============================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
