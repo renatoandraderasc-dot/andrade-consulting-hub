@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import HierarquiaVendasTable from "@/components/relatorios/HierarquiaVendasTable";
 import { usePicDisplayMode } from "@/hooks/usePicDisplay";
+import ProdutosSemGiro from "@/components/pic/ProdutosSemGiro";
+
 
 
 
@@ -460,6 +462,12 @@ const PIC = () => {
 
             {/* Finish Line Animation */}
             <FinishLineAnimation deptKpis={deptKpis} departments={DEPARTMENTS} />
+
+            {/* Produtos sem giro / em queda por categoria */}
+            {storeId && (
+              <ProdutosSemGiro storeId={storeId} ano={selectedYear} mes={selectedMonth} />
+            )}
+
 
           </>
         )}
