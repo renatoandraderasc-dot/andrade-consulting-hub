@@ -212,6 +212,15 @@ const Dashboard = () => {
     });
   }, [metaRows, vr, selectedDept]);
 
+  // Loja sem metas por departamento no banco: usa os departamentos do proprio VR
+  useEffect(() => {
+    if (!vr) return;
+    if (departments.length > 0) return;
+    const deps = Object.keys(vr).filter((d) => d !== "LOJA").sort();
+    if (deps.length > 0) setDepartments(deps);
+  }, [vr, departments.length]);
+
+
 
   const fetchStoreMetrics = async () => {
     const { data } = await supabase
