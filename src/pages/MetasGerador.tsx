@@ -533,9 +533,14 @@ const MetasGerador = () => {
                     className={selectCls} />
                 </div>
               </div>
-              <button onClick={handleDistribuirMetas} disabled={loading} className={btnPrimary}>
-                <Wand2 className="w-4 h-4" /> Distribuir nos dias do mês
-              </button>
+              <div className="flex flex-wrap gap-3">
+                <button onClick={handleDistribuirMetas} disabled={loading} className={btnPrimary}>
+                  <Wand2 className="w-4 h-4" /> Distribuir nos dias do mês
+                </button>
+                <button onClick={handleDistribuirTodasLojas} disabled={loading || stores.length === 0} className={btnGhost}>
+                  <Wand2 className="w-4 h-4" /> Aplicar em todas as lojas
+                </button>
+              </div>
             </div>
 
 
