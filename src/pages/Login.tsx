@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LogIn, UserPlus } from "lucide-react";
 import andradeLogo from "@/assets/andrade-logo.png";
+import { getLandingPath } from "@/lib/modules";
 
 interface Store {
   id: string;
