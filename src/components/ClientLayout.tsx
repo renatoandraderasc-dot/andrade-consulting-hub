@@ -157,6 +157,12 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
               </>
             )}
             <button
+              onClick={() => { setMenuOpen(false); setPwdOpen(true); }}
+              className="w-full flex items-center gap-2 px-3 py-3 text-sm text-foreground border-t border-border"
+            >
+              <KeyRound className="w-4 h-4" /> Alterar senha
+            </button>
+            <button
               onClick={handleSignOut}
               className="w-full flex items-center gap-2 px-3 py-3 text-sm text-foreground border-t border-border"
             >
@@ -165,6 +171,8 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
           </div>
         )}
       </header>
+
+      <ChangePasswordDialog open={pwdOpen} onOpenChange={setPwdOpen} />
 
       <main className="flex-1">{children}</main>
     </div>
