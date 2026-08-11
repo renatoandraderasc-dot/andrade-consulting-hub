@@ -253,7 +253,7 @@ const Catalogo = () => {
                 <tr><td colSpan={10} className="px-3 py-8 text-center text-muted-foreground">Consultando…</td></tr>
               )}
               {!loading && !linhas.length && (
-                <tr><td colSpan={10} className="px-3 py-8 text-center text-muted-foreground">Nenhum produto encontrado.</td></tr>
+                <tr><td colSpan={10} className="px-3 py-8 text-center text-muted-foreground">{aviso || "Nenhum produto encontrado."}</td></tr>
               )}
               {!loading && linhas.map((l, i) => (
                 <tr key={`${l.codigo}-${i}`} className="border-t border-border hover:bg-secondary/30">
