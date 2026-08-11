@@ -36,6 +36,7 @@ interface DayMetric {
   meta_volume: number;
   realizado_volume: number;
   realizado_mix: number;
+  meta_mix: number;
 
 }
 
