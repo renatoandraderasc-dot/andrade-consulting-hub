@@ -43,13 +43,21 @@ async function chamar(storeId: string, relatorio: string, params: Record<string,
 }
 
 async function carregar(storeId: string, inicio: string, fim: string): Promise<LinhaHierarquia[]> {
-  const { data: cfg } = await supabase
-    .from("store_vr_config")
-    .select("sistema")
-    .eq("store_id", storeId)
-    .maybeSingle();
+  // store_vr_config so e legivel por admin (contem a chave da API), entao o
+  // sistema da loja vem por uma funcao segura, disponivel a qualquer usuario
+  // autenticado com sessao. Sem isso, usuarios comuns caiam sempre na trilha
+  // VR e perdiam a abertura por produto das lojas WebSac.
+  const { data: sistemaRpc } = await (supabase as any).rpc("store_sistema", { _store_id: storeId });
 
-  const sistema = String((cfg as any)?.sistema ?? "VR").toUpperCase();
+  let sistema = String(sistemaRpc ?? "").toUpperCase();
+  if (!sistema) {
+    const { data: cfg } = await supabase
+      .from("store_vr_config")
+      .select("sistema")
+      .eq("store_id", storeId)
+      .maybeSingle();
+    sistema = String((cfg as any)?.sistema ?? "VR").toUpperCase();
+  }
 
   if (sistema === "WEBSAC") {
     const dados = await chamar(storeId, "vendas_hierarquia_periodo", { inicio, fim });
