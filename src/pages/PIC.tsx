@@ -445,7 +445,7 @@ const PIC = () => {
             </div>
 
             {/* Todos os mercadológicos, com abertura até produto */}
-            {storeId && (
+            {storeId && !soPct && (
               <HierarquiaVendasTable
                 storeId={storeId}
                 inicio={periodStart}
@@ -574,14 +574,14 @@ const KpiSection = ({ label, kpi, viewMode, today, soPct }: KpiSectionProps) => 
             kpi.pctAcumulado,
             acumColor,
             `Progresso da Meta Acumulada até hoje`,
-            `Realizado ${valueFmt(kpi.realizado)} / Meta acum. ${valueFmt(kpi.metaAcumulada)}`,
+            soPct ? "" : `Realizado ${valueFmt(kpi.realizado)} / Meta acum. ${valueFmt(kpi.metaAcumulada)}`,
           )}
           {renderBar(
             "TOTAL",
             kpi.pctTotal,
             totalColor,
             `Progresso Total do mês`,
-            `Realizado ${valueFmt(kpi.realizado)} / Meta mensal ${valueFmt(kpi.metaMensal)}`,
+            soPct ? "" : `Realizado ${valueFmt(kpi.realizado)} / Meta mensal ${valueFmt(kpi.metaMensal)}`,
           )}
           {!soPct && (
             <p className="ml-[4.5rem] text-[10px] text-muted-foreground font-mono">
