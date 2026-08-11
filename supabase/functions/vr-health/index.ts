@@ -1,4 +1,4 @@
-// vr-health — verifica a conexao com o sistema da loja (VR ou WebSac)
+// vr-health — verifica a conexao com o sistema da loja (VR, ORACLE ou WebSac)
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { carregarConfigLoja } from "../_shared/consultaLoja.ts";
 
@@ -56,11 +56,11 @@ Deno.serve(async (req) => {
       const pareceHtml = /^\s*<(!doctype|html)/i.test(texto) || /ngrok/i.test(texto.slice(0, 500));
       const online = resp.ok && !pareceHtml;
       return json({
-        online, sistema: "VR", latency_ms: Date.now() - t0,
+        online, sistema, latency_ms: Date.now() - t0,
         erro: online ? undefined : (pareceHtml ? "sem conexao VR (tunel fora do ar)" : `HTTP ${resp.status}`),
       });
     } catch (e) {
-      return json({ online: false, sistema: "VR", erro: e instanceof Error ? e.message : String(e) });
+      return json({ online: false, sistema, erro: e instanceof Error ? e.message : String(e) });
     }
   } catch (e) {
     return json({ online: false, erro: e instanceof Error ? e.message : String(e) }, 500);
