@@ -85,10 +85,13 @@ const PIC = () => {
     refresh,
   } = useVrRealizado(storeId, periodStart, periodEnd);
 
-  // Departamentos exibidos: os padroes quando a loja tem abertura por
-  // departamento; senao, os que vierem do proprio sistema da loja; e,
-  // em ultimo caso, o total da loja.
+  // Departamentos exibidos: configuracao por cliente (Admin > Departamentos do
+  // PIC) quando existir; senao os padroes; senao os que vierem do sistema da
+  // loja; e, em ultimo caso, o total da loja.
+  const deptsConfig = usePicDepartments(storeId);
   const DEPARTMENTS = useMemo(() => {
+    if (deptsConfig?.length) return deptsConfig;
+
     const todas = Object.keys(vr ?? {});
     const keys = todas.filter((k) => k !== LOJA);
     const temLoja = todas.includes(LOJA);
