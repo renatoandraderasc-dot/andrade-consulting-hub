@@ -64,6 +64,8 @@ const MetasGerador = () => {
   const [base, setBase] = useState<"ano_anterior" | "mes_anterior">("ano_anterior");
 
   const [loading, setLoading] = useState(false);
+  const [totalInput, setTotalInput] = useState({ faturamento: "", margem: "", volume: "", mix: "" });
+
   const [metasRows, setMetasRows] = useState<any[]>([]);
   const [dirtyDates, setDirtyDates] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
