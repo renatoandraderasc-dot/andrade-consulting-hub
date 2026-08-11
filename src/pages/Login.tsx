@@ -106,8 +106,14 @@ const Login = () => {
             setError("Você não tem acesso aprovado a esta loja. Aguarde a aprovação do administrador.");
           } else {
             sessionStorage.setItem("selectedStoreId", selectedStore);
+            const allowed = await getAllowedModules(signInData.user.id);
             const landing = await getLandingPath(signInData.user.id);
-            navigate(nextPath ?? landing);
+            const nextAllowed =
+              nextPath &&
+              (allowed === null ||
+                APP_MODULES.some((m) => allowed.has(m.key) && nextPath.startsWith(m.path)));
+            navigate(nextAllowed ? nextPath! : landing);
+
           }
         }
       }
