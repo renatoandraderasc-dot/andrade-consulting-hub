@@ -16,9 +16,23 @@ import { motion } from "framer-motion";
 const MESES = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
 const ANOS = [2022, 2023, 2024, 2025, 2026];
 
+type Turno = "manha" | "tarde" | "";
+
 type Row = {
   ano: number; mes: number; faturamento: number; lucro: number; volume: number;
-  departamento: string; secao: string; categoria: string;
+  departamento: string; secao: string; categoria: string; turno: Turno;
+};
+
+/** Extrai o turno (manhã 00:00–12:59:59 / tarde 13:00–23:59:59) de qualquer coluna de hora. */
+const extrairTurno = (l: any): Turno => {
+  const bruto = String(
+    pick(l, "hora", "horario", "hora_venda", "data_hora", "datahora", "emissao", "data") ?? "",
+  );
+  const m = bruto.match(/(\d{1,2}):(\d{2})/);
+  if (!m) return "";
+  const h = Number(m[1]);
+  if (!isFinite(h)) return "";
+  return h < 13 ? "manha" : "tarde";
 };
 
 const nfInt = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 });
