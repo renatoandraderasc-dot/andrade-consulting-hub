@@ -210,6 +210,7 @@ const PIC = () => {
           meta_volume: Number(m.meta_volume) || 0,
           realizado_volume: r?.volume || 0,
           realizado_mix: r?.mix || 0,
+          meta_mix: Number(m.meta_mix) || 0,
         };
 
       });
