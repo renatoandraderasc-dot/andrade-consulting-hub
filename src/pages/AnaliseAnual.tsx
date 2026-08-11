@@ -16,7 +16,10 @@ import { motion } from "framer-motion";
 const MESES = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
 const ANOS = [2022, 2023, 2024, 2025, 2026];
 
-type Row = { ano: number; mes: number; faturamento: number; lucro: number; volume: number; departamento: string };
+type Row = {
+  ano: number; mes: number; faturamento: number; lucro: number; volume: number;
+  departamento: string; secao: string; categoria: string;
+};
 
 const nfInt = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 });
 const fmtNum = (v: number | null) => (v == null || !isFinite(v) ? "" : nfInt.format(Math.round(v)));
