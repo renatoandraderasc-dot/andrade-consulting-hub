@@ -120,6 +120,12 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
               <ArrowLeft className="w-3.5 h-3.5" /> Site
             </Link>
             <button
+              onClick={() => setPwdOpen(true)}
+              className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-secondary text-foreground text-[12px] font-medium hover:bg-secondary/70 transition-colors"
+            >
+              <KeyRound className="w-3.5 h-3.5" /> Senha
+            </button>
+            <button
               onClick={handleSignOut}
               className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-secondary text-foreground text-[12px] font-medium hover:bg-secondary/70 transition-colors"
             >
