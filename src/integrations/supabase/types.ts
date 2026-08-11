@@ -1502,6 +1502,7 @@ export type Database = {
         }
         Returns: number
       }
+      store_sistema: { Args: { _store_id: string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "user"
