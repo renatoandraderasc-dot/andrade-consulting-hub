@@ -122,20 +122,22 @@ async function carregar(storeId: string, inicio: string, fim: string): Promise<L
   }
 
   return ranking.map((l) => {
-    const codigo = String(pick(l, "codigo") ?? "");
+    const codigo = String(pick(l, "codigo", "codigo_produto", "cod_produto", "ean") ?? "");
     const c = cat.get(codigo);
-    const vendas = num(pick(l, "total_vendido", "venda", "vendas"));
+    const vendas = num(pick(l, "total_vendido", "venda", "vendas", "valor_venda"));
+    const desc = txt(pick(l, "produto", "descricao", "descricao_produto"), "");
     return {
-      n1: c?.n1 ?? txt(pick(l, "secao"), "SEM DEPARTAMENTO").toUpperCase(),
-      n2: c?.n2 ?? "SEM GRUPO",
-      n3: c?.n3 ?? "SEM SUBGRUPO",
-      produto: c?.descricao ?? txt(pick(l, "produto", "descricao"), "SEM DESCRIÇÃO").toUpperCase(),
+      n1: (c?.n1 ?? txt(pick(l, "nivel1", "secao", "departamento"), "SEM DEPARTAMENTO")).toUpperCase(),
+      n2: (c?.n2 ?? txt(pick(l, "nivel2", "categoria", "grupo"), "SEM GRUPO")).toUpperCase(),
+      n3: (c?.n3 ?? txt(pick(l, "nivel3", "subcategoria", "subgrupo"), "SEM SUBGRUPO")).toUpperCase(),
+      produto: (desc || c?.descricao || codigo || "SEM DESCRIÇÃO").toUpperCase(),
       codigo,
       vendas,
       lucro: num(pick(l, "lucro")) || (vendas * num(pick(l, "margem_pct"))) / 100,
-      volume: num(pick(l, "quantidade", "volume", "qtde")),
+      volume: num(pick(l, "quantidade", "volume", "qtde", "qtd")),
     };
   });
+
 }
 
 
