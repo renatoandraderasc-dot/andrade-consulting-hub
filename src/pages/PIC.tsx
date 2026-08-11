@@ -11,6 +11,7 @@ import { useVrRealizado, VrDia, LOJA } from "@/hooks/useVrRealizado";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import HierarquiaVendasTable from "@/components/relatorios/HierarquiaVendasTable";
+import { usePicDepartments } from "@/hooks/usePicDepartments";
 import { usePicDisplayMode } from "@/hooks/usePicDisplay";
 import ProdutosSemGiro from "@/components/pic/ProdutosSemGiro";
 
