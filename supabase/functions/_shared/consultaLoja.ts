@@ -99,6 +99,10 @@ export async function consultarRelatorioLoja(opts: {
   for (const [k, v] of Object.entries(params ?? {})) {
     if (v !== undefined && v !== null) qs.set(k, String(v));
   }
+  // ORACLE exige o codigo da loja em todos os relatorios (bind :loja)
+  if (sistema === "ORACLE" && !qs.has("loja") && cfg.codigo_loja != null) {
+    qs.set("loja", String(cfg.codigo_loja));
+  }
   qs.set("chave", cfg.api_key);
   const url = `${cfg.api_url.replace(/\/+$/, "")}/relatorios/${relatorio}?${qs.toString()}`;
 
