@@ -86,32 +86,38 @@ const Catalogo = () => {
     termo: string,
     periodo: { inicio: string; fim: string } | null,
     limite = PAGE_SIZE,
-  ): Promise<Linha[]> => {
-    const { data, error } = await supabase.functions.invoke("vr-proxy", {
-      body: {
-        store_id: storeId,
-        relatorio: periodo ? "catalogo_produtos_vendidos" : "catalogo_produtos",
-        params: {
-          busca: termo,
-          limite,
-          offset: pg * limite,
-          ...(periodo ? { inicio: periodo.inicio, fim: periodo.fim } : {}),
-        },
-      },
+  ): Promise<{ linhas: Linha[]; aviso: string | null }> => {
+    const r = await chamarRelatorio(storeId, periodo ? "catalogo_produtos_vendidos" : "catalogo_produtos", {
+      busca: termo,
+      limite,
+      offset: pg * limite,
+      ...(periodo ? { inicio: periodo.inicio, fim: periodo.fim } : {}),
     });
-    if (error) throw error;
-    if (data?.erro) throw new Error(String(data.erro));
-    return (data?.dados || data || []) as Linha[];
+    const linhas: Linha[] = r.dados.map((l) => ({
+      codigo: col(l, "codigo", "cod_produto", "produto") ?? "",
+      descricao: String(col(l, "descricao", "produto", "nome") ?? ""),
+      custo: col(l, "custo", "preco_custo") ?? null,
+      preco_venda: col(l, "preco_venda", "preco", "venda") ?? null,
+      preco_oferta: col(l, "preco_oferta", "oferta") ?? null,
+      codigo_barras: (col(l, "codigo_barras", "ean", "barras") as string) ?? null,
+      m1_departamento: (col(l, "m1_departamento", "departamento", "nivel1", "secao") as string) ?? null,
+      m2_grupo: (col(l, "m2_grupo", "grupo", "nivel2", "categoria") as string) ?? null,
+      m3_subgrupo: (col(l, "m3_subgrupo", "subgrupo", "nivel3") as string) ?? null,
+      m4_familia: (col(l, "m4_familia", "familia", "nivel4") as string) ?? null,
+    }));
+    return { linhas, aviso: avisoRelatorio(r) };
   };
 
   const buscar = async (pg = pagina, termo = buscaAtiva, periodo = periodoAtivo) => {
     if (!storeId) return;
     setLoading(true);
     try {
-      setLinhas(await consultar(pg, termo, periodo));
+      const { linhas: l, aviso: a } = await consultar(pg, termo, periodo);
+      setLinhas(l);
+      setAviso(a);
     } catch (err: any) {
       setLinhas([]);
-      toast({ title: "Falha ao consultar o catálogo", description: err.message, variant: "destructive" });
+      setAviso(err.message);
     } finally {
       setLoading(false);
     }
