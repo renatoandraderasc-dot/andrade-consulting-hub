@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { chamarRelatorio, num, pick } from "@/lib/vrReport";
 
 // ============================================================
 // Hierarquia mercadologica de vendas AO VIVO (nada e gravado).
@@ -7,9 +8,9 @@ import { supabase } from "@/integrations/supabase/client";
 //
 //  - WebSac: relatorio vendas_hierarquia_periodo (SQL com depto,
 //    grupo, subgrupo e produto).
-//  - VR: nao existe relatorio hierarquico no servidor da loja, entao
-//    combinamos ranking_produtos (venda por produto) com o cadastro
-//    produtos (secao / grupo / subgrupo) e montamos a arvore no front.
+//  - VR / ORACLE: quando nao existe relatorio hierarquico, combinamos
+//    ranking_produtos com o cadastro produtos; se o conector nao
+//    publicar esses relatorios, caimos para secao/categoria.
 //
 // Cache leve de 60s por (loja + periodo).
 // ============================================================
@@ -39,8 +40,6 @@ async function chamar(storeId: string, relatorio: string, params: Record<string,
   const r = await chamarRelatorio(storeId, relatorio, params);
   if (r.erro) throw new Error(r.erro);
   return r.dados;
-  const dados = (data as any)?.dados;
-  return Array.isArray(dados) ? (dados as any[]) : [];
 }
 
 async function carregar(storeId: string, inicio: string, fim: string): Promise<LinhaHierarquia[]> {
