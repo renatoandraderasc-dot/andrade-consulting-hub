@@ -4,6 +4,7 @@ export const APP_MODULES = [
   { key: "analise_anual", label: "Análise Anual", path: "/analise-anual" },
   { key: "compras", label: "Compras", path: "/compras" },
   { key: "pic", label: "PIC", path: "/pic" },
+  { key: "pic_percentual", label: "PIC: somente % (visualizador)", path: "/pic" },
   { key: "pic_padaria", label: "Dashboard Padaria", path: "/pic/padaria" },
   { key: "admin_padaria_import", label: "Admin: Import Padaria", path: "/admin/padaria-import" },
   { key: "repricing", label: "Re-PRICING", path: "/repricing" },
