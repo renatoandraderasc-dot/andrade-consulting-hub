@@ -136,7 +136,14 @@ const ProdutosSemGiro = ({ storeId, ano, mes }: Props) => {
         <div className="p-6 text-sm text-muted-foreground font-body">Analisando produtos…</div>
       )}
 
-      {!loading && !atual.nivelProduto && (
+      {!loading && !(atual.linhas ?? []).length && (
+        <div className="px-5 py-4 text-xs font-body text-amber-500 border-b border-border">
+          Sem dados do sistema desta loja no período — verifique se a conexão
+          com o ERP está cadastrada e online.
+        </div>
+      )}
+
+      {!loading && !!(atual.linhas ?? []).length && !atual.nivelProduto && (
         <div className="px-5 py-4 text-xs font-body text-amber-500 border-b border-border">
           O conector desta loja não está publicando o relatório de produtos
           (ranking_produtos), então a análise abaixo sai no nível de
@@ -144,6 +151,7 @@ const ProdutosSemGiro = ({ storeId, ano, mes }: Props) => {
           abertura passa a ser por item automaticamente.
         </div>
       )}
+
 
       {!loading && categorias.length === 0 && (
         <div className="p-6 text-sm text-muted-foreground font-body">
