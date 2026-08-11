@@ -30,8 +30,13 @@ import MeusEncartes from "./pages/MeusEncartes";
 import OAuthConsent from "./pages/OAuthConsent";
 import AdminSite from "./pages/AdminSite";
 import NotFound from "./pages/NotFound";
+import ModuleGuard from "@/components/ModuleGuard";
 
 const queryClient = new QueryClient();
+
+const g = (module: string, el: React.ReactNode) => (
+  <ModuleGuard module={module}>{el}</ModuleGuard>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -44,29 +49,29 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<Login />} />
             <Route path="/admin/setup" element={<AdminSetup />} />
-            <Route path="/admin/questions" element={<AdminQuestions />} />
-            <Route path="/admin/users" element={<AdminUsers />} />
-            <Route path="/checklist" element={<Checklist />} />
-            <Route path="/catalogo" element={<Catalogo />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/admin/metas" element={<AdminMetas />} />
-            <Route path="/metas-gerador" element={<MetasGerador />} />
-            <Route path="/controladoria" element={<Controladoria />} />
-            <Route path="/analise-anual" element={<AnaliseAnual />} />
+            <Route path="/admin/questions" element={g("admin_questions", <AdminQuestions />)} />
+            <Route path="/admin/users" element={g("admin_users", <AdminUsers />)} />
+            <Route path="/checklist" element={g("checklist", <Checklist />)} />
+            <Route path="/catalogo" element={g("catalogo", <Catalogo />)} />
+            <Route path="/dashboard" element={g("dashboard", <Dashboard />)} />
+            <Route path="/admin/metas" element={g("admin_metas", <AdminMetas />)} />
+            <Route path="/metas-gerador" element={g("metas_gerador", <MetasGerador />)} />
+            <Route path="/controladoria" element={g("controladoria", <Controladoria />)} />
+            <Route path="/analise-anual" element={g("analise_anual", <AnaliseAnual />)} />
 
-            <Route path="/compras" element={<Compras />} />
-            <Route path="/repricing" element={<Repricing />} />
-            <Route path="/vtex-collector" element={<VtexCollector />} />
-            <Route path="/websac-sync" element={<WebSacSync />} />
-            <Route path="/pic" element={<PIC />} />
-            <Route path="/pic/padaria" element={<DashboardPadaria />} />
-            <Route path="/admin/padaria-import" element={<AdminPadariaImport />} />
-            <Route path="/admin/stores" element={<AdminStores />} />
-            <Route path="/admin/site" element={<AdminSite />} />
-            <Route path="/produtos" element={<Produtos />} />
-            <Route path="/encartes" element={<MeusEncartes />} />
-            <Route path="/encartes/editor" element={<EncarteEditor />} />
-            <Route path="/encartes/editor/:id" element={<EncarteEditor />} />
+            <Route path="/compras" element={g("compras", <Compras />)} />
+            <Route path="/repricing" element={g("repricing", <Repricing />)} />
+            <Route path="/vtex-collector" element={g("vtex_collector", <VtexCollector />)} />
+            <Route path="/websac-sync" element={g("websac_sync", <WebSacSync />)} />
+            <Route path="/pic" element={g("pic", <PIC />)} />
+            <Route path="/pic/padaria" element={g("pic_padaria", <DashboardPadaria />)} />
+            <Route path="/admin/padaria-import" element={g("admin_padaria_import", <AdminPadariaImport />)} />
+            <Route path="/admin/stores" element={g("admin_stores", <AdminStores />)} />
+            <Route path="/admin/site" element={g("admin_site", <AdminSite />)} />
+            <Route path="/produtos" element={g("produtos", <Produtos />)} />
+            <Route path="/encartes" element={g("encartes", <MeusEncartes />)} />
+            <Route path="/encartes/editor" element={g("encarte_editor", <EncarteEditor />)} />
+            <Route path="/encartes/editor/:id" element={g("encarte_editor", <EncarteEditor />)} />
             <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
