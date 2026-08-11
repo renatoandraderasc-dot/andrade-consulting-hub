@@ -61,10 +61,10 @@ export async function consultarRelatorioLoja(opts: {
   if (!cfg) {
     return { ok: false, dados: [], semConfig: true, erro: "loja sem conexao cadastrada" };
   }
+  const sistema = (cfg.sistema ?? "VR").toUpperCase();
 
   // ---------- WebSac ----------
-  if ((cfg.sistema ?? "VR").toUpperCase() === "WEBSAC") {
-    try {
+  if (sistema === "WEBSAC") {
       const resp = await fetch(`${supabaseUrl}/functions/v1/websac-proxy`, {
         method: "POST",
         headers: {
