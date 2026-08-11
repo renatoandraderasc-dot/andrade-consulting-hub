@@ -41,6 +41,7 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [pwdOpen, setPwdOpen] = useState(false);
   const [allowedModules, setAllowedModules] = useState<Set<string> | null>(null);
 
   useEffect(() => {
