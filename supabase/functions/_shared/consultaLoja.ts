@@ -16,6 +16,7 @@ export interface ConfigLoja {
   api_url: string;
   api_key: string;
   sistema?: string | null;
+  codigo_loja?: number | null;
 }
 
 export interface ResultadoConsulta {
@@ -36,7 +37,7 @@ export async function carregarConfigLoja(
   const service = createClient(supabaseUrl, serviceKey);
   const { data } = await service
     .from("store_vr_config")
-    .select("api_url, api_key, sistema")
+    .select("api_url, api_key, sistema, codigo_loja")
     .eq("store_id", storeId)
     .single();
   return (data as ConfigLoja) ?? null;
@@ -97,6 +98,10 @@ export async function consultarRelatorioLoja(opts: {
   const qs = new URLSearchParams();
   for (const [k, v] of Object.entries(params ?? {})) {
     if (v !== undefined && v !== null) qs.set(k, String(v));
+  }
+  // ORACLE exige o codigo da loja em todos os relatorios (bind :loja)
+  if (sistema === "ORACLE" && !qs.has("loja") && cfg.codigo_loja != null) {
+    qs.set("loja", String(cfg.codigo_loja));
   }
   qs.set("chave", cfg.api_key);
   const url = `${cfg.api_url.replace(/\/+$/, "")}/relatorios/${relatorio}?${qs.toString()}`;
