@@ -26,14 +26,18 @@ type Row = {
 /** Extrai o turno (manhã 00:00–12:59:59 / tarde 13:00–23:59:59) de qualquer coluna de hora. */
 const extrairTurno = (l: any): Turno => {
   const bruto = String(
-    pick(l, "hora", "horario", "hora_venda", "data_hora", "datahora", "emissao", "data") ?? "",
-  );
-  const m = bruto.match(/(\d{1,2}):(\d{2})/);
-  if (!m) return "";
-  const h = Number(m[1]);
-  if (!isFinite(h)) return "";
+    pick(l, "hora", "horario", "hora_venda", "data_hora", "datahora", "emissao") ?? "",
+  ).trim();
+  if (!bruto) return "";
+  let h: number | null = null;
+  const comSep = bruto.match(/(\d{1,2}):(\d{2})/);
+  if (comSep) h = Number(comSep[1]);
+  else if (/^\d{3,4}$/.test(bruto)) h = Number(bruto.slice(0, bruto.length - 2)); // "0650" | "650"
+  else if (/^\d{1,2}$/.test(bruto)) h = Number(bruto); // "6" | "13"
+  if (h == null || !isFinite(h) || h > 23) return "";
   return h < 13 ? "manha" : "tarde";
 };
+
 
 const nfInt = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 });
 const fmtNum = (v: number | null) => (v == null || !isFinite(v) ? "" : nfInt.format(Math.round(v)));
