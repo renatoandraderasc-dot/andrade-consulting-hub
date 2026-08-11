@@ -368,8 +368,17 @@ const EditUserDialog = ({ user, stores, onClose, onSaved, call }: any) => {
           </div>
 
           <div>
-            <p className="font-body text-sm font-semibold mb-2 flex items-center gap-2"><KeySquare className="w-4 h-4" /> Módulos visíveis</p>
-            <p className="text-xs text-muted-foreground font-body mb-2">Marque o que esse usuário pode acessar. Admin enxerga tudo independente desta lista.</p>
+            <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
+              <p className="font-body text-sm font-semibold flex items-center gap-2"><KeySquare className="w-4 h-4" /> Módulos visíveis</p>
+              <button
+                type="button"
+                onClick={() => setModuleKeys(["pic", "pic_percentual"])}
+                className="px-3 py-1.5 rounded-lg border border-border text-xs font-body font-semibold hover:bg-accent"
+              >
+                Perfil PIC VISUALIZADOR
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground font-body mb-2">Marque o que esse usuário pode acessar. Admin enxerga tudo independente desta lista. "PIC: somente %" oculta valores em R$ no PIC (análise por produto e volume continuam liberadas).</p>
             <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 border border-border rounded-lg">
               {APP_MODULES.map((m) => (
                 <label key={m.key} className="flex items-center gap-2 cursor-pointer text-sm font-body">
