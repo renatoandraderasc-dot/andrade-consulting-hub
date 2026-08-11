@@ -78,5 +78,5 @@ export function usePicDisplayMode(storeId: string | undefined) {
     };
   }, [storeId]);
 
-  return mode;
+  return forcePct ? "percentual" : mode;
 }
