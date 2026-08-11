@@ -446,7 +446,7 @@ const PIC = () => {
             )}
 
             {/* Finish Line Animation */}
-            <FinishLineAnimation deptKpis={deptKpis} />
+            <FinishLineAnimation deptKpis={deptKpis} departments={DEPARTMENTS} />
 
           </>
         )}
@@ -661,7 +661,7 @@ const FinishLineAnimation = ({ deptKpis, departments }: { deptKpis: Record<strin
       ) / 4;
       return { dept, avg };
     }).sort((a, b) => b.avg - a.avg);
-  }, [deptKpis]);
+  }, [deptKpis, departments]);
 
   const maxAvg = Math.max(...rankings.map((r) => r.avg), 1);
 
