@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Search, Download, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
+import { chamarRelatorio, avisoRelatorio, pick as col } from "@/lib/vrReport";
 import { useAuth } from "@/hooks/useAuth";
 import ClientLayout from "@/components/ClientLayout";
 import { useToast } from "@/hooks/use-toast";
@@ -50,6 +51,7 @@ const Catalogo = () => {
   const [linhas, setLinhas] = useState<Linha[]>([]);
   const [loading, setLoading] = useState(false);
   const [exportando, setExportando] = useState(false);
+  const [aviso, setAviso] = useState<string | null>(null);
 
 
   useEffect(() => {
@@ -147,7 +149,7 @@ const Catalogo = () => {
       const LOTE = 1000;
       const todas: Linha[] = [];
       for (let pg = 0; pg < 200; pg++) {
-        const parte = await consultar(pg, buscaAtiva, periodoAtivo, LOTE);
+        const { linhas: parte } = await consultar(pg, buscaAtiva, periodoAtivo, LOTE);
         todas.push(...parte);
         if (parte.length < LOTE) break;
       }
