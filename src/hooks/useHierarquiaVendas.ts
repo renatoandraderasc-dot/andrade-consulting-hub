@@ -191,7 +191,7 @@ export function useHierarquiaVendas(storeId: string, inicio: string, fim: string
   // Falso quando o conector da loja nao publica relatorio de produto e
   // caimos para a abertura por secao/categoria.
   const nivelProduto = useMemo(
-    () => (linhas ?? []).some((l) => !!l.codigo),
+    () => (linhas ?? []).some((l) => !!l.codigo || (!!l.produto && l.produto !== l.n2)),
     [linhas],
   );
 
