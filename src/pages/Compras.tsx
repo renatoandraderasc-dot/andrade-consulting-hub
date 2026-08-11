@@ -753,10 +753,10 @@ const Compras = () => {
                   <tbody>
                     {fornecedores.map((f, i) => (
                       <tr key={i} className="border-b border-border/50">
-                        <td className="py-2">{f.fornecedor || f.nome || "—"}</td>
-                        <td className="py-2 px-2 text-right tabular-nums">{fmtNum(parseFloat(String(f.notas ?? f.qtde_notas ?? 0)))}</td>
-                        <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(parseFloat(String(f.total_compra ?? 0)))}</td>
-                        <td className="py-2 px-2 text-right tabular-nums">{f.ultima_entrada ? String(f.ultima_entrada).slice(0, 10).split("-").reverse().join("/") : "—"}</td>
+                        <td className="py-2">{col(f, "fornecedor", "nome") || "—"}</td>
+                        <td className="py-2 px-2 text-right tabular-nums">{fmtNum(num(col(f, "notas", "qtde_notas")))}</td>
+                        <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(num(col(f, "total_compra", "compra")))}</td>
+                        <td className="py-2 px-2 text-right tabular-nums">{col(f, "ultima_entrada") ? String(col(f, "ultima_entrada")).slice(0, 10).split("-").reverse().join("/") : "—"}</td>
                       </tr>
                     ))}
                   </tbody>
