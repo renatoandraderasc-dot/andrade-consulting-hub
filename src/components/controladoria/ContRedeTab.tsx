@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { chamarRelatorio, avisoRelatorio, pick, num } from "@/lib/vrReport";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -115,26 +116,17 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
     if (!storeId) { setVendaPeriodo(null); setCmvPeriodo(null); return; }
     const inicio = `${ano}-${String(mes).padStart(2, "0")}-01`;
     const fim = new Date(ano, mes, 0).toISOString().slice(0, 10);
-    try {
-      const { data, error } = await supabase.functions.invoke("vr-proxy", {
-        body: { store_id: storeId, relatorio: "dre_periodo", params: { inicio, fim } },
-      });
-      if (error) throw new Error(error.message);
-      if (data?.erro) throw new Error(data.erro);
-      const d = data?.dados;
-      const rows: any[] = Array.isArray(d) ? d : Array.isArray(d?.dados) ? d.dados : [];
-      const num = (v: unknown) => {
-        const p = parseFloat(String(v ?? 0).replace(",", "."));
-        return isNaN(p) ? 0 : p;
-      };
-      setVendaPeriodo(rows.reduce((s, r) => s + num(r.receita_bruta), 0));
-      setCmvPeriodo(rows.reduce((s, r) => s + Math.abs(num(r.cmv)), 0));
-      setVendaErro(null);
-    } catch (e) {
+    const r = await chamarRelatorio(storeId, "dre_periodo", { inicio, fim });
+    const aviso = avisoRelatorio(r);
+    if (aviso || !r.dados.length) {
       setVendaPeriodo(null);
       setCmvPeriodo(null);
-      setVendaErro(e instanceof Error ? e.message : "Falha ao consultar o VR");
+      setVendaErro(aviso);
+      return;
     }
+    setVendaPeriodo(r.dados.reduce((s, x) => s + num(pick(x, "receita_bruta", "faturamento", "total_vendido")), 0));
+    setCmvPeriodo(r.dados.reduce((s, x) => s + Math.abs(num(pick(x, "cmv", "custo"))), 0));
+    setVendaErro(null);
   }, [storeId, mes, ano]);
 
   useEffect(() => { fetchVendaPeriodo(); }, [fetchVendaPeriodo]);

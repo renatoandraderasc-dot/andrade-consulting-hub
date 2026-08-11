@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
+import { chamarRelatorio, avisoRelatorio, pick as col, num } from "@/lib/vrReport";
 import { useNavigate } from "react-router-dom";
 import {
   ShoppingCart, TrendingUp, TrendingDown, Wallet, Target, Download, Wand2, Save, RefreshCw, Info,
@@ -60,6 +61,7 @@ const Compras = () => {
   const [cvFim, setCvFim] = useState("");
   const [cvLinhas, setCvLinhas] = useState<any[]>([]);
   const [cvLoading, setCvLoading] = useState(false);
+  const [cvAviso, setCvAviso] = useState<string | null>(null);
   const [fN1, setFN1] = useState("__all__");
   const [expandidos, setExpandidos] = useState<Record<string, boolean>>({});
   const [fornecedores, setFornecedores] = useState<any[]>([]);
@@ -155,11 +157,10 @@ const Compras = () => {
     setLoadingPainel(true);
     try {
       const { inicio, fim } = monthRange(year, month);
-      const { data, error } = await supabase.functions.invoke("vr-proxy", {
-        body: { store_id: storeId, relatorio: "compras_vendas_periodo", params: { inicio, fim } },
-      });
-      if (error) throw error;
-      const linhas: any[] = data?.dados || [];
+      const r = await chamarRelatorio(storeId, "compras_vendas_periodo", { inicio, fim });
+      const aviso = avisoRelatorio(r);
+      setCvAviso(aviso);
+      const linhas = r.dados;
       // agrupa por departamento via vr_secao_departamento
       const { data: mapas } = await supabase.from("vr_secao_departamento")
         .select("secao_vr, department").eq("store_id", storeId);
@@ -169,17 +170,19 @@ const Compras = () => {
       const acc: Record<string, { compra: number; venda: number; cmv: number }> = {};
       for (const l of linhas) {
         // departamento nivel 1 vindo do relatorio; mapeamento so como fallback
-        const dep = String(l.departamento ?? "").trim() || mapa.get(norm(l.secao)) || "SEM DEPARTAMENTO";
+        const dep = String(col(l, "departamento", "nivel1") ?? "").trim()
+          || mapa.get(norm(String(col(l, "secao") ?? "")))
+          || "SEM DEPARTAMENTO";
         const cur = acc[dep] || { compra: 0, venda: 0, cmv: 0 };
-        cur.compra += parseFloat(String(l.total_compra)) || 0;
-        cur.venda += parseFloat(String(l.total_venda)) || 0;
-        cur.cmv += parseFloat(String(l.cmv)) || 0;
+        cur.compra += num(col(l, "total_compra", "compra"));
+        cur.venda += num(col(l, "total_venda", "venda", "total_vendido"));
+        cur.cmv += num(col(l, "cmv", "custo"));
         acc[dep] = cur;
       }
 
       setRealizadoDep(acc);
     } catch (err: any) {
-      toast({ title: "Falha ao consultar o sistema da loja", description: err.message, variant: "destructive" });
+      setCvAviso(err.message);
       setRealizadoDep({});
     } finally { setLoadingPainel(false); }
   };
@@ -188,13 +191,12 @@ const Compras = () => {
     if (!storeId || !cvInicio || !cvFim) return;
     setCvLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("vr-proxy", {
-        body: { store_id: storeId, relatorio: "compras_vendas_periodo", params: { inicio: cvInicio, fim: cvFim } },
-      });
-      if (error) throw error;
-      setCvLinhas(data?.dados || []);
+      const r = await chamarRelatorio(storeId, "compras_vendas_periodo", { inicio: cvInicio, fim: cvFim });
+      setCvAviso(avisoRelatorio(r));
+      setCvLinhas(r.dados);
     } catch (err: any) {
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
+      setCvAviso(err.message);
+      setCvLinhas([]);
     } finally { setCvLoading(false); }
   };
 
@@ -202,15 +204,13 @@ const Compras = () => {
     if (!storeId || !cvInicio || !cvFim) return;
     setFornLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("vr-proxy", {
-        body: { store_id: storeId, relatorio: "compras_por_fornecedor", params: { inicio: cvInicio, fim: cvFim } },
-      });
-      if (error) throw error;
-      const linhas: any[] = data?.dados || [];
-      linhas.sort((a, b) => (parseFloat(String(b.total_compra)) || 0) - (parseFloat(String(a.total_compra)) || 0));
+      const r = await chamarRelatorio(storeId, "compras_por_fornecedor", { inicio: cvInicio, fim: cvFim });
+      const linhas = [...r.dados].sort(
+        (a, b) => num(col(b, "total_compra", "compra")) - num(col(a, "total_compra", "compra")),
+      );
       setFornecedores(linhas.slice(0, 20));
-    } catch (err: any) {
-      toast({ title: "Erro fornecedores", description: err.message, variant: "destructive" });
+    } catch {
+      setFornecedores([]);
     } finally { setFornLoading(false); }
   };
 
@@ -320,13 +320,13 @@ const Compras = () => {
   // Uma linha por departamento + secao vinda do relatorio compras_vendas_periodo
   const cvItens = useMemo(() => {
     return cvLinhas.map((l: any) => ({
-      departamento: String(l.departamento ?? l.nivel1 ?? "").trim() || "SEM DEPARTAMENTO",
-      secao: String(l.secao ?? l.nivel2 ?? "").trim() || "SEM SEÇÃO",
-      qtde_venda: parseFloat(String(l.qtde_venda ?? 0)) || 0,
-      venda: parseFloat(String(l.total_venda ?? 0)) || 0,
-      cmv: parseFloat(String(l.cmv ?? 0)) || 0,
-      qtde_compra: parseFloat(String(l.qtde_compra ?? 0)) || 0,
-      compra: parseFloat(String(l.total_compra ?? 0)) || 0,
+      departamento: String(col(l, "departamento", "nivel1") ?? "").trim() || "SEM DEPARTAMENTO",
+      secao: String(col(l, "secao", "nivel2") ?? "").trim() || "SEM SEÇÃO",
+      qtde_venda: num(col(l, "qtde_venda", "quantidade", "volume")),
+      venda: num(col(l, "total_venda", "venda", "total_vendido")),
+      cmv: num(col(l, "cmv", "custo")),
+      qtde_compra: num(col(l, "qtde_compra")),
+      compra: num(col(l, "total_compra", "compra")),
     }));
   }, [cvLinhas]);
 
@@ -573,6 +573,11 @@ const Compras = () => {
 
           {/* ================= ABA 2 - COMPRAS x VENDAS ================= */}
           <TabsContent value="cv">
+            {cvAviso && (
+              <div className="mb-4 rounded-xl border border-border bg-secondary/40 px-4 py-3 text-sm text-muted-foreground">
+                {cvAviso}
+              </div>
+            )}
             <div className="bg-card border border-border rounded-xl p-5 mb-6">
               <div className="flex flex-wrap items-end gap-4">
                 <div>
@@ -748,10 +753,10 @@ const Compras = () => {
                   <tbody>
                     {fornecedores.map((f, i) => (
                       <tr key={i} className="border-b border-border/50">
-                        <td className="py-2">{f.fornecedor || f.nome || "—"}</td>
-                        <td className="py-2 px-2 text-right tabular-nums">{fmtNum(parseFloat(String(f.notas ?? f.qtde_notas ?? 0)))}</td>
-                        <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(parseFloat(String(f.total_compra ?? 0)))}</td>
-                        <td className="py-2 px-2 text-right tabular-nums">{f.ultima_entrada ? String(f.ultima_entrada).slice(0, 10).split("-").reverse().join("/") : "—"}</td>
+                        <td className="py-2">{col(f, "fornecedor", "nome") || "—"}</td>
+                        <td className="py-2 px-2 text-right tabular-nums">{fmtNum(num(col(f, "notas", "qtde_notas")))}</td>
+                        <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(num(col(f, "total_compra", "compra")))}</td>
+                        <td className="py-2 px-2 text-right tabular-nums">{col(f, "ultima_entrada") ? String(col(f, "ultima_entrada")).slice(0, 10).split("-").reverse().join("/") : "—"}</td>
                       </tr>
                     ))}
                   </tbody>

@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { chamarRelatorio, avisoRelatorio, pick } from "@/lib/vrReport";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -87,15 +88,12 @@ export const DadosVrTab = ({ storeId }: Props) => {
     dir: "desc",
   });
 
+  const [aviso, setAviso] = useState<string | null>(null);
+
   const chamar = useCallback(
     async (relatorio: string) => {
-      const { data, error } = await supabase.functions.invoke("vr-proxy", {
-        body: { store_id: storeId, relatorio, params: { inicio, fim } },
-      });
-      if (error) throw new Error(error.message);
-      if (data?.erro) throw new Error(data.erro);
-      const d = data?.dados;
-      return Array.isArray(d) ? d : Array.isArray(d?.dados) ? d.dados : [];
+      const r = await chamarRelatorio(storeId, relatorio, { inicio, fim });
+      return { linhas: r.dados as any[], aviso: avisoRelatorio(r) };
     },
     [storeId, inicio, fim]
   );
@@ -105,40 +103,41 @@ export const DadosVrTab = ({ storeId }: Props) => {
     setLoading(true);
     try {
       const [a, b, c] = await Promise.all([
-        chamar("dre_periodo").catch(() => []),
-        chamar("pagar_fluxo").catch(() => []),
-        chamar("pagar_por_fornecedor").catch(() => []),
+        chamar("dre_periodo"),
+        chamar("pagar_fluxo"),
+        chamar("pagar_por_fornecedor"),
       ]);
+      setAviso([a, b, c].map((r) => r.aviso).find(Boolean) ?? null);
       setDre(
-        (a as any[]).map((r) => ({
-          mes: String(r.mes ?? r.competencia ?? r.data ?? ""),
-          receita_bruta: n(r.receita_bruta),
-          cmv: n(r.cmv),
-          lucro_bruto: n(r.lucro_bruto),
-          margem_bruta_pct: n(r.margem_bruta_pct),
-          volume: n(r.volume),
+        a.linhas.map((r) => ({
+          mes: String(pick(r, "mes", "competencia", "data") ?? ""),
+          receita_bruta: n(pick(r, "receita_bruta", "faturamento", "total_vendido")),
+          cmv: n(pick(r, "cmv", "custo")),
+          lucro_bruto: n(pick(r, "lucro_bruto", "lucro")),
+          margem_bruta_pct: n(pick(r, "margem_bruta_pct", "margem_pct", "margem")),
+          volume: n(pick(r, "volume", "quantidade", "qtde")),
         }))
       );
       setFluxo(
-        (b as any[]).map((r) => ({
-          vencimento: String(r.vencimento ?? r.data ?? ""),
-          parcelas: n(r.parcelas),
-          valor_total: n(r.valor_total),
-          em_aberto: n(r.em_aberto),
-          pago: n(r.pago),
+        b.linhas.map((r) => ({
+          vencimento: String(pick(r, "vencimento", "data") ?? ""),
+          parcelas: n(pick(r, "parcelas")),
+          valor_total: n(pick(r, "valor_total", "valor")),
+          em_aberto: n(pick(r, "em_aberto", "aberto")),
+          pago: n(pick(r, "pago")),
         }))
       );
       setFornecedores(
-        (c as any[]).map((r) => ({
-          fornecedor: String(r.fornecedor ?? "-"),
-          parcelas: n(r.parcelas),
-          valor_total: n(r.valor_total),
-          em_aberto: n(r.em_aberto),
-          proximo_vencimento: String(r.proximo_vencimento ?? ""),
+        c.linhas.map((r) => ({
+          fornecedor: String(pick(r, "fornecedor", "nome") ?? "-"),
+          parcelas: n(pick(r, "parcelas")),
+          valor_total: n(pick(r, "valor_total", "valor")),
+          em_aberto: n(pick(r, "em_aberto", "aberto")),
+          proximo_vencimento: String(pick(r, "proximo_vencimento", "vencimento") ?? ""),
         }))
       );
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Falha ao consultar o VR");
+      toast.error(e instanceof Error ? e.message : "Falha ao consultar o sistema da loja");
     } finally {
       setLoading(false);
     }
@@ -241,6 +240,11 @@ export const DadosVrTab = ({ storeId }: Props) => {
 
   return (
     <div className="space-y-6">
+      {aviso && (
+        <div className="rounded-lg border border-border bg-secondary/40 px-4 py-3 text-sm text-muted-foreground">
+          {aviso}
+        </div>
+      )}
       <Card className="p-4">
         <div className="flex flex-col md:flex-row md:items-end gap-3">
           <div className="flex items-center gap-3">

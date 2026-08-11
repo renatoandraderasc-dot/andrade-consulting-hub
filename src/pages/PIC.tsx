@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import ClientLayout from "@/components/ClientLayout";
 import SyncStatusBadge from "@/components/SyncStatusBadge";
 import VrOfflineNotice from "@/components/VrOfflineNotice";
-import { useVrRealizado, VrDia } from "@/hooks/useVrRealizado";
+import { useVrRealizado, VrDia, LOJA } from "@/hooks/useVrRealizado";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import HierarquiaVendasTable from "@/components/relatorios/HierarquiaVendasTable";
@@ -15,7 +15,7 @@ import HierarquiaVendasTable from "@/components/relatorios/HierarquiaVendasTable
 
 
 const MONTHS = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-const DEPARTMENTS = ["PADARIA", "AÇOUGUE", "HORTIFRUTI"];
+const DEFAULT_DEPARTMENTS = ["PADARIA", "AÇOUGUE", "HORTIFRUTI"];
 const KPI_LABELS: Record<string, string> = {
   faturamento: "Faturamento",
   margem: "Margem",
@@ -78,6 +78,17 @@ const PIC = () => {
     updatedAt,
     refresh,
   } = useVrRealizado(storeId, periodStart, periodEnd);
+
+  // Departamentos exibidos: os padroes quando a loja tem abertura por
+  // departamento; senao, os que vierem do proprio sistema da loja; e,
+  // em ultimo caso, o total da loja.
+  const DEPARTMENTS = useMemo(() => {
+    const keys = Object.keys(vr ?? {}).filter((k) => k !== LOJA);
+    const presentes = DEFAULT_DEPARTMENTS.filter((d) => keys.includes(d));
+    if (presentes.length) return presentes;
+    if (keys.length) return keys.sort((a, b) => a.localeCompare(b, "pt-BR"));
+    return [LOJA];
+  }, [vr]);
 
   useEffect(() => {
     if (!authLoading && !user) { navigate("/login"); return; }
@@ -148,7 +159,6 @@ const PIC = () => {
         .from("store_daily_metrics")
         .select("date, department, meta_vendas, meta_lucro, meta_margem_pct, meta_volume")
         .eq("store_id", storeId)
-        .in("department", DEPARTMENTS)
         .gte("date", periodStart)
         .lte("date", periodEnd)
         .order("date", { ascending: true }),
@@ -436,7 +446,7 @@ const PIC = () => {
             )}
 
             {/* Finish Line Animation */}
-            <FinishLineAnimation deptKpis={deptKpis} />
+            <FinishLineAnimation deptKpis={deptKpis} departments={DEPARTMENTS} />
 
           </>
         )}
@@ -639,9 +649,9 @@ const KpiSection = ({ label, kpi, viewMode, today }: KpiSectionProps) => {
 };
 
 // ========== FINISH LINE ANIMATION ==========
-const FinishLineAnimation = ({ deptKpis }: { deptKpis: Record<string, Record<string, KpiData>> }) => {
+const FinishLineAnimation = ({ deptKpis, departments }: { deptKpis: Record<string, Record<string, KpiData>>; departments: string[] }) => {
   const rankings = useMemo(() => {
-    return DEPARTMENTS.map((dept) => {
+    return departments.map((dept) => {
       const kpis = deptKpis[dept] || {};
       const avg = (
         (kpis.faturamento?.pctAcumulado || 0) +
@@ -651,7 +661,7 @@ const FinishLineAnimation = ({ deptKpis }: { deptKpis: Record<string, Record<str
       ) / 4;
       return { dept, avg };
     }).sort((a, b) => b.avg - a.avg);
-  }, [deptKpis]);
+  }, [deptKpis, departments]);
 
   const maxAvg = Math.max(...rankings.map((r) => r.avg), 1);
 
