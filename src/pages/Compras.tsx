@@ -320,13 +320,13 @@ const Compras = () => {
   // Uma linha por departamento + secao vinda do relatorio compras_vendas_periodo
   const cvItens = useMemo(() => {
     return cvLinhas.map((l: any) => ({
-      departamento: String(l.departamento ?? l.nivel1 ?? "").trim() || "SEM DEPARTAMENTO",
-      secao: String(l.secao ?? l.nivel2 ?? "").trim() || "SEM SEÇÃO",
-      qtde_venda: parseFloat(String(l.qtde_venda ?? 0)) || 0,
-      venda: parseFloat(String(l.total_venda ?? 0)) || 0,
-      cmv: parseFloat(String(l.cmv ?? 0)) || 0,
-      qtde_compra: parseFloat(String(l.qtde_compra ?? 0)) || 0,
-      compra: parseFloat(String(l.total_compra ?? 0)) || 0,
+      departamento: String(col(l, "departamento", "nivel1") ?? "").trim() || "SEM DEPARTAMENTO",
+      secao: String(col(l, "secao", "nivel2") ?? "").trim() || "SEM SEÇÃO",
+      qtde_venda: num(col(l, "qtde_venda", "quantidade", "volume")),
+      venda: num(col(l, "total_venda", "venda", "total_vendido")),
+      cmv: num(col(l, "cmv", "custo")),
+      qtde_compra: num(col(l, "qtde_compra")),
+      compra: num(col(l, "total_compra", "compra")),
     }));
   }, [cvLinhas]);
 
