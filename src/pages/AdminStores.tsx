@@ -210,7 +210,41 @@ const AdminStores = () => {
             </p>
           )}
         </div>
+
+        {/* Exibicao do PIC por cliente */}
+        <div className="mt-10">
+          <div className="flex items-center gap-2 mb-3">
+            <Eye className="w-5 h-5 text-primary" />
+            <h2 className="font-display text-xl font-bold">Exibição do PIC por cliente</h2>
+          </div>
+          <p className="text-sm text-muted-foreground font-body mb-4">
+            Escolha se o painel PIC mostra valores e percentuais ou somente percentuais para cada loja.
+          </p>
+          <div className="space-y-2">
+            {stores.map((store) => (
+              <div
+                key={store.id}
+                className="bg-card border border-border rounded-xl p-4 flex items-center justify-between gap-3"
+              >
+                <span className="font-body font-semibold text-sm">{store.name}</span>
+                <Select
+                  value={picDisplay[store.id] === "percentual" ? "percentual" : "valores"}
+                  onValueChange={(v) => changePicDisplay(store.id, v as PicDisplayMode)}
+                >
+                  <SelectTrigger className="w-[200px]" disabled={savingPic === store.id}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="valores">Valores e %</SelectItem>
+                    <SelectItem value="percentual">Apenas %</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
+
     </ClientLayout>
   );
 };
