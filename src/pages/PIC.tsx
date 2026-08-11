@@ -36,6 +36,7 @@ interface DayMetric {
   meta_volume: number;
   realizado_volume: number;
   realizado_mix: number;
+  meta_mix: number;
 
 }
 
@@ -166,7 +167,7 @@ const PIC = () => {
     const [{ data }, { data: mixRows }] = await Promise.all([
       supabase
         .from("store_daily_metrics")
-        .select("date, department, meta_vendas, meta_lucro, meta_margem_pct, meta_volume")
+        .select("date, department, meta_vendas, meta_lucro, meta_margem_pct, meta_volume, meta_mix")
         .eq("store_id", storeId)
         .gte("date", periodStart)
         .lte("date", periodEnd)
@@ -209,6 +210,7 @@ const PIC = () => {
           meta_volume: Number(m.meta_volume) || 0,
           realizado_volume: r?.volume || 0,
           realizado_mix: r?.mix || 0,
+          meta_mix: Number(m.meta_mix) || 0,
         };
 
       });
@@ -317,7 +319,9 @@ const PIC = () => {
       result[dept].margem = calcMargemKpi();
       result[dept].arrecadacao = calcKpi("meta_lucro", "realizado_lucro");
       // Mix: realizado ao vivo (positivação acumulada) x meta mensal de meta_mix
-      const metaMensalMix = Number(metaMix[dept]) || 0;
+      const metaMensalMix =
+        Number(metaMix[dept]) ||
+        rows.reduce((a, r) => a + (Number(r.meta_mix) || 0), 0);
       {
         let realizado = 0, acumulado = 0;
         const daily: KpiData["daily"] = [];
