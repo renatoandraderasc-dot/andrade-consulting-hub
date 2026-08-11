@@ -4,9 +4,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import {
   BarChart3, CheckSquare, Settings, Users, LogOut, Menu, X, ArrowLeft,
-  Target, ClipboardList, DollarSign, Database, RefreshCw, Trophy, Store, ShoppingCart, LayoutTemplate, TrendingUp, Package,
+  Target, ClipboardList, DollarSign, Database, RefreshCw, Trophy, Store, ShoppingCart, LayoutTemplate, TrendingUp, Package, KeyRound,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import ChangePasswordDialog from "@/components/ChangePasswordDialog";
 import andradeLogo from "@/assets/andrade-logo.png";
 
 interface ClientLayoutProps {
@@ -40,6 +41,7 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [pwdOpen, setPwdOpen] = useState(false);
   const [allowedModules, setAllowedModules] = useState<Set<string> | null>(null);
 
   useEffect(() => {
@@ -118,6 +120,12 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
               <ArrowLeft className="w-3.5 h-3.5" /> Site
             </Link>
             <button
+              onClick={() => setPwdOpen(true)}
+              className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-secondary text-foreground text-[12px] font-medium hover:bg-secondary/70 transition-colors"
+            >
+              <KeyRound className="w-3.5 h-3.5" /> Senha
+            </button>
+            <button
               onClick={handleSignOut}
               className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-secondary text-foreground text-[12px] font-medium hover:bg-secondary/70 transition-colors"
             >
@@ -149,6 +157,12 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
               </>
             )}
             <button
+              onClick={() => { setMenuOpen(false); setPwdOpen(true); }}
+              className="w-full flex items-center gap-2 px-3 py-3 text-sm text-foreground border-t border-border"
+            >
+              <KeyRound className="w-4 h-4" /> Alterar senha
+            </button>
+            <button
               onClick={handleSignOut}
               className="w-full flex items-center gap-2 px-3 py-3 text-sm text-foreground border-t border-border"
             >
@@ -157,6 +171,8 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
           </div>
         )}
       </header>
+
+      <ChangePasswordDialog open={pwdOpen} onOpenChange={setPwdOpen} />
 
       <main className="flex-1">{children}</main>
     </div>
