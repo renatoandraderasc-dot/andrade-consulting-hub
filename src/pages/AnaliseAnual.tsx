@@ -94,6 +94,7 @@ const AnaliseAnual = () => {
             departamento: dep,
             secao: String(pick(l, "secao", "nivel1") ?? dep).toUpperCase(),
             categoria: String(pick(l, "categoria", "nivel2") ?? dep).toUpperCase(),
+            turno: extrairTurno(l),
           };
         })
         .filter((x) => x.ano && x.mes);
