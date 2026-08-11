@@ -40,14 +40,18 @@ export async function getAllowedModules(userId: string): Promise<Set<string> | n
   return new Set(rows.filter((r) => r.allowed).map((r) => r.module));
 }
 
+// Distinct routes the user can reach.
+export function allowedPaths(allowed: Set<string>): string[] {
+  return Array.from(new Set(APP_MODULES.filter((m) => allowed.has(m.key)).map((m) => m.path)));
+}
+
 // Returns the first module the user is allowed to see, following APP_MODULES order.
 // Falls back to /dashboard when the user has no explicit restrictions.
 export async function getLandingPath(userId: string): Promise<string> {
   const allowed = await getAllowedModules(userId);
   if (allowed === null || allowed.size === 0) return "/dashboard";
-  if (allowed.has("dashboard")) return "/dashboard";
-
-  const first = APP_MODULES.find((m) => allowed.has(m.key));
-  return first?.path ?? "/dashboard";
+  const paths = allowedPaths(allowed);
+  return paths[0] ?? "/dashboard";
 }
+
 
