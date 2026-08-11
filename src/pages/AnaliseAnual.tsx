@@ -52,6 +52,7 @@ const AnaliseAnual = () => {
   const [anoFim, setAnoFim] = useState(ANOS[ANOS.length - 1]);
   const [deptos, setDeptos] = useState<string[]>([]);
   const [cats, setCats] = useState<string[]>([]);
+  const [turno, setTurno] = useState<"todos" | Turno>("todos");
 
   useEffect(() => {
     if (!authLoading && !user) { navigate("/login"); return; }
