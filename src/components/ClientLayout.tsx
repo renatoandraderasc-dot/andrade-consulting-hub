@@ -4,9 +4,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import {
   BarChart3, CheckSquare, Settings, Users, LogOut, Menu, X, ArrowLeft,
-  Target, ClipboardList, DollarSign, Database, RefreshCw, Trophy, Store, ShoppingCart, LayoutTemplate, TrendingUp, Package,
+  Target, ClipboardList, DollarSign, Database, RefreshCw, Trophy, Store, ShoppingCart, LayoutTemplate, TrendingUp, Package, KeyRound,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import ChangePasswordDialog from "@/components/ChangePasswordDialog";
 import andradeLogo from "@/assets/andrade-logo.png";
 
 interface ClientLayoutProps {
