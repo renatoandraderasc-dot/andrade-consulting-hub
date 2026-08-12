@@ -103,20 +103,42 @@ Deno.serve(async (req) => {
     let gravadosTotal = 0;
 
     for (const b of blocos) {
-      const r = await consultarRelatorioLoja({
+      const base = {
         supabaseUrl: Deno.env.get("SUPABASE_URL")!,
         serviceKey: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
         storeId: store_id,
-        relatorio: "pagamentos_periodo",
         params: { inicio: b.ini, fim: b.fim },
         cfg,
         timeoutMs: 90000,
-      });
+      };
+      let r = await consultarRelatorioLoja({ ...base, relatorio: "pagamentos_periodo" });
+
+      // Conectores que nao publicam pagamentos_periodo (ex.: SM Araujo)
+      // caem para contas_a_pagar (titulos de fornecedor por vencimento).
+      let viaContasAPagar = false;
+      if (!r.ok || r.dados.length === 0) {
+        const alt = await consultarRelatorioLoja({ ...base, relatorio: "contas_a_pagar" });
+        if (alt.ok && alt.dados.length) {
+          r = alt;
+          viaContasAPagar = true;
+        }
+      }
       if (!r.ok) {
         detalhe.push({ periodo: b.ini, erro: r.erro });
         continue;
       }
-      const linhas = r.dados as unknown as LinhaVr[];
+      const linhas = (viaContasAPagar
+        ? (r.dados as Record<string, unknown>[]).map((x, i) => ({
+            ref: `CAP-${x.documento ?? i}-${x.parcela ?? 0}-${String(x.vencimento ?? "").slice(0, 10)}`,
+            data_pagamento: String(x.vencimento ?? ""),
+            valor_pago: x.valor,
+            fornecedor: x.fornecedor,
+            documento: x.documento,
+            observacao: x.situacao ? `Situacao ${x.situacao}` : null,
+            id_tipo: null,
+          }))
+        : r.dados) as unknown as LinhaVr[];
+
 
       const registros = [];
       const vistos = new Set<string>();
