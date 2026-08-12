@@ -132,14 +132,24 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
         (s, x) => s + num(pick(x, "receita_bruta", "faturamento", "total_vendido", "venda", "vendas", "valor_venda")),
         0,
       );
-      const cmv = r.dados.reduce(
+      let cmv = r.dados.reduce(
         (s, x) => s + Math.abs(num(pick(x, "cmv", "custo", "custo_total"))),
         0,
       );
+      // Conectores que so publicam lucro (ex.: kpis_periodo do VR):
+      // CMV = venda - lucro
+      if (cmv === 0) {
+        const lucro = r.dados.reduce(
+          (s, x) => s + num(pick(x, "lucro", "lucro_bruto", "margem_valor")),
+          0,
+        );
+        if (lucro !== 0 && venda !== 0) cmv = Math.abs(venda - lucro);
+      }
       if (venda === 0 && cmv === 0) continue;
 
       setVendaPeriodo(venda);
       setCmvPeriodo(cmv);
+
       setVendaErro(null);
       return;
     }
