@@ -149,10 +149,12 @@ Deno.serve(async (req) => {
         // transferencias entre lojas nao sao despesa nem compra
         if (l.origem === "TRANSFERENCIA") continue;
 
-        const cls = classificar(l.id_tipo);
+        const cls = classificar(l.id_tipo) ??
+          (viaContasAPagar ? { tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" } : undefined);
         const data = String(l.data_pagamento).slice(0, 10);
         const [ano, mes] = data.split("-").map(Number);
         const valor = parseFloat(String(l.valor_pago)) || 0;
+        if (!data || !ano || !mes) continue;
 
         if (!cls) {
           const at = naoClassificados.get(Number(l.id_tipo ?? -1)) ??
@@ -174,7 +176,10 @@ Deno.serve(async (req) => {
           subtipo: cls?.subtipo ?? "OUTROS",
           descricao: partes.slice(0, 300) || "Pagamento VR",
           valor: Math.round(valor * 100) / 100,
-          observacao: cls ? null : `NAO CLASSIFICADO — tipo ${l.id_tipo}`,
+          observacao: cls
+            ? (viaContasAPagar ? "Origem: contas a pagar (VR sem pagamentos_periodo)" : null)
+            : `NAO CLASSIFICADO — tipo ${l.id_tipo}`,
+
           status: "ativo",
           origem: "VR",
           origem_ref: ref,
