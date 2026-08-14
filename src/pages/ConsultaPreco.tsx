@@ -108,11 +108,16 @@ const ConsultaPreco = () => {
       chamarRelatorio(sid, "produtos", {}),
       chamarRelatorio(sid, "estoque_atual", {}),
     ]);
+    const normalizarCodigo = (valor: unknown) => {
+      const codigo = String(valor ?? "").trim();
+      const semZeros = codigo.replace(/^0+/, "");
+      return semZeros || codigo;
+    };
     const estoques = new Map<string, { estoque: any; preco: any; precoOferta: any; categoria: any }>();
     for (const l of re.dados || []) {
       const k = String(col(l, "id_produto", "codigo", "produto_id") ?? "");
       if (k) {
-        estoques.set(k, {
+        estoques.set(normalizarCodigo(k), {
           estoque: col(l, "estoque", "saldo_estoque", "qtd_estoque"),
           preco: col(l, "preco_venda", "preco", "venda"),
           precoOferta: col(l, "preco_oferta", "oferta"),
@@ -122,7 +127,7 @@ const ConsultaPreco = () => {
     }
     const lista: Produto[] = (rp.dados || []).map((l: any) => {
       const codigo = String(col(l, "codigo", "cod_produto", "id_produto") ?? "");
-      const dadosEstoque = estoques.get(codigo);
+      const dadosEstoque = estoques.get(normalizarCodigo(codigo));
       return {
         codigo,
         descricao: String(col(l, "descricao", "produto", "nome") ?? ""),
