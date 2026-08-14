@@ -59,12 +59,12 @@ export const ClassificacaoVrTab = ({ storeId }: Props) => {
     const [{ data: maps }, { data: lanc }] = await Promise.all([
       supabase
         .from("vr_lancamento_map")
-        .select("id, store_id, id_tipo, tipo, subtipo")
+        .select("id, store_id, id_tipo, tipo, subtipo, descricao_vr")
         .or(`store_id.eq.${storeId},store_id.is.null`)
         .order("id_tipo"),
       supabase
         .from("lancamentos")
-        .select("valor, observacao")
+        .select("valor, observacao, descricao")
         .eq("store_id", storeId)
         .eq("origem", "VR")
         .like("observacao", "NAO CLASSIFICADO%")
@@ -77,7 +77,7 @@ export const ClassificacaoVrTab = ({ storeId }: Props) => {
     ((lanc as any[]) || []).forEach(l => {
       const m = /tipo VR (\-?\d+)/.exec(l.observacao || "");
       const idTipo = m ? Number(m[1]) : -1;
-      const cur = agg.get(idTipo) || { id_tipo: idTipo, qtd: 0, valor: 0 };
+      const cur = agg.get(idTipo) || { id_tipo: idTipo, qtd: 0, valor: 0, exemplo: String(l.descricao || "") };
       cur.qtd += 1;
       cur.valor += Number(l.valor) || 0;
       agg.set(idTipo, cur);
