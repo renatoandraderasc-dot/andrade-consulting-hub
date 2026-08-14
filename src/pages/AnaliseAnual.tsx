@@ -94,9 +94,10 @@ const AnaliseAnual = () => {
           return {
             ano: Number(a),
             mes: Number(m),
-            faturamento: num(pick(l, "receita_bruta", "faturamento", "total_vendido")),
+            faturamento: num(pick(l, "receita_bruta", "faturamento", "total_vendido", "vendas")),
             lucro: num(pick(l, "lucro_bruto", "lucro")),
-            volume: num(pick(l, "volume", "quantidade", "qtde")),
+            volume: num(pick(l, "volume", "quantidade", "qtde", "qtd")),
+
             departamento: dep,
             secao: String(pick(l, "secao", "nivel1") ?? dep).toUpperCase(),
             categoria: String(pick(l, "categoria", "nivel2") ?? dep).toUpperCase(),
