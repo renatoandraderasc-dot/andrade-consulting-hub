@@ -242,6 +242,7 @@ export const ClassificacaoVrTab = ({ storeId }: Props) => {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[90px]">ID Tipo</TableHead>
+                <TableHead>Tipo de entrada (nome)</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Subtipo</TableHead>
                 <TableHead className="w-[120px]">Origem</TableHead>
