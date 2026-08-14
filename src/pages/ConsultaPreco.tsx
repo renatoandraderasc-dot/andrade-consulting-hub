@@ -97,6 +97,53 @@ const ConsultaPreco = () => {
     ean: String(col(l, "codigo_barras", "ean", "barras") ?? t),
   });
 
+  // Algumas lojas ainda não publicam o relatório "catalogo_produtos".
+  // Nesses casos usamos o relatório "produtos" (+ "estoque_atual") e
+  // filtramos localmente, para que a consulta funcione em toda loja.
+  const cacheRef = useRef<Record<string, Produto[]>>({});
+
+  const carregarBaseLocal = async (sid: string): Promise<Produto[]> => {
+    if (cacheRef.current[sid]) return cacheRef.current[sid];
+    const [rp, re] = await Promise.all([
+      chamarRelatorio(sid, "produtos", {}),
+      chamarRelatorio(sid, "estoque_atual", {}),
+    ]);
+    const estoques = new Map<string, any>();
+    for (const l of re.dados || []) {
+      const k = String(col(l, "id_produto", "codigo", "produto_id") ?? "");
+      if (k) estoques.set(k, col(l, "estoque", "saldo_estoque", "qtd_estoque"));
+    }
+    const lista: Produto[] = (rp.dados || []).map((l: any) => {
+      const codigo = String(col(l, "codigo", "cod_produto", "id_produto") ?? "");
+      return {
+        codigo,
+        descricao: String(col(l, "descricao", "produto", "nome") ?? ""),
+        estoque: estoques.get(codigo) ?? null,
+        categoria: String(col(l, "grupo", "secao", "categoria", "subgrupo") ?? "—"),
+        preco: col(l, "preco_venda", "preco", "venda") ?? null,
+        precoOferta: col(l, "preco_oferta", "oferta") ?? null,
+        ean: String(col(l, "codigo_barras", "ean", "barras") ?? ""),
+      };
+    });
+    cacheRef.current[sid] = lista;
+    return lista;
+  };
+
+  const buscarLocal = async (sid: string, t: string): Promise<Produto[]> => {
+    const base = await carregarBaseLocal(sid);
+    if (!base.length) return [];
+    const limpar = (s: string) => s.replace(/\D/g, "").replace(/^0+/, "");
+    const alvos = variantes(t).map(limpar).filter(Boolean);
+    if (alvos.length) {
+      const porCodigo = base.filter(
+        (p) => alvos.includes(limpar(p.ean)) || alvos.includes(limpar(p.codigo)),
+      );
+      if (porCodigo.length) return porCodigo;
+    }
+    const termo = t.toLowerCase();
+    return base.filter((p) => p.descricao.toLowerCase().includes(termo)).slice(0, 20);
+  };
+
   const buscar = async (termo: string) => {
     const t = termo.trim();
     if (!t || !storeId) return;
@@ -106,9 +153,14 @@ const ConsultaPreco = () => {
     setResultados([]);
     const numerico = /^\d+$/.test(t.replace(/\s/g, ""));
     let ultimoAviso: string | null = null;
+    let indisponivel = false;
     try {
       for (const v of variantes(t)) {
         const r = await chamarRelatorio(storeId, "catalogo_produtos", { busca: v, limite: 20, offset: 0 });
+        if (r.indisponivel) {
+          indisponivel = true;
+          break;
+        }
         ultimoAviso = avisoRelatorio(r) || ultimoAviso;
         const linhas = r.dados || [];
         if (linhas.length) {
@@ -126,6 +178,16 @@ const ConsultaPreco = () => {
           return;
         }
       }
+
+      if (indisponivel) {
+        const achados = await buscarLocal(storeId, t);
+        if (achados.length === 1) setProduto(achados[0]);
+        else if (achados.length) setResultados(achados);
+        else setAviso(`Produto ${t} não encontrado no cadastro desta loja.`);
+        setLoading(false);
+        return;
+      }
+
       const { data: sistema } = await supabase.rpc("store_sistema", { _store_id: storeId });
       if (numerico && String(sistema || "").toLowerCase() === "oracle") {
         setAviso(
@@ -140,6 +202,7 @@ const ConsultaPreco = () => {
       setLoading(false);
     }
   };
+
 
 
   const iniciarScan = () => {
