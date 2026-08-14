@@ -86,9 +86,11 @@ Deno.serve(async (req) => {
 
       const acc = new Map<string, { venda: number; cmv: number; compra: number }>();
       for (const l of linhas) {
-        // departamento nivel 1 vindo do proprio relatorio; mapeamento so como fallback
-        const dep = String(l.departamento ?? "").trim() ||
+        // Mercadologico 1: VR devolve apenas "secao" (que e o nivel 1);
+        // WebSac/Oracle devolvem "nivel1"/"departamento".
+        const dep = (String(l.nivel1 ?? l.departamento ?? l.secao ?? "").trim().toUpperCase()) ||
           mapa.get(norm(l.secao)) || "SEM DEPARTAMENTO";
+
         const cur = acc.get(dep) ?? { venda: 0, cmv: 0, compra: 0 };
         cur.venda += parseFloat(String(l.total_venda)) || 0;
         cur.cmv += parseFloat(String(l.cmv)) || 0;
