@@ -24,7 +24,7 @@ const KPI_LABELS: Record<string, string> = {
   faturamento: "Faturamento",
   quantidade: "Volume",
   arrecadacao: "Arrecadação",
-  volume: "Mix",
+  volume: "MIX de Produtos",
 };
 
 interface DayMetric {
