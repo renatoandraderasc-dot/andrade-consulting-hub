@@ -116,7 +116,7 @@ export const ClassificacaoVrTab = ({ storeId }: Props) => {
     if (editing && editing.store_id) {
       const { error } = await supabase
         .from("vr_lancamento_map")
-        .update({ tipo: form.tipo, subtipo: form.subtipo })
+        .update({ tipo: form.tipo, subtipo: form.subtipo, descricao_vr: form.descricao_vr.trim() || null })
         .eq("id", editing.id);
       if (error) { toast.error("Erro ao salvar"); return; }
       toast.success("Mapeamento atualizado");
