@@ -124,7 +124,13 @@ export const ClassificacaoVrTab = ({ storeId }: Props) => {
       const { error } = await supabase
         .from("vr_lancamento_map")
         .upsert(
-          { store_id: storeId, id_tipo: idTipo, tipo: form.tipo, subtipo: form.subtipo },
+          {
+            store_id: storeId,
+            id_tipo: idTipo,
+            tipo: form.tipo,
+            subtipo: form.subtipo,
+            descricao_vr: form.descricao_vr.trim() || null,
+          },
           { onConflict: "store_id,id_tipo" },
         );
       if (error) { toast.error("Erro ao salvar: " + error.message); return; }
