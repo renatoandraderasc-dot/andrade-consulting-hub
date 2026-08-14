@@ -1,14 +1,15 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ScanLine, X, Search, Loader2 } from "lucide-react";
-import { BrowserMultiFormatReader, IScannerControls } from "@zxing/browser";
+import { ScanLine, Search, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { chamarRelatorio, avisoRelatorio, pick as col } from "@/lib/vrReport";
 import { useAuth } from "@/hooks/useAuth";
 import ClientLayout from "@/components/ClientLayout";
+import BarcodeScanner from "@/components/consulta/BarcodeScanner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 
 interface Store { id: string; name: string }
 
@@ -41,8 +42,6 @@ const ConsultaPreco = () => {
   const [aviso, setAviso] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
 
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const controlsRef = useRef<IScannerControls | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/login");
@@ -73,7 +72,28 @@ const ConsultaPreco = () => {
     })();
   }, [user, isAdmin]);
 
-  useEffect(() => () => controlsRef.current?.stop(), []);
+  // variações do código lido: EAN-13 puro, sem zeros à esquerda, UPC-A -> EAN-13
+  const variantes = (t: string) => {
+    const so = t.replace(/\D/g, "");
+    const vs = new Set<string>([t]);
+    if (so) {
+      vs.add(so);
+      vs.add(so.replace(/^0+/, ""));
+      if (so.length === 12) vs.add("0" + so);
+      if (so.length === 13 && so.startsWith("0")) vs.add(so.slice(1));
+    }
+    return [...vs].filter(Boolean);
+  };
+
+  const mapear = (l: any, t: string): Produto => ({
+    codigo: String(col(l, "codigo", "cod_produto", "codigo_reduzido", "produto") ?? ""),
+    descricao: String(col(l, "descricao", "produto", "nome") ?? ""),
+    estoque: col(l, "estoque", "saldo_estoque", "qtd_estoque", "estoque_atual") ?? null,
+    categoria: String(col(l, "m2_grupo", "categoria", "m1_departamento", "departamento", "secao") ?? "—"),
+    preco: col(l, "preco_venda", "preco", "venda") ?? null,
+    precoOferta: col(l, "preco_oferta", "oferta") ?? null,
+    ean: String(col(l, "codigo_barras", "ean", "barras") ?? t),
+  });
 
   const buscar = async (termo: string) => {
     const t = termo.trim();
@@ -81,25 +101,25 @@ const ConsultaPreco = () => {
     setLoading(true);
     setAviso(null);
     setProduto(null);
+    let ultimoAviso: string | null = null;
     try {
-      const r = await chamarRelatorio(storeId, "catalogo_produtos", { busca: t, limite: 5, offset: 0 });
-      const av = avisoRelatorio(r);
-      const l = r.dados[0];
-      if (!l) {
-        setAviso(av || "Produto não encontrado.");
-      } else {
-        setProduto({
-          codigo: String(col(l, "codigo", "cod_produto", "codigo_reduzido", "produto") ?? ""),
-          descricao: String(col(l, "descricao", "produto", "nome") ?? ""),
-          estoque: col(l, "estoque", "saldo_estoque", "qtd_estoque", "estoque_atual") ?? null,
-          categoria: String(
-            col(l, "m2_grupo", "categoria", "m1_departamento", "departamento", "secao") ?? "—",
-          ),
-          preco: col(l, "preco_venda", "preco", "venda") ?? null,
-          precoOferta: col(l, "preco_oferta", "oferta") ?? null,
-          ean: String(col(l, "codigo_barras", "ean", "barras") ?? t),
-        });
+      for (const v of variantes(t)) {
+        const r = await chamarRelatorio(storeId, "catalogo_produtos", { busca: v, limite: 5, offset: 0 });
+        ultimoAviso = avisoRelatorio(r) || ultimoAviso;
+        const linhas = r.dados || [];
+        if (linhas.length) {
+          const exato =
+            linhas.find(
+              (l: any) =>
+                String(col(l, "codigo_barras", "ean", "barras") ?? "").replace(/\D/g, "") ===
+                v.replace(/\D/g, ""),
+            ) || linhas[0];
+          setProduto(mapear(exato, t));
+          setLoading(false);
+          return;
+        }
       }
+      setAviso(ultimoAviso || `Produto ${t} não encontrado no cadastro desta loja.`);
     } catch (err: any) {
       setAviso(err.message);
     } finally {
@@ -107,66 +127,12 @@ const ConsultaPreco = () => {
     }
   };
 
-  const pararScan = () => {
-    controlsRef.current?.stop();
-    controlsRef.current = null;
-    const v = videoRef.current;
-    const s = v?.srcObject as MediaStream | null;
-    s?.getTracks().forEach((t) => t.stop());
-    if (v) v.srcObject = null;
-    setScanning(false);
-  };
-
-  // o <video> só existe depois que scanning vira true — por isso a câmera
-  // é ligada aqui, com o elemento já montado no DOM.
-  useEffect(() => {
-    if (!scanning) return;
-    let cancelado = false;
-
-    (async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: "environment" } },
-          audio: false,
-        });
-        const video = videoRef.current;
-        if (cancelado || !video) {
-          stream.getTracks().forEach((t) => t.stop());
-          return;
-        }
-        video.srcObject = stream;
-        await video.play().catch(() => undefined);
-
-        const reader = new BrowserMultiFormatReader();
-        const controls = await reader.decodeFromVideoElement(video, (result) => {
-          if (!result) return;
-          const texto = result.getText();
-          pararScan();
-          setCodigo(texto);
-          buscar(texto);
-        });
-        if (cancelado) controls.stop();
-        else controlsRef.current = controls;
-      } catch {
-        if (cancelado) return;
-        setScanning(false);
-        setAviso(
-          "Não foi possível acessar a câmera. Verifique a permissão do navegador e use HTTPS.",
-        );
-      }
-    })();
-
-    return () => {
-      cancelado = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scanning]);
-
   const iniciarScan = () => {
     setAviso(null);
     setProduto(null);
     setScanning(true);
   };
+
 
   return (
     <ClientLayout storeName={storeName}>
@@ -194,24 +160,21 @@ const ConsultaPreco = () => {
           </Select>
         )}
 
-        {!scanning ? (
-          <Button className="w-full h-14 text-base" onClick={iniciarScan} disabled={!storeId}>
-            <ScanLine className="w-5 h-5 mr-2" /> Consultar Preço
-          </Button>
-        ) : (
-          <div className="relative rounded-lg overflow-hidden border border-border bg-black">
-            <video ref={videoRef} className="w-full aspect-[3/4] object-cover" autoPlay muted playsInline />
-            <div className="pointer-events-none absolute inset-x-8 top-1/2 -translate-y-1/2 h-24 border-2 border-primary rounded-md" />
-            <Button
-              variant="secondary"
-              size="sm"
-              className="absolute top-2 right-2"
-              onClick={pararScan}
-            >
-              <X className="w-4 h-4 mr-1" /> Fechar
-            </Button>
-          </div>
+        <Button className="w-full h-14 text-base" onClick={iniciarScan} disabled={!storeId}>
+          <ScanLine className="w-5 h-5 mr-2" /> Consultar Preço
+        </Button>
+
+        {scanning && (
+          <BarcodeScanner
+            onClose={() => setScanning(false)}
+            onDetect={(texto) => {
+              setScanning(false);
+              setCodigo(texto);
+              buscar(texto);
+            }}
+          />
         )}
+
 
         <div className="flex gap-2">
           <Input
