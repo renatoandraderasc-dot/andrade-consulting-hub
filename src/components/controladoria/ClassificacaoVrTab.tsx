@@ -329,6 +329,17 @@ export const ClassificacaoVrTab = ({ storeId }: Props) => {
               />
             </div>
             <div>
+              <Label>Tipo de entrada (nome no ERP)</Label>
+              <Input
+                placeholder="Ex.: COMPRA DE MERCADORIA, MARMITEX"
+                value={form.descricao_vr}
+                onChange={e => setForm(p => ({ ...p, descricao_vr: e.target.value }))}
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Esse nome aparece na coluna "Tipo de entrada" dos lançamentos.
+              </p>
+            </div>
+            <div>
               <Label>Tipo</Label>
               <Select
                 value={form.tipo}
