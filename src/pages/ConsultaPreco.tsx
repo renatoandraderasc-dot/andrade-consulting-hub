@@ -108,20 +108,28 @@ const ConsultaPreco = () => {
       chamarRelatorio(sid, "produtos", {}),
       chamarRelatorio(sid, "estoque_atual", {}),
     ]);
-    const estoques = new Map<string, any>();
+    const estoques = new Map<string, { estoque: any; preco: any; precoOferta: any; categoria: any }>();
     for (const l of re.dados || []) {
       const k = String(col(l, "id_produto", "codigo", "produto_id") ?? "");
-      if (k) estoques.set(k, col(l, "estoque", "saldo_estoque", "qtd_estoque"));
+      if (k) {
+        estoques.set(k, {
+          estoque: col(l, "estoque", "saldo_estoque", "qtd_estoque"),
+          preco: col(l, "preco_venda", "preco", "venda"),
+          precoOferta: col(l, "preco_oferta", "oferta"),
+          categoria: col(l, "departamento", "grupo", "secao", "categoria"),
+        });
+      }
     }
     const lista: Produto[] = (rp.dados || []).map((l: any) => {
       const codigo = String(col(l, "codigo", "cod_produto", "id_produto") ?? "");
+      const dadosEstoque = estoques.get(codigo);
       return {
         codigo,
         descricao: String(col(l, "descricao", "produto", "nome") ?? ""),
-        estoque: estoques.get(codigo) ?? null,
-        categoria: String(col(l, "grupo", "secao", "categoria", "subgrupo") ?? "—"),
-        preco: col(l, "preco_venda", "preco", "venda") ?? null,
-        precoOferta: col(l, "preco_oferta", "oferta") ?? null,
+        estoque: dadosEstoque?.estoque ?? null,
+        categoria: String(col(l, "grupo", "secao", "categoria", "subgrupo") ?? dadosEstoque?.categoria ?? "—"),
+        preco: col(l, "preco_venda", "preco", "venda") ?? dadosEstoque?.preco ?? null,
+        precoOferta: col(l, "preco_oferta", "oferta") ?? dadosEstoque?.precoOferta ?? null,
         ean: String(col(l, "codigo_barras", "ean", "barras") ?? ""),
       };
     });
@@ -179,12 +187,16 @@ const ConsultaPreco = () => {
         }
       }
 
+      // Alguns conectores Oracle respondem 200 com lista vazia para
+      // catalogo_produtos. Neles, produtos e estoque_atual precisam ser
+      // unidos pelo código para obter EAN, preço e saldo.
+      const achados = await buscarLocal(storeId, t);
+      if (achados.length === 1) setProduto(achados[0]);
+      else if (achados.length) setResultados(achados);
+      if (achados.length) return;
+
       if (indisponivel) {
-        const achados = await buscarLocal(storeId, t);
-        if (achados.length === 1) setProduto(achados[0]);
-        else if (achados.length) setResultados(achados);
-        else setAviso(`Produto ${t} não encontrado no cadastro desta loja.`);
-        setLoading(false);
+        setAviso(`Produto ${t} não encontrado no cadastro desta loja.`);
         return;
       }
 
