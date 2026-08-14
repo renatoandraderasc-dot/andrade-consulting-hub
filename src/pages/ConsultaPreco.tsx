@@ -196,8 +196,7 @@ const ConsultaPreco = () => {
             value={codigo}
             onChange={(e) => setCodigo(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && buscar(codigo)}
-            placeholder="Código de barras ou código reduzido"
-            inputMode="numeric"
+            placeholder="Código de barras, código reduzido ou nome do produto"
           />
           <Button variant="outline" onClick={() => buscar(codigo)} disabled={loading || !storeId}>
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
@@ -209,6 +208,27 @@ const ConsultaPreco = () => {
             {aviso}
           </div>
         )}
+
+        {resultados.length > 0 && !produto && (
+          <div className="rounded-lg border border-border bg-card divide-y divide-border">
+            {resultados.map((p, i) => (
+              <button
+                key={`${p.codigo}-${i}`}
+                onClick={() => {
+                  setProduto(p);
+                  setResultados([]);
+                }}
+                className="w-full text-left p-3 hover:bg-muted/50 flex items-center justify-between gap-3"
+              >
+                <span className="text-sm text-foreground">{p.descricao}</span>
+                <span className="text-sm font-semibold tabular-nums text-foreground">
+                  {fmtBRL(p.preco)}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+
 
         {produto && (
           <div className="rounded-lg border border-border bg-card overflow-hidden">
