@@ -160,24 +160,21 @@ const ConsultaPreco = () => {
           </Select>
         )}
 
-        {!scanning ? (
-          <Button className="w-full h-14 text-base" onClick={iniciarScan} disabled={!storeId}>
-            <ScanLine className="w-5 h-5 mr-2" /> Consultar Preço
-          </Button>
-        ) : (
-          <div className="relative rounded-lg overflow-hidden border border-border bg-black">
-            <video ref={videoRef} className="w-full aspect-[3/4] object-cover" autoPlay muted playsInline />
-            <div className="pointer-events-none absolute inset-x-8 top-1/2 -translate-y-1/2 h-24 border-2 border-primary rounded-md" />
-            <Button
-              variant="secondary"
-              size="sm"
-              className="absolute top-2 right-2"
-              onClick={pararScan}
-            >
-              <X className="w-4 h-4 mr-1" /> Fechar
-            </Button>
-          </div>
+        <Button className="w-full h-14 text-base" onClick={iniciarScan} disabled={!storeId}>
+          <ScanLine className="w-5 h-5 mr-2" /> Consultar Preço
+        </Button>
+
+        {scanning && (
+          <BarcodeScanner
+            onClose={() => setScanning(false)}
+            onDetect={(texto) => {
+              setScanning(false);
+              setCodigo(texto);
+              buscar(texto);
+            }}
+          />
         )}
+
 
         <div className="flex gap-2">
           <Input
