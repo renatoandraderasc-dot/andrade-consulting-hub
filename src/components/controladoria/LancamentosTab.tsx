@@ -341,6 +341,17 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
               </SelectContent>
             </Select>
           </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">Tipo de entrada</Label>
+            <Select value={filterEntrada} onValueChange={setFilterEntrada}>
+              <SelectTrigger className="w-[170px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Todos">Todos</SelectItem>
+                {tiposEntrada.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="flex-1 min-w-[200px]">
             <Label className="text-xs text-muted-foreground">Buscar</Label>
             <div className="relative">
