@@ -38,6 +38,8 @@ const ConsultaPreco = () => {
   const [storeName, setStoreName] = useState("");
   const [codigo, setCodigo] = useState("");
   const [produto, setProduto] = useState<Produto | null>(null);
+  const [resultados, setResultados] = useState<Produto[]>([]);
+
   const [loading, setLoading] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
