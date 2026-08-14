@@ -21,8 +21,8 @@ interface Row {
   relatorios?: { nome: string; ok: boolean; msg?: string }[];
 }
 
-// relatórios essenciais para as telas do app
-const RELATORIOS = [
+// relatórios essenciais por sistema (cada ERP publica nomes diferentes)
+const RELATORIOS_VR = [
   { nome: "kpis_periodo", uso: "Faturamento / Controladoria" },
   { nome: "dre_periodo", uso: "DRE / CMV" },
   { nome: "vendas_secao_periodo", uso: "PIC e Análise Anual" },
@@ -30,6 +30,18 @@ const RELATORIOS = [
   { nome: "pagamentos_periodo", uso: "Lançamentos financeiros" },
   { nome: "contas_a_pagar", uso: "Lançamentos (alternativo)" },
 ];
+
+const RELATORIOS_WEBSAC = [
+  { nome: "kpis_periodo", uso: "Faturamento / Controladoria" },
+  { nome: "dre_periodo", uso: "DRE / CMV" },
+  { nome: "vendas_secao_periodo", uso: "PIC e Análise Anual" },
+  { nome: "vendas_hierarquia_periodo", uso: "Nível produto / Sem giro" },
+  { nome: "pagamentos_periodo", uso: "Lançamentos financeiros" },
+];
+
+const relatoriosDoSistema = (sistema?: string | null) =>
+  (sistema ?? "VR").toUpperCase() === "WEBSAC" ? RELATORIOS_WEBSAC : RELATORIOS_VR;
+
 
 const pendencias = (r: Row): string[] => {
   const out: string[] = [];
