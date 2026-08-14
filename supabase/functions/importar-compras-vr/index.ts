@@ -18,6 +18,33 @@ function norm(s: string): string {
     .replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
 }
 
+function pick(linha: Record<string, unknown>, ...campos: string[]): unknown {
+  const entradas = Object.entries(linha);
+  for (const campo of campos) {
+    const encontrado = entradas.find(([chave, valor]) => chave.toLowerCase() === campo.toLowerCase() && valor != null);
+    if (encontrado) return encontrado[1];
+  }
+  return undefined;
+}
+
+function numero(valor: unknown): number {
+  const n = Number.parseFloat(String(valor ?? "").replace(",", "."));
+  return Number.isFinite(n) ? n : 0;
+}
+
+function mercadologico1(linha: Record<string, unknown>): string {
+  return String(pick(
+    linha,
+    "m1_departamento",
+    "mercadologico1",
+    "mercadologico_1",
+    "merc1",
+    "nivel1",
+    "departamento",
+    "secao",
+  ) ?? "").trim().toUpperCase();
+}
+
 function mesesDoPeriodo(inicio: string, fim: string) {
   const out: { ano: number; mes: number; ini: string; fim: string }[] = [];
   const [ai, mi] = inicio.split("-").map(Number);
@@ -88,13 +115,13 @@ Deno.serve(async (req) => {
       for (const l of linhas) {
         // Mercadologico 1: VR devolve apenas "secao" (que e o nivel 1);
         // WebSac/Oracle devolvem "nivel1"/"departamento".
-        const dep = (String(l.nivel1 ?? l.departamento ?? l.secao ?? "").trim().toUpperCase()) ||
-          mapa.get(norm(l.secao)) || "SEM DEPARTAMENTO";
+        const secao = String(pick(l, "secao") ?? "");
+        const dep = mercadologico1(l) || mapa.get(norm(secao)) || "SEM DEPARTAMENTO";
 
         const cur = acc.get(dep) ?? { venda: 0, cmv: 0, compra: 0 };
-        cur.venda += parseFloat(String(l.total_venda)) || 0;
-        cur.cmv += parseFloat(String(l.cmv)) || 0;
-        cur.compra += parseFloat(String(l.total_compra)) || 0;
+        cur.venda += numero(pick(l, "total_venda", "venda", "total_vendido"));
+        cur.cmv += numero(pick(l, "cmv", "custo"));
+        cur.compra += numero(pick(l, "total_compra", "compra"));
         acc.set(dep, cur);
       }
       for (const [departamento, t] of acc) {

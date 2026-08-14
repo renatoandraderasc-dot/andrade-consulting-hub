@@ -16,6 +16,7 @@ import ClientLayout from "@/components/ClientLayout";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import HierarquiaVendasTable from "@/components/relatorios/HierarquiaVendasTable";
+import { carregarBaseCatalogo } from "@/lib/catalogoProdutos";
 
 
 interface Store { id: string; name: string }
@@ -32,6 +33,17 @@ const NIVEL_LABEL: Record<string, string> = {
 const fmtBRL = (v: number) => (Number(v) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const fmtPct = (v: number, d = 1) => `${(Number(v) || 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d })}%`;
 const fmtNum = (v: number, d = 0) => (Number(v) || 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
+
+const mercadologico1 = (linha: any) => String(col(
+  linha,
+  "m1_departamento",
+  "mercadologico1",
+  "mercadologico_1",
+  "merc1",
+  "nivel1",
+  "departamento",
+  "secao",
+) ?? "").trim().toUpperCase();
 
 const monthRange = (year: number, month: number) => {
   const inicio = `${year}-${String(month).padStart(2, "0")}-01`;
@@ -82,6 +94,7 @@ const Compras = () => {
     meta_venda_mes: 0, parcelas_excesso: 3, hist_inicio: "", hist_fim: "",
   });
   const [deptos, setDeptos] = useState<any[]>([]);
+  const [mercadologicos1, setMercadologicos1] = useState<string[]>([]);
   const [edits, setEdits] = useState<Record<string, any>>({});
   const [salvandoDeptos, setSalvandoDeptos] = useState(false);
   const [savingCfg, setSavingCfg] = useState(false);
@@ -102,6 +115,7 @@ const Compras = () => {
     fetchMetas();
     fetchConfig();
     fetchDeptos();
+    fetchMercadologicos1();
     fetchHistorico();
     fetchRealizadoMesAtual();
   }, [storeId, year, month]);
@@ -158,6 +172,18 @@ const Compras = () => {
     setDeptos(data || []);
   };
 
+  const fetchMercadologicos1 = async () => {
+    setMercadologicos1([]);
+    try {
+      const base = await carregarBaseCatalogo(storeId);
+      const nomes = [...new Set(base.map((produto) => produto.n1.trim().toUpperCase()).filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b, "pt-BR"));
+      setMercadologicos1(nomes);
+    } catch {
+      setMercadologicos1([]);
+    }
+  };
+
   const fetchHistorico = async () => {
     const { data } = await supabase.from("compras_historico")
       .select("*").eq("store_id", storeId).order("ano").order("mes").order("departamento");
@@ -183,8 +209,7 @@ const Compras = () => {
       for (const l of linhas) {
         // Mercadológico 1: no VR o nível 1 é a própria "secao" do relatório;
         // no WebSac/Oracle vem em "nivel1"/"departamento".
-        const dep = String(col(l, "nivel1", "departamento", "mercadologico1", "merc1", "secao") ?? "")
-          .trim().toUpperCase()
+        const dep = mercadologico1(l)
           || mapa.get(norm(String(col(l, "secao") ?? "")))
           || "SEM DEPARTAMENTO";
 
@@ -328,6 +353,9 @@ const Compras = () => {
     }
     setGerando(true);
     try {
+      // Garante que todos os Mercadológicos 1 do cadastro de produtos participem
+      // da geração, inclusive os que não tiveram movimento nos últimos meses.
+      for (const departamento of deptosView) await salvarDepto(departamento, true);
       const { data, error } = await supabase.rpc("gerar_metas_compra", {
         p_store_id: storeId, p_ano: year, p_mes: month,
       });
@@ -380,7 +408,7 @@ const Compras = () => {
       // Mercadológico 1: WebSac/Oracle mandam "nivel1"/"departamento";
       // no VR o nível 1 é a própria "secao" do relatório.
       departamento:
-        String(col(l, "nivel1", "departamento", "mercadologico1", "merc1", "secao") ?? "").trim().toUpperCase() ||
+        mercadologico1(l) ||
         "SEM DEPARTAMENTO",
       secao:
         String(col(l, "nivel2", "grupo", "categoria") ?? "").trim().toUpperCase() ||
@@ -511,7 +539,7 @@ const Compras = () => {
   const deptosView = useMemo(() => {
     const map = new Map<string, any>();
     for (const d of deptos) map.set(d.departamento, d);
-    for (const nome of new Set<string>([...deptOptions, ...Object.keys(realizadoDep)])) {
+    for (const nome of new Set<string>([...mercadologicos1, ...deptOptions, ...Object.keys(realizadoDep)])) {
       if (nome && !map.has(nome)) {
         map.set(nome, { departamento: nome, tx_perdas: 0, tx_recuperacao: 1, ativo: true });
       }
@@ -519,7 +547,7 @@ const Compras = () => {
     return Array.from(map.values())
       .map((d) => ({ ...d, ...(edits[d.departamento] || {}) }))
       .sort((a, b) => String(a.departamento).localeCompare(String(b.departamento)));
-  }, [deptos, deptOptions, realizadoDep, edits]);
+  }, [deptos, mercadologicos1, deptOptions, realizadoDep, edits]);
 
   const editarDepto = (departamento: string, patch: Record<string, any>) =>
     setEdits((e) => ({ ...e, [departamento]: { ...(e[departamento] || {}), ...patch } }));
@@ -697,7 +725,7 @@ const Compras = () => {
               {cvItens.length > 0 && (
                 <div className="flex flex-wrap items-end gap-4 mt-4 pt-4 border-t border-border">
                   <div>
-                    <label className="text-xs text-muted-foreground mb-1 block">Departamento</label>
+                    <label className="text-xs text-muted-foreground mb-1 block">Mercadológico 1</label>
                     <select value={fN1} onChange={(e) => setFN1(e.target.value)} className={inputCls}>
                       <option value="__all__">Todos</option>
                       {cvOpcoes.n1.map((o) => <option key={o} value={o}>{o}</option>)}
@@ -974,7 +1002,7 @@ const Compras = () => {
                     </tr>
                   ))}
                   {deptosView.length === 0 && (
-                    <tr><td colSpan={isAdmin ? 5 : 4} className="py-6 text-center text-muted-foreground">Importe o histórico para listar os departamentos.</td></tr>
+                    <tr><td colSpan={isAdmin ? 5 : 4} className="py-6 text-center text-muted-foreground">Nenhum Mercadológico 1 encontrado no cadastro de produtos.</td></tr>
                   )}
                 </tbody>
               </table>
