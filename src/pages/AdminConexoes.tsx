@@ -53,13 +53,14 @@ const pendencias = (r: Row): string[] => {
   if ((r.sistema ?? "").toUpperCase() === "ORACLE" && r.codigo_loja == null)
     out.push("Informar o código da loja (obrigatório no Oracle)");
   if (r.enabled === false) out.push("Conexão desativada — ativar o conector");
+  const lista = relatoriosDoSistema(r.sistema);
   const semRel = (r.relatorios ?? []).filter((x) => !x.ok);
-  if (r.online === true && r.relatorios && semRel.length === RELATORIOS.length)
+  if (r.online === true && r.relatorios && semRel.length === lista.length)
     out.push("Conector online, porém sem NENHUM relatório publicado — cadastrar as consultas SQL no conector da loja");
   else if (r.online === true && semRel.length > 0)
     out.push(
       "Relatórios faltando no conector: " +
-        semRel.map((x) => `${x.nome} (${RELATORIOS.find((y) => y.nome === x.nome)?.uso})`).join(", "),
+        semRel.map((x) => `${x.nome} (${lista.find((y) => y.nome === x.nome)?.uso ?? "-"})`).join(", "),
     );
   if (r.online === false && out.length === 0)
     out.push(r.erro?.includes("tunel") || r.erro?.includes("túnel")
