@@ -24,12 +24,14 @@ interface MapRow {
   id_tipo: number;
   tipo: string;
   subtipo: string;
+  descricao_vr: string | null;
 }
 
 interface Pendente {
   id_tipo: number;
   qtd: number;
   valor: number;
+  exemplo: string;
 }
 
 interface Props {
