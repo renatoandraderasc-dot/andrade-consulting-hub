@@ -43,6 +43,11 @@ const mercadologico1 = (linha: any) => String(col(
   "nivel1",
   "departamento",
   "secao",
+  "desc_secao",
+  "descricao_secao",
+  "sec",
+  "dept",
+  "grupo_1",
 ) ?? "").trim().toUpperCase();
 
 const monthRange = (year: number, month: number) => {

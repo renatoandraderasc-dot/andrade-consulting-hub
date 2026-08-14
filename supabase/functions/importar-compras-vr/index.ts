@@ -42,6 +42,11 @@ function mercadologico1(linha: Record<string, unknown>): string {
     "nivel1",
     "departamento",
     "secao",
+    "desc_secao",
+    "descricao_secao",
+    "sec",
+    "dept",
+    "grupo_1",
   ) ?? "").trim().toUpperCase();
 }
 
