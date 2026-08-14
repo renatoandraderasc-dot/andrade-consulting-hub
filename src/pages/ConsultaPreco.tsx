@@ -38,6 +38,8 @@ const ConsultaPreco = () => {
   const [storeName, setStoreName] = useState("");
   const [codigo, setCodigo] = useState("");
   const [produto, setProduto] = useState<Produto | null>(null);
+  const [resultados, setResultados] = useState<Produto[]>([]);
+
   const [loading, setLoading] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
@@ -101,31 +103,44 @@ const ConsultaPreco = () => {
     setLoading(true);
     setAviso(null);
     setProduto(null);
+    setResultados([]);
+    const numerico = /^\d+$/.test(t.replace(/\s/g, ""));
     let ultimoAviso: string | null = null;
     try {
       for (const v of variantes(t)) {
-        const r = await chamarRelatorio(storeId, "catalogo_produtos", { busca: v, limite: 5, offset: 0 });
+        const r = await chamarRelatorio(storeId, "catalogo_produtos", { busca: v, limite: 20, offset: 0 });
         ultimoAviso = avisoRelatorio(r) || ultimoAviso;
         const linhas = r.dados || [];
         if (linhas.length) {
-          const exato =
-            linhas.find(
-              (l: any) =>
-                String(col(l, "codigo_barras", "ean", "barras") ?? "").replace(/\D/g, "") ===
-                v.replace(/\D/g, ""),
-            ) || linhas[0];
-          setProduto(mapear(exato, t));
+          const exato = linhas.find(
+            (l: any) =>
+              String(col(l, "codigo_barras", "ean", "barras") ?? "").replace(/^0+/, "") ===
+              v.replace(/\D/g, "").replace(/^0+/, ""),
+          );
+          if (exato || linhas.length === 1) {
+            setProduto(mapear(exato || linhas[0], t));
+          } else {
+            setResultados(linhas.map((l: any) => mapear(l, t)));
+          }
           setLoading(false);
           return;
         }
       }
-      setAviso(ultimoAviso || `Produto ${t} não encontrado no cadastro desta loja.`);
+      const { data: sistema } = await supabase.rpc("store_sistema", { _store_id: storeId });
+      if (numerico && String(sistema || "").toLowerCase() === "oracle") {
+        setAviso(
+          "Esta loja usa o conector Oracle (Intersolid), que hoje só permite pesquisar o catálogo pelo NOME do produto — a busca por código de barras precisa ser liberada pelo fornecedor do ERP. Digite parte da descrição do produto para consultar o preço.",
+        );
+      } else {
+        setAviso(ultimoAviso || `Produto ${t} não encontrado no cadastro desta loja.`);
+      }
     } catch (err: any) {
       setAviso(err.message);
     } finally {
       setLoading(false);
     }
   };
+
 
   const iniciarScan = () => {
     setAviso(null);
@@ -181,8 +196,7 @@ const ConsultaPreco = () => {
             value={codigo}
             onChange={(e) => setCodigo(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && buscar(codigo)}
-            placeholder="Código de barras ou código reduzido"
-            inputMode="numeric"
+            placeholder="Código de barras, código reduzido ou nome do produto"
           />
           <Button variant="outline" onClick={() => buscar(codigo)} disabled={loading || !storeId}>
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
@@ -194,6 +208,27 @@ const ConsultaPreco = () => {
             {aviso}
           </div>
         )}
+
+        {resultados.length > 0 && !produto && (
+          <div className="rounded-lg border border-border bg-card divide-y divide-border">
+            {resultados.map((p, i) => (
+              <button
+                key={`${p.codigo}-${i}`}
+                onClick={() => {
+                  setProduto(p);
+                  setResultados([]);
+                }}
+                className="w-full text-left p-3 hover:bg-muted/50 flex items-center justify-between gap-3"
+              >
+                <span className="text-sm text-foreground">{p.descricao}</span>
+                <span className="text-sm font-semibold tabular-nums text-foreground">
+                  {fmtBRL(p.preco)}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+
 
         {produto && (
           <div className="rounded-lg border border-border bg-card overflow-hidden">
