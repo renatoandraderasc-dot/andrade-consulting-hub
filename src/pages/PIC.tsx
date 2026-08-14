@@ -540,7 +540,7 @@ const KpiSection = ({ label, kpi, viewMode, today, soPct }: KpiSectionProps) => 
   );
 
   return (
-    <div>
+    <div translate="no">
       <button onClick={() => setExpanded(!expanded)} className="w-full flex items-center justify-between mb-1.5 group cursor-pointer">
         <span className="text-xs font-heading font-bold text-foreground uppercase tracking-wider">{label}</span>
         <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
