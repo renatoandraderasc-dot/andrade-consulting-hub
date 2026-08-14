@@ -134,7 +134,7 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
 
   const tiposEntrada = useMemo(
     () => Array.from(new Set(lancamentos.map(tipoEntradaDe))).sort(),
-    [lancamentos],
+    [lancamentos, nomesTipo],
   );
 
   const filtered = useMemo(() => {
