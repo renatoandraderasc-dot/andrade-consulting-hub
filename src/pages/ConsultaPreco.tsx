@@ -101,31 +101,44 @@ const ConsultaPreco = () => {
     setLoading(true);
     setAviso(null);
     setProduto(null);
+    setResultados([]);
+    const numerico = /^\d+$/.test(t.replace(/\s/g, ""));
     let ultimoAviso: string | null = null;
     try {
       for (const v of variantes(t)) {
-        const r = await chamarRelatorio(storeId, "catalogo_produtos", { busca: v, limite: 5, offset: 0 });
+        const r = await chamarRelatorio(storeId, "catalogo_produtos", { busca: v, limite: 20, offset: 0 });
         ultimoAviso = avisoRelatorio(r) || ultimoAviso;
         const linhas = r.dados || [];
         if (linhas.length) {
-          const exato =
-            linhas.find(
-              (l: any) =>
-                String(col(l, "codigo_barras", "ean", "barras") ?? "").replace(/\D/g, "") ===
-                v.replace(/\D/g, ""),
-            ) || linhas[0];
-          setProduto(mapear(exato, t));
+          const exato = linhas.find(
+            (l: any) =>
+              String(col(l, "codigo_barras", "ean", "barras") ?? "").replace(/^0+/, "") ===
+              v.replace(/\D/g, "").replace(/^0+/, ""),
+          );
+          if (exato || linhas.length === 1) {
+            setProduto(mapear(exato || linhas[0], t));
+          } else {
+            setResultados(linhas.map((l: any) => mapear(l, t)));
+          }
           setLoading(false);
           return;
         }
       }
-      setAviso(ultimoAviso || `Produto ${t} não encontrado no cadastro desta loja.`);
+      const { data: sistema } = await supabase.rpc("store_sistema", { _store_id: storeId });
+      if (numerico && String(sistema || "").toLowerCase() === "oracle") {
+        setAviso(
+          "Esta loja usa o conector Oracle (Intersolid), que hoje só permite pesquisar o catálogo pelo NOME do produto — a busca por código de barras precisa ser liberada pelo fornecedor do ERP. Digite parte da descrição do produto para consultar o preço.",
+        );
+      } else {
+        setAviso(ultimoAviso || `Produto ${t} não encontrado no cadastro desta loja.`);
+      }
     } catch (err: any) {
       setAviso(err.message);
     } finally {
       setLoading(false);
     }
   };
+
 
   const iniciarScan = () => {
     setAviso(null);
