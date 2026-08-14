@@ -75,7 +75,7 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
         } ${active ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
       >
         <item.icon className="w-4 h-4" strokeWidth={2} />
-        {item.label}
+        <span translate="no">{item.label}</span>
         {!mobile && active && (
           <span className="absolute left-3 right-3 -bottom-px h-0.5 bg-primary" />
         )}
