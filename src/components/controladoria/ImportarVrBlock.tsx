@@ -61,29 +61,30 @@ export const ImportarVrBlock = ({ storeId, onImported, onGoClassificacao }: Prop
     const ini = new Date(Date.UTC(hoje.getUTCFullYear(), hoje.getUTCMonth() - Number(meses) + 1, 1))
       .toISOString().slice(0, 10);
 
-    const { data, error } = await supabase.rpc("importar_lancamentos_vr", {
-      p_store_id: storeId,
-      p_inicio: ini,
-      p_fim: fim,
-      p_user_id: user.id,
+    // Usa a edge function: cobre VR, WebSac e Oracle e tem fallback para
+    // contas_a_pagar quando o conector nao publica pagamentos_periodo.
+    const { data, error } = await supabase.functions.invoke("importar-lancamentos-vr", {
+      body: { store_id: storeId, user_id: user.id, inicio: ini, fim },
     });
     setLoading(false);
-    if (error) {
-      setResultado({ erro: error.message });
-      toast.error("Falha ao ler o VR");
+    const payload = data as any;
+    if (error || payload?.erro) {
+      setResultado({ erro: error?.message || payload?.erro || "falha ao ler o sistema da loja" });
+      toast.error("Falha ao ler os dados da loja");
       return;
     }
-    const row = (Array.isArray(data) ? data[0] : data) as { linhas?: number; gravados?: number } | null;
     setResultado({
       ok: true,
       inicio: ini,
       fim,
-      gravados: row?.gravados ?? 0,
-      detalhe: [{ periodo: ini.slice(0, 7), linhas_api: row?.linhas ?? 0, gravados: row?.gravados ?? 0 }],
+      gravados: payload?.gravados ?? 0,
+      detalhe: payload?.detalhe ?? [{ periodo: ini.slice(0, 7), gravados: payload?.gravados ?? 0 }],
+      pendentes: payload?.pendentes ?? [],
     });
-    toast.success(`${row?.gravados ?? 0} lançamento(s) atualizados`);
+    toast.success(`${payload?.gravados ?? 0} lançamento(s) atualizados`);
     onImported?.();
   };
+
 
   const pendentes = resultado?.pendentes ?? [];
 
