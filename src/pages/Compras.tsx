@@ -181,10 +181,13 @@ const Compras = () => {
       for (const m of mapas ?? []) mapa.set(norm(m.secao_vr), m.department);
       const acc: Record<string, { compra: number; venda: number; cmv: number }> = {};
       for (const l of linhas) {
-        // departamento nivel 1 vindo do relatorio; mapeamento so como fallback
-        const dep = String(col(l, "departamento", "nivel1") ?? "").trim()
+        // Mercadológico 1: no VR o nível 1 é a própria "secao" do relatório;
+        // no WebSac/Oracle vem em "nivel1"/"departamento".
+        const dep = String(col(l, "nivel1", "departamento", "mercadologico1", "merc1", "secao") ?? "")
+          .trim().toUpperCase()
           || mapa.get(norm(String(col(l, "secao") ?? "")))
           || "SEM DEPARTAMENTO";
+
         const cur = acc[dep] || { compra: 0, venda: 0, cmv: 0 };
         cur.compra += num(col(l, "total_compra", "compra"));
         cur.venda += num(col(l, "total_venda", "venda", "total_vendido"));
@@ -374,8 +377,15 @@ const Compras = () => {
   // Uma linha por departamento + secao vinda do relatorio compras_vendas_periodo
   const cvItens = useMemo(() => {
     return cvLinhas.map((l: any) => ({
-      departamento: String(col(l, "departamento", "nivel1") ?? "").trim() || "SEM DEPARTAMENTO",
-      secao: String(col(l, "secao", "nivel2") ?? "").trim() || "SEM SEÇÃO",
+      // Mercadológico 1: WebSac/Oracle mandam "nivel1"/"departamento";
+      // no VR o nível 1 é a própria "secao" do relatório.
+      departamento:
+        String(col(l, "nivel1", "departamento", "mercadologico1", "merc1", "secao") ?? "").trim().toUpperCase() ||
+        "SEM DEPARTAMENTO",
+      secao:
+        String(col(l, "nivel2", "grupo", "categoria") ?? "").trim().toUpperCase() ||
+        String(col(l, "secao") ?? "").trim().toUpperCase() ||
+        "SEM SEÇÃO",
       qtde_venda: num(col(l, "qtde_venda", "quantidade", "volume")),
       venda: num(col(l, "total_venda", "venda", "total_vendido")),
       cmv: num(col(l, "cmv", "custo")),
@@ -383,6 +393,7 @@ const Compras = () => {
       compra: num(col(l, "total_compra", "compra")),
     }));
   }, [cvLinhas]);
+
 
   const cvOpcoes = useMemo(() => {
     const n1 = new Set<string>(cvItens.map((i) => i.departamento));
