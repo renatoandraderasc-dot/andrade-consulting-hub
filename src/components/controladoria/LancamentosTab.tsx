@@ -150,7 +150,7 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
       );
     }
     return result;
-  }, [lancamentos, filterTipo, filterEntrada, filterBusca]);
+  }, [lancamentos, filterTipo, filterEntrada, filterBusca, nomesTipo]);
 
 
   const totaisPorTipo = useMemo(() => {
