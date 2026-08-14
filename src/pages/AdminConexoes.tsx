@@ -18,7 +18,18 @@ interface Row {
   latency?: number | null;
   erro?: string | null;
   checking?: boolean;
+  relatorios?: { nome: string; ok: boolean; msg?: string }[];
 }
+
+// relatórios essenciais para as telas do app
+const RELATORIOS = [
+  { nome: "kpis_periodo", uso: "Faturamento / Controladoria" },
+  { nome: "dre_periodo", uso: "DRE / CMV" },
+  { nome: "vendas_secao_periodo", uso: "PIC e Análise Anual" },
+  { nome: "ranking_produtos", uso: "Nível produto / Sem giro" },
+  { nome: "pagamentos_periodo", uso: "Lançamentos financeiros" },
+  { nome: "contas_a_pagar", uso: "Lançamentos (alternativo)" },
+];
 
 const pendencias = (r: Row): string[] => {
   const out: string[] = [];
@@ -30,6 +41,14 @@ const pendencias = (r: Row): string[] => {
   if ((r.sistema ?? "").toUpperCase() === "ORACLE" && r.codigo_loja == null)
     out.push("Informar o código da loja (obrigatório no Oracle)");
   if (r.enabled === false) out.push("Conexão desativada — ativar o conector");
+  const semRel = (r.relatorios ?? []).filter((x) => !x.ok);
+  if (r.online === true && r.relatorios && semRel.length === RELATORIOS.length)
+    out.push("Conector online, porém sem NENHUM relatório publicado — cadastrar as consultas SQL no conector da loja");
+  else if (r.online === true && semRel.length > 0)
+    out.push(
+      "Relatórios faltando no conector: " +
+        semRel.map((x) => `${x.nome} (${RELATORIOS.find((y) => y.nome === x.nome)?.uso})`).join(", "),
+    );
   if (r.online === false && out.length === 0)
     out.push(r.erro?.includes("tunel") || r.erro?.includes("túnel")
       ? "Servidor/túnel da loja fora do ar — ligar o conector na loja"
@@ -76,6 +95,22 @@ const AdminConexoes = () => {
     setLoading(false);
   };
 
+  const sondarRelatorios = async (storeId: string) => {
+    const hoje = new Date();
+    const inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().slice(0, 10);
+    const fim = hoje.toISOString().slice(0, 10);
+    const res = await Promise.all(
+      RELATORIOS.map(async (rel) => {
+        const { data, error } = await supabase.functions.invoke("vr-proxy", {
+          body: { store_id: storeId, relatorio: rel.nome, params: { inicio, fim, data_inicio: inicio, data_fim: fim } },
+        });
+        const msg = error ? error.message : (data?.erro as string | undefined);
+        return { nome: rel.nome, ok: !msg, msg };
+      }),
+    );
+    setRows((prev) => prev.map((r) => (r.store_id === storeId ? { ...r, relatorios: res } : r)));
+  };
+
   const testar = async (storeId: string) => {
     setRows((prev) => prev.map((r) => (r.store_id === storeId ? { ...r, checking: true } : r)));
     const { data, error } = await supabase.functions.invoke("vr-health", { body: { store_id: storeId } });
@@ -92,6 +127,7 @@ const AdminConexoes = () => {
           : r,
       ),
     );
+    if (!error && data?.online) await sondarRelatorios(storeId);
   };
 
   const testarTodos = async () => {
@@ -203,6 +239,23 @@ const AdminConexoes = () => {
                       </li>
                     ))}
                   </ul>
+                )}
+                {r.relatorios && r.relatorios.length > 0 && (
+                  <div className="mt-3 pl-8 flex flex-wrap gap-2">
+                    {r.relatorios.map((rel) => (
+                      <span
+                        key={rel.nome}
+                        title={rel.msg || undefined}
+                        className={`text-[11px] font-body px-2 py-0.5 rounded-full border ${
+                          rel.ok
+                            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-500"
+                            : "border-red-500/30 bg-red-500/10 text-red-500"
+                        }`}
+                      >
+                        {rel.nome}
+                      </span>
+                    ))}
+                  </div>
                 )}
                 {faltas.length === 0 && status === "on" && (
                   <p className="mt-3 pl-8 text-xs font-body text-emerald-500">Conexão completa e respondendo.</p>
