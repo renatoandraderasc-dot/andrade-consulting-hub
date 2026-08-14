@@ -1,14 +1,15 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ScanLine, X, Search, Loader2 } from "lucide-react";
-import { BrowserMultiFormatReader, IScannerControls } from "@zxing/browser";
+import { ScanLine, Search, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { chamarRelatorio, avisoRelatorio, pick as col } from "@/lib/vrReport";
 import { useAuth } from "@/hooks/useAuth";
 import ClientLayout from "@/components/ClientLayout";
+import BarcodeScanner from "@/components/consulta/BarcodeScanner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 
 interface Store { id: string; name: string }
 
