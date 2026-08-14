@@ -56,7 +56,9 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
     return stored ? Number(stored) : new Date().getFullYear();
   });
   const [filterTipo, setFilterTipo] = useState("Todos");
+  const [filterEntrada, setFilterEntrada] = useState("Todos");
   const [filterBusca, setFilterBusca] = useState("");
+
 
   // Bulk selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
