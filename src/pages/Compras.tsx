@@ -181,10 +181,13 @@ const Compras = () => {
       for (const m of mapas ?? []) mapa.set(norm(m.secao_vr), m.department);
       const acc: Record<string, { compra: number; venda: number; cmv: number }> = {};
       for (const l of linhas) {
-        // departamento nivel 1 vindo do relatorio; mapeamento so como fallback
-        const dep = String(col(l, "departamento", "nivel1") ?? "").trim()
+        // Mercadológico 1: no VR o nível 1 é a própria "secao" do relatório;
+        // no WebSac/Oracle vem em "nivel1"/"departamento".
+        const dep = String(col(l, "nivel1", "departamento", "mercadologico1", "merc1", "secao") ?? "")
+          .trim().toUpperCase()
           || mapa.get(norm(String(col(l, "secao") ?? "")))
           || "SEM DEPARTAMENTO";
+
         const cur = acc[dep] || { compra: 0, venda: 0, cmv: 0 };
         cur.compra += num(col(l, "total_compra", "compra"));
         cur.venda += num(col(l, "total_venda", "venda", "total_vendido"));
