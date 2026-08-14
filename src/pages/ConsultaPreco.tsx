@@ -166,7 +166,6 @@ const ConsultaPreco = () => {
     setAviso(null);
     setProduto(null);
     setScanning(true);
-    }
   };
 
   return (
