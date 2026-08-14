@@ -110,30 +110,62 @@ const ConsultaPreco = () => {
   const pararScan = () => {
     controlsRef.current?.stop();
     controlsRef.current = null;
+    const v = videoRef.current;
+    const s = v?.srcObject as MediaStream | null;
+    s?.getTracks().forEach((t) => t.stop());
+    if (v) v.srcObject = null;
     setScanning(false);
   };
 
-  const iniciarScan = async () => {
-    setScanning(true);
-    setAviso(null);
-    try {
-      const reader = new BrowserMultiFormatReader();
-      const controls = await reader.decodeFromConstraints(
-        { video: { facingMode: { ideal: "environment" } } },
-        videoRef.current!,
-        (result) => {
+  // o <video> só existe depois que scanning vira true — por isso a câmera
+  // é ligada aqui, com o elemento já montado no DOM.
+  useEffect(() => {
+    if (!scanning) return;
+    let cancelado = false;
+
+    (async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" } },
+          audio: false,
+        });
+        const video = videoRef.current;
+        if (cancelado || !video) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        video.srcObject = stream;
+        await video.play().catch(() => undefined);
+
+        const reader = new BrowserMultiFormatReader();
+        const controls = await reader.decodeFromVideoElement(video, (result) => {
           if (!result) return;
           const texto = result.getText();
           pararScan();
           setCodigo(texto);
           buscar(texto);
-        },
-      );
-      controlsRef.current = controls;
-    } catch (err: any) {
-      setScanning(false);
-      setAviso("Não foi possível acessar a câmera. Verifique a permissão do navegador.");
-    }
+        });
+        if (cancelado) controls.stop();
+        else controlsRef.current = controls;
+      } catch {
+        if (cancelado) return;
+        setScanning(false);
+        setAviso(
+          "Não foi possível acessar a câmera. Verifique a permissão do navegador e use HTTPS.",
+        );
+      }
+    })();
+
+    return () => {
+      cancelado = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scanning]);
+
+  const iniciarScan = () => {
+    setAviso(null);
+    setProduto(null);
+    setScanning(true);
   };
 
   return (
@@ -168,7 +200,7 @@ const ConsultaPreco = () => {
           </Button>
         ) : (
           <div className="relative rounded-lg overflow-hidden border border-border bg-black">
-            <video ref={videoRef} className="w-full aspect-[3/4] object-cover" muted playsInline />
+            <video ref={videoRef} className="w-full aspect-[3/4] object-cover" autoPlay muted playsInline />
             <div className="pointer-events-none absolute inset-x-8 top-1/2 -translate-y-1/2 h-24 border-2 border-primary rounded-md" />
             <Button
               variant="secondary"
