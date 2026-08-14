@@ -30,6 +30,7 @@ import EncarteEditor from "./pages/EncarteEditor";
 import MeusEncartes from "./pages/MeusEncartes";
 import OAuthConsent from "./pages/OAuthConsent";
 import AdminSite from "./pages/AdminSite";
+import AdminConexoes from "./pages/AdminConexoes";
 import NotFound from "./pages/NotFound";
 import ModuleGuard from "@/components/ModuleGuard";
 
@@ -69,6 +70,7 @@ const App = () => (
             <Route path="/admin/padaria-import" element={g("admin_padaria_import", <AdminPadariaImport />)} />
             <Route path="/admin/pic-departamentos" element={g("admin_pic_departamentos", <AdminPicDepartments />)} />
             <Route path="/admin/stores" element={g("admin_stores", <AdminStores />)} />
+            <Route path="/admin/conexoes" element={g("admin_conexoes", <AdminConexoes />)} />
             <Route path="/admin/site" element={g("admin_site", <AdminSite />)} />
             <Route path="/produtos" element={g("produtos", <Produtos />)} />
             <Route path="/encartes" element={g("encartes", <MeusEncartes />)} />
