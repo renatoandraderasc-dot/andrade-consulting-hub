@@ -374,8 +374,15 @@ const Compras = () => {
   // Uma linha por departamento + secao vinda do relatorio compras_vendas_periodo
   const cvItens = useMemo(() => {
     return cvLinhas.map((l: any) => ({
-      departamento: String(col(l, "departamento", "nivel1") ?? "").trim() || "SEM DEPARTAMENTO",
-      secao: String(col(l, "secao", "nivel2") ?? "").trim() || "SEM SEÇÃO",
+      // Mercadológico 1: WebSac/Oracle mandam "nivel1"/"departamento";
+      // no VR o nível 1 é a própria "secao" do relatório.
+      departamento:
+        String(col(l, "nivel1", "departamento", "mercadologico1", "merc1", "secao") ?? "").trim().toUpperCase() ||
+        "SEM DEPARTAMENTO",
+      secao:
+        String(col(l, "nivel2", "grupo", "categoria") ?? "").trim().toUpperCase() ||
+        String(col(l, "secao") ?? "").trim().toUpperCase() ||
+        "SEM SEÇÃO",
       qtde_venda: num(col(l, "qtde_venda", "quantidade", "volume")),
       venda: num(col(l, "total_venda", "venda", "total_vendido")),
       cmv: num(col(l, "cmv", "custo")),
@@ -383,6 +390,7 @@ const Compras = () => {
       compra: num(col(l, "total_compra", "compra")),
     }));
   }, [cvLinhas]);
+
 
   const cvOpcoes = useMemo(() => {
     const n1 = new Set<string>(cvItens.map((i) => i.departamento));
