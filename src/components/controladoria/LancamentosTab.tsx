@@ -428,6 +428,12 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
                     </TableCell>
                     <TableCell className="text-sm">{new Date(l.data + "T12:00:00").toLocaleDateString("pt-BR")}</TableCell>
                     <TableCell>
+                      <span className="text-[11px] font-mono bg-muted text-muted-foreground px-2 py-0.5 rounded-full whitespace-nowrap">
+                        {tipoEntradaDe(l)}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+
                       <span className="text-xs bg-secondary/20 text-secondary-foreground px-2 py-0.5 rounded-full">
                         {l.tipo}
                       </span>
