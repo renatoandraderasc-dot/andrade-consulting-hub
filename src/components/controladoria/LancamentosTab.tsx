@@ -56,7 +56,9 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
     return stored ? Number(stored) : new Date().getFullYear();
   });
   const [filterTipo, setFilterTipo] = useState("Todos");
+  const [filterEntrada, setFilterEntrada] = useState("Todos");
   const [filterBusca, setFilterBusca] = useState("");
+
 
   // Bulk selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -102,18 +104,33 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
     setLoading(false);
   };
 
+  // "Tipo de entrada" = codigo do tipo no ERP, gravado na observacao (ex.: "Tipo VR 12")
+  const tipoEntradaDe = (l: Lancamento) => {
+    const m = /tipo VR ([\w-]+)/i.exec(l.observacao || "");
+    if (m) return `VR ${m[1]}`;
+    return l.origem === "VR" ? "VR sem tipo" : "Manual";
+  };
+
+  const tiposEntrada = useMemo(
+    () => Array.from(new Set(lancamentos.map(tipoEntradaDe))).sort(),
+    [lancamentos],
+  );
+
   const filtered = useMemo(() => {
     let result = lancamentos;
     if (filterTipo !== "Todos") result = result.filter(l => l.tipo === filterTipo);
+    if (filterEntrada !== "Todos") result = result.filter(l => tipoEntradaDe(l) === filterEntrada);
     if (filterBusca) {
       const q = filterBusca.toLowerCase();
       result = result.filter(l =>
         (l.descricao || "").toLowerCase().includes(q) ||
+        (l.observacao || "").toLowerCase().includes(q) ||
         l.subtipo.toLowerCase().includes(q)
       );
     }
     return result;
-  }, [lancamentos, filterTipo, filterBusca]);
+  }, [lancamentos, filterTipo, filterEntrada, filterBusca]);
+
 
   const totaisPorTipo = useMemo(() => {
     const map: Record<string, number> = {};
@@ -324,6 +341,17 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
               </SelectContent>
             </Select>
           </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">Tipo de entrada</Label>
+            <Select value={filterEntrada} onValueChange={setFilterEntrada}>
+              <SelectTrigger className="w-[170px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Todos">Todos</SelectItem>
+                {tiposEntrada.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="flex-1 min-w-[200px]">
             <Label className="text-xs text-muted-foreground">Buscar</Label>
             <div className="relative">
@@ -381,22 +409,24 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
                     onCheckedChange={toggleSelectAll}
                   />
                 </TableHead>
-                <TableHead>Data</TableHead>
+                <TableHead>Vencimento</TableHead>
+                <TableHead>Tipo de entrada</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Conta</TableHead>
                 <TableHead>Descrição</TableHead>
                 <TableHead className="text-right">Valor</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
+
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">Carregando...</TableCell>
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">Carregando...</TableCell>
                 </TableRow>
               ) : filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhum lançamento encontrado</TableCell>
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">Nenhum lançamento encontrado</TableCell>
                 </TableRow>
               ) : (
                 filtered.map(l => (
@@ -409,6 +439,12 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
                     </TableCell>
                     <TableCell className="text-sm">{new Date(l.data + "T12:00:00").toLocaleDateString("pt-BR")}</TableCell>
                     <TableCell>
+                      <span className="text-[11px] font-mono bg-muted text-muted-foreground px-2 py-0.5 rounded-full whitespace-nowrap">
+                        {tipoEntradaDe(l)}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+
                       <span className="text-xs bg-secondary/20 text-secondary-foreground px-2 py-0.5 rounded-full">
                         {l.tipo}
                       </span>
@@ -446,7 +482,7 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
           <div className="grid gap-4 py-2">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Data</Label>
+                <Label>Vencimento</Label>
                 <Input type="date" value={form.data} onChange={e => setForm(p => ({ ...p, data: e.target.value }))} />
               </div>
               <div>

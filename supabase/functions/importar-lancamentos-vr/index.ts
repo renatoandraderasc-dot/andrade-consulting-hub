@@ -151,7 +151,8 @@ Deno.serve(async (req) => {
 
         const cls = classificar(l.id_tipo) ??
           (viaContasAPagar ? { tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" } : undefined);
-        const data = String(l.data_pagamento).slice(0, 10);
+        // A data do lancamento e sempre o VENCIMENTO do titulo
+        const data = String(l.vencimento || l.data_pagamento || "").slice(0, 10);
         const [ano, mes] = data.split("-").map(Number);
         const valor = parseFloat(String(l.valor_pago)) || 0;
         if (!data || !ano || !mes) continue;
@@ -166,6 +167,12 @@ Deno.serve(async (req) => {
         const partes = [l.fornecedor, l.documento ? `Doc ${l.documento}` : null, l.observacao]
           .filter(Boolean).join(" · ");
 
+        // Tipo de entrada (codigo do tipo no ERP) sempre registrado, para classificacao
+        const idTipoTxt = l.id_tipo === null || l.id_tipo === undefined || l.id_tipo === ""
+          ? (viaContasAPagar ? "CAP" : "SEM TIPO")
+          : String(l.id_tipo);
+        const obsBase = `Tipo VR ${idTipoTxt}`;
+
         registros.push({
           store_id,
           user_id,
@@ -177,13 +184,15 @@ Deno.serve(async (req) => {
           descricao: partes.slice(0, 300) || "Pagamento VR",
           valor: Math.round(valor * 100) / 100,
           observacao: cls
-            ? (viaContasAPagar ? "Origem: contas a pagar (VR sem pagamentos_periodo)" : null)
-            : `NAO CLASSIFICADO — tipo ${l.id_tipo}`,
+            ? [obsBase, viaContasAPagar ? "Origem: contas a pagar (VR sem pagamentos_periodo)" : null]
+                .filter(Boolean).join(" · ")
+            : `NAO CLASSIFICADO — ${obsBase}`,
 
           status: "ativo",
           origem: "VR",
           origem_ref: ref,
         });
+
       }
 
       let gravados = 0;
