@@ -90,15 +90,20 @@ export const ClassificacaoVrTab = ({ storeId }: Props) => {
 
   const subcontas = useMemo(() => SUBCONTAS_V2[form.tipo] || [], [form.tipo]);
 
-  const openNew = (idTipo?: number) => {
+  const openNew = (idTipo?: number, descricao?: string) => {
     setEditing(null);
-    setForm({ id_tipo: idTipo != null ? String(idTipo) : "", tipo: "Despesas", subtipo: (SUBCONTAS_V2["Despesas"] || [])[0] || "" });
+    setForm({
+      id_tipo: idTipo != null ? String(idTipo) : "",
+      tipo: "Despesas",
+      subtipo: (SUBCONTAS_V2["Despesas"] || [])[0] || "",
+      descricao_vr: descricao ?? "",
+    });
     setDialogOpen(true);
   };
 
   const openEdit = (r: MapRow) => {
     setEditing(r);
-    setForm({ id_tipo: String(r.id_tipo), tipo: r.tipo, subtipo: r.subtipo });
+    setForm({ id_tipo: String(r.id_tipo), tipo: r.tipo, subtipo: r.subtipo, descricao_vr: r.descricao_vr ?? "" });
     setDialogOpen(true);
   };
 
