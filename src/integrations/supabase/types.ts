@@ -1296,6 +1296,71 @@ export type Database = {
         }
         Relationships: []
       }
+      titulo_planejamento: {
+        Row: {
+          categoria: string | null
+          created_at: string
+          data_prevista: string | null
+          documento: string | null
+          fornecedor: string | null
+          id: string
+          observacao: string | null
+          prioridade: string
+          responsavel: string | null
+          situacao: string
+          store_id: string
+          titulo_ref: string
+          updated_at: string
+          updated_by: string | null
+          valor: number | null
+          vencimento: string | null
+        }
+        Insert: {
+          categoria?: string | null
+          created_at?: string
+          data_prevista?: string | null
+          documento?: string | null
+          fornecedor?: string | null
+          id?: string
+          observacao?: string | null
+          prioridade?: string
+          responsavel?: string | null
+          situacao?: string
+          store_id: string
+          titulo_ref: string
+          updated_at?: string
+          updated_by?: string | null
+          valor?: number | null
+          vencimento?: string | null
+        }
+        Update: {
+          categoria?: string | null
+          created_at?: string
+          data_prevista?: string | null
+          documento?: string | null
+          fornecedor?: string | null
+          id?: string
+          observacao?: string | null
+          prioridade?: string
+          responsavel?: string | null
+          situacao?: string
+          store_id?: string
+          titulo_ref?: string
+          updated_at?: string
+          updated_by?: string | null
+          valor?: number | null
+          vencimento?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "titulo_planejamento_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_module_access: {
         Row: {
           allowed: boolean
