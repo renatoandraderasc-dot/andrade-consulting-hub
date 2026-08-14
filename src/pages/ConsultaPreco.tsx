@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ScanLine, Search, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { chamarRelatorio, avisoRelatorio, pick as col } from "@/lib/vrReport";
+import { carregarBaseCatalogo, filtrarCatalogo } from "@/lib/catalogoProdutos";
 import { useAuth } from "@/hooks/useAuth";
 import ClientLayout from "@/components/ClientLayout";
 import BarcodeScanner from "@/components/consulta/BarcodeScanner";
@@ -97,65 +98,23 @@ const ConsultaPreco = () => {
     ean: String(col(l, "codigo_barras", "ean", "barras") ?? t),
   });
 
-  // Algumas lojas ainda não publicam o relatório "catalogo_produtos".
-  // Nesses casos usamos o relatório "produtos" (+ "estoque_atual") e
-  // filtramos localmente, para que a consulta funcione em toda loja.
-  const cacheRef = useRef<Record<string, Produto[]>>({});
-
-  const carregarBaseLocal = async (sid: string): Promise<Produto[]> => {
-    if (cacheRef.current[sid]) return cacheRef.current[sid];
-    const [rp, re] = await Promise.all([
-      chamarRelatorio(sid, "produtos", {}),
-      chamarRelatorio(sid, "estoque_atual", {}),
-    ]);
-    const normalizarCodigo = (valor: unknown) => {
-      const codigo = String(valor ?? "").trim();
-      const semZeros = codigo.replace(/^0+/, "");
-      return semZeros || codigo;
-    };
-    const estoques = new Map<string, { estoque: any; preco: any; precoOferta: any; categoria: any }>();
-    for (const l of re.dados || []) {
-      const k = String(col(l, "id_produto", "codigo", "produto_id") ?? "");
-      if (k) {
-        estoques.set(normalizarCodigo(k), {
-          estoque: col(l, "estoque", "saldo_estoque", "qtd_estoque"),
-          preco: col(l, "preco_venda", "preco", "venda"),
-          precoOferta: col(l, "preco_oferta", "oferta"),
-          categoria: col(l, "departamento", "grupo", "secao", "categoria"),
-        });
-      }
-    }
-    const lista: Produto[] = (rp.dados || []).map((l: any) => {
-      const codigo = String(col(l, "codigo", "cod_produto", "id_produto") ?? "");
-      const dadosEstoque = estoques.get(normalizarCodigo(codigo));
-      return {
-        codigo,
-        descricao: String(col(l, "descricao", "produto", "nome") ?? ""),
-        estoque: dadosEstoque?.estoque ?? null,
-        categoria: String(col(l, "grupo", "secao", "categoria", "subgrupo") ?? dadosEstoque?.categoria ?? "—"),
-        preco: col(l, "preco_venda", "preco", "venda") ?? dadosEstoque?.preco ?? null,
-        precoOferta: col(l, "preco_oferta", "oferta") ?? dadosEstoque?.precoOferta ?? null,
-        ean: String(col(l, "codigo_barras", "ean", "barras") ?? ""),
-      };
-    });
-    cacheRef.current[sid] = lista;
-    return lista;
-  };
-
+  // Algumas lojas nao publicam o relatorio "catalogo_produtos"
+  // (conectores VR, por exemplo). Nesses casos a base e montada com
+  // produtos + produtos_precos + estoque_atual e filtrada localmente.
   const buscarLocal = async (sid: string, t: string): Promise<Produto[]> => {
-    const base = await carregarBaseLocal(sid);
+    const base = await carregarBaseCatalogo(sid);
     if (!base.length) return [];
-    const limpar = (s: string) => s.replace(/\D/g, "").replace(/^0+/, "");
-    const alvos = variantes(t).map(limpar).filter(Boolean);
-    if (alvos.length) {
-      const porCodigo = base.filter(
-        (p) => alvos.includes(limpar(p.ean)) || alvos.includes(limpar(p.codigo)),
-      );
-      if (porCodigo.length) return porCodigo;
-    }
-    const termo = t.toLowerCase();
-    return base.filter((p) => p.descricao.toLowerCase().includes(termo)).slice(0, 20);
+    return filtrarCatalogo(base, t, 20).map((p) => ({
+      codigo: p.codigo,
+      descricao: p.descricao,
+      estoque: p.estoque,
+      categoria: p.n1 || p.n2 || "—",
+      preco: p.preco,
+      precoOferta: p.precoOferta,
+      ean: p.ean,
+    }));
   };
+
 
   const buscar = async (termo: string) => {
     const t = termo.trim();

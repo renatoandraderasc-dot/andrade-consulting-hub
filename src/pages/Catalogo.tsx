@@ -4,6 +4,7 @@ import { Search, Download, RefreshCw, ChevronLeft, ChevronRight } from "lucide-r
 import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
 import { chamarRelatorio, avisoRelatorio, pick as col } from "@/lib/vrReport";
+import { carregarBaseCatalogo, filtrarCatalogo, type CatalogoItem } from "@/lib/catalogoProdutos";
 import { useAuth } from "@/hooks/useAuth";
 import ClientLayout from "@/components/ClientLayout";
 import { useToast } from "@/hooks/use-toast";
@@ -52,6 +53,7 @@ const Catalogo = () => {
   const [loading, setLoading] = useState(false);
   const [exportando, setExportando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [localTotal, setLocalTotal] = useState<number | null>(null);
 
 
   useEffect(() => {
@@ -110,13 +112,56 @@ const Catalogo = () => {
     return { linhas, aviso: avisoRelatorio(r) };
   };
 
+  const doItem = (p: CatalogoItem): Linha => ({
+    codigo: p.codigo,
+    descricao: p.descricao,
+    custo: p.custo,
+    preco_venda: p.preco,
+    preco_oferta: p.precoOferta,
+    codigo_barras: p.ean || null,
+    m1_departamento: p.n1 || null,
+    m2_grupo: p.n2 || null,
+    m3_subgrupo: p.n3 || null,
+    m4_familia: p.n4 || null,
+  });
+
+  // Lojas cujo conector nao publica "catalogo_produtos" (caso dos VR)
+  // montam a base com produtos + produtos_precos + estoque_atual.
+  const buscarLocal = async (
+    pg: number,
+    termo: string,
+    limite = PAGE_SIZE,
+  ): Promise<{ linhas: Linha[]; total: number }> => {
+    const base = await carregarBaseCatalogo(storeId);
+    const filtradas = filtrarCatalogo(base, termo, base.length);
+    return {
+      linhas: filtradas.slice(pg * limite, pg * limite + limite).map(doItem),
+      total: filtradas.length,
+    };
+  };
+
   const buscar = async (pg = pagina, termo = buscaAtiva, periodo = periodoAtivo) => {
     if (!storeId) return;
     setLoading(true);
     try {
       const { linhas: l, aviso: a } = await consultar(pg, termo, periodo);
-      setLinhas(l);
-      setAviso(a);
+      if (l.length) {
+        setLocalTotal(null);
+        setLinhas(l);
+        setAviso(a);
+        return;
+      }
+      // fallback: base montada localmente
+      const { linhas: locais, total } = await buscarLocal(pg, termo);
+      if (total) {
+        setLocalTotal(total);
+        setLinhas(locais);
+        setAviso(periodo ? "Esta loja não tem o relatório por período; exibindo o cadastro completo." : null);
+      } else {
+        setLocalTotal(null);
+        setLinhas([]);
+        setAviso(a ?? "Nenhum produto encontrado.");
+      }
     } catch (err: any) {
       setLinhas([]);
       setAviso(err.message);
@@ -148,10 +193,15 @@ const Catalogo = () => {
     try {
       const LOTE = 1000;
       const todas: Linha[] = [];
-      for (let pg = 0; pg < 200; pg++) {
-        const { linhas: parte } = await consultar(pg, buscaAtiva, periodoAtivo, LOTE);
-        todas.push(...parte);
-        if (parte.length < LOTE) break;
+      if (localTotal !== null) {
+        const base = await carregarBaseCatalogo(storeId);
+        todas.push(...filtrarCatalogo(base, buscaAtiva, base.length).map(doItem));
+      } else {
+        for (let pg = 0; pg < 200; pg++) {
+          const { linhas: parte } = await consultar(pg, buscaAtiva, periodoAtivo, LOTE);
+          todas.push(...parte);
+          if (parte.length < LOTE) break;
+        }
       }
       const dados = todas.map((l) => ({
         Código: l.codigo,
@@ -176,6 +226,7 @@ const Catalogo = () => {
       setExportando(false);
     }
   };
+
 
 
   return (
