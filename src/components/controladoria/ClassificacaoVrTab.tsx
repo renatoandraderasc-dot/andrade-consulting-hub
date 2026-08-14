@@ -195,7 +195,8 @@ export const ClassificacaoVrTab = ({ storeId }: Props) => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Tipo VR</TableHead>
+                  <TableHead className="w-[90px]">Tipo VR</TableHead>
+                  <TableHead>Exemplo de lançamento</TableHead>
                   <TableHead className="text-right">Lançamentos</TableHead>
                   <TableHead className="text-right">Valor total</TableHead>
                   <TableHead className="w-[130px]" />
@@ -205,6 +206,7 @@ export const ClassificacaoVrTab = ({ storeId }: Props) => {
                 {pendentes.map(p => (
                   <TableRow key={p.id_tipo}>
                     <TableCell className="font-mono text-sm">{p.id_tipo}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground max-w-[320px] truncate">{p.exemplo || "—"}</TableCell>
                     <TableCell className="text-right font-mono text-sm">{p.qtd}</TableCell>
                     <TableCell className="text-right font-mono text-sm">{fmtCurrency(p.valor)}</TableCell>
                     <TableCell className="text-right">
