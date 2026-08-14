@@ -347,7 +347,7 @@ const PIC = () => {
 
   return (
     <ClientLayout storeName={storeName}>
-      <div className="p-4 md:p-6 space-y-6 max-w-[1400px] mx-auto">
+      <div className="p-4 md:p-6 space-y-6 max-w-[1400px] mx-auto" translate="no">
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -355,7 +355,7 @@ const PIC = () => {
               <Trophy className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold font-heading text-foreground">PIC — Painel de Indicadores Comerciais</h1>
+              <h1 className="text-2xl font-bold font-heading text-foreground" translate="no">PIC — Painel de Indicadores Comerciais</h1>
               <div className="flex items-center gap-3 flex-wrap mt-1">
                 <p className="text-sm text-muted-foreground font-body">Acompanhamento de metas por departamento</p>
                 {storeId && <SyncStatusBadge storeId={storeId} onSyncChange={handleSyncChange} />}
@@ -467,7 +467,7 @@ const DepartmentCard = ({ dept, kpis, viewMode, delay, today, soPct }: DeptCardP
     >
       {/* Department Header */}
       <div className="bg-gradient-to-r from-slate-900 to-slate-800 dark:from-slate-800 dark:to-slate-700 px-5 py-3 flex items-center justify-between">
-        <h2 className="text-white font-heading font-bold text-lg tracking-wide">{dept}</h2>
+        <h2 className="text-white font-heading font-bold text-lg tracking-wide" translate="no">{dept}</h2>
         <div className="flex items-center gap-1.5">
           {kpiKeys.map((k) => {
             const val = kpis[k]?.pctAcumulado || 0;
