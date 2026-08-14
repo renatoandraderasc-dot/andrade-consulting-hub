@@ -200,7 +200,7 @@ const ConsultaPreco = () => {
           </Button>
         ) : (
           <div className="relative rounded-lg overflow-hidden border border-border bg-black">
-            <video ref={videoRef} className="w-full aspect-[3/4] object-cover" muted playsInline />
+            <video ref={videoRef} className="w-full aspect-[3/4] object-cover" autoPlay muted playsInline />
             <div className="pointer-events-none absolute inset-x-8 top-1/2 -translate-y-1/2 h-24 border-2 border-primary rounded-md" />
             <Button
               variant="secondary"
