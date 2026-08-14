@@ -42,8 +42,6 @@ const ConsultaPreco = () => {
   const [aviso, setAviso] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
 
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const controlsRef = useRef<IScannerControls | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/login");
