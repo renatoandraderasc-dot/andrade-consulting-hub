@@ -20,7 +20,7 @@ export interface RelatorioResultado {
   erro: string | null;
 }
 
-const INDISPONIVEL = /relatorio nao encontrado|nao encontrado|404|ORA-\d+|illegal variable|invalid identifier|not supported/i;
+const INDISPONIVEL = /relatorio nao encontrado|nao encontrado|nao existe|nao cadastrado|parametro ausente|parametros obrigatorios|404|ORA-\d+|illegal variable|invalid identifier|not supported/i;
 const OFFLINE = /sem conexao|connection refused|failed to fetch|timeout|ngrok|tunnel|econnrefused/i;
 
 /** Le uma coluna sem se importar com a caixa do nome. */
