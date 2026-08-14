@@ -411,11 +411,11 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">Carregando...</TableCell>
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">Carregando...</TableCell>
                 </TableRow>
               ) : filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhum lançamento encontrado</TableCell>
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">Nenhum lançamento encontrado</TableCell>
                 </TableRow>
               ) : (
                 filtered.map(l => (
