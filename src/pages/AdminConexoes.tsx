@@ -108,14 +108,18 @@ const AdminConexoes = () => {
     setLoading(false);
   };
 
-  const sondarRelatorios = async (storeId: string) => {
+  const sondarRelatorios = async (storeId: string, sistema?: string | null) => {
     const hoje = new Date();
     const inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().slice(0, 10);
     const fim = hoje.toISOString().slice(0, 10);
     const res = await Promise.all(
-      RELATORIOS.map(async (rel) => {
+      relatoriosDoSistema(sistema).map(async (rel) => {
         const { data, error } = await supabase.functions.invoke("vr-proxy", {
-          body: { store_id: storeId, relatorio: rel.nome, params: { inicio, fim, data_inicio: inicio, data_fim: fim } },
+          body: {
+            store_id: storeId,
+            relatorio: rel.nome,
+            params: { inicio, fim, data_inicio: inicio, data_fim: fim, limite: 100 },
+          },
         });
         const msg = error ? error.message : (data?.erro as string | undefined);
         return { nome: rel.nome, ok: !msg, msg };
