@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
     if (!r.ok) {
       const msg = r.erro ?? "falha ao consultar o sistema da loja";
       const brando = r.semConexao ||
-        /404|relatorio nao encontrado|not supported|ORA-\d+|illegal variable|invalid identifier/i.test(msg);
+        /404|relatorio nao encontrado|nao existe|nao cadastrado|parametro ausente|not supported|ORA-\d+|illegal variable|invalid identifier|Parametros obrigatorios/i.test(msg);
       return json({ erro: msg, dados: [] }, brando ? 200 : 502);
     }
 

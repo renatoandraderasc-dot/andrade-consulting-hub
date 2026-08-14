@@ -21,8 +21,8 @@ interface Row {
   relatorios?: { nome: string; ok: boolean; msg?: string }[];
 }
 
-// relatórios essenciais para as telas do app
-const RELATORIOS = [
+// relatórios essenciais por sistema (cada ERP publica nomes diferentes)
+const RELATORIOS_VR = [
   { nome: "kpis_periodo", uso: "Faturamento / Controladoria" },
   { nome: "dre_periodo", uso: "DRE / CMV" },
   { nome: "vendas_secao_periodo", uso: "PIC e Análise Anual" },
@@ -30,6 +30,18 @@ const RELATORIOS = [
   { nome: "pagamentos_periodo", uso: "Lançamentos financeiros" },
   { nome: "contas_a_pagar", uso: "Lançamentos (alternativo)" },
 ];
+
+const RELATORIOS_WEBSAC = [
+  { nome: "kpis_periodo", uso: "Faturamento / Controladoria" },
+  { nome: "dre_periodo", uso: "DRE / CMV" },
+  { nome: "vendas_secao_periodo", uso: "PIC e Análise Anual" },
+  { nome: "vendas_hierarquia_periodo", uso: "Nível produto / Sem giro" },
+  { nome: "pagamentos_periodo", uso: "Lançamentos financeiros" },
+];
+
+const relatoriosDoSistema = (sistema?: string | null) =>
+  (sistema ?? "VR").toUpperCase() === "WEBSAC" ? RELATORIOS_WEBSAC : RELATORIOS_VR;
+
 
 const pendencias = (r: Row): string[] => {
   const out: string[] = [];
@@ -41,13 +53,14 @@ const pendencias = (r: Row): string[] => {
   if ((r.sistema ?? "").toUpperCase() === "ORACLE" && r.codigo_loja == null)
     out.push("Informar o código da loja (obrigatório no Oracle)");
   if (r.enabled === false) out.push("Conexão desativada — ativar o conector");
+  const lista = relatoriosDoSistema(r.sistema);
   const semRel = (r.relatorios ?? []).filter((x) => !x.ok);
-  if (r.online === true && r.relatorios && semRel.length === RELATORIOS.length)
+  if (r.online === true && r.relatorios && semRel.length === lista.length)
     out.push("Conector online, porém sem NENHUM relatório publicado — cadastrar as consultas SQL no conector da loja");
   else if (r.online === true && semRel.length > 0)
     out.push(
       "Relatórios faltando no conector: " +
-        semRel.map((x) => `${x.nome} (${RELATORIOS.find((y) => y.nome === x.nome)?.uso})`).join(", "),
+        semRel.map((x) => `${x.nome} (${lista.find((y) => y.nome === x.nome)?.uso ?? "-"})`).join(", "),
     );
   if (r.online === false && out.length === 0)
     out.push(r.erro?.includes("tunel") || r.erro?.includes("túnel")
@@ -95,14 +108,18 @@ const AdminConexoes = () => {
     setLoading(false);
   };
 
-  const sondarRelatorios = async (storeId: string) => {
+  const sondarRelatorios = async (storeId: string, sistema?: string | null) => {
     const hoje = new Date();
     const inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().slice(0, 10);
     const fim = hoje.toISOString().slice(0, 10);
     const res = await Promise.all(
-      RELATORIOS.map(async (rel) => {
+      relatoriosDoSistema(sistema).map(async (rel) => {
         const { data, error } = await supabase.functions.invoke("vr-proxy", {
-          body: { store_id: storeId, relatorio: rel.nome, params: { inicio, fim, data_inicio: inicio, data_fim: fim } },
+          body: {
+            store_id: storeId,
+            relatorio: rel.nome,
+            params: { inicio, fim, data_inicio: inicio, data_fim: fim, limite: 100 },
+          },
         });
         const msg = error ? error.message : (data?.erro as string | undefined);
         return { nome: rel.nome, ok: !msg, msg };
@@ -127,7 +144,10 @@ const AdminConexoes = () => {
           : r,
       ),
     );
-    if (!error && data?.online) await sondarRelatorios(storeId);
+    if (!error && data?.online) {
+      const loja = rows.find((r) => r.store_id === storeId);
+      await sondarRelatorios(storeId, loja?.sistema);
+    }
   };
 
   const testarTodos = async () => {
