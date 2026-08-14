@@ -22,7 +22,7 @@ const MONTHS = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", 
 const DEFAULT_DEPARTMENTS = ["PADARIA", "AÇOUGUE", "HORTIFRUTI"];
 const KPI_LABELS: Record<string, string> = {
   faturamento: "Faturamento",
-  margem: "Margem",
+  quantidade: "Volume",
   arrecadacao: "Arrecadação",
   volume: "Mix",
 };
@@ -283,46 +283,10 @@ const PIC = () => {
         return { pctTotal, pctAcumulado, realizado, metaMensal, metaAcumulada, hasMeta: metaMensal > 0, daily };
       };
 
-      const calcMargemKpi = (): KpiData => {
-        // Realizado = lucro / vendas (nao depende de existir meta cadastrada)
-        let metaMensalSum = 0, metaMensalCount = 0;
-        let metaAcumSum = 0, metaAcumCount = 0;
-        let vendasAcum = 0, lucroAcum = 0;
-        let runVendas = 0, runLucro = 0, runMeta = 0, runMetaCount = 0;
-        const daily: KpiData["daily"] = [];
-        for (const r of rows) {
-          if (r.meta_margem_pct > 0) {
-            metaMensalSum += r.meta_margem_pct;
-            metaMensalCount++;
-            runMeta += r.meta_margem_pct;
-            runMetaCount++;
-            if (r.day <= cutoffDay) {
-              metaAcumSum += r.meta_margem_pct;
-              metaAcumCount++;
-            }
-          }
-          if (r.day <= cutoffDay) {
-            vendasAcum += r.realizado_vendas;
-            lucroAcum += r.realizado_lucro;
-          }
-          runVendas += r.realizado_vendas;
-          runLucro += r.realizado_lucro;
-          const avgMetaRun = runMetaCount > 0 ? runMeta / runMetaCount : 0;
-          const margemRun = runVendas > 0 ? (runLucro / runVendas) * 100 : 0;
-          const pct = avgMetaRun > 0 ? (margemRun / avgMetaRun) * 100 : 0;
-          daily.push({ day: r.day, pct, realizado: r.realizado_margem_pct, meta: r.meta_margem_pct, hasMeta: r.meta_margem_pct > 0 });
-        }
-        const metaMensal = metaMensalCount > 0 ? metaMensalSum / metaMensalCount : 0;
-        const metaAcumulada = metaAcumCount > 0 ? metaAcumSum / metaAcumCount : 0;
-        const realizado = vendasAcum > 0 ? (lucroAcum / vendasAcum) * 100 : 0;
-        const pctTotal = metaMensal > 0 ? (realizado / metaMensal) * 100 : 0;
-        const pctAcumulado = metaAcumulada > 0 ? (realizado / metaAcumulada) * 100 : 0;
-        return { pctTotal, pctAcumulado, realizado, metaMensal, metaAcumulada, hasMeta: metaMensal > 0, daily };
-      };
 
 
       result[dept].faturamento = calcKpi("meta_vendas", "realizado_vendas");
-      result[dept].margem = calcMargemKpi();
+      result[dept].quantidade = calcKpi("meta_volume", "realizado_volume");
       result[dept].arrecadacao = calcKpi("meta_lucro", "realizado_lucro");
       // Mix: realizado ao vivo (positivação acumulada) x meta mensal de meta_mix
       const metaMensalMix =
@@ -366,14 +330,14 @@ const PIC = () => {
       const kpis = deptKpis[dept];
       if (!kpis) continue;
       const fat = kpis.faturamento?.pctAcumulado || 0;
-      const marg = kpis.margem?.pctAcumulado || 0;
+      const vol = kpis.quantidade?.pctAcumulado || 0;
 
       if (fat >= 100) insights.push(`🏆 ${dept} superou a meta de faturamento com ${pctFmt(fat)}!`);
       else if (fat >= 90) insights.push(`📈 ${dept} está próximo da meta de faturamento (${pctFmt(fat)}).`);
       else if (fat > 0 && fat < 70) insights.push(`⚠️ ${dept} está abaixo de 70% da meta de faturamento (${pctFmt(fat)}).`);
 
-      if (marg >= 100) insights.push(`✅ ${dept}: margem acima da meta (${pctFmt(marg)}).`);
-      else if (marg > 0 && marg < 80) insights.push(`🔴 ${dept}: margem crítica em ${pctFmt(marg)} da meta.`);
+      if (vol >= 100) insights.push(`✅ ${dept}: volume acima da meta (${pctFmt(vol)}).`);
+      else if (vol > 0 && vol < 80) insights.push(`🔴 ${dept}: volume crítico em ${pctFmt(vol)} da meta.`);
     }
     if (insights.length === 0) insights.push("📊 Sem dados suficientes para análise neste período.");
     return insights;
@@ -492,7 +456,7 @@ interface DeptCardProps {
 }
 
 const DepartmentCard = ({ dept, kpis, viewMode, delay, today, soPct }: DeptCardProps) => {
-  const kpiKeys = ["faturamento", "margem", "arrecadacao", "volume"];
+  const kpiKeys = ["faturamento", "quantidade", "arrecadacao", "volume"];
 
   return (
     <motion.div
@@ -543,11 +507,10 @@ const KpiSection = ({ label, kpi, viewMode, today, soPct }: KpiSectionProps) => 
   const [expanded, setExpanded] = useState(false);
   const acumColor = kpi.pctAcumulado >= 100 ? "bg-emerald-500" : kpi.pctAcumulado >= 80 ? "bg-blue-500" : "bg-red-500";
   const totalColor = kpi.pctTotal >= 100 ? "bg-emerald-500" : kpi.pctTotal >= 80 ? "bg-blue-500" : "bg-amber-500";
-  const isCurrency = label !== "Margem" && label !== "Mix";
+  const isCurrency = label !== "Volume" && label !== "Mix";
   const valueFmt = (value: number) => {
-    if (soPct && label !== "Margem") return "—";
-    if (label === "Margem") return pctFmt(value);
-    if (label === "Mix") return value.toLocaleString("pt-BR", { maximumFractionDigits: 3 });
+    if (soPct) return "—";
+    if (label === "Volume" || label === "Mix") return value.toLocaleString("pt-BR", { maximumFractionDigits: 3 });
     return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
   };
 
@@ -685,7 +648,7 @@ const FinishLineAnimation = ({ deptKpis, departments }: { deptKpis: Record<strin
       const kpis = deptKpis[dept] || {};
       const avg = (
         (kpis.faturamento?.pctAcumulado || 0) +
-        (kpis.margem?.pctAcumulado || 0) +
+        (kpis.quantidade?.pctAcumulado || 0) +
         (kpis.arrecadacao?.pctAcumulado || 0) +
         (kpis.volume?.pctAcumulado || 0)
       ) / 4;
