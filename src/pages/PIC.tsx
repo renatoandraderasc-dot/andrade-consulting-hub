@@ -24,7 +24,7 @@ const KPI_LABELS: Record<string, string> = {
   faturamento: "Faturamento",
   quantidade: "Volume",
   arrecadacao: "Arrecadação",
-  volume: "Mix",
+  volume: "MIX de Produtos",
 };
 
 interface DayMetric {
@@ -507,10 +507,10 @@ const KpiSection = ({ label, kpi, viewMode, today, soPct }: KpiSectionProps) => 
   const [expanded, setExpanded] = useState(false);
   const acumColor = kpi.pctAcumulado >= 100 ? "bg-emerald-500" : kpi.pctAcumulado >= 80 ? "bg-blue-500" : "bg-red-500";
   const totalColor = kpi.pctTotal >= 100 ? "bg-emerald-500" : kpi.pctTotal >= 80 ? "bg-blue-500" : "bg-amber-500";
-  const isCurrency = label !== "Volume" && label !== "Mix";
+  const isCurrency = label !== "Volume" && label !== "MIX de Produtos";
   const valueFmt = (value: number) => {
     if (soPct) return "—";
-    if (label === "Volume" || label === "Mix") return value.toLocaleString("pt-BR", { maximumFractionDigits: 3 });
+    if (label === "Volume" || label === "MIX de Produtos") return value.toLocaleString("pt-BR", { maximumFractionDigits: 3 });
     return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
   };
 
@@ -540,7 +540,7 @@ const KpiSection = ({ label, kpi, viewMode, today, soPct }: KpiSectionProps) => 
   );
 
   return (
-    <div>
+    <div translate="no">
       <button onClick={() => setExpanded(!expanded)} className="w-full flex items-center justify-between mb-1.5 group cursor-pointer">
         <span className="text-xs font-heading font-bold text-foreground uppercase tracking-wider">{label}</span>
         <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`} />
