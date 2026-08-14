@@ -94,9 +94,10 @@ const AnaliseAnual = () => {
           return {
             ano: Number(a),
             mes: Number(m),
-            faturamento: num(pick(l, "receita_bruta", "faturamento", "total_vendido")),
+            faturamento: num(pick(l, "receita_bruta", "faturamento", "total_vendido", "vendas")),
             lucro: num(pick(l, "lucro_bruto", "lucro")),
-            volume: num(pick(l, "volume", "quantidade", "qtde")),
+            volume: num(pick(l, "volume", "quantidade", "qtde", "qtd")),
+
             departamento: dep,
             secao: String(pick(l, "secao", "nivel1") ?? dep).toUpperCase(),
             categoria: String(pick(l, "categoria", "nivel2") ?? dep).toUpperCase(),
@@ -134,9 +135,10 @@ const AnaliseAnual = () => {
               ano, mes, faturamento: 0, lucro: 0, volume: 0,
               departamento: secao, secao, categoria, turno,
             };
-            cur.faturamento += num(pick(l, "total_vendido", "faturamento", "venda"));
-            cur.lucro += num(pick(l, "lucro", "lucro_bruto"));
-            cur.volume += num(pick(l, "volume", "quantidade", "qtde"));
+            cur.faturamento += num(pick(l, "vendas", "total_vendido", "faturamento", "venda", "valor_venda", "valor", "total"));
+            cur.lucro += num(pick(l, "lucro", "lucro_bruto", "margem_valor"));
+            cur.volume += num(pick(l, "volume", "quantidade", "qtde", "qtd"));
+
             acc.set(k, cur);
           }
         }
