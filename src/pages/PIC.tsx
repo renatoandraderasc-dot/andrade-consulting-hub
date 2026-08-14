@@ -456,7 +456,7 @@ interface DeptCardProps {
 }
 
 const DepartmentCard = ({ dept, kpis, viewMode, delay, today, soPct }: DeptCardProps) => {
-  const kpiKeys = ["faturamento", "quantidade", "arrecadacao", "volume"];
+  const kpiKeys = ["faturamento", "quantidade", "volume", "arrecadacao"];
 
   return (
     <motion.div
