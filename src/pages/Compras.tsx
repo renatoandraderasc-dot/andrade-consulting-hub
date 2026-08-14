@@ -40,6 +40,16 @@ const monthRange = (year: number, month: number) => {
   return { inicio, fim };
 };
 
+/** Janela dos 6 meses fechados anteriores ao mês da meta. */
+const janela6Meses = (year: number, month: number) => {
+  const fimRef = new Date(year, month - 2, 1); // mês anterior
+  const iniRef = new Date(year, month - 7, 1); // 6 meses antes
+  const { inicio } = monthRange(iniRef.getFullYear(), iniRef.getMonth() + 1);
+  const { fim } = monthRange(fimRef.getFullYear(), fimRef.getMonth() + 1);
+  return { inicio, fim };
+};
+
+
 const Compras = () => {
   const { user, isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -72,6 +82,8 @@ const Compras = () => {
     meta_venda_mes: 0, parcelas_excesso: 3, hist_inicio: "", hist_fim: "",
   });
   const [deptos, setDeptos] = useState<any[]>([]);
+  const [edits, setEdits] = useState<Record<string, any>>({});
+  const [salvandoDeptos, setSalvandoDeptos] = useState(false);
   const [savingCfg, setSavingCfg] = useState(false);
   const [importando, setImportando] = useState(false);
   const [gerando, setGerando] = useState(false);
@@ -133,12 +145,12 @@ const Compras = () => {
       .select("*").eq("store_id", storeId).eq("ano", year).eq("mes", month).maybeSingle();
     if (data) setCfg(data);
     else {
-      // padrao: histórico = mesmo mês do ano anterior
-      const y = year - 1;
-      const { inicio, fim } = monthRange(y, month);
+      // padrao: histórico = os 6 meses fechados anteriores ao mês da meta
+      const { inicio, fim } = janela6Meses(year, month);
       setCfg({ meta_venda_mes: 0, parcelas_excesso: 3, hist_inicio: inicio, hist_fim: fim });
     }
   };
+
 
   const fetchDeptos = async () => {
     const { data } = await supabase.from("compras_departamento")
@@ -232,34 +244,61 @@ const Compras = () => {
     } finally { setSavingCfg(false); }
   };
 
-  const salvarDepto = async (row: any) => {
+  const salvarDepto = async (row: any, silencioso = false) => {
     if (!isAdmin) return;
     try {
+      const valores = {
+        tx_perdas: Number(row.tx_perdas) || 0,
+        tx_recuperacao: Number(row.tx_recuperacao) || 0,
+        ativo: !!row.ativo,
+      };
       if (row.id) {
-        const { error } = await supabase.from("compras_departamento")
-          .update({ tx_perdas: row.tx_perdas, tx_recuperacao: row.tx_recuperacao, ativo: row.ativo })
-          .eq("id", row.id);
+        const { error } = await supabase.from("compras_departamento").update(valores).eq("id", row.id);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("compras_departamento").insert({
-          store_id: storeId, departamento: row.departamento,
-          tx_perdas: row.tx_perdas, tx_recuperacao: row.tx_recuperacao, ativo: row.ativo,
+          store_id: storeId, departamento: row.departamento, ...valores,
         });
         if (error) throw error;
       }
-      toast({ title: "Salvo" });
-      fetchDeptos();
+      if (!silencioso) {
+        setEdits((e) => {
+          const c = { ...e };
+          delete c[row.departamento];
+          return c;
+        });
+        toast({ title: "Salvo" });
+        fetchDeptos();
+      }
     } catch (err: any) {
+      if (silencioso) throw err;
       toast({ title: "Erro", description: err.message, variant: "destructive" });
     }
   };
 
-  const importarHistorico = async () => {
+
+  const aplicar6Meses = () => {
+    const { inicio, fim } = janela6Meses(year, month);
+    setCfg((c: any) => ({ ...c, hist_inicio: inicio, hist_fim: fim }));
+  };
+
+  const importarHistorico = async (janela?: { inicio: string; fim: string }) => {
     if (!isAdmin) return;
+    const periodo = janela ?? { inicio: cfg.hist_inicio, fim: cfg.hist_fim };
+    if (!periodo.inicio || !periodo.fim) return;
     setImportando(true);
     try {
+      // grava a janela usada, para que a geração de metas respeite o mesmo histórico
+      await supabase.from("compras_config").upsert({
+        store_id: storeId, ano: year, mes: month,
+        meta_venda_mes: Number(cfg.meta_venda_mes) || 0,
+        parcelas_excesso: Number(cfg.parcelas_excesso) || 1,
+        hist_inicio: periodo.inicio, hist_fim: periodo.fim,
+      }, { onConflict: "store_id,ano,mes" });
+      setCfg((c: any) => ({ ...c, hist_inicio: periodo.inicio, hist_fim: periodo.fim }));
+
       const { data, error } = await supabase.functions.invoke("importar-compras-vr", {
-        body: { store_id: storeId, inicio: cfg.hist_inicio, fim: cfg.hist_fim },
+        body: { store_id: storeId, inicio: periodo.inicio, fim: periodo.fim },
       });
       if (error) throw error;
       toast({ title: "Histórico importado", description: `${data?.gravadas ?? 0} linhas em ${data?.meses ?? 0} mês(es).` });
@@ -269,8 +308,21 @@ const Compras = () => {
     } finally { setImportando(false); }
   };
 
+  const importar6Meses = async () => {
+    const janela = janela6Meses(year, month);
+    await importarHistorico(janela);
+  };
+
   const gerarMetas = async () => {
     if (!isAdmin) return;
+    if (!(Number(cfg.meta_venda_mes) > 0)) {
+      toast({
+        title: "Cadastre a meta de faturamento",
+        description: "Informe a meta de venda do mês e salve antes de gerar as metas de compra.",
+        variant: "destructive",
+      });
+      return;
+    }
     setGerando(true);
     try {
       const { data, error } = await supabase.rpc("gerar_metas_compra", {
@@ -283,10 +335,12 @@ const Compras = () => {
         description: `${r?.departamentos ?? 0} deptos · Venda ${fmtBRL(Number(r?.meta_venda_total ?? 0))} · Compra ${fmtBRL(Number(r?.meta_compra_total ?? 0))}`,
       });
       fetchMetas();
+      fetchDeptos();
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
     } finally { setGerando(false); }
   };
+
 
   // ============ Derived (Aba 1) ============
   const painelRows = useMemo(() => {
@@ -440,6 +494,39 @@ const Compras = () => {
     const set = new Set<string>(historico.map((r: any) => r.departamento));
     return Array.from(set).sort();
   }, [historico]);
+
+  // Todos os departamentos vistos no histórico / no mês entram na edição,
+  // mesmo os que ainda não têm cadastro de taxas.
+  const deptosView = useMemo(() => {
+    const map = new Map<string, any>();
+    for (const d of deptos) map.set(d.departamento, d);
+    for (const nome of new Set<string>([...deptOptions, ...Object.keys(realizadoDep)])) {
+      if (nome && !map.has(nome)) {
+        map.set(nome, { departamento: nome, tx_perdas: 0, tx_recuperacao: 1, ativo: true });
+      }
+    }
+    return Array.from(map.values())
+      .map((d) => ({ ...d, ...(edits[d.departamento] || {}) }))
+      .sort((a, b) => String(a.departamento).localeCompare(String(b.departamento)));
+  }, [deptos, deptOptions, realizadoDep, edits]);
+
+  const editarDepto = (departamento: string, patch: Record<string, any>) =>
+    setEdits((e) => ({ ...e, [departamento]: { ...(e[departamento] || {}), ...patch } }));
+
+  const salvarTodosDeptos = async () => {
+    if (!isAdmin) return;
+    setSalvandoDeptos(true);
+    try {
+      for (const d of deptosView) await salvarDepto(d, true);
+      setEdits({});
+      toast({ title: "Departamentos salvos", description: `${deptosView.length} departamento(s).` });
+      fetchDeptos();
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    } finally { setSalvandoDeptos(false); }
+  };
+
+
 
   const inputCls = "w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40";
   const btnPrimary = "flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 disabled:opacity-50";
@@ -813,18 +900,35 @@ const Compras = () => {
                   <button onClick={salvarConfig} disabled={savingCfg} className={btnPrimary}>
                     <Save className="w-4 h-4" /> Salvar
                   </button>
-                  <button onClick={importarHistorico} disabled={importando || !cfg.hist_inicio} className={btnGhost}>
+                  <button onClick={aplicar6Meses} className={btnGhost}>
+                    <RefreshCw className="w-4 h-4" /> Usar últimos 6 meses
+                  </button>
+                  <button onClick={() => importarHistorico()} disabled={importando || !cfg.hist_inicio} className={btnGhost}>
                     <Download className={`w-4 h-4 ${importando ? "animate-pulse" : ""}`} /> Importar histórico
+                  </button>
+                  <button onClick={importar6Meses} disabled={importando} className={btnGhost}>
+                    <Download className={`w-4 h-4 ${importando ? "animate-pulse" : ""}`} /> Importar 6 meses por departamento
                   </button>
                   <button onClick={gerarMetas} disabled={gerando} className={btnPrimary}>
                     <Wand2 className="w-4 h-4" /> Gerar metas de compra
                   </button>
                 </div>
               )}
+              <p className="text-xs text-muted-foreground mt-3">
+                O histórico padrão são os 6 meses fechados anteriores ao mês da meta, sempre por departamento.
+                A meta de faturamento precisa estar cadastrada acima antes de gerar as metas de compra.
+              </p>
             </div>
 
             <div className="bg-card border border-border rounded-xl p-5 overflow-x-auto">
-              <h3 className="text-sm font-semibold mb-3">Departamentos</h3>
+              <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+                <h3 className="text-sm font-semibold">Departamentos</h3>
+                {isAdmin && (
+                  <button onClick={salvarTodosDeptos} disabled={salvandoDeptos} className={btnGhost}>
+                    <Save className="w-4 h-4" /> Salvar todos
+                  </button>
+                )}
+              </div>
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border text-muted-foreground">
@@ -836,17 +940,20 @@ const Compras = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {deptos.map((d, idx) => (
-                    <tr key={d.id} className="border-b border-border/50">
-                      <td className="py-2 font-medium">{d.departamento}</td>
-                      <td className="py-2 px-2 text-right">
-                        <input type="number" step="0.001" disabled={!isAdmin} value={d.tx_perdas ?? 0} onChange={(e) => { const c = [...deptos]; c[idx] = { ...c[idx], tx_perdas: parseFloat(e.target.value) || 0 }; setDeptos(c); }} className="w-24 bg-transparent border border-border rounded px-2 py-1 text-right tabular-nums" />
+                  {deptosView.map((d) => (
+                    <tr key={d.departamento} className="border-b border-border/50">
+                      <td className="py-2 font-medium">
+                        {d.departamento}
+                        {!d.id && <span className="ml-2 text-[10px] text-muted-foreground">(novo)</span>}
                       </td>
                       <td className="py-2 px-2 text-right">
-                        <input type="number" step="0.001" disabled={!isAdmin} value={d.tx_recuperacao ?? 1} onChange={(e) => { const c = [...deptos]; c[idx] = { ...c[idx], tx_recuperacao: parseFloat(e.target.value) || 0 }; setDeptos(c); }} className="w-24 bg-transparent border border-border rounded px-2 py-1 text-right tabular-nums" />
+                        <input type="number" step="0.001" disabled={!isAdmin} value={d.tx_perdas ?? 0} onChange={(e) => editarDepto(d.departamento, { tx_perdas: parseFloat(e.target.value) || 0 })} className="w-24 bg-transparent border border-border rounded px-2 py-1 text-right tabular-nums" />
+                      </td>
+                      <td className="py-2 px-2 text-right">
+                        <input type="number" step="0.001" disabled={!isAdmin} value={d.tx_recuperacao ?? 1} onChange={(e) => editarDepto(d.departamento, { tx_recuperacao: parseFloat(e.target.value) || 0 })} className="w-24 bg-transparent border border-border rounded px-2 py-1 text-right tabular-nums" />
                       </td>
                       <td className="py-2 px-2 text-center">
-                        <input type="checkbox" disabled={!isAdmin} checked={!!d.ativo} onChange={(e) => { const c = [...deptos]; c[idx] = { ...c[idx], ativo: e.target.checked }; setDeptos(c); }} />
+                        <input type="checkbox" disabled={!isAdmin} checked={!!d.ativo} onChange={(e) => editarDepto(d.departamento, { ativo: e.target.checked })} />
                       </td>
                       {isAdmin && (
                         <td className="py-2 px-2 text-right">
@@ -855,12 +962,13 @@ const Compras = () => {
                       )}
                     </tr>
                   ))}
-                  {deptos.length === 0 && (
-                    <tr><td colSpan={isAdmin ? 5 : 4} className="py-6 text-center text-muted-foreground">Nenhum departamento cadastrado.</td></tr>
+                  {deptosView.length === 0 && (
+                    <tr><td colSpan={isAdmin ? 5 : 4} className="py-6 text-center text-muted-foreground">Importe o histórico para listar os departamentos.</td></tr>
                   )}
                 </tbody>
               </table>
             </div>
+
           </TabsContent>
 
           {/* ================= ABA 4 - HISTÓRICO ================= */}
