@@ -252,13 +252,14 @@ export const ClassificacaoVrTab = ({ storeId }: Props) => {
             <TableBody>
               {rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-6">
                     Nenhum mapeamento cadastrado
                   </TableCell>
                 </TableRow>
               ) : rows.map(r => (
                 <TableRow key={r.id}>
                   <TableCell className="font-mono text-sm">{r.id_tipo}</TableCell>
+                  <TableCell className="text-sm font-medium">{r.descricao_vr || "—"}</TableCell>
                   <TableCell className="text-sm">{r.tipo}</TableCell>
                   <TableCell className="text-sm">{r.subtipo}</TableCell>
                   <TableCell>
