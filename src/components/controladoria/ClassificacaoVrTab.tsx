@@ -51,7 +51,7 @@ export const ClassificacaoVrTab = ({ storeId }: Props) => {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<MapRow | null>(null);
-  const [form, setForm] = useState({ id_tipo: "", tipo: "Despesas", subtipo: "" });
+  const [form, setForm] = useState({ id_tipo: "", tipo: "Despesas", subtipo: "", descricao_vr: "" });
 
   const load = useCallback(async () => {
     if (!storeId) return;
