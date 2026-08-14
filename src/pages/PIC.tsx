@@ -22,7 +22,7 @@ const MONTHS = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", 
 const DEFAULT_DEPARTMENTS = ["PADARIA", "AÇOUGUE", "HORTIFRUTI"];
 const KPI_LABELS: Record<string, string> = {
   faturamento: "Faturamento",
-  margem: "Margem",
+  quantidade: "Volume",
   arrecadacao: "Arrecadação",
   volume: "Mix",
 };
@@ -322,7 +322,7 @@ const PIC = () => {
 
 
       result[dept].faturamento = calcKpi("meta_vendas", "realizado_vendas");
-      result[dept].margem = calcMargemKpi();
+      result[dept].quantidade = calcKpi("meta_volume", "realizado_volume");
       result[dept].arrecadacao = calcKpi("meta_lucro", "realizado_lucro");
       // Mix: realizado ao vivo (positivação acumulada) x meta mensal de meta_mix
       const metaMensalMix =
@@ -492,7 +492,7 @@ interface DeptCardProps {
 }
 
 const DepartmentCard = ({ dept, kpis, viewMode, delay, today, soPct }: DeptCardProps) => {
-  const kpiKeys = ["faturamento", "margem", "arrecadacao", "volume"];
+  const kpiKeys = ["faturamento", "quantidade", "arrecadacao", "volume"];
 
   return (
     <motion.div
@@ -543,11 +543,10 @@ const KpiSection = ({ label, kpi, viewMode, today, soPct }: KpiSectionProps) => 
   const [expanded, setExpanded] = useState(false);
   const acumColor = kpi.pctAcumulado >= 100 ? "bg-emerald-500" : kpi.pctAcumulado >= 80 ? "bg-blue-500" : "bg-red-500";
   const totalColor = kpi.pctTotal >= 100 ? "bg-emerald-500" : kpi.pctTotal >= 80 ? "bg-blue-500" : "bg-amber-500";
-  const isCurrency = label !== "Margem" && label !== "Mix";
+  const isCurrency = label !== "Volume" && label !== "Mix";
   const valueFmt = (value: number) => {
-    if (soPct && label !== "Margem") return "—";
-    if (label === "Margem") return pctFmt(value);
-    if (label === "Mix") return value.toLocaleString("pt-BR", { maximumFractionDigits: 3 });
+    if (soPct) return "—";
+    if (label === "Volume" || label === "Mix") return value.toLocaleString("pt-BR", { maximumFractionDigits: 3 });
     return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
   };
 
@@ -685,7 +684,7 @@ const FinishLineAnimation = ({ deptKpis, departments }: { deptKpis: Record<strin
       const kpis = deptKpis[dept] || {};
       const avg = (
         (kpis.faturamento?.pctAcumulado || 0) +
-        (kpis.margem?.pctAcumulado || 0) +
+        (kpis.quantidade?.pctAcumulado || 0) +
         (kpis.arrecadacao?.pctAcumulado || 0) +
         (kpis.volume?.pctAcumulado || 0)
       ) / 4;
