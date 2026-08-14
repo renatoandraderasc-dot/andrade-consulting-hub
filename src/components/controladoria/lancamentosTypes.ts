@@ -11,6 +11,9 @@ export interface Lancamento {
   valor: number;
   observacao: string | null;
   status: string;
+  origem?: string | null;
+  origem_ref?: string | null;
+
   created_at: string;
   updated_at: string;
 }
