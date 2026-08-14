@@ -398,12 +398,14 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
                     onCheckedChange={toggleSelectAll}
                   />
                 </TableHead>
-                <TableHead>Data</TableHead>
+                <TableHead>Vencimento</TableHead>
+                <TableHead>Tipo de entrada</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Conta</TableHead>
                 <TableHead>Descrição</TableHead>
                 <TableHead className="text-right">Valor</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
+
               </TableRow>
             </TableHeader>
             <TableBody>
