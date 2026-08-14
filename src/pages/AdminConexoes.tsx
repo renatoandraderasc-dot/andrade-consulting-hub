@@ -144,7 +144,10 @@ const AdminConexoes = () => {
           : r,
       ),
     );
-    if (!error && data?.online) await sondarRelatorios(storeId);
+    if (!error && data?.online) {
+      const loja = rows.find((r) => r.store_id === storeId);
+      await sondarRelatorios(storeId, loja?.sistema);
+    }
   };
 
   const testarTodos = async () => {
