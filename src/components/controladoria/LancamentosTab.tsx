@@ -102,18 +102,33 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
     setLoading(false);
   };
 
+  // "Tipo de entrada" = codigo do tipo no ERP, gravado na observacao (ex.: "Tipo VR 12")
+  const tipoEntradaDe = (l: Lancamento) => {
+    const m = /tipo VR ([\w-]+)/i.exec(l.observacao || "");
+    if (m) return `VR ${m[1]}`;
+    return l.origem === "VR" ? "VR sem tipo" : "Manual";
+  };
+
+  const tiposEntrada = useMemo(
+    () => Array.from(new Set(lancamentos.map(tipoEntradaDe))).sort(),
+    [lancamentos],
+  );
+
   const filtered = useMemo(() => {
     let result = lancamentos;
     if (filterTipo !== "Todos") result = result.filter(l => l.tipo === filterTipo);
+    if (filterEntrada !== "Todos") result = result.filter(l => tipoEntradaDe(l) === filterEntrada);
     if (filterBusca) {
       const q = filterBusca.toLowerCase();
       result = result.filter(l =>
         (l.descricao || "").toLowerCase().includes(q) ||
+        (l.observacao || "").toLowerCase().includes(q) ||
         l.subtipo.toLowerCase().includes(q)
       );
     }
     return result;
-  }, [lancamentos, filterTipo, filterBusca]);
+  }, [lancamentos, filterTipo, filterEntrada, filterBusca]);
+
 
   const totaisPorTipo = useMemo(() => {
     const map: Record<string, number> = {};
