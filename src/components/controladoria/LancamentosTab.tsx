@@ -104,16 +104,37 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
     setLoading(false);
   };
 
-  // "Tipo de entrada" = codigo do tipo no ERP, gravado na observacao (ex.: "Tipo VR 12")
+  // "Tipo de entrada": nome cadastrado no de-para (vr_lancamento_map.descricao_vr).
+  // O codigo do ERP fica gravado na observacao (ex.: "Tipo VR 12") e so aparece
+  // quando o tipo ainda nao tem nome cadastrado.
+  const [nomesTipo, setNomesTipo] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!storeId) return;
+    (async () => {
+      const { data } = await supabase
+        .from("vr_lancamento_map")
+        .select("store_id, id_tipo, descricao_vr")
+        .or(`store_id.eq.${storeId},store_id.is.null`);
+      const padrao: Record<string, string> = {};
+      const daLoja: Record<string, string> = {};
+      for (const m of (data as any[]) || []) {
+        if (!m.descricao_vr) continue;
+        (m.store_id ? daLoja : padrao)[String(m.id_tipo)] = m.descricao_vr;
+      }
+      setNomesTipo({ ...padrao, ...daLoja });
+    })();
+  }, [storeId]);
+
   const tipoEntradaDe = (l: Lancamento) => {
     const m = /tipo VR ([\w-]+)/i.exec(l.observacao || "");
-    if (m) return `VR ${m[1]}`;
+    if (m) return nomesTipo[m[1]] || `VR ${m[1]}`;
     return l.origem === "VR" ? "VR sem tipo" : "Manual";
   };
 
   const tiposEntrada = useMemo(
     () => Array.from(new Set(lancamentos.map(tipoEntradaDe))).sort(),
-    [lancamentos],
+    [lancamentos, nomesTipo],
   );
 
   const filtered = useMemo(() => {
@@ -129,7 +150,7 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
       );
     }
     return result;
-  }, [lancamentos, filterTipo, filterEntrada, filterBusca]);
+  }, [lancamentos, filterTipo, filterEntrada, filterBusca, nomesTipo]);
 
 
   const totaisPorTipo = useMemo(() => {

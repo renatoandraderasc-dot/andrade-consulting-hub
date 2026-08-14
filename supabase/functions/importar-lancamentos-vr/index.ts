@@ -131,13 +131,23 @@ Deno.serve(async (req) => {
         ? (r.dados as Record<string, unknown>[]).map((x, i) => ({
             ref: `CAP-${x.documento ?? i}-${x.parcela ?? 0}-${String(x.vencimento ?? "").slice(0, 10)}`,
             data_pagamento: String(x.vencimento ?? ""),
+            vencimento: String(x.vencimento ?? ""),
             valor_pago: x.valor,
             fornecedor: x.fornecedor,
             documento: x.documento,
-            observacao: x.situacao ? `Situacao ${x.situacao}` : null,
-            id_tipo: null,
+            observacao: x.observacao ?? (x.situacao ? `Situacao ${x.situacao}` : null),
+            // conectores VR tambem devolvem o tipo de entrada em contas_a_pagar
+            id_tipo: x.id_tipo ?? null,
           }))
-        : r.dados) as unknown as LinhaVr[];
+        : (r.dados as Record<string, unknown>[]).map((x, i) => ({
+            ...x,
+            // varios conectores VR nao devolvem "ref" em pagamentos_periodo:
+            // gera uma chave estavel para nao perder o lancamento nem duplicar.
+            ref: x.ref ??
+              `PG-${String(x.vencimento ?? x.data_pagamento ?? "").slice(0, 10)}-${x.documento ?? i}-${
+                String(x.fornecedor ?? "").slice(0, 20)
+              }-${x.valor_pago ?? x.valor ?? 0}-${x.id_tipo ?? ""}`,
+          }))) as unknown as LinhaVr[];
 
 
       const registros = [];

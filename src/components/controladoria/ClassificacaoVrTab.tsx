@@ -24,12 +24,14 @@ interface MapRow {
   id_tipo: number;
   tipo: string;
   subtipo: string;
+  descricao_vr: string | null;
 }
 
 interface Pendente {
   id_tipo: number;
   qtd: number;
   valor: number;
+  exemplo: string;
 }
 
 interface Props {
@@ -49,7 +51,7 @@ export const ClassificacaoVrTab = ({ storeId }: Props) => {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<MapRow | null>(null);
-  const [form, setForm] = useState({ id_tipo: "", tipo: "Despesas", subtipo: "" });
+  const [form, setForm] = useState({ id_tipo: "", tipo: "Despesas", subtipo: "", descricao_vr: "" });
 
   const load = useCallback(async () => {
     if (!storeId) return;
@@ -57,12 +59,12 @@ export const ClassificacaoVrTab = ({ storeId }: Props) => {
     const [{ data: maps }, { data: lanc }] = await Promise.all([
       supabase
         .from("vr_lancamento_map")
-        .select("id, store_id, id_tipo, tipo, subtipo")
+        .select("id, store_id, id_tipo, tipo, subtipo, descricao_vr")
         .or(`store_id.eq.${storeId},store_id.is.null`)
         .order("id_tipo"),
       supabase
         .from("lancamentos")
-        .select("valor, observacao")
+        .select("valor, observacao, descricao")
         .eq("store_id", storeId)
         .eq("origem", "VR")
         .like("observacao", "NAO CLASSIFICADO%")
@@ -75,7 +77,7 @@ export const ClassificacaoVrTab = ({ storeId }: Props) => {
     ((lanc as any[]) || []).forEach(l => {
       const m = /tipo VR (\-?\d+)/.exec(l.observacao || "");
       const idTipo = m ? Number(m[1]) : -1;
-      const cur = agg.get(idTipo) || { id_tipo: idTipo, qtd: 0, valor: 0 };
+      const cur = agg.get(idTipo) || { id_tipo: idTipo, qtd: 0, valor: 0, exemplo: String(l.descricao || "") };
       cur.qtd += 1;
       cur.valor += Number(l.valor) || 0;
       agg.set(idTipo, cur);
@@ -88,15 +90,20 @@ export const ClassificacaoVrTab = ({ storeId }: Props) => {
 
   const subcontas = useMemo(() => SUBCONTAS_V2[form.tipo] || [], [form.tipo]);
 
-  const openNew = (idTipo?: number) => {
+  const openNew = (idTipo?: number, descricao?: string) => {
     setEditing(null);
-    setForm({ id_tipo: idTipo != null ? String(idTipo) : "", tipo: "Despesas", subtipo: (SUBCONTAS_V2["Despesas"] || [])[0] || "" });
+    setForm({
+      id_tipo: idTipo != null ? String(idTipo) : "",
+      tipo: "Despesas",
+      subtipo: (SUBCONTAS_V2["Despesas"] || [])[0] || "",
+      descricao_vr: descricao ?? "",
+    });
     setDialogOpen(true);
   };
 
   const openEdit = (r: MapRow) => {
     setEditing(r);
-    setForm({ id_tipo: String(r.id_tipo), tipo: r.tipo, subtipo: r.subtipo });
+    setForm({ id_tipo: String(r.id_tipo), tipo: r.tipo, subtipo: r.subtipo, descricao_vr: r.descricao_vr ?? "" });
     setDialogOpen(true);
   };
 
@@ -109,7 +116,7 @@ export const ClassificacaoVrTab = ({ storeId }: Props) => {
     if (editing && editing.store_id) {
       const { error } = await supabase
         .from("vr_lancamento_map")
-        .update({ tipo: form.tipo, subtipo: form.subtipo })
+        .update({ tipo: form.tipo, subtipo: form.subtipo, descricao_vr: form.descricao_vr.trim() || null })
         .eq("id", editing.id);
       if (error) { toast.error("Erro ao salvar"); return; }
       toast.success("Mapeamento atualizado");
@@ -117,7 +124,13 @@ export const ClassificacaoVrTab = ({ storeId }: Props) => {
       const { error } = await supabase
         .from("vr_lancamento_map")
         .upsert(
-          { store_id: storeId, id_tipo: idTipo, tipo: form.tipo, subtipo: form.subtipo },
+          {
+            store_id: storeId,
+            id_tipo: idTipo,
+            tipo: form.tipo,
+            subtipo: form.subtipo,
+            descricao_vr: form.descricao_vr.trim() || null,
+          },
           { onConflict: "store_id,id_tipo" },
         );
       if (error) { toast.error("Erro ao salvar: " + error.message); return; }
@@ -182,7 +195,8 @@ export const ClassificacaoVrTab = ({ storeId }: Props) => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Tipo VR</TableHead>
+                  <TableHead className="w-[90px]">Tipo VR</TableHead>
+                  <TableHead>Exemplo de lançamento</TableHead>
                   <TableHead className="text-right">Lançamentos</TableHead>
                   <TableHead className="text-right">Valor total</TableHead>
                   <TableHead className="w-[130px]" />
@@ -192,6 +206,7 @@ export const ClassificacaoVrTab = ({ storeId }: Props) => {
                 {pendentes.map(p => (
                   <TableRow key={p.id_tipo}>
                     <TableCell className="font-mono text-sm">{p.id_tipo}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground max-w-[320px] truncate">{p.exemplo || "—"}</TableCell>
                     <TableCell className="text-right font-mono text-sm">{p.qtd}</TableCell>
                     <TableCell className="text-right font-mono text-sm">{fmtCurrency(p.valor)}</TableCell>
                     <TableCell className="text-right">
@@ -227,6 +242,7 @@ export const ClassificacaoVrTab = ({ storeId }: Props) => {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[90px]">ID Tipo</TableHead>
+                <TableHead>Tipo de entrada (nome)</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Subtipo</TableHead>
                 <TableHead className="w-[120px]">Origem</TableHead>
@@ -236,13 +252,14 @@ export const ClassificacaoVrTab = ({ storeId }: Props) => {
             <TableBody>
               {rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-6">
                     Nenhum mapeamento cadastrado
                   </TableCell>
                 </TableRow>
               ) : rows.map(r => (
                 <TableRow key={r.id}>
                   <TableCell className="font-mono text-sm">{r.id_tipo}</TableCell>
+                  <TableCell className="text-sm font-medium">{r.descricao_vr || "—"}</TableCell>
                   <TableCell className="text-sm">{r.tipo}</TableCell>
                   <TableCell className="text-sm">{r.subtipo}</TableCell>
                   <TableCell>
@@ -310,6 +327,17 @@ export const ClassificacaoVrTab = ({ storeId }: Props) => {
                 disabled={!!editing}
                 onChange={e => setForm(p => ({ ...p, id_tipo: e.target.value }))}
               />
+            </div>
+            <div>
+              <Label>Tipo de entrada (nome no ERP)</Label>
+              <Input
+                placeholder="Ex.: COMPRA DE MERCADORIA, MARMITEX"
+                value={form.descricao_vr}
+                onChange={e => setForm(p => ({ ...p, descricao_vr: e.target.value }))}
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Esse nome aparece na coluna "Tipo de entrada" dos lançamentos.
+              </p>
             </div>
             <div>
               <Label>Tipo</Label>
