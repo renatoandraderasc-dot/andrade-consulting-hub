@@ -22,6 +22,8 @@ export interface CatalogoItem {
   n2: string;
   n3: string;
   n4: string;
+  /** true quando o preco veio da media de venda (ERP sem tabela de precos completa) */
+  precoEstimado?: boolean;
 }
 
 const numOrNull = (v: unknown): number | null => {
@@ -77,46 +79,78 @@ export async function carregarBaseCatalogo(storeId: string): Promise<CatalogoIte
   const emCache = cache.get(storeId);
   if (emCache) return emCache;
 
-  const [rp, rpp, re] = await Promise.all([
+  // Alguns conectores (ORACLE/Intersolid) so publicam parte do cadastro em
+  // cada relatorio: "produtos" traz EAN/descricao de todos os itens, mas o
+  // preco so aparece em "estoque_atual"/"catalogo_produtos" (subconjuntos).
+  // Para nao deixar o item sem preco, usamos como ultimo recurso o preco
+  // medio de venda dos ultimos 90 dias (ranking_produtos).
+  const hoje = new Date();
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  const inicio90 = new Date(hoje.getTime() - 90 * 86400000);
+
+  const [rp, rpp, re, rc, rr] = await Promise.all([
     chamarRelatorio(storeId, "produtos", {}),
     chamarRelatorio(storeId, "produtos_precos", {}),
     chamarRelatorio(storeId, "estoque_atual", {}),
+    chamarRelatorio(storeId, "catalogo_produtos", {}),
+    chamarRelatorio(storeId, "ranking_produtos", { inicio: iso(inicio90), fim: iso(hoje) }),
   ]);
 
+  const chaveLinha = (l: any) => normalizarCodigo(col(l, "id_produto", "codigo", "produto_id"));
+
+  const indexar = (linhas: any[]) => {
+    const m = new Map<string, CatalogoItem>();
+    for (const l of linhas || []) {
+      const k = chaveLinha(l);
+      if (k) m.set(k, mapearLinhaCatalogo(l));
+    }
+    return m;
+  };
+
   // EAN / preco vindos de produtos_precos
-  const precos = new Map<string, CatalogoItem>();
-  for (const l of rpp.dados || []) {
-    const item = mapearLinhaCatalogo(l);
-    const k = normalizarCodigo(col(l, "id_produto", "codigo", "produto_id"));
-    if (k) precos.set(k, item);
-  }
-
+  const precos = indexar(rpp.dados || []);
   // Estoque e preco vindos de estoque_atual
-  const estoques = new Map<string, CatalogoItem>();
-  for (const l of re.dados || []) {
-    const item = mapearLinhaCatalogo(l);
-    const k = normalizarCodigo(col(l, "id_produto", "codigo", "produto_id"));
-    if (k) estoques.set(k, item);
+  const estoques = indexar(re.dados || []);
+  // Preco e oferta vindos de catalogo_produtos (quando publicado sem filtro)
+  const catalogo = indexar(rc.dados || []);
+
+  // Preco medio de venda (fallback): VENDAS / VOLUME
+  const medios = new Map<string, number>();
+  for (const l of rr.dados || []) {
+    const k = chaveLinha(l);
+    const vendas = numOrNull(col(l, "vendas", "total_vendido", "valor_venda", "total")) ?? 0;
+    const volume = numOrNull(col(l, "volume", "quantidade", "qtd")) ?? 0;
+    if (k && vendas > 0 && volume > 0) medios.set(k, Math.round((vendas / volume) * 100) / 100);
   }
 
-  const base = (rp.dados || []).length ? rp.dados : (rpp.dados || []).length ? rpp.dados : re.dados || [];
+  const base = (rp.dados || []).length
+    ? rp.dados
+    : (rc.dados || []).length
+      ? rc.dados
+      : (rpp.dados || []).length
+        ? rpp.dados
+        : re.dados || [];
 
   const lista: CatalogoItem[] = (base || []).map((l: any) => {
     const item = mapearLinhaCatalogo(l);
     const k = normalizarCodigo(item.codigo);
     const p = precos.get(k);
     const e = estoques.get(k);
+    const c = catalogo.get(k);
+    const medio = medios.get(k) ?? null;
+    const preco = item.preco || p?.preco || c?.preco || e?.preco || null;
     return {
       ...item,
-      ean: item.ean || p?.ean || "",
-      custo: item.custo ?? p?.custo ?? e?.custo ?? null,
-      preco: item.preco ?? p?.preco ?? e?.preco ?? null,
-      precoOferta: item.precoOferta ?? p?.precoOferta ?? e?.precoOferta ?? null,
+      ean: item.ean || p?.ean || c?.ean || "",
+      custo: item.custo ?? p?.custo ?? c?.custo ?? e?.custo ?? null,
+      preco: preco ?? medio,
+      precoEstimado: !preco && medio != null,
+      precoOferta: item.precoOferta || p?.precoOferta || c?.precoOferta || e?.precoOferta || null,
       estoque: item.estoque ?? e?.estoque ?? null,
-      n1: item.n1 || e?.n1 || "",
-      n2: item.n2 || e?.n2 || "",
-      n3: item.n3 || e?.n3 || "",
-      n4: item.n4 || e?.n4 || "",
+      n1: item.n1 || c?.n1 || e?.n1 || "",
+      n2: item.n2 || c?.n2 || e?.n2 || "",
+      n3: item.n3 || c?.n3 || e?.n3 || "",
+      n4: item.n4 || c?.n4 || e?.n4 || "",
     };
   });
 
