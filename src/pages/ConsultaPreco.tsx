@@ -22,6 +22,7 @@ interface Produto {
   preco: string | number | null;
   precoOferta: string | number | null;
   ean: string;
+  precoEstimado?: boolean;
 }
 
 const fmtBRL = (v: any) => {
@@ -112,6 +113,7 @@ const ConsultaPreco = () => {
       preco: p.preco,
       precoOferta: p.precoOferta,
       ean: p.ean,
+      precoEstimado: p.precoEstimado,
     }));
   };
 
@@ -296,6 +298,11 @@ const ConsultaPreco = () => {
               <div className="p-4">
                 <p className="text-xs uppercase tracking-wider text-muted-foreground">Preço Atual</p>
                 <p className="text-2xl font-bold text-foreground tabular-nums">{fmtBRL(produto.preco)}</p>
+                {produto.precoEstimado && (
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Preço médio de venda (90 dias) — o ERP desta loja não publica a tabela de preços completa.
+                  </p>
+                )}
               </div>
               <div className="p-4">
                 <p className="text-xs uppercase tracking-wider text-muted-foreground">Preço Promo</p>
