@@ -99,10 +99,13 @@ export async function consultarRelatorioLoja(opts: {
   for (const [k, v] of Object.entries(params ?? {})) {
     if (v !== undefined && v !== null) qs.set(k, String(v));
   }
-  // ORACLE exige o codigo da loja em todos os relatorios (bind :loja)
-  if (sistema === "ORACLE" && !qs.has("loja") && cfg.codigo_loja != null) {
+  // ORACLE exige o codigo da loja em todos os relatorios (bind :loja).
+  // Nos demais conectores (VR) o parametro e enviado quando a loja tem codigo
+  // cadastrado — conectores que nao filtram por loja simplesmente o ignoram.
+  if (!qs.has("loja") && cfg.codigo_loja != null) {
     qs.set("loja", String(cfg.codigo_loja));
   }
+
   qs.set("chave", cfg.api_key);
   const url = `${cfg.api_url.replace(/\/+$/, "")}/relatorios/${relatorio}?${qs.toString()}`;
 
