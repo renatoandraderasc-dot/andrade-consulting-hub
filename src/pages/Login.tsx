@@ -72,11 +72,6 @@ const Login = () => {
         setSuccess("Cadastro realizado! Aguarde a aprovação do administrador para acessar o sistema.");
       }
     } else {
-      if (!selectedStore) {
-        setError("Selecione uma loja.");
-        setLoading(false);
-        return;
-      }
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
       if (signInError) {
         setError(signInError.message);
@@ -90,22 +85,20 @@ const Login = () => {
         const isAdmin = roles && roles.length > 0;
 
         if (isAdmin) {
-          sessionStorage.setItem("selectedStoreId", selectedStore);
+          sessionStorage.removeItem("selectedStoreId");
           navigate(postLoginTarget);
         } else {
-          // Regular users need approved access to the selected store
+          // Regular users: resolve the store(s) already approved for them
           const { data: access } = await supabase
             .from("user_store_access")
-            .select("id")
+            .select("store_id")
             .eq("user_id", signInData.user.id)
-            .eq("store_id", selectedStore)
-            .eq("approved", true)
-            .limit(1);
+            .eq("approved", true);
           if (!access || access.length === 0) {
             await supabase.auth.signOut();
-            setError("Você não tem acesso aprovado a esta loja. Aguarde a aprovação do administrador.");
+            setError("Você ainda não tem acesso aprovado. Aguarde a aprovação do administrador.");
           } else {
-            sessionStorage.setItem("selectedStoreId", selectedStore);
+            sessionStorage.setItem("selectedStoreId", access[0].store_id);
             const allowed = await getAllowedModules(signInData.user.id);
             const landing = await getLandingPath(signInData.user.id);
             const nextAllowed =
