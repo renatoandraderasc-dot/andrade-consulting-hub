@@ -153,21 +153,23 @@ const Login = () => {
                     <Input id="name" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Seu nome" required />
                   </div>
                 )}
-                <div className="space-y-2">
-                  <Label htmlFor="store" className="font-body">Loja</Label>
-                  <select
-                    id="store"
-                    value={selectedStore}
-                    onChange={(e) => setSelectedStore(e.target.value)}
-                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm font-body text-foreground"
-                    required
-                  >
-                    <option value="">Selecione sua loja</option>
-                    {stores.map((s) => (
-                      <option key={s.id} value={s.id}>{s.name}</option>
-                    ))}
-                  </select>
-                </div>
+                {isSignup && (
+                  <div className="space-y-2">
+                    <Label htmlFor="store" className="font-body">Loja</Label>
+                    <select
+                      id="store"
+                      value={selectedStore}
+                      onChange={(e) => setSelectedStore(e.target.value)}
+                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm font-body text-foreground"
+                      required
+                    >
+                      <option value="">Selecione sua loja</option>
+                      {stores.map((s) => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="email" className="font-body">Email</Label>
                   <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" required />
