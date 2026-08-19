@@ -51,6 +51,31 @@ interface LinhaVr {
   ref: number;
 }
 
+// Quando o conector so publica contas_a_pagar (sem tipo de entrada),
+// separa despesas de compra de mercadoria pelo texto do titulo.
+const PALAVRAS: [RegExp, string, string][] = [
+  [/energ|eletr|enel|cpfl|cemig|light/i, "Despesas", "Energia"],
+  [/\bagua\b|água|saneam|sabesp|copasa/i, "Despesas", "Água"],
+  [/aluguel|locac|locaç|imovel|imóvel/i, "Despesas", "Aluguel"],
+  [/folha|salar|salár|rescis|ferias|férias|fgts|inss|vale.?transp|vale.?refei/i, "Despesas", "Folha"],
+  [/internet|telefon|vivo|claro|tim\b|oi\b|link\b/i, "Despesas", "Internet"],
+  [/manuten|conserto|reparo|refrig|equipament/i, "Despesas", "Manutenção"],
+  [/marketing|public|propagand|encarte|radio|rádio/i, "Despesas", "Marketing"],
+  [/contab|advog|consult|seguranc|seguranç|vigil|limpeza|terceir|assessor/i, "Despesas", "Serviços de terceiros"],
+  [/imposto|icms|pis\b|cofins|simples|das\b|iss\b|tribut/i, "Impostos", "Outros impostos"],
+  [/juros|tarifa|banc|emprest|emprést|financ|multa|encargo/i, "Despesas Financeiras", "Taxas bancárias"],
+  [/aliment|marmit|refeic|refeiç|copa\b|material de escrit|escritorio|escritório|cartor|cartór|taxa\b/i, "Despesas", "Despesas administrativas"],
+];
+
+function porPalavraChave(texto: string): { tipo: string; subtipo: string } | undefined {
+  if (!texto) return undefined;
+  for (const [re, tipo, subtipo] of PALAVRAS) {
+    if (re.test(texto)) return { tipo, subtipo };
+  }
+  return undefined;
+}
+
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
