@@ -8,7 +8,9 @@ import {
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import ChangePasswordDialog from "@/components/ChangePasswordDialog";
+import StoreSwitcher from "@/components/StoreSwitcher";
 import andradeLogo from "@/assets/andrade-logo.png";
+
 
 interface ClientLayoutProps {
   children: React.ReactNode;
