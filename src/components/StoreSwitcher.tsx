@@ -68,7 +68,7 @@ const StoreSwitcher = () => {
     window.location.reload();
   };
 
-  if (stores.length < 2) return null;
+  if (stores.length === 0) return null;
 
   return (
     <div className="flex items-center gap-1.5">
