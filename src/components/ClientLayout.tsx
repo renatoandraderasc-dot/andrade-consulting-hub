@@ -149,7 +149,9 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
 
         {menuOpen && (
           <div className="md:hidden bg-card border-t border-border">
+            <div className="p-3 border-b border-border sm:hidden"><StoreSwitcher /></div>
             {visibleNav.map((item) => (
+
               <NavButton key={item.path} item={item} mobile />
             ))}
             {isAdmin && (
