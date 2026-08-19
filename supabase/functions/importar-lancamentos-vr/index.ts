@@ -213,12 +213,48 @@ Deno.serve(async (req) => {
       }
 
       let gravados = 0;
+      let falhouGravacao = false;
       for (let i = 0; i < registros.length; i += 500) {
         const lote = registros.slice(i, i + 500);
         const { error } = await supabase.from("lancamentos")
           .upsert(lote, { onConflict: "store_id,origem,origem_ref" });
-        if (error) { detalhe.push({ periodo: b.ini, erro: error.message, gravados }); break; }
+        if (error) {
+          detalhe.push({ periodo: b.ini, erro: error.message, gravados });
+          falhouGravacao = true;
+          break;
+        }
         gravados += lote.length;
+      }
+
+      // O conector pode passar a filtrar corretamente uma loja depois de um
+      // período em que devolvia todas as filiais juntas. O upsert sozinho não
+      // remove esses pagamentos antigos. Após uma leitura e gravação completas,
+      // reconciliamos somente os registros VR desta loja e deste bloco mensal.
+      if (!falhouGravacao) {
+        const refsAtuais = new Set(registros.map((r) => String(r.origem_ref)));
+        const { data: existentes, error: erroLeitura } = await supabase
+          .from("lancamentos")
+          .select("id, origem_ref")
+          .eq("store_id", store_id)
+          .eq("origem", "VR")
+          .gte("data", b.ini)
+          .lte("data", b.fim);
+
+        if (erroLeitura) {
+          detalhe.push({ periodo: b.ini, erro: `falha ao reconciliar loja: ${erroLeitura.message}`, gravados });
+        } else {
+          const obsoletos = (existentes ?? [])
+            .filter((item) => !refsAtuais.has(String(item.origem_ref ?? "")))
+            .map((item) => item.id);
+
+          for (let i = 0; i < obsoletos.length; i += 100) {
+            const { error } = await supabase.from("lancamentos").delete().in("id", obsoletos.slice(i, i + 100));
+            if (error) {
+              detalhe.push({ periodo: b.ini, erro: `falha ao remover pagamentos de outra loja: ${error.message}`, gravados });
+              break;
+            }
+          }
+        }
       }
       gravadosTotal += gravados;
       detalhe.push({ periodo: b.ini, linhas_api: linhas.length, gravados });
