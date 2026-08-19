@@ -58,7 +58,7 @@ export const DEFAULT_CONTENT: SiteContent = {
     linkServicos: "Serviços",
     linkSobre: "Sobre",
     linkContato: "Contato",
-    linkClientes: "Clientes",
+    linkClientes: "Entrar",
     ctaFale: "Fale Conosco",
   },
   hero: {
