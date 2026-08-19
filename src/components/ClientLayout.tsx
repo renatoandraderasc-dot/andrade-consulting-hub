@@ -8,7 +8,9 @@ import {
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import ChangePasswordDialog from "@/components/ChangePasswordDialog";
+import StoreSwitcher from "@/components/StoreSwitcher";
 import andradeLogo from "@/assets/andrade-logo.png";
+
 
 interface ClientLayoutProps {
   children: React.ReactNode;
@@ -114,7 +116,9 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
           </nav>
 
           <div className="ml-auto flex items-center gap-2">
+            <div className="hidden sm:block"><StoreSwitcher /></div>
             <ThemeToggle />
+
             <Link
               to="/"
               className="hidden md:inline-flex items-center gap-1 px-2 py-1 text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
@@ -145,7 +149,9 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
 
         {menuOpen && (
           <div className="md:hidden bg-card border-t border-border">
+            <div className="p-3 border-b border-border sm:hidden"><StoreSwitcher /></div>
             {visibleNav.map((item) => (
+
               <NavButton key={item.path} item={item} mobile />
             ))}
             {isAdmin && (
