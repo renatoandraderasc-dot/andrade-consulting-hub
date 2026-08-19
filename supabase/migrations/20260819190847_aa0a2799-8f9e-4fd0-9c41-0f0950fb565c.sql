@@ -1,0 +1,1 @@
+update public.site_content set data = jsonb_set(data, '{navbar,linkClientes}', '"Entrar"'::jsonb) where id = 'home';
