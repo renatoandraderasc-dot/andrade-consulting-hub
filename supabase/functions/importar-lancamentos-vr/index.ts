@@ -51,6 +51,31 @@ interface LinhaVr {
   ref: number;
 }
 
+// Quando o conector so publica contas_a_pagar (sem tipo de entrada),
+// separa despesas de compra de mercadoria pelo texto do titulo.
+const PALAVRAS: [RegExp, string, string][] = [
+  [/energ|eletr|enel|cpfl|cemig|light/i, "Despesas", "Energia"],
+  [/\bagua\b|água|saneam|sabesp|copasa/i, "Despesas", "Água"],
+  [/aluguel|locac|locaç|imovel|imóvel/i, "Despesas", "Aluguel"],
+  [/folha|salar|salár|rescis|ferias|férias|fgts|inss|vale.?transp|vale.?refei/i, "Despesas", "Folha"],
+  [/internet|telefon|vivo|claro|tim\b|oi\b|link\b/i, "Despesas", "Internet"],
+  [/manuten|conserto|reparo|refrig|equipament/i, "Despesas", "Manutenção"],
+  [/marketing|public|propagand|encarte|radio|rádio/i, "Despesas", "Marketing"],
+  [/contab|advog|consult|seguranc|seguranç|vigil|limpeza|terceir|assessor/i, "Despesas", "Serviços de terceiros"],
+  [/imposto|icms|pis\b|cofins|simples|das\b|iss\b|tribut/i, "Impostos", "Outros impostos"],
+  [/juros|tarifa|banc|emprest|emprést|financ|multa|encargo/i, "Despesas Financeiras", "Taxas bancárias"],
+  [/aliment|marmit|refeic|refeiç|copa\b|material de escrit|escritorio|escritório|cartor|cartór|taxa\b/i, "Despesas", "Despesas administrativas"],
+];
+
+function porPalavraChave(texto: string): { tipo: string; subtipo: string } | undefined {
+  if (!texto) return undefined;
+  for (const [re, tipo, subtipo] of PALAVRAS) {
+    if (re.test(texto)) return { tipo, subtipo };
+  }
+  return undefined;
+}
+
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -136,8 +161,11 @@ Deno.serve(async (req) => {
             fornecedor: x.fornecedor,
             documento: x.documento,
             observacao: x.observacao ?? (x.situacao ? `Situacao ${x.situacao}` : null),
+            // texto livre do titulo, usado para separar despesa de compra
+            texto: [x.tipo, x.tipo_titulo, x.descricao, x.categoria, x.historico, x.fornecedor]
+              .filter(Boolean).join(" "),
             // conectores VR tambem devolvem o tipo de entrada em contas_a_pagar
-            id_tipo: x.id_tipo ?? null,
+            id_tipo: x.id_tipo ?? x.id_tipo_entrada ?? null,
           }))
         : (r.dados as Record<string, unknown>[]).map((x, i) => ({
             ...x,
@@ -160,7 +188,11 @@ Deno.serve(async (req) => {
         if (l.origem === "TRANSFERENCIA") continue;
 
         const cls = classificar(l.id_tipo) ??
-          (viaContasAPagar ? { tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" } : undefined);
+          (viaContasAPagar
+            ? (porPalavraChave((l as unknown as { texto?: string }).texto ?? "") ??
+              { tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" })
+            : undefined);
+
         // A data do lancamento e sempre o VENCIMENTO do titulo
         const data = String(l.vencimento || l.data_pagamento || "").slice(0, 10);
         const [ano, mes] = data.split("-").map(Number);
