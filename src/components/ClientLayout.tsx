@@ -114,7 +114,9 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
           </nav>
 
           <div className="ml-auto flex items-center gap-2">
+            <div className="hidden sm:block"><StoreSwitcher /></div>
             <ThemeToggle />
+
             <Link
               to="/"
               className="hidden md:inline-flex items-center gap-1 px-2 py-1 text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
