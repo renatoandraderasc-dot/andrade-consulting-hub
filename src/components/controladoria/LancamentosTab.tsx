@@ -127,6 +127,8 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
   }, [storeId]);
 
   const tipoEntradaDe = (l: Lancamento) => {
+    const nomeNovo = /tipo de entrada:\s*(.*?)\s*\(id\s+([\w-]+)\)/i.exec(l.observacao || "");
+    if (nomeNovo) return nomeNovo[1] !== "NÃO CADASTRADO" ? nomeNovo[1] : (nomesTipo[nomeNovo[2]] || `VR ${nomeNovo[2]}`);
     const m = /tipo VR ([\w-]+)/i.exec(l.observacao || "");
     if (m) return nomesTipo[m[1]] || `VR ${m[1]}`;
     return l.origem === "VR" ? "VR sem tipo" : "Manual";

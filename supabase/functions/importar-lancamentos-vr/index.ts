@@ -49,32 +49,8 @@ interface LinhaVr {
   observacao: string | null;
   origem: string;
   ref: number;
+  nome_tipo_entrada?: string | null;
 }
-
-// Quando o conector so publica contas_a_pagar (sem tipo de entrada),
-// separa despesas de compra de mercadoria pelo texto do titulo.
-const PALAVRAS: [RegExp, string, string][] = [
-  [/energ|eletr|enel|cpfl|cemig|light/i, "Despesas", "Energia"],
-  [/\bagua\b|água|saneam|sabesp|copasa/i, "Despesas", "Água"],
-  [/aluguel|locac|locaç|imovel|imóvel/i, "Despesas", "Aluguel"],
-  [/folha|salar|salár|rescis|ferias|férias|fgts|inss|vale.?transp|vale.?refei/i, "Despesas", "Folha"],
-  [/internet|telefon|vivo|claro|tim\b|oi\b|link\b/i, "Despesas", "Internet"],
-  [/manuten|conserto|reparo|refrig|equipament/i, "Despesas", "Manutenção"],
-  [/marketing|public|propagand|encarte|radio|rádio/i, "Despesas", "Marketing"],
-  [/contab|advog|consult|seguranc|seguranç|vigil|limpeza|terceir|assessor/i, "Despesas", "Serviços de terceiros"],
-  [/imposto|icms|pis\b|cofins|simples|das\b|iss\b|tribut/i, "Impostos", "Outros impostos"],
-  [/juros|tarifa|banc|emprest|emprést|financ|multa|encargo/i, "Despesas Financeiras", "Taxas bancárias"],
-  [/aliment|marmit|refeic|refeiç|copa\b|material de escrit|escritorio|escritório|cartor|cartór|taxa\b/i, "Despesas", "Despesas administrativas"],
-];
-
-function porPalavraChave(texto: string): { tipo: string; subtipo: string } | undefined {
-  if (!texto) return undefined;
-  for (const [re, tipo, subtipo] of PALAVRAS) {
-    if (re.test(texto)) return { tipo, subtipo };
-  }
-  return undefined;
-}
-
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -109,12 +85,17 @@ Deno.serve(async (req) => {
 
     // de-para: excecao da loja tem prioridade sobre o padrao (store_id NULL)
     const { data: mapas } = await supabase.from("vr_lancamento_map")
-      .select("store_id, id_tipo, tipo, subtipo")
+      .select("store_id, id_tipo, tipo, subtipo, descricao_vr")
       .or(`store_id.eq.${store_id},store_id.is.null`);
-    const padrao = new Map<number, { tipo: string; subtipo: string }>();
-    const daLoja = new Map<number, { tipo: string; subtipo: string }>();
+    type Classificacao = { tipo: string; subtipo: string; descricao_vr: string | null };
+    const padrao = new Map<number, Classificacao>();
+    const daLoja = new Map<number, Classificacao>();
     for (const m of mapas ?? []) {
-      (m.store_id ? daLoja : padrao).set(m.id_tipo, { tipo: m.tipo, subtipo: m.subtipo });
+      (m.store_id ? daLoja : padrao).set(m.id_tipo, {
+        tipo: m.tipo,
+        subtipo: m.subtipo,
+        descricao_vr: m.descricao_vr,
+      });
     }
     const classificar = (idTipo: number | string | null) => {
       const n = idTipo === null || idTipo === "" ? NaN : Number(idTipo);
@@ -161,14 +142,14 @@ Deno.serve(async (req) => {
             fornecedor: x.fornecedor,
             documento: x.documento,
             observacao: x.observacao ?? (x.situacao ? `Situacao ${x.situacao}` : null),
-            // texto livre do titulo, usado para separar despesa de compra
-            texto: [x.tipo, x.tipo_titulo, x.descricao, x.categoria, x.historico, x.fornecedor]
-              .filter(Boolean).join(" "),
-            // conectores VR tambem devolvem o tipo de entrada em contas_a_pagar
-            id_tipo: x.id_tipo ?? x.id_tipo_entrada ?? null,
+            // Classificacao sempre pelo Tipo de Entrada informado pelo ERP.
+            id_tipo: x.id_tipo ?? x.id_tipo_entrada ?? x.tipo_entrada_id ?? x.cod_tipo_entrada ?? null,
+            nome_tipo_entrada: String(x.tipo_entrada ?? x.descricao_tipo ?? x.nome_tipo ?? "") || null,
           }))
         : (r.dados as Record<string, unknown>[]).map((x, i) => ({
             ...x,
+            id_tipo: x.id_tipo ?? x.id_tipo_entrada ?? x.tipo_entrada_id ?? x.cod_tipo_entrada ?? null,
+            nome_tipo_entrada: String(x.tipo_entrada ?? x.descricao_tipo ?? x.nome_tipo ?? "") || null,
             // varios conectores VR nao devolvem "ref" em pagamentos_periodo:
             // gera uma chave estavel para nao perder o lancamento nem duplicar.
             ref: x.ref ??
@@ -187,11 +168,7 @@ Deno.serve(async (req) => {
         // transferencias entre lojas nao sao despesa nem compra
         if (l.origem === "TRANSFERENCIA") continue;
 
-        const cls = classificar(l.id_tipo) ??
-          (viaContasAPagar
-            ? (porPalavraChave((l as unknown as { texto?: string }).texto ?? "") ??
-              { tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" })
-            : undefined);
+        const cls = classificar(l.id_tipo);
 
         // A data do lancamento e sempre o VENCIMENTO do titulo
         const data = String(l.vencimento || l.data_pagamento || "").slice(0, 10);
@@ -213,7 +190,8 @@ Deno.serve(async (req) => {
         const idTipoTxt = l.id_tipo === null || l.id_tipo === undefined || l.id_tipo === ""
           ? (viaContasAPagar ? "CAP" : "SEM TIPO")
           : String(l.id_tipo);
-        const obsBase = `Tipo VR ${idTipoTxt}`;
+        const nomeTipo = cls?.descricao_vr || l.nome_tipo_entrada;
+        const obsBase = `Tipo de Entrada: ${nomeTipo || "NÃO CADASTRADO"} (ID ${idTipoTxt})`;
 
         registros.push({
           store_id,
@@ -225,10 +203,7 @@ Deno.serve(async (req) => {
           subtipo: cls?.subtipo ?? "OUTROS",
           descricao: partes.slice(0, 300) || "Pagamento VR",
           valor: Math.round(valor * 100) / 100,
-          observacao: cls
-            ? [obsBase, viaContasAPagar ? "Origem: contas a pagar (VR sem pagamentos_periodo)" : null]
-                .filter(Boolean).join(" · ")
-            : `NAO CLASSIFICADO — ${obsBase}`,
+          observacao: cls ? obsBase : `NÃO CLASSIFICADO — ${obsBase}`,
 
           status: "ativo",
           origem: "VR",
