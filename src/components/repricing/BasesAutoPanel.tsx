@@ -54,19 +54,19 @@ const BasesAutoPanel = ({
     setLoadingP(true);
     try {
       const base = await carregarBaseCatalogo(storeId);
-      const rows: Linha[] = base
-        .filter((p) => p.ean || p.codigo)
-        .map((p) => ({
-          ean: p.ean || p.codigo,
-          descricao: p.descricao,
-          custo: p.custo ?? 0,
-          preco: p.precoOferta || p.preco || 0,
-          mercadologico: [p.n1, p.n2].filter(Boolean).join(" / ") || "Outros",
-        }));
+      // Nunca usar o codigo interno como EAN: sem codigo de barras, campo vazio.
+      const rows: Linha[] = base.map((p) => ({
+        ean: String(p.ean ?? "").trim(),
+        descricao: p.descricao,
+        custo: p.custo ?? 0,
+        preco: p.precoOferta || p.preco || 0,
+        mercadologico: [p.n1, p.n2].filter(Boolean).join(" / ") || "Outros",
+      }));
+      const comEan = rows.filter((r) => String(r.ean).replace(/\D/g, "").length >= 8).length;
       onProdutos(rows);
-      rows.length
-        ? toast.success(`${rows.length} produtos do cadastro carregados`)
-        : toast.error("Nenhum produto retornado pelo sistema da loja");
+      if (!rows.length) toast.error("Nenhum produto retornado pelo sistema da loja");
+      else if (!comEan) toast.error(`${rows.length} produtos carregados, mas nenhum tem código de barras`);
+      else toast.success(`${rows.length} produtos carregados (${comEan} com código de barras)`);
     } catch {
       toast.error("Falha ao carregar o cadastro de produtos");
     }
@@ -79,19 +79,19 @@ const BasesAutoPanel = ({
     setLoadingC(true);
     const rows: Linha[] = [];
     const passo = 1000;
-    for (let de = 0; de < 60000; de += passo) {
+    for (let de = 0; de < 200000; de += passo) {
       const { data, error } = await supabase
         .from("precos_concorrente")
-        .select("ean, nome, preco, preco_de, em_promocao, disponivel")
+        .select("id, ean, nome, preco, preco_de, em_promocao, disponivel")
         .eq("concorrente_id", concSel)
         .eq("disponivel", true)
-        .not("ean", "is", null)
+        .order("id", { ascending: true })
         .range(de, de + passo - 1);
       if (error) { toast.error(error.message); break; }
       const lote = data || [];
       for (const r of lote) {
         rows.push({
-          ean: r.ean,
+          ean: String(r.ean ?? "").trim(),
           descricao: r.nome ?? "",
           preco: r.preco_de ?? r.preco ?? 0,
           oferta: r.em_promocao ? (r.preco ?? 0) : 0,
@@ -101,8 +101,9 @@ const BasesAutoPanel = ({
     }
     onConcorrente(rows);
     setLoadingC(false);
+    const comEanC = rows.filter((r) => String(r.ean).replace(/\D/g, "").length >= 8).length;
     rows.length
-      ? toast.success(`${rows.length} preços do concorrente carregados`)
+      ? toast.success(`${rows.length} preços carregados (${comEanC} com código de barras)`)
       : toast.error("Nenhum preço coletado para este concorrente ainda");
   }, [concSel, onConcorrente]);
 
@@ -118,9 +119,9 @@ const BasesAutoPanel = ({
       try {
         const base = await carregarBaseCatalogo(l.id);
         for (const p of base) {
-          if (!p.ean && !p.codigo) continue;
+          if (!String(p.ean ?? "").trim()) continue;
           rows.push({
-            ean: p.ean || p.codigo,
+            ean: String(p.ean).trim(),
             descricao: p.descricao,
             preco: p.precoOferta || p.preco || 0,
             custo: p.custo ?? 0,

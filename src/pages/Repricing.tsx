@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import ClientLayout from "@/components/ClientLayout";
 import BasesAutoPanel from "@/components/repricing/BasesAutoPanel";
 import RepricingResultTable from "@/components/repricing/RepricingResultTable";
-import { useRepricingProcessor } from "@/components/repricing/useRepricingProcessor";
+import { useRepricingProcessor, useRepricingDiagnostico } from "@/components/repricing/useRepricingProcessor";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +46,7 @@ const Repricing = () => {
   }, [storeId]);
 
   const rows = useRepricingProcessor(produtos, concorrentes, auxiliar);
+  const diag = useRepricingDiagnostico(produtos, concorrentes);
   const allLoaded = produtos.length > 0 && concorrentes.length > 0;
 
   const handleReset = () => {
@@ -94,11 +95,17 @@ const Repricing = () => {
         />
 
         {/* Status */}
-        {allLoaded && (
+        {(produtos.length > 0 || concorrentes.length > 0) && (
           <div className="flex items-center gap-3 flex-wrap">
             <Badge variant="outline" className="gap-1.5 py-1">
               <FileSpreadsheet className="w-3.5 h-3.5" />
-              {rows.length} produtos cruzados por EAN
+              {rows.length} produtos cruzados por código de barras
+            </Badge>
+            <Badge variant="outline" className={`py-1 ${diag.produtosComEan ? "" : "bg-destructive/10 text-destructive border-destructive/30"}`}>
+              Loja: {diag.produtosComEan.toLocaleString("pt-BR")} com código · {diag.produtosSemEan.toLocaleString("pt-BR")} sem código
+            </Badge>
+            <Badge variant="outline" className={`py-1 ${diag.concorrentesComEan ? "" : "bg-destructive/10 text-destructive border-destructive/30"}`}>
+              Concorrente: {diag.concorrentesComEan.toLocaleString("pt-BR")} com código · {diag.concorrentesSemEan.toLocaleString("pt-BR")} sem código
             </Badge>
             {auxiliar.length > 0 && (
               <Badge variant="outline" className="gap-1.5 py-1 bg-amber-500/10 text-amber-700 border-amber-500/20">
@@ -116,7 +123,15 @@ const Repricing = () => {
           <div className="text-center py-12 text-muted-foreground">
             <FileSpreadsheet className="w-10 h-10 mx-auto mb-3 opacity-40" />
             <p className="font-medium">Nenhum produto cruzado</p>
-            <p className="text-sm mt-1">Verifique se as colunas de EAN estão corretas nas duas bases.</p>
+            <p className="text-sm mt-1">
+              {diag.produtosComEan === 0 && diag.concorrentesComEan === 0
+                ? "Nenhum dos dois lados tem código de barras: a loja e o concorrente estão sem essa informação."
+                : diag.produtosComEan === 0
+                  ? "O cadastro da loja não traz código de barras — o sistema da loja não está publicando esse campo."
+                  : diag.concorrentesComEan === 0
+                    ? "A pesquisa do concorrente está sem código de barras nos itens coletados."
+                    : "Os dois lados têm código de barras, mas nenhum código coincide entre as bases."}
+            </p>
           </div>
         )}
 
