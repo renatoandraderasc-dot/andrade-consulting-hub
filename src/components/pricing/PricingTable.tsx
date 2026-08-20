@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -161,13 +161,13 @@ const PricingTable = ({ rows, concorrentes, semEanTotal }: Props) => {
             <TableRow className="bg-muted/20">
               <TableHead colSpan={9} />
               {concorrentes.map((c) => (
-                <>
-                  <Th key={`${c.id}p`} k={`${c.id}:preco`} className="text-right border-l border-border text-[11px]">Preço</Th>
-                  <Th key={`${c.id}v`} k={`${c.id}:venda`} className="text-right text-[11px]">Venda sim.</Th>
-                  <Th key={`${c.id}l`} k={`${c.id}:lucro`} className="text-right text-[11px]">Lucro sim.</Th>
-                  <Th key={`${c.id}m`} k={`${c.id}:margem`} className="text-right text-[11px]">Margem sim.</Th>
-                  <Th key={`${c.id}d`} k={`${c.id}:dif`} className="text-right text-[11px]">Diferença</Th>
-                </>
+                <Fragment key={c.id}>
+                  <Th k={`${c.id}:preco`} className="text-right border-l border-border text-[11px]">Preço</Th>
+                  <Th k={`${c.id}:venda`} className="text-right text-[11px]">Venda sim.</Th>
+                  <Th k={`${c.id}:lucro`} className="text-right text-[11px]">Lucro sim.</Th>
+                  <Th k={`${c.id}:margem`} className="text-right text-[11px]">Margem sim.</Th>
+                  <Th k={`${c.id}:dif`} className="text-right text-[11px]">Diferença</Th>
+                </Fragment>
               ))}
             </TableRow>
           </TableHeader>
@@ -200,8 +200,8 @@ const PricingTable = ({ rows, concorrentes, semEanTotal }: Props) => {
                   const difPct = preco != null && preco > 0 ? ((r.meuPreco - preco) / preco) * 100 : null;
                   const cor = dif == null ? "" : dif < 0 ? "text-green-600" : dif > 0 ? "text-destructive" : "text-muted-foreground";
                   return (
-                    <>
-                      <TableCell key={`${c.id}p`} className="text-right text-sm tabular-nums border-l border-border">
+                    <Fragment key={c.id}>
+                      <TableCell className="text-right text-sm tabular-nums border-l border-border">
                         {preco != null ? (
                           <span className="inline-flex items-center gap-1 justify-end">
                             {brl(preco)}
@@ -222,20 +222,20 @@ const PricingTable = ({ rows, concorrentes, semEanTotal }: Props) => {
                           "—"
                         )}
                       </TableCell>
-                      <TableCell key={`${c.id}v`} className="text-right text-sm tabular-nums">
+                      <TableCell className="text-right text-sm tabular-nums">
                         {preco != null ? brl(preco * r.qtdVendas) : "—"}
                       </TableCell>
-                      <TableCell key={`${c.id}l`} className="text-right text-sm tabular-nums">
+                      <TableCell className="text-right text-sm tabular-nums">
                         {preco != null ? brl((preco - r.custo) * r.qtdVendas) : "—"}
                       </TableCell>
-                      <TableCell key={`${c.id}m`} className="text-right text-sm tabular-nums">
+                      <TableCell className="text-right text-sm tabular-nums">
                         {preco != null && preco > 0 ? pct(((preco - r.custo) / preco) * 100) : "—"}
                       </TableCell>
-                      <TableCell key={`${c.id}d`} className={`text-right text-sm tabular-nums font-semibold ${cor}`}>
+                      <TableCell className={`text-right text-sm tabular-nums font-semibold ${cor}`}>
                         {dif != null ? `${dif > 0 ? "+" : ""}${brl(dif)}` : "—"}
                         {difPct != null && <div className="text-[10px] font-normal">{difPct > 0 ? "+" : ""}{difPct.toFixed(1)}%</div>}
                       </TableCell>
-                    </>
+                    </Fragment>
                   );
                 })}
               </TableRow>
