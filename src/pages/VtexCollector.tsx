@@ -169,7 +169,7 @@ const VtexCollector = () => {
           <div>
             <h1 className="text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
               <Database className="w-6 h-6 text-primary" />
-              Coletor VTEX – Santo Antônio em Casa
+              Coletor de Preços – Santo Antônio em Casa
             </h1>
             <p className="text-sm text-muted-foreground mt-0.5">
               Extração completa do catálogo com paginação automática e deduplicação
@@ -191,7 +191,7 @@ const VtexCollector = () => {
             <CardContent className="p-4 space-y-2">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Varrendo catálogo VTEX... Estratégias: Search API → Categorias → Marcas → Sitemap
+                Varrendo o catálogo do concorrente por categorias e marcas...
               </div>
               <Progress value={33} className="h-2" />
             </CardContent>
