@@ -74,7 +74,7 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
       <Link
         to={item.path}
         onClick={() => setMenuOpen(false)}
-        className={`relative flex items-center gap-2 px-3 h-full text-[13px] font-medium transition-colors ${
+        className={`relative flex items-center gap-2 px-3 h-full text-[13px] font-medium transition-colors shrink-0 whitespace-nowrap ${
           mobile ? "py-3 border-b border-border w-full" : ""
         } ${active ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
       >
@@ -103,7 +103,7 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
             )}
           </Link>
 
-          <nav className="hidden md:flex items-stretch">
+          <nav className="hidden md:flex items-stretch flex-1 min-w-0 overflow-x-auto scrollbar-thin">
             {visibleNav.map((item) => (
               <NavButton key={item.path} item={item} />
             ))}
@@ -115,6 +115,7 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
               </div>
             )}
           </nav>
+
 
           <div className="ml-auto flex items-center gap-2">
             <div className="hidden sm:block"><StoreSwitcher /></div>

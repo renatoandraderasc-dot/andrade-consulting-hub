@@ -9,6 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, RotateCcw, FileSpreadsheet } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import ConcorrentesTab from "@/components/repricing/ConcorrentesTab";
 
 const Repricing = () => {
   const [searchParams] = useSearchParams();
@@ -52,8 +54,20 @@ const Repricing = () => {
           )}
         </div>
 
+        <Tabs defaultValue="bases">
+          <TabsList>
+            <TabsTrigger value="bases">Importação de Bases</TabsTrigger>
+            <TabsTrigger value="concorrentes">Concorrentes & Coleta</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="concorrentes" className="mt-4">
+            <ConcorrentesTab />
+          </TabsContent>
+
+          <TabsContent value="bases" className="mt-4 space-y-5">
         {/* Upload Section */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
           <FileUploadCard
             label="Tipo 1: Cadastro Atual dos Produtos"
             description="Base com EAN, preço atual, custo e classificação mercadológica dos produtos da loja."
@@ -114,6 +128,8 @@ const Repricing = () => {
             <p className="text-sm mt-1">Importe pelo menos a <strong>Base de Produtos</strong> e a <strong>Pesquisa Grandes</strong> para iniciar a análise.</p>
           </div>
         )}
+          </TabsContent>
+        </Tabs>
       </div>
     </ClientLayout>
   );
