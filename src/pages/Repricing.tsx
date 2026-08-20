@@ -105,8 +105,8 @@ const Repricing = () => {
         {!allLoaded && (
           <div className="text-center py-12 text-muted-foreground">
             <FileSpreadsheet className="w-10 h-10 mx-auto mb-3 opacity-40" />
-            <p className="font-medium">Aguardando upload das bases</p>
-            <p className="text-sm mt-1">Importe pelo menos a <strong>Base de Produtos</strong> e a <strong>Pesquisa Grandes</strong> para iniciar a análise.</p>
+            <p className="font-medium">Aguardando o carregamento das bases</p>
+            <p className="text-sm mt-1">Carregue pelo menos o <strong>cadastro atual da loja</strong> e a <strong>pesquisa do concorrente</strong> para iniciar a análise.</p>
           </div>
         )}
           </TabsContent>
