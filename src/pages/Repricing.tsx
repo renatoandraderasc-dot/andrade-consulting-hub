@@ -45,7 +45,7 @@ const Repricing = () => {
       .then(({ data }) => { if (data) setStoreName(data.name); });
   }, [storeId]);
 
-  const rows = useRepricingProcessor(produtos, concorrentes, auxiliar);
+  const { rows, concorrentesMeta } = useRepricingProcessor(produtos, concorrentes, auxiliar);
   const diag = useRepricingDiagnostico(produtos, concorrentes);
   const allLoaded = produtos.length > 0 && concorrentes.length > 0;
 
@@ -110,14 +110,16 @@ const Repricing = () => {
             {auxiliar.length > 0 && (
               <Badge variant="outline" className="gap-1.5 py-1 bg-amber-500/10 text-amber-700 border-amber-500/20">
                 <Sparkles className="w-3.5 h-3.5" />
-                Base auxiliar disponível para correspondência IA
+                Base interna da rede: {auxiliar.length.toLocaleString("pt-BR")} preços de outras lojas
               </Badge>
             )}
           </div>
         )}
 
         {/* Results */}
-        {allLoaded && rows.length > 0 && <RepricingResultTable rows={rows} />}
+        {allLoaded && rows.length > 0 && (
+          <RepricingResultTable rows={rows} concorrentesMeta={concorrentesMeta} />
+        )}
 
         {allLoaded && rows.length === 0 && (
           <div className="text-center py-12 text-muted-foreground">
