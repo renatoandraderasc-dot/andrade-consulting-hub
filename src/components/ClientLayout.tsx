@@ -103,7 +103,7 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
             )}
           </Link>
 
-          <nav className="hidden md:flex items-stretch">
+          <nav className="hidden md:flex items-stretch flex-1 min-w-0 overflow-x-auto scrollbar-thin">
             {visibleNav.map((item) => (
               <NavButton key={item.path} item={item} />
             ))}
@@ -115,6 +115,7 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
               </div>
             )}
           </nav>
+
 
           <div className="ml-auto flex items-center gap-2">
             <div className="hidden sm:block"><StoreSwitcher /></div>
