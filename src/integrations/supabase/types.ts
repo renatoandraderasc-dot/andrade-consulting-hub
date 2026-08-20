@@ -487,6 +487,7 @@ export type Database = {
           dia_fim: number
           dia_inicio: number
           id: string
+          modelo_id: string | null
           nome: string
           ordem: number
           tipo_faixa: string
@@ -499,6 +500,7 @@ export type Database = {
           dia_fim: number
           dia_inicio: number
           id?: string
+          modelo_id?: string | null
           nome: string
           ordem?: number
           tipo_faixa?: string
@@ -511,15 +513,109 @@ export type Database = {
           dia_fim?: number
           dia_inicio?: number
           id?: string
+          modelo_id?: string | null
           nome?: string
           ordem?: number
           tipo_faixa?: string
           updated_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "encarte_calendario_modelo_id_fkey"
+            columns: ["modelo_id"]
+            isOneToOne: false
+            referencedRelation: "encarte_modelo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      encarte_categoria: {
+        Row: {
+          amarelo: boolean
+          created_at: string
+          departamento: string | null
+          id: string
+          neutro: boolean
+          nome: string
+          ordem: number
+          termos: string[]
+          updated_at: string
+          vermelho: boolean
+        }
+        Insert: {
+          amarelo?: boolean
+          created_at?: string
+          departamento?: string | null
+          id?: string
+          neutro?: boolean
+          nome: string
+          ordem?: number
+          termos?: string[]
+          updated_at?: string
+          vermelho?: boolean
+        }
+        Update: {
+          amarelo?: boolean
+          created_at?: string
+          departamento?: string | null
+          id?: string
+          neutro?: boolean
+          nome?: string
+          ordem?: number
+          termos?: string[]
+          updated_at?: string
+          vermelho?: boolean
+        }
         Relationships: []
+      }
+      encarte_categoria_map: {
+        Row: {
+          categoria_id: string
+          created_at: string
+          grupo: string | null
+          id: string
+          secao: string | null
+          store_id: string
+          subgrupo: string | null
+        }
+        Insert: {
+          categoria_id: string
+          created_at?: string
+          grupo?: string | null
+          id?: string
+          secao?: string | null
+          store_id: string
+          subgrupo?: string | null
+        }
+        Update: {
+          categoria_id?: string
+          created_at?: string
+          grupo?: string | null
+          id?: string
+          secao?: string | null
+          store_id?: string
+          subgrupo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "encarte_categoria_map_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "encarte_categoria"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "encarte_categoria_map_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       encarte_config_loja: {
         Row: {
+          carga_tributaria_pct: number
           created_at: string
           fecha_domingo: boolean
           id: string
@@ -529,8 +625,10 @@ export type Database = {
           store_id: string
           total_itens: number
           updated_at: string
+          variacao_max_pct: number
         }
         Insert: {
+          carga_tributaria_pct?: number
           created_at?: string
           fecha_domingo?: boolean
           id?: string
@@ -540,8 +638,10 @@ export type Database = {
           store_id: string
           total_itens?: number
           updated_at?: string
+          variacao_max_pct?: number
         }
         Update: {
+          carga_tributaria_pct?: number
           created_at?: string
           fecha_domingo?: boolean
           id?: string
@@ -551,6 +651,7 @@ export type Database = {
           store_id?: string
           total_itens?: number
           updated_at?: string
+          variacao_max_pct?: number
         }
         Relationships: [
           {
@@ -565,38 +666,64 @@ export type Database = {
       encarte_gerado: {
         Row: {
           agv_pct: number | null
+          calendario_id: string | null
           criado_em: string
           criado_por: string | null
           data_fim: string | null
           data_inicio: string | null
           id: string
+          modelo_id: string | null
           nome: string
+          status: string
           store_id: string
+          tipo_faixa: string | null
           updated_at: string
         }
         Insert: {
           agv_pct?: number | null
+          calendario_id?: string | null
           criado_em?: string
           criado_por?: string | null
           data_fim?: string | null
           data_inicio?: string | null
           id?: string
+          modelo_id?: string | null
           nome: string
+          status?: string
           store_id: string
+          tipo_faixa?: string | null
           updated_at?: string
         }
         Update: {
           agv_pct?: number | null
+          calendario_id?: string | null
           criado_em?: string
           criado_por?: string | null
           data_fim?: string | null
           data_inicio?: string | null
           id?: string
+          modelo_id?: string | null
           nome?: string
+          status?: string
           store_id?: string
+          tipo_faixa?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "encarte_gerado_calendario_id_fkey"
+            columns: ["calendario_id"]
+            isOneToOne: false
+            referencedRelation: "encarte_calendario"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "encarte_gerado_modelo_id_fkey"
+            columns: ["modelo_id"]
+            isOneToOne: false
+            referencedRelation: "encarte_modelo"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "encarte_gerado_store_id_fkey"
             columns: ["store_id"]
@@ -608,55 +735,100 @@ export type Database = {
       }
       encarte_item: {
         Row: {
+          alerta: string | null
+          aprovado: boolean
+          categoria: string | null
+          ciente: boolean
           codigo: string | null
           created_at: string
           custo: number | null
           departamento: string | null
           descricao: string | null
+          ean: string | null
           encarte_id: string
           estoque: number | null
+          face: string | null
           giro_90d: number | null
           id: string
           indice_elast: number | null
+          margem_atual: number | null
           margem_oferta: number | null
+          motivo: Json | null
+          observacao: string | null
           ordem: number
+          origem: string
+          pmz: number | null
+          posicao: number | null
           preco_oferta: number | null
+          score: number | null
           tipo_faixa: string | null
+          travado: boolean
           venda_atual: number | null
+          volume_30d: number | null
         }
         Insert: {
+          alerta?: string | null
+          aprovado?: boolean
+          categoria?: string | null
+          ciente?: boolean
           codigo?: string | null
           created_at?: string
           custo?: number | null
           departamento?: string | null
           descricao?: string | null
+          ean?: string | null
           encarte_id: string
           estoque?: number | null
+          face?: string | null
           giro_90d?: number | null
           id?: string
           indice_elast?: number | null
+          margem_atual?: number | null
           margem_oferta?: number | null
+          motivo?: Json | null
+          observacao?: string | null
           ordem?: number
+          origem?: string
+          pmz?: number | null
+          posicao?: number | null
           preco_oferta?: number | null
+          score?: number | null
           tipo_faixa?: string | null
+          travado?: boolean
           venda_atual?: number | null
+          volume_30d?: number | null
         }
         Update: {
+          alerta?: string | null
+          aprovado?: boolean
+          categoria?: string | null
+          ciente?: boolean
           codigo?: string | null
           created_at?: string
           custo?: number | null
           departamento?: string | null
           descricao?: string | null
+          ean?: string | null
           encarte_id?: string
           estoque?: number | null
+          face?: string | null
           giro_90d?: number | null
           id?: string
           indice_elast?: number | null
+          margem_atual?: number | null
           margem_oferta?: number | null
+          motivo?: Json | null
+          observacao?: string | null
           ordem?: number
+          origem?: string
+          pmz?: number | null
+          posicao?: number | null
           preco_oferta?: number | null
+          score?: number | null
           tipo_faixa?: string | null
+          travado?: boolean
           venda_atual?: number | null
+          volume_30d?: number | null
         }
         Relationships: [
           {
@@ -665,6 +837,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "encarte_gerado"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "encarte_item_encarte_id_fkey"
+            columns: ["encarte_id"]
+            isOneToOne: false
+            referencedRelation: "encarte_historico_itens"
+            referencedColumns: ["encarte_id"]
           },
         ]
       }
@@ -718,6 +897,121 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      encarte_modelo: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+          padrao: boolean
+          store_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome: string
+          padrao?: boolean
+          store_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string
+          padrao?: boolean
+          store_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "encarte_modelo_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      encarte_modelo_slot: {
+        Row: {
+          categoria: string | null
+          created_at: string
+          departamento: string | null
+          face: string
+          id: string
+          modelo_id: string
+          posicao: number
+          tipo_faixa: string
+        }
+        Insert: {
+          categoria?: string | null
+          created_at?: string
+          departamento?: string | null
+          face: string
+          id?: string
+          modelo_id: string
+          posicao: number
+          tipo_faixa?: string
+        }
+        Update: {
+          categoria?: string | null
+          created_at?: string
+          departamento?: string | null
+          face?: string
+          id?: string
+          modelo_id?: string
+          posicao?: number
+          tipo_faixa?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "encarte_modelo_slot_modelo_id_fkey"
+            columns: ["modelo_id"]
+            isOneToOne: false
+            referencedRelation: "encarte_modelo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      encarte_regra_faixa: {
+        Row: {
+          desconto_max_pct: number
+          id: string
+          janela_giro_dias: number
+          margem_minima_pct: number
+          peso_concorrente: number
+          peso_estoque: number
+          peso_giro: number
+          peso_margem: number
+          tipo_faixa: string
+          updated_at: string
+        }
+        Insert: {
+          desconto_max_pct?: number
+          id?: string
+          janela_giro_dias?: number
+          margem_minima_pct?: number
+          peso_concorrente?: number
+          peso_estoque?: number
+          peso_giro?: number
+          peso_margem?: number
+          tipo_faixa: string
+          updated_at?: string
+        }
+        Update: {
+          desconto_max_pct?: number
+          id?: string
+          janela_giro_dias?: number
+          margem_minima_pct?: number
+          peso_concorrente?: number
+          peso_estoque?: number
+          peso_giro?: number
+          peso_margem?: number
+          tipo_faixa?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       encartes: {
         Row: {
@@ -1850,6 +2144,28 @@ export type Database = {
       }
     }
     Views: {
+      encarte_historico_itens: {
+        Row: {
+          codigo: string | null
+          data_fim: string | null
+          data_inicio: string | null
+          descricao: string | null
+          ean: string | null
+          encarte_id: string | null
+          preco_oferta: number | null
+          status: string | null
+          store_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "encarte_gerado_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vr_sync_status: {
         Row: {
           enabled: boolean | null
