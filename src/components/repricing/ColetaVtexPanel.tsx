@@ -338,10 +338,17 @@ const ColetaVtexPanel = () => {
                 ))}
               </SelectContent>
             </Select>
-            <Button onClick={iniciar} disabled={starting || (!!rodando && !travado) || !selected} className="gap-2">
-              {starting || (rodando && !travado) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-              {rodando && !travado ? "Coletando..." : "Iniciar coleta"}
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={iniciar} disabled={starting || (!!rodando && !travado) || !selected} className="gap-2">
+                {starting || (rodando && !travado) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+                {rodando && !travado ? "Coletando..." : "Iniciar coleta"}
+              </Button>
+              {rodando && (
+                <Button variant="outline" onClick={cancelar} className="gap-2">
+                  <XCircle className="w-4 h-4" /> Parar
+                </Button>
+              )}
+            </div>
           </div>
 
           {job && (
