@@ -125,14 +125,44 @@ Deno.serve(async (req) => {
     const janelaSemanas = Number(cfgLoja.data?.janela_nao_repetir_semanas ?? 4);
 
     // ---------- base do ERP ----------
-    const vrResp = await fetch(`${supabaseUrl}/functions/v1/vr-proxy`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: authHeader, apikey: anonKey },
-      body: JSON.stringify({ store_id, relatorio: "encarte_base", params: {} }),
-    });
-    const vrBody = await vrResp.json().catch(() => null) as Row | null;
-    const erroVr = txt(vrBody?.erro);
-    const baseBruta = (vrBody?.dados as Row[]) ?? [];
+    // Algumas pontes registram o relatorio com prefixo (ex.: "02-encarte_base")
+    // ou com nome alternativo ("candidatos_encarte"). Tentamos em cascata e,
+    // se a ponte devolver a lista `disponiveis`, escolhemos o nome compativel.
+    const consultarVr = async (nome: string) => {
+      const resp = await fetch(`${supabaseUrl}/functions/v1/vr-proxy`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: authHeader, apikey: anonKey },
+        body: JSON.stringify({ store_id, relatorio: nome, params: {} }),
+      });
+      const body = await resp.json().catch(() => null) as Row | null;
+      return { erro: txt(body?.erro), dados: (body?.dados as Row[]) ?? [] };
+    };
+
+    const tentativas = ["encarte_base", "02-encarte_base", "candidatos_encarte"];
+    let erroVr = "";
+    let baseBruta: Row[] = [];
+    const jaTentados = new Set<string>();
+
+    for (const nome of tentativas) {
+      if (jaTentados.has(nome)) continue;
+      jaTentados.add(nome);
+      const r = await consultarVr(nome);
+      if (r.dados.length > 0) { baseBruta = r.dados; erroVr = ""; break; }
+      erroVr = r.erro;
+      // extrai nomes disponiveis do erro e tenta o que casar com encarte
+      const m = r.erro.match(/"disponiveis"\s*:\s*\[([^\]]*)/);
+      if (m) {
+        const nomes = m[1].split(",").map((s) => s.replace(/[\\"\s]/g, "")).filter(Boolean);
+        const alvo = nomes.find((n) => /encarte_base$/i.test(n)) ?? nomes.find((n) => /encarte/i.test(n) && !/migration/i.test(n));
+        if (alvo && !jaTentados.has(alvo)) {
+          jaTentados.add(alvo);
+          const r2 = await consultarVr(alvo);
+          if (r2.dados.length > 0) { baseBruta = r2.dados; erroVr = ""; break; }
+          erroVr = r2.erro || erroVr;
+        }
+      }
+    }
+
     if (erroVr && baseBruta.length === 0) {
       const faltaRelatorio = /404|nao encontrado|nao existe|nao cadastrado|not found/i.test(erroVr);
       return json({
@@ -145,6 +175,7 @@ Deno.serve(async (req) => {
     if (baseBruta.length === 0) {
       return json({ erro: "a ponte da loja retornou o relatorio encarte_base vazio" }, 200);
     }
+
 
     const base = baseBruta.map(lower).map((r) => {
       const preco = num(pick(r, "preco_venda", "preco", "venda", "preco_atual"));
