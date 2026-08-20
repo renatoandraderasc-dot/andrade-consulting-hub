@@ -44,7 +44,7 @@ const Repricing = () => {
           <div>
             <h1 className="text-2xl font-bold text-foreground tracking-tight">Re-PRICING</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Importe as bases para cruzar preços e analisar competitividade
+              Carregue as bases do próprio sistema para cruzar preços e analisar competitividade
             </p>
           </div>
           {allLoaded && (
