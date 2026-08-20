@@ -19,6 +19,7 @@ import Controladoria from "./pages/Controladoria";
 import AnaliseAnual from "./pages/AnaliseAnual";
 import Compras from "./pages/Compras";
 import Repricing from "./pages/Repricing";
+import Pricing from "./pages/Pricing";
 import VtexCollector from "./pages/VtexCollector";
 import WebSacSync from "./pages/WebSacSync";
 import PIC from "./pages/PIC";
@@ -64,6 +65,7 @@ const App = () => (
             <Route path="/analise-anual" element={g("analise_anual", <AnaliseAnual />)} />
 
             <Route path="/compras" element={g("compras", <Compras />)} />
+            <Route path="/precificacao/pricing" element={g("pricing", <Pricing />)} />
             <Route path="/repricing" element={g("repricing", <Repricing />)} />
             <Route path="/vtex-collector" element={g("vtex_collector", <VtexCollector />)} />
             <Route path="/websac-sync" element={g("websac_sync", <WebSacSync />)} />

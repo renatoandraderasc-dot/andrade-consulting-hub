@@ -8,6 +8,7 @@ export const APP_MODULES = [
   { key: "pic_padaria", label: "Dashboard Padaria", path: "/pic/padaria" },
   { key: "admin_padaria_import", label: "Admin: Import Padaria", path: "/admin/padaria-import" },
   { key: "repricing", label: "Re-PRICING", path: "/repricing" },
+  { key: "pricing", label: "Pricing", path: "/precificacao/pricing" },
   { key: "checklist", label: "Checklist", path: "/checklist" },
   { key: "catalogo", label: "Catálogo de Produtos", path: "/catalogo" },
   { key: "consulta_preco", label: "Consulta de Preços", path: "/consulta-preco" },
