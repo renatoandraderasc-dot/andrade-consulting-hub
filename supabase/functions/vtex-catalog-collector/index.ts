@@ -555,6 +555,16 @@ Deno.serve(async (req) => {
       return json({ success: true, job: data });
     }
 
+    if (action === "cancel") {
+      if (!body.jobId) throw new Error("jobId obrigatório");
+      await supabase.from("scrape_jobs").update({
+        status: "error",
+        error_message: "coleta cancelada pelo usuário",
+        finished_at: new Date().toISOString(),
+      }).eq("id", body.jobId);
+      return json({ success: true });
+    }
+
     if (action === "batch") {
       if (!body.jobId) throw new Error("jobId obrigatório");
       // @ts-ignore EdgeRuntime global
