@@ -50,6 +50,8 @@ interface Job {
   concorrente_id: string | null;
   fila: FilaItem[] | null;
   ultima_atividade: string | null;
+  updated_at: string | null;
+  created_at: string | null;
   region_id: string | null;
   cep_referencia: string | null;
 }
@@ -194,8 +196,9 @@ const ColetaVtexPanel = () => {
     !job.lojista_detectado.toUpperCase().replace(/[^A-Z0-9]/g, "")
       .includes(concJob.praca_esperada.toUpperCase().replace(/[^A-Z0-9]/g, ""));
 
-  const minutosParado = job?.ultima_atividade
-    ? Math.floor((agora - new Date(job.ultima_atividade).getTime()) / 60000)
+  const ultimoSinal = job?.ultima_atividade || job?.updated_at || job?.created_at || null;
+  const minutosParado = ultimoSinal
+    ? Math.floor((agora - new Date(ultimoSinal).getTime()) / 60000)
     : null;
   const travado = !!rodando && minutosParado !== null && minutosParado >= 3;
 
@@ -334,7 +337,7 @@ const ColetaVtexPanel = () => {
                   {rodando && !travado ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> :
                     job.status === "done" ? <CheckCircle2 className="w-4 h-4 text-green-600" /> :
                     <XCircle className="w-4 h-4 text-destructive" />}
-                  {concJob?.nome || "Coleta"} — {statusLabel(job.status)}
+                  {concJob?.nome || "Coleta"} — {travado ? "interrompida" : statusLabel(job.status)}
                 </span>
                 <Badge variant="outline">{job.progress_pct || 0}%</Badge>
               </div>

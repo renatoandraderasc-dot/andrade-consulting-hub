@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import ClientLayout from "@/components/ClientLayout";
-import FileUploadCard from "@/components/repricing/FileUploadPanel";
+import BasesAutoPanel from "@/components/repricing/BasesAutoPanel";
 import RepricingResultTable from "@/components/repricing/RepricingResultTable";
 import { useRepricingProcessor } from "@/components/repricing/useRepricingProcessor";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,7 +44,7 @@ const Repricing = () => {
           <div>
             <h1 className="text-2xl font-bold text-foreground tracking-tight">Re-PRICING</h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Importe as bases para cruzar preços e analisar competitividade
+              Carregue as bases do próprio sistema para cruzar preços e analisar competitividade
             </p>
           </div>
           {allLoaded && (
@@ -56,7 +56,7 @@ const Repricing = () => {
 
         <Tabs defaultValue="bases">
           <TabsList>
-            <TabsTrigger value="bases">Importação de Bases</TabsTrigger>
+            <TabsTrigger value="bases">Bases de Comparação</TabsTrigger>
             <TabsTrigger value="concorrentes">Concorrentes & Coleta</TabsTrigger>
           </TabsList>
 
@@ -65,34 +65,15 @@ const Repricing = () => {
           </TabsContent>
 
           <TabsContent value="bases" className="mt-4 space-y-5">
-        {/* Upload Section */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-
-          <FileUploadCard
-            label="Tipo 1: Cadastro Atual dos Produtos"
-            description="Base com EAN, preço atual, custo e classificação mercadológica dos produtos da loja."
-            expectedColumns={["EAN", "Descrição", "Custo", "Preço", "Mercadológico"]}
-            onDataLoaded={(data) => { setProdutos(data); if (data.length) toast.success(`${data.length} produtos carregados`); }}
-            loaded={produtos.length > 0}
-            rowCount={produtos.length}
-          />
-          <FileUploadCard
-            label="Tipo 2: Pesquisa Grandes"
-            description="Base do concorrente com EAN, preço normal e preço de oferta."
-            expectedColumns={["EAN", "Preço", "Oferta"]}
-            onDataLoaded={(data) => { setConcorrentes(data); if (data.length) toast.success(`${data.length} itens do concorrente carregados`); }}
-            loaded={concorrentes.length > 0}
-            rowCount={concorrentes.length}
-          />
-          <FileUploadCard
-            label="Tipo 3: Pesquisa Base Interna"
-            description="Cadastro auxiliar ampliado para correspondência por descrição quando EAN não for encontrado."
-            expectedColumns={["EAN", "Descrição"]}
-            onDataLoaded={(data) => { setAuxiliar(data); if (data.length) toast.success(`${data.length} itens auxiliares carregados`); }}
-            loaded={auxiliar.length > 0}
-            rowCount={auxiliar.length}
-          />
-        </div>
+        <BasesAutoPanel
+          storeId={storeId}
+          onProdutos={setProdutos}
+          onConcorrente={setConcorrentes}
+          onInterna={setAuxiliar}
+          produtosCount={produtos.length}
+          concorrenteCount={concorrentes.length}
+          internaCount={auxiliar.length}
+        />
 
         {/* Status */}
         {allLoaded && (
@@ -124,8 +105,8 @@ const Repricing = () => {
         {!allLoaded && (
           <div className="text-center py-12 text-muted-foreground">
             <FileSpreadsheet className="w-10 h-10 mx-auto mb-3 opacity-40" />
-            <p className="font-medium">Aguardando upload das bases</p>
-            <p className="text-sm mt-1">Importe pelo menos a <strong>Base de Produtos</strong> e a <strong>Pesquisa Grandes</strong> para iniciar a análise.</p>
+            <p className="font-medium">Aguardando o carregamento das bases</p>
+            <p className="text-sm mt-1">Carregue pelo menos o <strong>cadastro atual da loja</strong> e a <strong>pesquisa do concorrente</strong> para iniciar a análise.</p>
           </div>
         )}
           </TabsContent>
