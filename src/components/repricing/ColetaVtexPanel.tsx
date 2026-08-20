@@ -50,6 +50,8 @@ interface Job {
   concorrente_id: string | null;
   fila: FilaItem[] | null;
   ultima_atividade: string | null;
+  updated_at: string | null;
+  created_at: string | null;
   region_id: string | null;
   cep_referencia: string | null;
 }
