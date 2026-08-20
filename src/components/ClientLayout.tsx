@@ -74,7 +74,7 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
       <Link
         to={item.path}
         onClick={() => setMenuOpen(false)}
-        className={`relative flex items-center gap-2 px-3 h-full text-[13px] font-medium transition-colors ${
+        className={`relative flex items-center gap-2 px-3 h-full text-[13px] font-medium transition-colors shrink-0 whitespace-nowrap ${
           mobile ? "py-3 border-b border-border w-full" : ""
         } ${active ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
       >
