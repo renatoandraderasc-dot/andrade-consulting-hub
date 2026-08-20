@@ -258,7 +258,7 @@ async function brandSliceCategory(ctx: Ctx, leaf: Leaf, buffer: any[]) {
   }
 }
 
-async function runCollection(ctx: Ctx) {
+async function runCollection(ctx: Ctx & { concurrency?: number }) {
   const buffer: any[] = [];
   try {
     logLine(ctx, `iniciando coleta em ${ctx.host} (sc=${ctx.sc})`);
