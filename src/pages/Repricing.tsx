@@ -110,7 +110,7 @@ const Repricing = () => {
             {auxiliar.length > 0 && (
               <Badge variant="outline" className="gap-1.5 py-1 bg-amber-500/10 text-amber-700 border-amber-500/20">
                 <Sparkles className="w-3.5 h-3.5" />
-                Base auxiliar disponível para correspondência IA
+                Base interna da rede: {auxiliar.length.toLocaleString("pt-BR")} preços de outras lojas
               </Badge>
             )}
           </div>
