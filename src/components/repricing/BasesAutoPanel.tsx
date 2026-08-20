@@ -70,7 +70,7 @@ const BasesAutoPanel = ({
           descricao: p.descricao,
           custo: p.custo ?? 0,
           preco: p.preco ?? 0,
-          mercadologico: [p.secao, p.grupo].filter(Boolean).join(" / ") || "Outros",
+          mercadologico: p.secao || "Outros",
           estoque: p.estoque,
           qtd_vendida_12m: p.qtdVendida12m,
           valor_vendido_12m: p.valorVendido12m,
@@ -89,7 +89,7 @@ const BasesAutoPanel = ({
           descricao: p.descricao,
           custo: p.custo ?? 0,
           preco: p.precoOferta || p.preco || 0,
-          mercadologico: [p.n1, p.n2].filter(Boolean).join(" / ") || "Outros",
+          mercadologico: p.n1 || "Outros",
         }));
         onProdutos(rows);
         setModoCarregado("completo");
