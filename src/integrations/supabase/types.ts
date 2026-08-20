@@ -413,35 +413,47 @@ export type Database = {
       concorrentes: {
         Row: {
           ativo: boolean
+          cep_referencia: string | null
           created_at: string
           host: string
           id: string
           nome: string
           plataforma: string
           praca_esperada: string | null
+          region_id: string | null
           sales_channel: number
+          seller_id: string | null
+          seller_nome: string | null
           updated_at: string
         }
         Insert: {
           ativo?: boolean
+          cep_referencia?: string | null
           created_at?: string
           host: string
           id?: string
           nome: string
           plataforma?: string
           praca_esperada?: string | null
+          region_id?: string | null
           sales_channel?: number
+          seller_id?: string | null
+          seller_nome?: string | null
           updated_at?: string
         }
         Update: {
           ativo?: boolean
+          cep_referencia?: string | null
           created_at?: string
           host?: string
           id?: string
           nome?: string
           plataforma?: string
           praca_esperada?: string | null
+          region_id?: string | null
           sales_channel?: number
+          seller_id?: string | null
+          seller_nome?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -909,6 +921,7 @@ export type Database = {
         Row: {
           arvore_categoria: string | null
           categoria: string | null
+          cep_referencia: string | null
           colecoes: string[] | null
           coletado_em: string
           concorrente_id: string
@@ -927,7 +940,10 @@ export type Database = {
           preco_de: number | null
           produto_id: string | null
           promocao_multipla: string[] | null
+          region_id: string | null
           sales_channel: number
+          seller_id: string | null
+          seller_nome: string | null
           sku: string
           updated_at: string
           url: string | null
@@ -935,6 +951,7 @@ export type Database = {
         Insert: {
           arvore_categoria?: string | null
           categoria?: string | null
+          cep_referencia?: string | null
           colecoes?: string[] | null
           coletado_em?: string
           concorrente_id: string
@@ -953,7 +970,10 @@ export type Database = {
           preco_de?: number | null
           produto_id?: string | null
           promocao_multipla?: string[] | null
+          region_id?: string | null
           sales_channel?: number
+          seller_id?: string | null
+          seller_nome?: string | null
           sku: string
           updated_at?: string
           url?: string | null
@@ -961,6 +981,7 @@ export type Database = {
         Update: {
           arvore_categoria?: string | null
           categoria?: string | null
+          cep_referencia?: string | null
           colecoes?: string[] | null
           coletado_em?: string
           concorrente_id?: string
@@ -979,7 +1000,10 @@ export type Database = {
           preco_de?: number | null
           produto_id?: string | null
           promocao_multipla?: string[] | null
+          region_id?: string | null
           sales_channel?: number
+          seller_id?: string | null
+          seller_nome?: string | null
           sku?: string
           updated_at?: string
           url?: string | null
@@ -1072,12 +1096,15 @@ export type Database = {
       }
       scrape_jobs: {
         Row: {
+          categorias_erro: Json
           categorias_incompletas: Json | null
+          cep_referencia: string | null
           competitor_name: string | null
           competitor_url: string
           concorrente_id: string | null
           created_at: string
           error_message: string | null
+          fila: Json
           finished_at: string | null
           firecrawl_crawl_id: string | null
           host: string | null
@@ -1089,22 +1116,28 @@ export type Database = {
           products_json: Json | null
           progress_pct: number | null
           rate_limit_hits: number | null
+          region_id: string | null
           sales_channel: number | null
+          seller_esperado: string | null
           skus_indisponiveis: number | null
           skus_sem_ean: number | null
           skus_validos: number | null
           status: string
           total_pages: number | null
           total_urls_found: number | null
+          ultima_atividade: string | null
           updated_at: string
         }
         Insert: {
+          categorias_erro?: Json
           categorias_incompletas?: Json | null
+          cep_referencia?: string | null
           competitor_name?: string | null
           competitor_url: string
           concorrente_id?: string | null
           created_at?: string
           error_message?: string | null
+          fila?: Json
           finished_at?: string | null
           firecrawl_crawl_id?: string | null
           host?: string | null
@@ -1116,22 +1149,28 @@ export type Database = {
           products_json?: Json | null
           progress_pct?: number | null
           rate_limit_hits?: number | null
+          region_id?: string | null
           sales_channel?: number | null
+          seller_esperado?: string | null
           skus_indisponiveis?: number | null
           skus_sem_ean?: number | null
           skus_validos?: number | null
           status?: string
           total_pages?: number | null
           total_urls_found?: number | null
+          ultima_atividade?: string | null
           updated_at?: string
         }
         Update: {
+          categorias_erro?: Json
           categorias_incompletas?: Json | null
+          cep_referencia?: string | null
           competitor_name?: string | null
           competitor_url?: string
           concorrente_id?: string | null
           created_at?: string
           error_message?: string | null
+          fila?: Json
           finished_at?: string | null
           firecrawl_crawl_id?: string | null
           host?: string | null
@@ -1143,13 +1182,16 @@ export type Database = {
           products_json?: Json | null
           progress_pct?: number | null
           rate_limit_hits?: number | null
+          region_id?: string | null
           sales_channel?: number | null
+          seller_esperado?: string | null
           skus_indisponiveis?: number | null
           skus_sem_ean?: number | null
           skus_validos?: number | null
           status?: string
           total_pages?: number | null
           total_urls_found?: number | null
+          ultima_atividade?: string | null
           updated_at?: string
         }
         Relationships: [
