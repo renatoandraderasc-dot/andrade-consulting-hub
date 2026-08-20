@@ -337,7 +337,7 @@ const ColetaVtexPanel = () => {
                   {rodando && !travado ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> :
                     job.status === "done" ? <CheckCircle2 className="w-4 h-4 text-green-600" /> :
                     <XCircle className="w-4 h-4 text-destructive" />}
-                  {concJob?.nome || "Coleta"} — {statusLabel(job.status)}
+                  {concJob?.nome || "Coleta"} — {travado ? "interrompida" : statusLabel(job.status)}
                 </span>
                 <Badge variant="outline">{job.progress_pct || 0}%</Badge>
               </div>
