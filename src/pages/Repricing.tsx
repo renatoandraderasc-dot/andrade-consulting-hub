@@ -56,7 +56,7 @@ const Repricing = () => {
 
         <Tabs defaultValue="bases">
           <TabsList>
-            <TabsTrigger value="bases">Importação de Bases</TabsTrigger>
+            <TabsTrigger value="bases">Bases de Comparação</TabsTrigger>
             <TabsTrigger value="concorrentes">Concorrentes & Coleta</TabsTrigger>
           </TabsList>
 
