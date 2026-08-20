@@ -119,9 +119,9 @@ const BasesAutoPanel = ({
       try {
         const base = await carregarBaseCatalogo(l.id);
         for (const p of base) {
-          if (!p.ean && !p.codigo) continue;
+          if (!String(p.ean ?? "").trim()) continue;
           rows.push({
-            ean: p.ean || p.codigo,
+            ean: String(p.ean).trim(),
             descricao: p.descricao,
             preco: p.precoOferta || p.preco || 0,
             custo: p.custo ?? 0,
