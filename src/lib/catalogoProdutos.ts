@@ -42,7 +42,7 @@ export function mapearLinhaCatalogo(l: any): CatalogoItem {
   return {
     codigo: String(col(l, "codigo", "cod_produto", "codigo_reduzido", "id_produto", "produto_id") ?? ""),
     descricao: String(col(l, "descricao", "produto", "nome") ?? ""),
-    ean: String(col(l, "codigo_barras", "ean", "barras") ?? ""),
+    ean: String(col(l, "codigo_barras", "ean", "barcode", "barras", "cod_barras", "gtin") ?? ""),
     custo: numOrNull(col(l, "custo", "preco_custo")),
     preco: numOrNull(col(l, "preco_venda", "preco", "venda")),
     precoOferta: numOrNull(col(l, "preco_oferta", "oferta")),
@@ -123,13 +123,13 @@ export async function carregarBaseCatalogo(storeId: string): Promise<CatalogoIte
     if (k && vendas > 0 && volume > 0) medios.set(k, Math.round((vendas / volume) * 100) / 100);
   }
 
-  const base = (rp.dados || []).length
-    ? rp.dados
-    : (rc.dados || []).length
-      ? rc.dados
-      : (rpp.dados || []).length
-        ? rpp.dados
-        : re.dados || [];
+  // Alguns ERPs nao trazem codigo de barras no relatorio "produtos" — nesse
+  // caso preferimos "produtos_precos", que costuma publicar a coluna barcode.
+  const temEan = (linhas: any[]) =>
+    (linhas || []).slice(0, 50).some((l) => String(mapearLinhaCatalogo(l).ean || "").replace(/\D/g, "").length >= 8);
+
+  const candidatos = [rp.dados, rpp.dados, rc.dados, re.dados].filter((d) => (d || []).length) as any[][];
+  const base = candidatos.find((d) => temEan(d)) || candidatos[0] || [];
 
   const lista: CatalogoItem[] = (base || []).map((l: any) => {
     const item = mapearLinhaCatalogo(l);
