@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -232,11 +232,11 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
                 <TableHead className="text-right w-[85px]">Médio</TableHead>
                 <TableHead className="text-right w-[60px]">Lojas</TableHead>
                 {concorrentesMeta.map((c) => (
-                  <>
-                    <TableHead key={`${c.id}-p`} className="text-right w-[85px] border-l border-border">Preço</TableHead>
-                    <TableHead key={`${c.id}-d`} className="text-right w-[85px]">Dif R$</TableHead>
-                    <TableHead key={`${c.id}-pc`} className="text-right w-[75px]">Dif %</TableHead>
-                  </>
+                  <Fragment key={c.id}>
+                    <TableHead className="text-right w-[85px] border-l border-border">Preço</TableHead>
+                    <TableHead className="text-right w-[85px]">Dif R$</TableHead>
+                    <TableHead className="text-right w-[75px]">Dif %</TableHead>
+                  </Fragment>
                 ))}
                 <TableHead className="w-[90px] text-center cursor-pointer select-none border-l border-border" onClick={() => toggleSort("status")}>
                   Status <SortIcon col="status" />
@@ -279,17 +279,17 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
                       const difPct = cell && r.precoAtual > 0 ? (dif! / r.precoAtual) * 100 : null;
                       const cor = dif == null ? "" : dif > 0 ? "text-destructive" : dif < 0 ? "text-green-600" : "text-muted-foreground";
                       return (
-                        <>
-                          <TableCell key={`${r.id}-${c.id}-p`} className="text-right text-sm tabular-nums border-l border-border">
+                        <Fragment key={`${r.id}-${c.id}`}>
+                          <TableCell className="text-right text-sm tabular-nums border-l border-border">
                             {cell ? fmt(cell.preco) : ""}
                           </TableCell>
-                          <TableCell key={`${r.id}-${c.id}-d`} className={`text-right text-sm tabular-nums font-semibold ${cor}`}>
+                          <TableCell className={`text-right text-sm tabular-nums font-semibold ${cor}`}>
                             {dif == null ? "" : `${dif > 0 ? "+" : ""}${fmt(dif)}`}
                           </TableCell>
-                          <TableCell key={`${r.id}-${c.id}-pc`} className={`text-right text-sm tabular-nums ${cor}`}>
+                          <TableCell className={`text-right text-sm tabular-nums ${cor}`}>
                             {difPct == null ? "" : `${difPct > 0 ? "+" : ""}${difPct.toFixed(1)}%`}
                           </TableCell>
-                        </>
+                        </Fragment>
                       );
                     })}
 
