@@ -20,6 +20,43 @@ function findCol(row: Record<string, unknown>, candidates: string[]): string | u
   return undefined;
 }
 
+const EAN_COLS = ["ean", "codigo_barras", "cod_barras", "barcode", "barras", "gtin", "código de barras"];
+
+/** EAN válido = pelo menos 8 dígitos (descarta vazios, "0" e códigos internos curtos). */
+function eanValido(v: unknown): string {
+  const d = normalize(v);
+  return d.length >= 8 ? d : "";
+}
+
+export interface RepricingDiagnostico {
+  produtosTotal: number;
+  produtosComEan: number;
+  produtosSemEan: number;
+  concorrentesTotal: number;
+  concorrentesComEan: number;
+  concorrentesSemEan: number;
+}
+
+export function useRepricingDiagnostico(
+  produtos: Record<string, unknown>[],
+  concorrentes: Record<string, unknown>[],
+): RepricingDiagnostico {
+  return useMemo(() => {
+    const colP = produtos.length ? findCol(produtos[0], EAN_COLS) : undefined;
+    const colC = concorrentes.length ? findCol(concorrentes[0], EAN_COLS) : undefined;
+    const pOk = produtos.filter((p) => eanValido(p[colP ?? ""])).length;
+    const cOk = concorrentes.filter((c) => eanValido(c[colC ?? ""])).length;
+    return {
+      produtosTotal: produtos.length,
+      produtosComEan: pOk,
+      produtosSemEan: produtos.length - pOk,
+      concorrentesTotal: concorrentes.length,
+      concorrentesComEan: cOk,
+      concorrentesSemEan: concorrentes.length - cOk,
+    };
+  }, [produtos, concorrentes]);
+}
+
 export function useRepricingProcessor(
   produtos: Record<string, unknown>[],
   concorrentes: Record<string, unknown>[],
