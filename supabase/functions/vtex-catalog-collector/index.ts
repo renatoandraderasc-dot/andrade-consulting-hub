@@ -412,11 +412,14 @@ function reinvocar(body: Record<string, unknown>) {
 // ------------------------------------------------------------ lote
 
 async function processarLote(jobId: string) {
-  // guarda: só continua se a coleta ainda estiver ativa
+  // guarda: só continua se a coleta ainda estiver ativa e não tiver sido encerrada
   const { data: estado } = await supabase
-    .from("scrape_jobs").select("status").eq("id", jobId).maybeSingle();
-  if (!estado || (estado.status !== "crawling" && estado.status !== "pending")) {
-    console.log("lote ignorado, coleta não está ativa:", estado?.status);
+    .from("scrape_jobs").select("status, finished_at").eq("id", jobId).maybeSingle();
+  if (
+    !estado || estado.finished_at ||
+    (estado.status !== "crawling" && estado.status !== "pending")
+  ) {
+    console.log("lote ignorado, coleta encerrada:", estado?.status);
     return;
   }
   let ctx: Ctx;
