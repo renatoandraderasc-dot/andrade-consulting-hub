@@ -196,8 +196,9 @@ const ColetaVtexPanel = () => {
     !job.lojista_detectado.toUpperCase().replace(/[^A-Z0-9]/g, "")
       .includes(concJob.praca_esperada.toUpperCase().replace(/[^A-Z0-9]/g, ""));
 
-  const minutosParado = job?.ultima_atividade
-    ? Math.floor((agora - new Date(job.ultima_atividade).getTime()) / 60000)
+  const ultimoSinal = job?.ultima_atividade || job?.updated_at || job?.created_at || null;
+  const minutosParado = ultimoSinal
+    ? Math.floor((agora - new Date(ultimoSinal).getTime()) / 60000)
     : null;
   const travado = !!rodando && minutosParado !== null && minutosParado >= 3;
 
