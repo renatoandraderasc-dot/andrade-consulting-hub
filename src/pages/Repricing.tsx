@@ -9,6 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, RotateCcw, FileSpreadsheet } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import ConcorrentesTab from "@/components/repricing/ConcorrentesTab";
 
 const Repricing = () => {
   const [searchParams] = useSearchParams();
@@ -126,6 +128,8 @@ const Repricing = () => {
             <p className="text-sm mt-1">Importe pelo menos a <strong>Base de Produtos</strong> e a <strong>Pesquisa Grandes</strong> para iniciar a análise.</p>
           </div>
         )}
+          </TabsContent>
+        </Tabs>
       </div>
     </ClientLayout>
   );
