@@ -45,7 +45,7 @@ const Repricing = () => {
       .then(({ data }) => { if (data) setStoreName(data.name); });
   }, [storeId]);
 
-  const rows = useRepricingProcessor(produtos, concorrentes, auxiliar);
+  const { rows, concorrentesMeta } = useRepricingProcessor(produtos, concorrentes, auxiliar);
   const diag = useRepricingDiagnostico(produtos, concorrentes);
   const allLoaded = produtos.length > 0 && concorrentes.length > 0;
 
