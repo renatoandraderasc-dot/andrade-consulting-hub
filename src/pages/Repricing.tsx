@@ -117,7 +117,9 @@ const Repricing = () => {
         )}
 
         {/* Results */}
-        {allLoaded && rows.length > 0 && <RepricingResultTable rows={rows} />}
+        {allLoaded && rows.length > 0 && (
+          <RepricingResultTable rows={rows} concorrentesMeta={concorrentesMeta} />
+        )}
 
         {allLoaded && rows.length === 0 && (
           <div className="text-center py-12 text-muted-foreground">
