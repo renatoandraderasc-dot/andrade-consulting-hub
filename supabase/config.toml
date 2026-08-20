@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.importar-lancamentos-vr]
 verify_jwt = false
+
+[functions.vtex-catalog-collector]
+verify_jwt = false
