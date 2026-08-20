@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import {
   BarChart3, CheckSquare, Settings, Users, LogOut, Menu, X, ArrowLeft,
-  Target, ClipboardList, DollarSign, Database, RefreshCw, Trophy, Store, ShoppingCart, LayoutTemplate, TrendingUp, Package, KeyRound, Plug, ScanLine,
+  Target, ClipboardList, DollarSign, Database, RefreshCw, Trophy, Store, ShoppingCart, LayoutTemplate, TrendingUp, Package, KeyRound, Plug, ScanLine, Tags,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import ChangePasswordDialog from "@/components/ChangePasswordDialog";
@@ -24,6 +24,7 @@ const navItems = [
   { key: "compras", path: "/compras", label: "Compras", icon: ShoppingCart },
   { key: "pic", path: "/pic", label: "PIC", icon: Trophy },
   { key: "repricing", path: "/repricing", label: "Re-Pricing", icon: DollarSign },
+  { key: "pricing", path: "/precificacao/pricing", label: "Pricing", icon: Tags },
   { key: "checklist", path: "/checklist", label: "Checklist", icon: CheckSquare },
   { key: "catalogo", path: "/catalogo", label: "Catálogo", icon: Package },
   { key: "consulta_preco", path: "/consulta-preco", label: "Consulta de Preços", icon: ScanLine },
