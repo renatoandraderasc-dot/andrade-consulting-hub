@@ -58,6 +58,15 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
+    id: "encartes",
+    label: "Encartes",
+    icon: Tags,
+    items: [
+      { key: "encarte_sugestao", path: "/encarte-sugestao", label: "Sugestão de Encarte", icon: Tags },
+      { key: "encartes", path: "/encartes", label: "Meus Encartes", icon: LayoutTemplate },
+    ],
+  },
+  {
     id: "operacao",
     label: "Operação",
     icon: CheckSquare,

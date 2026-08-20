@@ -25,6 +25,7 @@ export const APP_MODULES = [
   { key: "produtos", label: "Produtos", path: "/produtos" },
   { key: "encartes", label: "Meus Encartes", path: "/encartes" },
   { key: "encarte_editor", label: "Editor de Encarte", path: "/encartes/editor" },
+  { key: "encarte_sugestao", label: "Sugestão de Encarte", path: "/encarte-sugestao" },
 ] as const;
 
 export type ModuleKey = typeof APP_MODULES[number]["key"];
