@@ -79,19 +79,19 @@ const BasesAutoPanel = ({
     setLoadingC(true);
     const rows: Linha[] = [];
     const passo = 1000;
-    for (let de = 0; de < 60000; de += passo) {
+    for (let de = 0; de < 200000; de += passo) {
       const { data, error } = await supabase
         .from("precos_concorrente")
-        .select("ean, nome, preco, preco_de, em_promocao, disponivel")
+        .select("id, ean, nome, preco, preco_de, em_promocao, disponivel")
         .eq("concorrente_id", concSel)
         .eq("disponivel", true)
-        .not("ean", "is", null)
+        .order("id", { ascending: true })
         .range(de, de + passo - 1);
       if (error) { toast.error(error.message); break; }
       const lote = data || [];
       for (const r of lote) {
         rows.push({
-          ean: r.ean,
+          ean: String(r.ean ?? "").trim(),
           descricao: r.nome ?? "",
           preco: r.preco_de ?? r.preco ?? 0,
           oferta: r.em_promocao ? (r.preco ?? 0) : 0,
@@ -101,8 +101,9 @@ const BasesAutoPanel = ({
     }
     onConcorrente(rows);
     setLoadingC(false);
+    const comEanC = rows.filter((r) => String(r.ean).replace(/\D/g, "").length >= 8).length;
     rows.length
-      ? toast.success(`${rows.length} preços do concorrente carregados`)
+      ? toast.success(`${rows.length} preços carregados (${comEanC} com código de barras)`)
       : toast.error("Nenhum preço coletado para este concorrente ainda");
   }, [concSel, onConcorrente]);
 
