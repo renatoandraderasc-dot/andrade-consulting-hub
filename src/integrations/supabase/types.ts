@@ -410,6 +410,42 @@ export type Database = {
           },
         ]
       }
+      concorrentes: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          host: string
+          id: string
+          nome: string
+          plataforma: string
+          praca_esperada: string | null
+          sales_channel: number
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          host: string
+          id?: string
+          nome: string
+          plataforma?: string
+          praca_esperada?: string | null
+          sales_channel?: number
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          host?: string
+          id?: string
+          nome?: string
+          plataforma?: string
+          praca_esperada?: string | null
+          sales_channel?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       departments: {
         Row: {
           created_at: string
@@ -869,6 +905,102 @@ export type Database = {
           },
         ]
       }
+      precos_concorrente: {
+        Row: {
+          arvore_categoria: string | null
+          categoria: string | null
+          colecoes: string[] | null
+          coletado_em: string
+          concorrente_id: string
+          created_at: string
+          disponivel: boolean
+          ean: string | null
+          em_promocao: boolean
+          id: string
+          imagem_url: string | null
+          job_id: string | null
+          lojista: string | null
+          marca: string | null
+          nome: string | null
+          preco: number | null
+          preco_auditoria: number | null
+          preco_de: number | null
+          produto_id: string | null
+          promocao_multipla: string[] | null
+          sales_channel: number
+          sku: string
+          updated_at: string
+          url: string | null
+        }
+        Insert: {
+          arvore_categoria?: string | null
+          categoria?: string | null
+          colecoes?: string[] | null
+          coletado_em?: string
+          concorrente_id: string
+          created_at?: string
+          disponivel?: boolean
+          ean?: string | null
+          em_promocao?: boolean
+          id?: string
+          imagem_url?: string | null
+          job_id?: string | null
+          lojista?: string | null
+          marca?: string | null
+          nome?: string | null
+          preco?: number | null
+          preco_auditoria?: number | null
+          preco_de?: number | null
+          produto_id?: string | null
+          promocao_multipla?: string[] | null
+          sales_channel?: number
+          sku: string
+          updated_at?: string
+          url?: string | null
+        }
+        Update: {
+          arvore_categoria?: string | null
+          categoria?: string | null
+          colecoes?: string[] | null
+          coletado_em?: string
+          concorrente_id?: string
+          created_at?: string
+          disponivel?: boolean
+          ean?: string | null
+          em_promocao?: boolean
+          id?: string
+          imagem_url?: string | null
+          job_id?: string | null
+          lojista?: string | null
+          marca?: string | null
+          nome?: string | null
+          preco?: number | null
+          preco_auditoria?: number | null
+          preco_de?: number | null
+          produto_id?: string | null
+          promocao_multipla?: string[] | null
+          sales_channel?: number
+          sku?: string
+          updated_at?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "precos_concorrente_concorrente_id_fkey"
+            columns: ["concorrente_id"]
+            isOneToOne: false
+            referencedRelation: "concorrentes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "precos_concorrente_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "scrape_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       produtos: {
         Row: {
           categoria: string | null
@@ -940,51 +1072,95 @@ export type Database = {
       }
       scrape_jobs: {
         Row: {
+          categorias_incompletas: Json | null
           competitor_name: string | null
           competitor_url: string
+          concorrente_id: string | null
           created_at: string
           error_message: string | null
+          finished_at: string | null
           firecrawl_crawl_id: string | null
+          host: string | null
           id: string
+          log_lines: Json | null
+          lojista_detectado: string | null
           pages_crawled: number | null
           products_found: number | null
           products_json: Json | null
           progress_pct: number | null
+          rate_limit_hits: number | null
+          sales_channel: number | null
+          skus_indisponiveis: number | null
+          skus_sem_ean: number | null
+          skus_validos: number | null
           status: string
+          total_pages: number | null
           total_urls_found: number | null
           updated_at: string
         }
         Insert: {
+          categorias_incompletas?: Json | null
           competitor_name?: string | null
           competitor_url: string
+          concorrente_id?: string | null
           created_at?: string
           error_message?: string | null
+          finished_at?: string | null
           firecrawl_crawl_id?: string | null
+          host?: string | null
           id?: string
+          log_lines?: Json | null
+          lojista_detectado?: string | null
           pages_crawled?: number | null
           products_found?: number | null
           products_json?: Json | null
           progress_pct?: number | null
+          rate_limit_hits?: number | null
+          sales_channel?: number | null
+          skus_indisponiveis?: number | null
+          skus_sem_ean?: number | null
+          skus_validos?: number | null
           status?: string
+          total_pages?: number | null
           total_urls_found?: number | null
           updated_at?: string
         }
         Update: {
+          categorias_incompletas?: Json | null
           competitor_name?: string | null
           competitor_url?: string
+          concorrente_id?: string | null
           created_at?: string
           error_message?: string | null
+          finished_at?: string | null
           firecrawl_crawl_id?: string | null
+          host?: string | null
           id?: string
+          log_lines?: Json | null
+          lojista_detectado?: string | null
           pages_crawled?: number | null
           products_found?: number | null
           products_json?: Json | null
           progress_pct?: number | null
+          rate_limit_hits?: number | null
+          sales_channel?: number | null
+          skus_indisponiveis?: number | null
+          skus_sem_ean?: number | null
+          skus_validos?: number | null
           status?: string
+          total_pages?: number | null
           total_urls_found?: number | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "scrape_jobs_concorrente_id_fkey"
+            columns: ["concorrente_id"]
+            isOneToOne: false
+            referencedRelation: "concorrentes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       site_content: {
         Row: {
