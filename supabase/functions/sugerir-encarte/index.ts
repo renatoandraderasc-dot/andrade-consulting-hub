@@ -45,15 +45,16 @@ const lower = (r: Row): Row => {
 /** terminacao psicologica */
 function arredondar(p: number): number {
   if (p <= 0) return 0;
-  if (p >= 10) return Math.floor(p) - 1 + 0.99 >= p ? Math.floor(p) - 1 + 0.99 : Math.floor(p) + 0.99;
-  if (p >= 2) {
-    const base = Math.floor(p) + 0.9;
-    return base <= p ? base : Math.floor(p) - 1 + 0.9;
+  // termina em ,99 acima de R$ 10 / ,90 entre R$ 2 e R$ 10 / ,49 ou ,99 abaixo de R$ 2
+  const terminacoes = p >= 10 ? [0.99] : p >= 2 ? [0.9] : [0.49, 0.99];
+  const inteiro = Math.floor(p);
+  const opcoes: number[] = [];
+  for (const t of terminacoes) {
+    opcoes.push(inteiro + t, inteiro - 1 + t);
   }
-  const cent = p - Math.floor(p);
-  const alvo = cent >= 0.49 ? (cent >= 0.99 ? 0.99 : 0.49) : 0.49;
-  const v = Math.floor(p) + alvo;
-  return v <= p ? v : Math.max(0.49, Math.floor(p) - 1 + 0.99);
+  const abaixo = opcoes.filter((v) => v > 0 && v <= p + 0.0001);
+  if (abaixo.length) return Math.max(...abaixo);
+  return Math.max(0.49, Math.min(...opcoes.filter((v) => v > 0)));
 }
 
 const normaliza = (v: number, min: number, max: number) =>
