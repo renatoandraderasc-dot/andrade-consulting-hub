@@ -111,7 +111,18 @@ export function useRepricingProcessor(
     const colDescP = findCol(sampleP, ["descricao", "descrição", "produto", "nome", "item"]);
     const colCustoP = findCol(sampleP, ["custo", "preco_custo", "vlr_custo"]);
     const colPrecoP = findCol(sampleP, ["preco", "preço", "preco_venda", "vlr_venda", "preco_atual"]);
-    const colMercP = findCol(sampleP, ["mercadologico", "mercadológico", "categoria", "departamento", "setor", "secao"]);
+    // Preferir nível 1 do mercadológico; nunca concatenar nível 1 + nível 2.
+    const colMercP =
+      findCol(sampleP, [
+        "m1_departamento",
+        "mercadologico1",
+        "mercadologico_1",
+        "nivel1",
+        "departamento",
+        "secao",
+        "setor",
+      ]) ||
+      findCol(sampleP, ["mercadologico", "mercadológico", "categoria"]);
 
     const rows: RepricingRow[] = [];
     for (let i = 0; i < produtos.length; i++) {
@@ -141,7 +152,9 @@ export function useRepricingProcessor(
         descricao: String(p[colDescP ?? ""] ?? "Sem descrição"),
         custo: toNum(p[colCustoP ?? ""]),
         precoAtual: toNum(p[colPrecoP ?? ""]),
-        mercadologico: String(p[colMercP ?? ""] ?? "Outros"),
+        mercadologico: String(p[colMercP ?? ""] ?? "Outros")
+          .split(/\s*[>/|]\s*/)[0]
+          .trim() || "Outros",
         concorrentes: cells,
         interna: internaStats,
       });
