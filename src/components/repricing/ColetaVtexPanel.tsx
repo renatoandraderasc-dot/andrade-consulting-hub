@@ -102,6 +102,12 @@ const ColetaVtexPanel = () => {
     })();
   }, []);
 
+  // relógio sempre ativo, para detectar coleta parada mesmo sem novas atualizações
+  useEffect(() => {
+    const t = window.setInterval(() => setAgora(Date.now()), 5000);
+    return () => window.clearInterval(t);
+  }, []);
+
   useEffect(() => {
     if (!job || (job.status !== "pending" && job.status !== "crawling")) {
       if (timer.current) window.clearInterval(timer.current);
@@ -111,9 +117,17 @@ const ColetaVtexPanel = () => {
       setAgora(Date.now());
       const { data } = await supabase.from("scrape_jobs").select("*").eq("id", job.id).maybeSingle();
       if (data) setJob(data as unknown as Job);
-    }, 2500);
+    }, 5000);
     return () => { if (timer.current) window.clearInterval(timer.current); };
   }, [job?.id, job?.status]);
+
+  const cancelar = async () => {
+    if (!job) return;
+    await supabase.functions.invoke("vtex-catalog-collector", { body: { action: "cancel", jobId: job.id } });
+    const { data: j } = await supabase.from("scrape_jobs").select("*").eq("id", job.id).maybeSingle();
+    if (j) setJob(j as unknown as Job);
+    toast.success("Coleta cancelada");
+  };
 
   const verificarCep = async () => {
     const host = novoHost.replace(/^https?:\/\//, "").replace(/\/.*$/, "").trim();
