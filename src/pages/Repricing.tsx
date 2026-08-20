@@ -65,34 +65,15 @@ const Repricing = () => {
           </TabsContent>
 
           <TabsContent value="bases" className="mt-4 space-y-5">
-        {/* Upload Section */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-
-          <FileUploadCard
-            label="Tipo 1: Cadastro Atual dos Produtos"
-            description="Base com EAN, preço atual, custo e classificação mercadológica dos produtos da loja."
-            expectedColumns={["EAN", "Descrição", "Custo", "Preço", "Mercadológico"]}
-            onDataLoaded={(data) => { setProdutos(data); if (data.length) toast.success(`${data.length} produtos carregados`); }}
-            loaded={produtos.length > 0}
-            rowCount={produtos.length}
-          />
-          <FileUploadCard
-            label="Tipo 2: Pesquisa Grandes"
-            description="Base do concorrente com EAN, preço normal e preço de oferta."
-            expectedColumns={["EAN", "Preço", "Oferta"]}
-            onDataLoaded={(data) => { setConcorrentes(data); if (data.length) toast.success(`${data.length} itens do concorrente carregados`); }}
-            loaded={concorrentes.length > 0}
-            rowCount={concorrentes.length}
-          />
-          <FileUploadCard
-            label="Tipo 3: Pesquisa Base Interna"
-            description="Cadastro auxiliar ampliado para correspondência por descrição quando EAN não for encontrado."
-            expectedColumns={["EAN", "Descrição"]}
-            onDataLoaded={(data) => { setAuxiliar(data); if (data.length) toast.success(`${data.length} itens auxiliares carregados`); }}
-            loaded={auxiliar.length > 0}
-            rowCount={auxiliar.length}
-          />
-        </div>
+        <BasesAutoPanel
+          storeId={storeId}
+          onProdutos={setProdutos}
+          onConcorrente={setConcorrentes}
+          onInterna={setAuxiliar}
+          produtosCount={produtos.length}
+          concorrenteCount={concorrentes.length}
+          internaCount={auxiliar.length}
+        />
 
         {/* Status */}
         {allLoaded && (
