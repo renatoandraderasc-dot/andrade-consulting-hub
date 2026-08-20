@@ -54,19 +54,19 @@ const BasesAutoPanel = ({
     setLoadingP(true);
     try {
       const base = await carregarBaseCatalogo(storeId);
-      const rows: Linha[] = base
-        .filter((p) => p.ean || p.codigo)
-        .map((p) => ({
-          ean: p.ean || p.codigo,
-          descricao: p.descricao,
-          custo: p.custo ?? 0,
-          preco: p.precoOferta || p.preco || 0,
-          mercadologico: [p.n1, p.n2].filter(Boolean).join(" / ") || "Outros",
-        }));
+      // Nunca usar o codigo interno como EAN: sem codigo de barras, campo vazio.
+      const rows: Linha[] = base.map((p) => ({
+        ean: String(p.ean ?? "").trim(),
+        descricao: p.descricao,
+        custo: p.custo ?? 0,
+        preco: p.precoOferta || p.preco || 0,
+        mercadologico: [p.n1, p.n2].filter(Boolean).join(" / ") || "Outros",
+      }));
+      const comEan = rows.filter((r) => String(r.ean).replace(/\D/g, "").length >= 8).length;
       onProdutos(rows);
-      rows.length
-        ? toast.success(`${rows.length} produtos do cadastro carregados`)
-        : toast.error("Nenhum produto retornado pelo sistema da loja");
+      if (!rows.length) toast.error("Nenhum produto retornado pelo sistema da loja");
+      else if (!comEan) toast.error(`${rows.length} produtos carregados, mas nenhum tem código de barras`);
+      else toast.success(`${rows.length} produtos carregados (${comEan} com código de barras)`);
     } catch {
       toast.error("Falha ao carregar o cadastro de produtos");
     }
