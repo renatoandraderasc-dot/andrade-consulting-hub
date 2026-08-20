@@ -158,6 +158,51 @@ export async function carregarBaseCatalogo(storeId: string): Promise<CatalogoIte
   return lista;
 }
 
+// ==========================================================
+// Produtos ativos com movimento nos ultimos 12 meses.
+// Relatorio "produtos_ativos_12m" publicado pela ponte.
+// ==========================================================
+
+export interface ProdutoAtivo12m {
+  codigo: string;
+  ean: string;
+  descricao: string;
+  secao: string;
+  grupo: string;
+  preco: number | null;
+  custo: number | null;
+  margem: number | null;
+  estoque: number | null;
+  qtdVendida12m: number | null;
+  valorVendido12m: number | null;
+  ultimaVenda: string;
+  qtdComprada12m: number | null;
+  ultimaCompra: string;
+  origemMovimento: string;
+}
+
+export async function carregarProdutosAtivos12m(storeId: string) {
+  const r = await chamarRelatorio(storeId, "produtos_ativos_12m", {});
+  const itens: ProdutoAtivo12m[] = (r.dados || []).map((l: any) => ({
+    codigo: String(col(l, "codigo", "cod_produto", "id_produto") ?? ""),
+    ean: String(col(l, "barcode", "codigo_barras", "ean", "cod_barras", "gtin") ?? ""),
+    descricao: String(col(l, "produto", "descricao", "nome") ?? ""),
+    secao: String(col(l, "secao", "departamento") ?? ""),
+    grupo: String(col(l, "grupo", "categoria") ?? ""),
+    preco: numOrNull(col(l, "preco_atual", "preco_venda", "preco")),
+    custo: numOrNull(col(l, "custo", "preco_custo")),
+    margem: numOrNull(col(l, "margem_atual", "margem")),
+    estoque: numOrNull(col(l, "estoque", "estoque_atual")),
+    qtdVendida12m: numOrNull(col(l, "qtd_vendida_12m", "qtd_vendida")),
+    valorVendido12m: numOrNull(col(l, "valor_vendido_12m", "valor_vendido")),
+    ultimaVenda: String(col(l, "ultima_venda") ?? ""),
+    qtdComprada12m: numOrNull(col(l, "qtd_comprada_12m")),
+    ultimaCompra: String(col(l, "ultima_compra") ?? ""),
+    origemMovimento: String(col(l, "origem_movimento") ?? ""),
+  }));
+  return { itens, indisponivel: r.indisponivel, offline: r.offline, erro: r.erro };
+}
+
 export function limparCacheCatalogo(storeId?: string) {
   if (storeId) cache.delete(storeId);
   else cache.clear();
