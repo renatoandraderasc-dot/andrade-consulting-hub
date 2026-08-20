@@ -66,21 +66,21 @@ export function useRepricingProcessor(
     if (!produtos.length || !concorrentes.length) return [];
 
     const sampleP = produtos[0];
-    const colEanP = findCol(sampleP, ["ean", "codigo_barras", "cod_barras", "barras", "gtin", "código de barras", "codigo"]);
+    const colEanP = findCol(sampleP, EAN_COLS);
     const colDescP = findCol(sampleP, ["descricao", "descrição", "produto", "nome", "item"]);
     const colCustoP = findCol(sampleP, ["custo", "preco_custo", "preço_custo", "vlr_custo"]);
     const colPrecoP = findCol(sampleP, ["preco", "preço", "preco_venda", "preço_venda", "vlr_venda", "preco_atual"]);
     const colMercP = findCol(sampleP, ["mercadologico", "mercadológico", "categoria", "departamento", "setor", "secao"]);
 
     const sampleC = concorrentes[0];
-    const colEanC = findCol(sampleC, ["ean", "codigo_barras", "cod_barras", "barras", "gtin", "código de barras", "codigo"]);
+    const colEanC = findCol(sampleC, EAN_COLS);
     const colPrecoC = findCol(sampleC, ["preco", "preço", "preco_normal", "preço_normal", "vlr_venda"]);
     const colOfertaC = findCol(sampleC, ["oferta", "preco_oferta", "preço_oferta", "promocao", "promoção", "vlr_oferta"]);
 
     // Build concorrente map by EAN
     const concMap = new Map<string, { preco: number; oferta: number; desc?: string }>();
     for (const c of concorrentes) {
-      const ean = normalize(c[colEanC ?? ""] ?? "");
+      const ean = eanValido(c[colEanC ?? ""]);
       if (!ean) continue;
       const descCol = findCol(c, ["descricao", "descrição", "produto", "nome"]);
       concMap.set(ean, {
@@ -94,7 +94,7 @@ export function useRepricingProcessor(
 
     for (let i = 0; i < produtos.length; i++) {
       const p = produtos[i];
-      const ean = normalize(p[colEanP ?? ""] ?? "");
+      const ean = eanValido(p[colEanP ?? ""]);
       const descricao = String(p[colDescP ?? ""] ?? "Sem descrição");
       const custo = toNum(p[colCustoP ?? ""]);
       const precoAtual = toNum(p[colPrecoP ?? ""]);
