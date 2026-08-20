@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import ClientLayout from "@/components/ClientLayout";
-import FileUploadCard from "@/components/repricing/FileUploadPanel";
+import BasesAutoPanel from "@/components/repricing/BasesAutoPanel";
 import RepricingResultTable from "@/components/repricing/RepricingResultTable";
 import { useRepricingProcessor } from "@/components/repricing/useRepricingProcessor";
 import { supabase } from "@/integrations/supabase/client";
