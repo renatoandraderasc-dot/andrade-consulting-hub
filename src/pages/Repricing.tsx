@@ -52,8 +52,20 @@ const Repricing = () => {
           )}
         </div>
 
+        <Tabs defaultValue="bases">
+          <TabsList>
+            <TabsTrigger value="bases">Importação de Bases</TabsTrigger>
+            <TabsTrigger value="concorrentes">Concorrentes & Coleta</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="concorrentes" className="mt-4">
+            <ConcorrentesTab />
+          </TabsContent>
+
+          <TabsContent value="bases" className="mt-4 space-y-5">
         {/* Upload Section */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
           <FileUploadCard
             label="Tipo 1: Cadastro Atual dos Produtos"
             description="Base com EAN, preço atual, custo e classificação mercadológica dos produtos da loja."
