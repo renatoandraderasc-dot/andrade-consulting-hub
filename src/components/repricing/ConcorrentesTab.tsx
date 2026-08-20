@@ -14,6 +14,7 @@ import {
   XCircle, Clock, Store, Link2, Search, Download, Settings2, Eye
 } from "lucide-react";
 import ConcorrenteAnalise from "./ConcorrenteAnalise";
+import ColetaVtexPanel from "./ColetaVtexPanel";
 import { firecrawlApi, type ScrapedProduct } from "@/lib/api/firecrawl";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -298,6 +299,7 @@ const ConcorrentesTab = () => {
 
   return (
     <div className="space-y-5">
+      <ColetaVtexPanel />
       {/* Active Job Progress */}
       {activeJob && (
         <Card className="border-primary/30 bg-primary/5">
