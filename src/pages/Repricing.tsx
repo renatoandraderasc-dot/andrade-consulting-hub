@@ -94,11 +94,17 @@ const Repricing = () => {
         />
 
         {/* Status */}
-        {allLoaded && (
+        {(produtos.length > 0 || concorrentes.length > 0) && (
           <div className="flex items-center gap-3 flex-wrap">
             <Badge variant="outline" className="gap-1.5 py-1">
               <FileSpreadsheet className="w-3.5 h-3.5" />
-              {rows.length} produtos cruzados por EAN
+              {rows.length} produtos cruzados por código de barras
+            </Badge>
+            <Badge variant="outline" className={`py-1 ${diag.produtosComEan ? "" : "bg-destructive/10 text-destructive border-destructive/30"}`}>
+              Loja: {diag.produtosComEan.toLocaleString("pt-BR")} com código · {diag.produtosSemEan.toLocaleString("pt-BR")} sem código
+            </Badge>
+            <Badge variant="outline" className={`py-1 ${diag.concorrentesComEan ? "" : "bg-destructive/10 text-destructive border-destructive/30"}`}>
+              Concorrente: {diag.concorrentesComEan.toLocaleString("pt-BR")} com código · {diag.concorrentesSemEan.toLocaleString("pt-BR")} sem código
             </Badge>
             {auxiliar.length > 0 && (
               <Badge variant="outline" className="gap-1.5 py-1 bg-amber-500/10 text-amber-700 border-amber-500/20">
