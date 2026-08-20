@@ -412,6 +412,13 @@ function reinvocar(body: Record<string, unknown>) {
 // ------------------------------------------------------------ lote
 
 async function processarLote(jobId: string) {
+  // guarda: só continua se a coleta ainda estiver ativa
+  const { data: estado } = await supabase
+    .from("scrape_jobs").select("status").eq("id", jobId).maybeSingle();
+  if (!estado || (estado.status !== "crawling" && estado.status !== "pending")) {
+    console.log("lote ignorado, coleta não está ativa:", estado?.status);
+    return;
+  }
   let ctx: Ctx;
   try {
     ctx = await carregarCtx(jobId);
@@ -421,7 +428,8 @@ async function processarLote(jobId: string) {
   }
   const buffer: any[] = [];
   try {
-    const pendentes = ctx.fila.filter((f) => f.status !== "feita");
+    // categorias com erro NÃO voltam para a fila automaticamente (evita loop infinito)
+    const pendentes = ctx.fila.filter((f) => f.status === "pendente");
     const lote = pendentes.slice(0, LOTE_CATEGORIAS);
     if (lote.length === 0) {
       await gravarJob(ctx, {
