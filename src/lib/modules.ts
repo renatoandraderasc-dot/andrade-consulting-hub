@@ -20,7 +20,7 @@ export const APP_MODULES = [
   { key: "admin_users", label: "Admin: Usuários", path: "/admin/users" },
   { key: "admin_conexoes", label: "Admin: Gestão de Conexão", path: "/admin/conexoes" },
   { key: "admin_site", label: "Admin: Página Inicial", path: "/admin/site" },
-  { key: "vtex_collector", label: "Coletor VTEX", path: "/vtex-collector" },
+  { key: "vtex_collector", label: "Coletor de Preços", path: "/vtex-collector" },
   { key: "websac_sync", label: "Sync WebSac", path: "/websac-sync" },
   { key: "produtos", label: "Produtos", path: "/produtos" },
   { key: "encartes", label: "Meus Encartes", path: "/encartes" },
