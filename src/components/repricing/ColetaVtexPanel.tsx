@@ -203,7 +203,9 @@ const ColetaVtexPanel = () => {
     if (j) setJob(j as unknown as Job);
   };
 
-  const rodando = job && (job.status === "pending" || job.status === "crawling");
+  const rodando =
+    job && !(job as { finished_at?: string | null }).finished_at &&
+    (job.status === "pending" || job.status === "crawling");
   const concJob = concorrentes.find((c) => c.id === job?.concorrente_id);
   const pracaDivergente =
     job?.lojista_detectado && concJob?.praca_esperada &&
