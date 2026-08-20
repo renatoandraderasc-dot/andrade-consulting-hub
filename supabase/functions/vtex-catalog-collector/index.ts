@@ -412,6 +412,16 @@ function reinvocar(body: Record<string, unknown>) {
 // ------------------------------------------------------------ lote
 
 async function processarLote(jobId: string) {
+  // guarda: só continua se a coleta ainda estiver ativa e não tiver sido encerrada
+  const { data: estado } = await supabase
+    .from("scrape_jobs").select("status, finished_at").eq("id", jobId).maybeSingle();
+  if (
+    !estado || estado.finished_at ||
+    (estado.status !== "crawling" && estado.status !== "pending")
+  ) {
+    console.log("lote ignorado, coleta encerrada:", estado?.status);
+    return;
+  }
   let ctx: Ctx;
   try {
     ctx = await carregarCtx(jobId);
@@ -421,7 +431,8 @@ async function processarLote(jobId: string) {
   }
   const buffer: any[] = [];
   try {
-    const pendentes = ctx.fila.filter((f) => f.status !== "feita");
+    // categorias com erro NÃO voltam para a fila automaticamente (evita loop infinito)
+    const pendentes = ctx.fila.filter((f) => f.status === "pendente");
     const lote = pendentes.slice(0, LOTE_CATEGORIAS);
     if (lote.length === 0) {
       await gravarJob(ctx, {
@@ -545,6 +556,16 @@ Deno.serve(async (req) => {
         .from("scrape_jobs").select("*").eq("id", body.jobId).maybeSingle();
       if (error) throw error;
       return json({ success: true, job: data });
+    }
+
+    if (action === "cancel") {
+      if (!body.jobId) throw new Error("jobId obrigatório");
+      await supabase.from("scrape_jobs").update({
+        status: "error",
+        error_message: "coleta cancelada pelo usuário",
+        finished_at: new Date().toISOString(),
+      }).eq("id", body.jobId);
+      return json({ success: true });
     }
 
     if (action === "batch") {

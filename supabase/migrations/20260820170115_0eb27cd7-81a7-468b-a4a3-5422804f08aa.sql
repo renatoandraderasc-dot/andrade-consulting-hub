@@ -1,0 +1,1 @@
+UPDATE public.scrape_jobs SET status = 'error', error_message = coalesce(error_message, 'coleta interrompida'), finished_at = now() WHERE status IN ('crawling','pending');

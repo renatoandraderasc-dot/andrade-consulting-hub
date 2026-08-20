@@ -102,6 +102,12 @@ const ColetaVtexPanel = () => {
     })();
   }, []);
 
+  // relógio sempre ativo, para detectar coleta parada mesmo sem novas atualizações
+  useEffect(() => {
+    const t = window.setInterval(() => setAgora(Date.now()), 5000);
+    return () => window.clearInterval(t);
+  }, []);
+
   useEffect(() => {
     if (!job || (job.status !== "pending" && job.status !== "crawling")) {
       if (timer.current) window.clearInterval(timer.current);
@@ -111,9 +117,17 @@ const ColetaVtexPanel = () => {
       setAgora(Date.now());
       const { data } = await supabase.from("scrape_jobs").select("*").eq("id", job.id).maybeSingle();
       if (data) setJob(data as unknown as Job);
-    }, 2500);
+    }, 5000);
     return () => { if (timer.current) window.clearInterval(timer.current); };
   }, [job?.id, job?.status]);
+
+  const cancelar = async () => {
+    if (!job) return;
+    await supabase.functions.invoke("vtex-catalog-collector", { body: { action: "cancel", jobId: job.id } });
+    const { data: j } = await supabase.from("scrape_jobs").select("*").eq("id", job.id).maybeSingle();
+    if (j) setJob(j as unknown as Job);
+    toast.success("Coleta cancelada");
+  };
 
   const verificarCep = async () => {
     const host = novoHost.replace(/^https?:\/\//, "").replace(/\/.*$/, "").trim();
@@ -189,7 +203,9 @@ const ColetaVtexPanel = () => {
     if (j) setJob(j as unknown as Job);
   };
 
-  const rodando = job && (job.status === "pending" || job.status === "crawling");
+  const rodando =
+    job && !(job as { finished_at?: string | null }).finished_at &&
+    (job.status === "pending" || job.status === "crawling");
   const concJob = concorrentes.find((c) => c.id === job?.concorrente_id);
   const pracaDivergente =
     job?.lojista_detectado && concJob?.praca_esperada &&
@@ -324,10 +340,17 @@ const ColetaVtexPanel = () => {
                 ))}
               </SelectContent>
             </Select>
-            <Button onClick={iniciar} disabled={starting || (!!rodando && !travado) || !selected} className="gap-2">
-              {starting || (rodando && !travado) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-              {rodando && !travado ? "Coletando..." : "Iniciar coleta"}
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={iniciar} disabled={starting || (!!rodando && !travado) || !selected} className="gap-2">
+                {starting || (rodando && !travado) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+                {rodando && !travado ? "Coletando..." : "Iniciar coleta"}
+              </Button>
+              {rodando && (
+                <Button variant="outline" onClick={cancelar} className="gap-2">
+                  <XCircle className="w-4 h-4" /> Parar
+                </Button>
+              )}
+            </div>
           </div>
 
           {job && (
