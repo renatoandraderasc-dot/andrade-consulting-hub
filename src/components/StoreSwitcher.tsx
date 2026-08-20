@@ -51,6 +51,7 @@ const StoreSwitcher = () => {
       if ((!saved || !list.some((s) => s.id === saved)) && list.length) {
         sessionStorage.setItem("selectedStoreId", list[0].id);
         setCurrent(list[0].id);
+        window.dispatchEvent(new CustomEvent("store-changed", { detail: list[0].id }));
       }
     };
 

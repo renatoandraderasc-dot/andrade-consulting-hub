@@ -14,7 +14,9 @@ import ConcorrentesTab from "@/components/repricing/ConcorrentesTab";
 
 const Repricing = () => {
   const [searchParams] = useSearchParams();
-  const storeId = searchParams.get("store") || "";
+  const [storeId, setStoreId] = useState(
+    () => searchParams.get("store") || sessionStorage.getItem("selectedStoreId") || "",
+  );
   const [storeName, setStoreName] = useState("");
 
   const [produtos, setProdutos] = useState<Record<string, unknown>[]>([]);
@@ -22,7 +24,23 @@ const Repricing = () => {
   const [auxiliar, setAuxiliar] = useState<Record<string, unknown>[]>([]);
 
   useEffect(() => {
-    if (!storeId) return;
+    const handleStoreChange = (event: Event) => {
+      const nextStoreId = (event as CustomEvent<string>).detail;
+      if (!nextStoreId) return;
+      setStoreId(nextStoreId);
+      setProdutos([]);
+      setConcorrentes([]);
+      setAuxiliar([]);
+    };
+    window.addEventListener("store-changed", handleStoreChange);
+    return () => window.removeEventListener("store-changed", handleStoreChange);
+  }, []);
+
+  useEffect(() => {
+    if (!storeId) {
+      setStoreName("");
+      return;
+    }
     supabase.from("stores").select("name").eq("id", storeId).single()
       .then(({ data }) => { if (data) setStoreName(data.name); });
   }, [storeId]);
