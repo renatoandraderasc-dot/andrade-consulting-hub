@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Download, CheckCircle2, Package, Store, Building2 } from "lucide-react";
-import { carregarBaseCatalogo } from "@/lib/catalogoProdutos";
+import { carregarBaseCatalogo, carregarProdutosAtivos12m, avisoRelatorio } from "@/lib/catalogoProdutos";
 
 export type Linha = Record<string, unknown>;
 
@@ -23,17 +23,22 @@ interface Props {
 interface ConcOpt { id: string; nome: string; host: string }
 interface LojaOpt { id: string; name: string }
 
+type ModoCadastro = "ativos12m" | "completo";
+
 const BasesAutoPanel = ({
   storeId, onProdutos, onConcorrente, onInterna,
   produtosCount, concorrenteCount, internaCount,
 }: Props) => {
   const [concorrentes, setConcorrentes] = useState<ConcOpt[]>([]);
-  const [concSel, setConcSel] = useState("");
+  const [concSel, setConcSel] = useState("todos");
   const [lojas, setLojas] = useState<LojaOpt[]>([]);
+  const [modo, setModo] = useState<ModoCadastro>("ativos12m");
+  const [modoCarregado, setModoCarregado] = useState<ModoCadastro | null>(null);
   const [loadingP, setLoadingP] = useState(false);
   const [loadingC, setLoadingC] = useState(false);
   const [loadingI, setLoadingI] = useState(false);
   const [progressoInterna, setProgressoInterna] = useState("");
+  const [progressoConc, setProgressoConc] = useState("");
 
   useEffect(() => {
     (async () => {
@@ -41,71 +46,106 @@ const BasesAutoPanel = ({
         supabase.from("concorrentes").select("id, nome, host").eq("ativo", true).order("nome"),
         supabase.from("stores").select("id, name").order("name"),
       ]);
-      const list = (cs as ConcOpt[]) || [];
-      setConcorrentes(list);
-      setConcSel((p) => p || list[0]?.id || "");
+      setConcorrentes((cs as ConcOpt[]) || []);
       setLojas((ls as LojaOpt[]) || []);
     })();
   }, []);
 
-  // 1) Cadastro atual da loja (gestão de produtos)
+  // 1) Cadastro da loja — ativos 12 meses (padrao) ou cadastro completo
   const carregarProdutos = useCallback(async () => {
     if (!storeId) return toast.error("Selecione a loja para carregar o cadastro");
     setLoadingP(true);
     try {
-      const base = await carregarBaseCatalogo(storeId);
-      // Nunca usar o codigo interno como EAN: sem codigo de barras, campo vazio.
-      const rows: Linha[] = base.map((p) => ({
-        ean: String(p.ean ?? "").trim(),
-        descricao: p.descricao,
-        custo: p.custo ?? 0,
-        preco: p.precoOferta || p.preco || 0,
-        mercadologico: [p.n1, p.n2].filter(Boolean).join(" / ") || "Outros",
-      }));
-      const comEan = rows.filter((r) => String(r.ean).replace(/\D/g, "").length >= 8).length;
-      onProdutos(rows);
-      if (!rows.length) toast.error("Nenhum produto retornado pelo sistema da loja");
-      else if (!comEan) toast.error(`${rows.length} produtos carregados, mas nenhum tem código de barras`);
-      else toast.success(`${rows.length} produtos carregados (${comEan} com código de barras)`);
+      if (modo === "ativos12m") {
+        const r = await carregarProdutosAtivos12m(storeId);
+        const aviso = avisoRelatorio(r);
+        if (!r.itens.length && aviso) {
+          toast.error(aviso);
+          onProdutos([]);
+          setLoadingP(false);
+          return;
+        }
+        const rows: Linha[] = r.itens.map((p) => ({
+          ean: String(p.ean ?? "").trim(),
+          descricao: p.descricao,
+          custo: p.custo ?? 0,
+          preco: p.preco ?? 0,
+          mercadologico: [p.secao, p.grupo].filter(Boolean).join(" / ") || "Outros",
+          estoque: p.estoque,
+          qtd_vendida_12m: p.qtdVendida12m,
+          valor_vendido_12m: p.valorVendido12m,
+          ultima_venda: p.ultimaVenda,
+        }));
+        onProdutos(rows);
+        setModoCarregado("ativos12m");
+        const comEan = rows.filter((x) => String(x.ean).replace(/\D/g, "").length >= 8).length;
+        rows.length
+          ? toast.success(`${rows.length} produtos ativos com movimento em 12 meses (${comEan} com código de barras)`)
+          : toast.error("Nenhum produto ativo retornado pelo sistema da loja");
+      } else {
+        const base = await carregarBaseCatalogo(storeId);
+        const rows: Linha[] = base.map((p) => ({
+          ean: String(p.ean ?? "").trim(),
+          descricao: p.descricao,
+          custo: p.custo ?? 0,
+          preco: p.precoOferta || p.preco || 0,
+          mercadologico: [p.n1, p.n2].filter(Boolean).join(" / ") || "Outros",
+        }));
+        onProdutos(rows);
+        setModoCarregado("completo");
+        const comEan = rows.filter((x) => String(x.ean).replace(/\D/g, "").length >= 8).length;
+        rows.length
+          ? toast.success(`${rows.length} produtos do cadastro completo (${comEan} com código de barras)`)
+          : toast.error("Nenhum produto retornado pelo sistema da loja");
+      }
     } catch {
       toast.error("Falha ao carregar o cadastro de produtos");
     }
     setLoadingP(false);
-  }, [storeId, onProdutos]);
+  }, [storeId, modo, onProdutos]);
 
-  // 2) Pesquisa do concorrente coletada
+  // 2) Pesquisas dos concorrentes coletadas (uma coluna por concorrente)
   const carregarConcorrente = useCallback(async () => {
-    if (!concSel) return toast.error("Selecione o concorrente");
+    const alvos = concSel === "todos" ? concorrentes : concorrentes.filter((c) => c.id === concSel);
+    if (!alvos.length) return toast.error("Nenhum concorrente cadastrado");
     setLoadingC(true);
     const rows: Linha[] = [];
     const passo = 1000;
-    for (let de = 0; de < 200000; de += passo) {
-      const { data, error } = await supabase
-        .from("precos_concorrente")
-        .select("id, ean, nome, preco, preco_de, em_promocao, disponivel")
-        .eq("concorrente_id", concSel)
-        .eq("disponivel", true)
-        .order("id", { ascending: true })
-        .range(de, de + passo - 1);
-      if (error) { toast.error(error.message); break; }
-      const lote = data || [];
-      for (const r of lote) {
-        rows.push({
-          ean: String(r.ean ?? "").trim(),
-          descricao: r.nome ?? "",
-          preco: r.preco_de ?? r.preco ?? 0,
-          oferta: r.em_promocao ? (r.preco ?? 0) : 0,
-        });
+    for (let i = 0; i < alvos.length; i++) {
+      const c = alvos[i];
+      setProgressoConc(`${i + 1}/${alvos.length} — ${c.nome}`);
+      for (let de = 0; de < 200000; de += passo) {
+        const { data, error } = await supabase
+          .from("precos_concorrente")
+          .select("id, ean, nome, preco, preco_de, em_promocao, disponivel, coletado_em")
+          .eq("concorrente_id", c.id)
+          .eq("disponivel", true)
+          .order("id", { ascending: true })
+          .range(de, de + passo - 1);
+        if (error) { toast.error(error.message); break; }
+        const lote = data || [];
+        for (const r of lote) {
+          rows.push({
+            ean: String(r.ean ?? "").trim(),
+            descricao: r.nome ?? "",
+            preco: r.preco_de ?? r.preco ?? 0,
+            oferta: r.em_promocao ? (r.preco ?? 0) : 0,
+            concorrente_id: c.id,
+            concorrente_nome: c.nome,
+            coletado_em: r.coletado_em ?? null,
+          });
+        }
+        if (lote.length < passo) break;
       }
-      if (lote.length < passo) break;
     }
+    setProgressoConc("");
     onConcorrente(rows);
     setLoadingC(false);
     const comEanC = rows.filter((r) => String(r.ean).replace(/\D/g, "").length >= 8).length;
     rows.length
-      ? toast.success(`${rows.length} preços carregados (${comEanC} com código de barras)`)
-      : toast.error("Nenhum preço coletado para este concorrente ainda");
-  }, [concSel, onConcorrente]);
+      ? toast.success(`${rows.length} preços carregados de ${alvos.length} concorrente(s) (${comEanC} com código de barras)`)
+      : toast.error("Nenhum preço coletado para o(s) concorrente(s) selecionado(s)");
+  }, [concSel, concorrentes, onConcorrente]);
 
   // 3) Base interna — preços das demais lojas da rede
   const carregarInterna = useCallback(async () => {
@@ -140,48 +180,65 @@ const BasesAutoPanel = ({
       : toast.error("Nenhuma outra loja respondeu com cadastro de preços");
   }, [lojas, storeId, onInterna]);
 
-  const Ok = ({ n }: { n: number }) => (
-    <Badge variant="outline" className="gap-1 bg-emerald-500/10 text-emerald-600 border-emerald-500/30">
-      <CheckCircle2 className="w-3.5 h-3.5" /> {n.toLocaleString("pt-BR")} itens
-    </Badge>
+  const Ok = ({ n, obs }: { n: number; obs?: string }) => (
+    <div className="space-y-1">
+      <Badge variant="outline" className="gap-1 bg-emerald-500/10 text-emerald-600 border-emerald-500/30">
+        <CheckCircle2 className="w-3.5 h-3.5" /> {n.toLocaleString("pt-BR")} itens
+      </Badge>
+      {obs && <p className="text-[11px] text-muted-foreground">{obs}</p>}
+    </div>
   );
 
   return (
     <div className="grid gap-4 md:grid-cols-3">
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm flex items-center gap-2"><Package className="w-4 h-4" /> Cadastro atual da loja</CardTitle>
+          <CardTitle className="text-sm flex items-center gap-2"><Package className="w-4 h-4" /> Cadastro da loja</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-xs text-muted-foreground">
-            Puxa direto da gestão de produtos da loja selecionada: código de barras, descrição, custo, preço e classificação.
+            Traz por padrão apenas os produtos ativos com movimento nos últimos 12 meses — sem item parado há anos.
           </p>
+          <Select value={modo} onValueChange={(v) => setModo(v as ModoCadastro)}>
+            <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+            <SelectContent className="bg-popover z-50">
+              <SelectItem value="ativos12m">Ativos (12 meses)</SelectItem>
+              <SelectItem value="completo">Cadastro completo</SelectItem>
+            </SelectContent>
+          </Select>
           <Button size="sm" onClick={carregarProdutos} disabled={loadingP} className="gap-2 w-full">
             {loadingP ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Carregar cadastro
           </Button>
-          {produtosCount > 0 && <Ok n={produtosCount} />}
+          {produtosCount > 0 && (
+            <Ok
+              n={produtosCount}
+              obs={modoCarregado === "completo" ? "cadastro completo da loja" : "ativos com movimento em 12 meses"}
+            />
+          )}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm flex items-center gap-2"><Store className="w-4 h-4" /> Pesquisa do concorrente</CardTitle>
+          <CardTitle className="text-sm flex items-center gap-2"><Store className="w-4 h-4" /> Pesquisa dos concorrentes</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-xs text-muted-foreground">
-            Usa a pesquisa de preços já coletada do concorrente escolhido.
+            Usa as pesquisas de preços já coletadas. Cada concorrente vira um bloco de colunas na tabela.
           </p>
           <Select value={concSel} onValueChange={setConcSel} disabled={!concorrentes.length}>
             <SelectTrigger className="h-9">
-              <SelectValue placeholder={concorrentes.length ? "Selecione o concorrente" : "Nenhum concorrente cadastrado"} />
+              <SelectValue placeholder={concorrentes.length ? "Selecione" : "Nenhum concorrente cadastrado"} />
             </SelectTrigger>
             <SelectContent className="bg-popover z-50">
+              <SelectItem value="todos">Todos os concorrentes</SelectItem>
               {concorrentes.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Button size="sm" onClick={carregarConcorrente} disabled={loadingC || !concSel} className="gap-2 w-full">
+          <Button size="sm" onClick={carregarConcorrente} disabled={loadingC || !concorrentes.length} className="gap-2 w-full">
             {loadingC ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Carregar pesquisa
           </Button>
+          {loadingC && progressoConc && <p className="text-[11px] text-muted-foreground">{progressoConc}</p>}
           {concorrenteCount > 0 && <Ok n={concorrenteCount} />}
         </CardContent>
       </Card>
@@ -198,7 +255,7 @@ const BasesAutoPanel = ({
             {loadingI ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Carregar base interna
           </Button>
           {loadingI && progressoInterna && <p className="text-[11px] text-muted-foreground">{progressoInterna}</p>}
-          {internaCount > 0 && <Ok n={internaCount} />}
+          {internaCount > 0 && <Ok n={internaCount} obs="preços das outras lojas da rede" />}
         </CardContent>
       </Card>
     </div>
