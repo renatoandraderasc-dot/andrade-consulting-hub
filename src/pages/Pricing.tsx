@@ -145,8 +145,9 @@ const Pricing = () => {
         for (;;) {
           const { data } = await supabase
             .from("precos_concorrente")
-            .select("ean, preco, preco_auditoria, disponivel, promocao_multipla, lojista, coletado_em, imagem_url")
+            .select("id, ean, preco, preco_auditoria, disponivel, promocao_multipla, lojista, coletado_em, imagem_url")
             .eq("concorrente_id", c.id)
+            .order("id", { ascending: true })
             .range(from, from + 999);
           const linhas = data || [];
           for (const l of linhas) {
