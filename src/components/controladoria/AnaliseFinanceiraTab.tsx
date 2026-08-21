@@ -438,8 +438,8 @@ export const AnaliseFinanceiraTab = ({ storeId, storeName }: Props) => {
             <FileSpreadsheet className="h-4 w-4 mr-2" /> Exportar Excel
           </Button>
           <p className="text-xs text-muted-foreground ml-auto max-w-[420px]">
-            Em aberto = títulos com Situação "Aberto" no sistema da loja (Pago sai da
-            análise). Os valores considerados são sempre o Valor Líquido.
+            Aberto = título sem pagamento registrado. Pago = título com data de pagamento
+            registrada na Situação. Os valores considerados são sempre o Valor Líquido.
           </p>
 
         </CardContent>
