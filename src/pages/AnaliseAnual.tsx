@@ -204,7 +204,7 @@ const AnaliseAnual = () => {
     setHoraLoading(true);
     const hoje0 = new Date();
     const acc = new Map<string, Row>();
-    for (const r of horaRows) acc.set(`${r.ano}-${r.mes}-${r.secao}-${r.categoria}-${r.turno}`, { ...r });
+    for (const r of horaRows) acc.set(`${r.ano}-${r.mes}-${r.departamento}-${r.categoria}-${r.turno}`, { ...r });
     const tarefas: { ano: number; mes: number }[] = [];
     for (const a of anos) {
       const ultMes = a === hoje0.getFullYear() ? hoje0.getMonth() + 1 : 12;
