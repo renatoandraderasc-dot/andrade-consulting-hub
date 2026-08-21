@@ -205,7 +205,8 @@ export const AnaliseFinanceiraTab = ({ storeId, storeName }: Props) => {
       .sort((a: any, b: any) =>
         String(pick(a, "vencimento") ?? "").localeCompare(String(pick(b, "vencimento") ?? "")))
       .forEach((r: any) => {
-        // sem data de pagamento = em aberto; com data = ja pago, sai da analise
+        // Situacao "Pago" sai da analise; "Aberto" fica.
+        if (temSituacao && situacaoDe(r) === "pago") return;
         if (temDataPagamento && dataPagamentoDe(r)) return;
 
         const fornecedor = String(pick(r, "fornecedor") ?? "").trim() || "SEM FORNECEDOR";
