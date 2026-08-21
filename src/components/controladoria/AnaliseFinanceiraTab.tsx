@@ -215,7 +215,7 @@ export const AnaliseFinanceiraTab = ({ storeId, storeName }: Props) => {
         const valor = valorLiquidoDe(r);
         let aberto = Math.round(valor * 100) / 100;
 
-        if (!temDataPagamento) {
+        if (usaFifo) {
           const k = `${String(pick(r, "fornecedor") ?? "").trim()}|${documento}`;
           const disponivel = pagos.get(k) ?? 0;
           const abatido = Math.min(disponivel, valor);
