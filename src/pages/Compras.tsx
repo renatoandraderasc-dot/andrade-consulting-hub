@@ -387,8 +387,15 @@ const Compras = () => {
 
   // ============ Derived (Aba 1) ============
   const painelRows = useMemo(() => {
+    const indice = new Map<string, { compra: number; venda: number; cmv: number }>();
+    for (const [nome, v] of Object.entries(realizadoDep)) {
+      const k = chaveDep(nome);
+      const cur = indice.get(k) ?? { compra: 0, venda: 0, cmv: 0 };
+      indice.set(k, { compra: cur.compra + v.compra, venda: cur.venda + v.venda, cmv: cur.cmv + v.cmv });
+    }
     return metas.map((m) => {
-      const real = realizadoDep[m.departamento] || { compra: 0, venda: 0, cmv: 0 };
+      const real = indice.get(chaveDep(m.departamento)) || { compra: 0, venda: 0, cmv: 0 };
+
       const meta_compra = Number(m.meta_compra) || 0;
       const saldo = meta_compra - real.compra;
       const consumido = meta_compra > 0 ? (real.compra / meta_compra) * 100 : 0;
