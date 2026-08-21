@@ -50,6 +50,13 @@ const mercadologico1 = (linha: any) => String(col(
   "grupo_1",
 ) ?? "").trim().toUpperCase();
 
+// Chave de comparacao de departamento: sem acento, sem caixa e sem espacos duplos.
+// O ERP devolve "Acougue"/"Pereciveis" e as metas podem estar como "AÇOUGUE".
+const chaveDep = (s: string) =>
+  (s || "").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
+
+
+
 const monthRange = (year: number, month: number) => {
   const inicio = `${year}-${String(month).padStart(2, "0")}-01`;
   const last = new Date(year, month, 0).getDate();
