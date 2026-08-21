@@ -85,6 +85,18 @@ const dataPagamentoDe = (r: any) => {
   return s.slice(0, 10);
 };
 
+/** Situacao do titulo informada pelo sistema da loja: "aberto" | "pago" | "" */
+const situacaoDe = (r: any): "aberto" | "pago" | "" => {
+  const v = pick(r, "situacao", "situacao_titulo", "status", "status_titulo", "sit");
+  const s = String(v ?? "")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .trim().toLowerCase();
+  if (!s) return "";
+  if (/(^|\b)(pago|paga|pagos|quitado|quitada|baixado|baixada|liquidado|liquidada|p)$/.test(s)) return "pago";
+  if (/(aberto|aberta|pendente|a pagar|em aberto|nao pago|vencido|a vencer)/.test(s)) return "aberto";
+  return "";
+};
+
 /** Valor liquido do titulo (com fallback para o valor bruto). */
 const valorLiquidoDe = (r: any) => {
   const liq = pick(r, "valor_liquido", "vlr_liquido", "valorliquido", "vl_liquido", "liquido");
