@@ -86,6 +86,11 @@ const AnaliseAnual = () => {
       const r = await chamarRelatorio(sid, "dre_periodo", { inicio: `${ANOS[0]}-01-01`, fim });
       const aviso = avisoRelatorio(r);
       if (aviso) throw new Error(aviso);
+      // Se o DRE não traz quebra por departamento/categoria, usa a base analítica (fallback ao vivo)
+      const temQuebra = r.dados.some(
+        (l) => pick(l, "departamento", "department", "secao", "nivel1", "categoria", "nivel2") != null,
+      );
+      if (!temQuebra) throw new Error("dre sem quebra por departamento");
       const mapeado: Row[] = r.dados
         .map((l) => {
           const ref = String(pick(l, "mes", "competencia", "data") ?? "");
@@ -128,12 +133,13 @@ const AnaliseAnual = () => {
             const mes = Number(dia.slice(5, 7));
             if (!ano || !mes) continue;
             const secao = String(pick(l, "secao", "departamento", "nivel1") ?? "TOTAL").toUpperCase();
-            const categoria = String(pick(l, "categoria", "nivel2") ?? secao).toUpperCase();
+            const departamento = String(pick(l, "categoria", "departamento", "nivel1") ?? secao).toUpperCase();
+            const categoria = String(pick(l, "grupo", "nivel2", "categoria") ?? secao).toUpperCase();
             const turno = extrairTurno(l);
-            const k = `${ano}-${mes}-${secao}-${categoria}-${turno}`;
+            const k = `${ano}-${mes}-${departamento}-${categoria}-${turno}`;
             const cur = acc.get(k) ?? {
               ano, mes, faturamento: 0, lucro: 0, volume: 0,
-              departamento: secao, secao, categoria, turno,
+              departamento, secao, categoria, turno,
             };
             cur.faturamento += num(pick(l, "vendas", "total_vendido", "faturamento", "venda", "valor_venda", "valor", "total"));
             cur.lucro += num(pick(l, "lucro", "lucro_bruto", "margem_valor"));
@@ -198,7 +204,7 @@ const AnaliseAnual = () => {
     setHoraLoading(true);
     const hoje0 = new Date();
     const acc = new Map<string, Row>();
-    for (const r of horaRows) acc.set(`${r.ano}-${r.mes}-${r.secao}-${r.categoria}-${r.turno}`, { ...r });
+    for (const r of horaRows) acc.set(`${r.ano}-${r.mes}-${r.departamento}-${r.categoria}-${r.turno}`, { ...r });
     const tarefas: { ano: number; mes: number }[] = [];
     for (const a of anos) {
       const ultMes = a === hoje0.getFullYear() ? hoje0.getMonth() + 1 : 12;
@@ -222,12 +228,13 @@ const AnaliseAnual = () => {
           const mes = Number(dia.slice(5, 7));
           if (!ano || !mes) continue;
           const secao = String(pick(l, "secao", "departamento", "nivel1") ?? "TOTAL").toUpperCase();
-          const categoria = String(pick(l, "categoria", "nivel2") ?? secao).toUpperCase();
+          const departamento = String(pick(l, "categoria", "departamento", "nivel1") ?? secao).toUpperCase();
+          const categoria = String(pick(l, "grupo", "nivel2", "categoria") ?? secao).toUpperCase();
           const turnoL = extrairTurno(l);
-          const k = `${ano}-${mes}-${secao}-${categoria}-${turnoL}`;
+          const k = `${ano}-${mes}-${departamento}-${categoria}-${turnoL}`;
           const cur = acc.get(k) ?? {
             ano, mes, faturamento: 0, lucro: 0, volume: 0,
-            departamento: secao, secao, categoria, turno: turnoL,
+            departamento, secao, categoria, turno: turnoL,
           };
           cur.faturamento += num(pick(l, "total_vendido", "faturamento", "venda"));
           cur.lucro += num(pick(l, "lucro", "lucro_bruto"));
