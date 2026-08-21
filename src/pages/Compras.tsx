@@ -557,12 +557,14 @@ const Compras = () => {
   // mesmo os que ainda não têm cadastro de taxas.
   const deptosView = useMemo(() => {
     const map = new Map<string, any>();
-    for (const d of deptos) map.set(d.departamento, d);
+    for (const d of deptos) map.set(chaveDep(d.departamento), d);
     for (const nome of new Set<string>([...mercadologicos1, ...deptOptions, ...Object.keys(realizadoDep)])) {
-      if (nome && !map.has(nome)) {
-        map.set(nome, { departamento: nome, tx_perdas: 0, tx_recuperacao: 1, ativo: true });
+      const k = chaveDep(nome);
+      if (nome && !map.has(k)) {
+        map.set(k, { departamento: nome, tx_perdas: 0, tx_recuperacao: 1, ativo: true });
       }
     }
+
     return Array.from(map.values())
       .map((d) => ({ ...d, ...(edits[d.departamento] || {}) }))
       .sort((a, b) => String(a.departamento).localeCompare(String(b.departamento)));
