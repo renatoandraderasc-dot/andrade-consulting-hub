@@ -73,6 +73,27 @@ interface Titulo {
   faixa: string;
 }
 
+/** Data de pagamento do titulo (vazio = nao pago). */
+const dataPagamentoDe = (r: any) => {
+  const v = pick(
+    r,
+    "data_pagamento", "dt_pagamento", "datapagamento", "dtpagamento",
+    "data_baixa", "dt_baixa", "databaixa", "pagamento", "data_pgto", "dt_pgto",
+  );
+  const s = String(v ?? "").trim();
+  if (!s || /^(0000-00-00|null|-|00\/00\/0000)$/i.test(s)) return "";
+  return s.slice(0, 10);
+};
+
+/** Valor liquido do titulo (com fallback para o valor bruto). */
+const valorLiquidoDe = (r: any) => {
+  const liq = pick(r, "valor_liquido", "vlr_liquido", "valorliquido", "vl_liquido", "liquido");
+  const n = numero(liq);
+  if (n) return n;
+  return numero(pick(r, "valor", "valor_titulo", "vlr_titulo", "valor_bruto"));
+};
+
+
 interface Plano {
   titulo_ref: string;
   situacao: string;
@@ -147,31 +168,46 @@ export const AnaliseFinanceiraTab = ({ storeId, storeName }: Props) => {
       }
     });
 
-    // pagamentos ja realizados por (fornecedor|documento) — abate FIFO
+    const linhasCap = (cap.dados ?? []) as any[];
+
+    // O titulo esta pago quando o sistema informa data de pagamento.
+    // Se o relatorio da loja nao publica essa coluna, caimos no abatimento
+    // pelos pagamentos do periodo (FIFO por fornecedor|documento).
+    const temDataPagamento = linhasCap.some((r) => dataPagamentoDe(r));
+
     const pagos = new Map<string, number>();
-    (pag.dados ?? []).forEach((r: any) => {
-      const k = `${String(pick(r, "fornecedor") ?? "").trim()}|${String(pick(r, "documento") ?? "").trim()}`;
-      pagos.set(k, (pagos.get(k) ?? 0) + numero(pick(r, "valor_pago", "valor")));
-    });
+    if (!temDataPagamento) {
+      (pag.dados ?? []).forEach((r: any) => {
+        const k = `${String(pick(r, "fornecedor") ?? "").trim()}|${String(pick(r, "documento") ?? "").trim()}`;
+        pagos.set(k, (pagos.get(k) ?? 0) + numero(pick(r, "valor_liquido", "valor_pago", "valor")));
+      });
+    }
 
     const hj = hoje().getTime();
     const contagem = new Map<string, number>();
     const lista: Titulo[] = [];
 
-    (cap.dados ?? [])
+    linhasCap
       .slice()
       .sort((a: any, b: any) =>
         String(pick(a, "vencimento") ?? "").localeCompare(String(pick(b, "vencimento") ?? "")))
       .forEach((r: any) => {
+        // sem data de pagamento = em aberto; com data = ja pago, sai da analise
+        if (temDataPagamento && dataPagamentoDe(r)) return;
+
         const fornecedor = String(pick(r, "fornecedor") ?? "").trim() || "SEM FORNECEDOR";
         const documento = String(pick(r, "documento") ?? "").trim();
         const vencimento = String(pick(r, "vencimento") ?? "").slice(0, 10);
-        const valor = numero(pick(r, "valor", "valor_titulo"));
-        const k = `${String(pick(r, "fornecedor") ?? "").trim()}|${documento}`;
-        const disponivel = pagos.get(k) ?? 0;
-        const abatido = Math.min(disponivel, valor);
-        pagos.set(k, disponivel - abatido);
-        const aberto = Math.round((valor - abatido) * 100) / 100;
+        const valor = valorLiquidoDe(r);
+        let aberto = Math.round(valor * 100) / 100;
+
+        if (!temDataPagamento) {
+          const k = `${String(pick(r, "fornecedor") ?? "").trim()}|${documento}`;
+          const disponivel = pagos.get(k) ?? 0;
+          const abatido = Math.min(disponivel, valor);
+          pagos.set(k, disponivel - abatido);
+          aberto = Math.round((valor - abatido) * 100) / 100;
+        }
         if (aberto <= 0.005) return;
 
         const base = `${vencimento}|${documento}|${fornecedor}`;
@@ -199,6 +235,7 @@ export const AnaliseFinanceiraTab = ({ storeId, storeName }: Props) => {
           faixa: faixaDe(isNaN(dias) ? 0 : dias).id,
         });
       });
+
 
     setTitulos(lista);
     setLoading(false);
@@ -387,9 +424,10 @@ export const AnaliseFinanceiraTab = ({ storeId, storeName }: Props) => {
             <FileSpreadsheet className="h-4 w-4 mr-2" /> Exportar Excel
           </Button>
           <p className="text-xs text-muted-foreground ml-auto max-w-[420px]">
-            Títulos em aberto = contas a pagar do sistema da loja menos os pagamentos já
-            registrados no período (inclui pagamentos parciais).
+            Em aberto = títulos sem data de pagamento no sistema da loja. Os valores
+            considerados são sempre o Valor Líquido.
           </p>
+
         </CardContent>
       </Card>
 
