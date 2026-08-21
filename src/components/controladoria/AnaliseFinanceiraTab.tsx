@@ -85,6 +85,18 @@ const dataPagamentoDe = (r: any) => {
   return s.slice(0, 10);
 };
 
+/** Situacao do titulo informada pelo sistema da loja: "aberto" | "pago" | "" */
+const situacaoDe = (r: any): "aberto" | "pago" | "" => {
+  const v = pick(r, "situacao", "situacao_titulo", "status", "status_titulo", "sit");
+  const s = String(v ?? "")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .trim().toLowerCase();
+  if (!s) return "";
+  if (/(^|\b)(pago|paga|pagos|quitado|quitada|baixado|baixada|liquidado|liquidada|p)$/.test(s)) return "pago";
+  if (/(aberto|aberta|pendente|a pagar|em aberto|nao pago|vencido|a vencer)/.test(s)) return "aberto";
+  return "";
+};
+
 /** Valor liquido do titulo (com fallback para o valor bruto). */
 const valorLiquidoDe = (r: any) => {
   const liq = pick(r, "valor_liquido", "vlr_liquido", "valorliquido", "vl_liquido", "liquido");
@@ -170,13 +182,14 @@ export const AnaliseFinanceiraTab = ({ storeId, storeName }: Props) => {
 
     const linhasCap = (cap.dados ?? []) as any[];
 
-    // O titulo esta pago quando o sistema informa data de pagamento.
-    // Se o relatorio da loja nao publica essa coluna, caimos no abatimento
-    // pelos pagamentos do periodo (FIFO por fornecedor|documento).
-    const temDataPagamento = linhasCap.some((r) => dataPagamentoDe(r));
+    // Prioridade 1: coluna Situacao (Aberto = nao pago, Pago = pago).
+    // Prioridade 2: data de pagamento. Prioridade 3: abatimento FIFO.
+    const temSituacao = linhasCap.some((r) => situacaoDe(r) !== "");
+    const temDataPagamento = !temSituacao && linhasCap.some((r) => dataPagamentoDe(r));
+    const usaFifo = !temSituacao && !temDataPagamento;
 
     const pagos = new Map<string, number>();
-    if (!temDataPagamento) {
+    if (usaFifo) {
       (pag.dados ?? []).forEach((r: any) => {
         const k = `${String(pick(r, "fornecedor") ?? "").trim()}|${String(pick(r, "documento") ?? "").trim()}`;
         pagos.set(k, (pagos.get(k) ?? 0) + numero(pick(r, "valor_liquido", "valor_pago", "valor")));
@@ -192,7 +205,8 @@ export const AnaliseFinanceiraTab = ({ storeId, storeName }: Props) => {
       .sort((a: any, b: any) =>
         String(pick(a, "vencimento") ?? "").localeCompare(String(pick(b, "vencimento") ?? "")))
       .forEach((r: any) => {
-        // sem data de pagamento = em aberto; com data = ja pago, sai da analise
+        // Situacao "Pago" sai da analise; "Aberto" fica.
+        if (temSituacao && situacaoDe(r) === "pago") return;
         if (temDataPagamento && dataPagamentoDe(r)) return;
 
         const fornecedor = String(pick(r, "fornecedor") ?? "").trim() || "SEM FORNECEDOR";
@@ -201,7 +215,7 @@ export const AnaliseFinanceiraTab = ({ storeId, storeName }: Props) => {
         const valor = valorLiquidoDe(r);
         let aberto = Math.round(valor * 100) / 100;
 
-        if (!temDataPagamento) {
+        if (usaFifo) {
           const k = `${String(pick(r, "fornecedor") ?? "").trim()}|${documento}`;
           const disponivel = pagos.get(k) ?? 0;
           const abatido = Math.min(disponivel, valor);
@@ -424,8 +438,8 @@ export const AnaliseFinanceiraTab = ({ storeId, storeName }: Props) => {
             <FileSpreadsheet className="h-4 w-4 mr-2" /> Exportar Excel
           </Button>
           <p className="text-xs text-muted-foreground ml-auto max-w-[420px]">
-            Em aberto = títulos sem data de pagamento no sistema da loja. Os valores
-            considerados são sempre o Valor Líquido.
+            Em aberto = títulos com Situação "Aberto" no sistema da loja (Pago sai da
+            análise). Os valores considerados são sempre o Valor Líquido.
           </p>
 
         </CardContent>
