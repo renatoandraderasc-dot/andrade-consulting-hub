@@ -168,31 +168,46 @@ export const AnaliseFinanceiraTab = ({ storeId, storeName }: Props) => {
       }
     });
 
-    // pagamentos ja realizados por (fornecedor|documento) — abate FIFO
+    const linhasCap = (cap.dados ?? []) as any[];
+
+    // O titulo esta pago quando o sistema informa data de pagamento.
+    // Se o relatorio da loja nao publica essa coluna, caimos no abatimento
+    // pelos pagamentos do periodo (FIFO por fornecedor|documento).
+    const temDataPagamento = linhasCap.some((r) => dataPagamentoDe(r));
+
     const pagos = new Map<string, number>();
-    (pag.dados ?? []).forEach((r: any) => {
-      const k = `${String(pick(r, "fornecedor") ?? "").trim()}|${String(pick(r, "documento") ?? "").trim()}`;
-      pagos.set(k, (pagos.get(k) ?? 0) + numero(pick(r, "valor_pago", "valor")));
-    });
+    if (!temDataPagamento) {
+      (pag.dados ?? []).forEach((r: any) => {
+        const k = `${String(pick(r, "fornecedor") ?? "").trim()}|${String(pick(r, "documento") ?? "").trim()}`;
+        pagos.set(k, (pagos.get(k) ?? 0) + numero(pick(r, "valor_liquido", "valor_pago", "valor")));
+      });
+    }
 
     const hj = hoje().getTime();
     const contagem = new Map<string, number>();
     const lista: Titulo[] = [];
 
-    (cap.dados ?? [])
+    linhasCap
       .slice()
       .sort((a: any, b: any) =>
         String(pick(a, "vencimento") ?? "").localeCompare(String(pick(b, "vencimento") ?? "")))
       .forEach((r: any) => {
+        // sem data de pagamento = em aberto; com data = ja pago, sai da analise
+        if (temDataPagamento && dataPagamentoDe(r)) return;
+
         const fornecedor = String(pick(r, "fornecedor") ?? "").trim() || "SEM FORNECEDOR";
         const documento = String(pick(r, "documento") ?? "").trim();
         const vencimento = String(pick(r, "vencimento") ?? "").slice(0, 10);
-        const valor = numero(pick(r, "valor", "valor_titulo"));
-        const k = `${String(pick(r, "fornecedor") ?? "").trim()}|${documento}`;
-        const disponivel = pagos.get(k) ?? 0;
-        const abatido = Math.min(disponivel, valor);
-        pagos.set(k, disponivel - abatido);
-        const aberto = Math.round((valor - abatido) * 100) / 100;
+        const valor = valorLiquidoDe(r);
+        let aberto = Math.round(valor * 100) / 100;
+
+        if (!temDataPagamento) {
+          const k = `${String(pick(r, "fornecedor") ?? "").trim()}|${documento}`;
+          const disponivel = pagos.get(k) ?? 0;
+          const abatido = Math.min(disponivel, valor);
+          pagos.set(k, disponivel - abatido);
+          aberto = Math.round((valor - abatido) * 100) / 100;
+        }
         if (aberto <= 0.005) return;
 
         const base = `${vencimento}|${documento}|${fornecedor}`;
@@ -220,6 +235,7 @@ export const AnaliseFinanceiraTab = ({ storeId, storeName }: Props) => {
           faixa: faixaDe(isNaN(dias) ? 0 : dias).id,
         });
       });
+
 
     setTitulos(lista);
     setLoading(false);
