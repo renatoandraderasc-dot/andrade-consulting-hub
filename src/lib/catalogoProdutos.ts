@@ -182,7 +182,16 @@ export interface ProdutoAtivo12m {
 }
 
 export async function carregarProdutosAtivos12m(storeId: string) {
-  const r = await chamarRelatorio(storeId, "produtos_ativos_12m", {});
+  // Cada ponte publica o relatorio com um nome ligeiramente diferente.
+  const nomes = ["produtos_ativos_12m", "01-produtos_ativos_12m", "produtos_ativos", "produtos_movimento_12m"];
+  let r = { dados: [] as any[], indisponivel: true, offline: false, erro: null as string | null };
+  for (const nome of nomes) {
+    const tentativa = await chamarRelatorio(storeId, nome, {});
+    if (tentativa.dados.length) { r = tentativa; break; }
+    if (tentativa.offline || tentativa.erro) { r = tentativa; break; }
+    r = tentativa;
+  }
+
   const itens: ProdutoAtivo12m[] = (r.dados || []).map((l: any) => ({
     codigo: String(col(l, "codigo", "cod_produto", "id_produto") ?? ""),
     ean: String(col(l, "barcode", "codigo_barras", "ean", "cod_barras", "gtin") ?? ""),
