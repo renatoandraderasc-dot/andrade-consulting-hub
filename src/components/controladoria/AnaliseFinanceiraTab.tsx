@@ -73,6 +73,27 @@ interface Titulo {
   faixa: string;
 }
 
+/** Data de pagamento do titulo (vazio = nao pago). */
+const dataPagamentoDe = (r: any) => {
+  const v = pick(
+    r,
+    "data_pagamento", "dt_pagamento", "datapagamento", "dtpagamento",
+    "data_baixa", "dt_baixa", "databaixa", "pagamento", "data_pgto", "dt_pgto",
+  );
+  const s = String(v ?? "").trim();
+  if (!s || /^(0000-00-00|null|-|00\/00\/0000)$/i.test(s)) return "";
+  return s.slice(0, 10);
+};
+
+/** Valor liquido do titulo (com fallback para o valor bruto). */
+const valorLiquidoDe = (r: any) => {
+  const liq = pick(r, "valor_liquido", "vlr_liquido", "valorliquido", "vl_liquido", "liquido");
+  const n = numero(liq);
+  if (n) return n;
+  return numero(pick(r, "valor", "valor_titulo", "vlr_titulo", "valor_bruto"));
+};
+
+
 interface Plano {
   titulo_ref: string;
   situacao: string;
