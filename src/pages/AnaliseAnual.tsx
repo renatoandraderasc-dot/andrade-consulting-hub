@@ -86,6 +86,11 @@ const AnaliseAnual = () => {
       const r = await chamarRelatorio(sid, "dre_periodo", { inicio: `${ANOS[0]}-01-01`, fim });
       const aviso = avisoRelatorio(r);
       if (aviso) throw new Error(aviso);
+      // Se o DRE não traz quebra por departamento/categoria, usa a base analítica (fallback ao vivo)
+      const temQuebra = r.dados.some(
+        (l) => pick(l, "departamento", "department", "secao", "nivel1", "categoria", "nivel2") != null,
+      );
+      if (!temQuebra) throw new Error("dre sem quebra por departamento");
       const mapeado: Row[] = r.dados
         .map((l) => {
           const ref = String(pick(l, "mes", "competencia", "data") ?? "");
