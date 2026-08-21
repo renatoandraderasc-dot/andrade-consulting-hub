@@ -182,13 +182,14 @@ export const AnaliseFinanceiraTab = ({ storeId, storeName }: Props) => {
 
     const linhasCap = (cap.dados ?? []) as any[];
 
-    // O titulo esta pago quando o sistema informa data de pagamento.
-    // Se o relatorio da loja nao publica essa coluna, caimos no abatimento
-    // pelos pagamentos do periodo (FIFO por fornecedor|documento).
-    const temDataPagamento = linhasCap.some((r) => dataPagamentoDe(r));
+    // Prioridade 1: coluna Situacao (Aberto = nao pago, Pago = pago).
+    // Prioridade 2: data de pagamento. Prioridade 3: abatimento FIFO.
+    const temSituacao = linhasCap.some((r) => situacaoDe(r) !== "");
+    const temDataPagamento = !temSituacao && linhasCap.some((r) => dataPagamentoDe(r));
+    const usaFifo = !temSituacao && !temDataPagamento;
 
     const pagos = new Map<string, number>();
-    if (!temDataPagamento) {
+    if (usaFifo) {
       (pag.dados ?? []).forEach((r: any) => {
         const k = `${String(pick(r, "fornecedor") ?? "").trim()}|${String(pick(r, "documento") ?? "").trim()}`;
         pagos.set(k, (pagos.get(k) ?? 0) + numero(pick(r, "valor_liquido", "valor_pago", "valor")));
