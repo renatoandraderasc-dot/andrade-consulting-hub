@@ -160,11 +160,8 @@ export async function consultarRelatorioLoja(opts: {
   // 2a: nomes com prefixo numerico e sinonimos conhecidos
   const alvo = base(relatorio);
   const tentativas = new Set<string>();
-  for (const p of ["01", "02", "03", "04", "05"]) tentativas.add(`${p}-${alvo}`);
-  for (const s of SINONIMOS[alvo] ?? []) {
-    tentativas.add(s);
-    for (const p of ["01", "02", "03", "04", "05"]) tentativas.add(`${p}-${s}`);
-  }
+  for (const p of ["01", "02", "03", "04"]) tentativas.add(`${p}-${alvo}`);
+  for (const s of SINONIMOS[alvo] ?? []) tentativas.add(s);
 
   // Se a ponte listou os relatorios disponiveis no erro, usamos essa lista.
   const lista = primeira.erro?.match(/"disponiveis"\s*:\s*\[([^\]]*)/);
