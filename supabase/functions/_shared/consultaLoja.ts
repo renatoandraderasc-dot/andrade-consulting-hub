@@ -107,34 +107,78 @@ export async function consultarRelatorioLoja(opts: {
   }
 
   qs.set("chave", cfg.api_key);
-  const url = `${cfg.api_url.replace(/\/+$/, "")}/relatorios/${relatorio}?${qs.toString()}`;
 
-  try {
-    const resp = await fetch(url, {
-      headers: { "ngrok-skip-browser-warning": "true" },
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-    const texto = await resp.text();
-    const pareceHtml = /^\s*<(!doctype|html)/i.test(texto) || /ngrok/i.test(texto.slice(0, 500));
-    if (!resp.ok) {
-      if (pareceHtml) {
-        return {
-          ok: false, dados: [], semConexao: true,
-          erro: `sem conexao VR (servidor respondeu ${resp.status})`,
-        };
-      }
-      return { ok: false, dados: [], erro: `API VR ${resp.status}: ${texto.slice(0, 300)}` };
-    }
+  const base = (n: string) => n.toLowerCase().replace(/^[\s\d]*[-_.]?\s*/, "").trim();
+
+  // Sinonimos conhecidos por relatorio (nomes usados por pontes diferentes).
+  const SINONIMOS: Record<string, string[]> = {
+    compras_vendas_periodo: ["compras_x_vendas", "compras_vendas", "compras_periodo", "compras_por_secao"],
+    compras_por_fornecedor: ["compras_fornecedor", "fornecedores_compras"],
+  };
+
+  async function chamar(nome: string): Promise<ResultadoConsulta> {
+    const url = `${cfg!.api_url.replace(/\/+$/, "")}/relatorios/${nome}?${qs.toString()}`;
     try {
-      const dados = JSON.parse(texto);
-      return { ok: true, dados: Array.isArray(dados) ? dados : (dados?.dados ?? []) };
-    } catch {
-      if (pareceHtml) {
-        return { ok: false, dados: [], semConexao: true, erro: "sem conexao VR (resposta invalida do tunel)" };
+      const resp = await fetch(url, {
+        headers: { "ngrok-skip-browser-warning": "true" },
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+      const texto = await resp.text();
+      const pareceHtml = /^\s*<(!doctype|html)/i.test(texto) || /ngrok/i.test(texto.slice(0, 500));
+      if (!resp.ok) {
+        if (pareceHtml) {
+          return {
+            ok: false, dados: [], semConexao: true,
+            erro: `sem conexao VR (servidor respondeu ${resp.status})`,
+          };
+        }
+        return { ok: false, dados: [], erro: `API VR ${resp.status}: ${texto.slice(0, 300)}` };
       }
-      return { ok: false, dados: [], erro: "resposta VR nao e JSON" };
+      try {
+        const dados = JSON.parse(texto);
+        if (dados && !Array.isArray(dados) && dados.erro) {
+          return { ok: false, dados: [], erro: String(dados.erro) };
+        }
+        return { ok: true, dados: Array.isArray(dados) ? dados : (dados?.dados ?? []) };
+      } catch {
+        if (pareceHtml) {
+          return { ok: false, dados: [], semConexao: true, erro: "sem conexao VR (resposta invalida do tunel)" };
+        }
+        return { ok: false, dados: [], erro: "resposta VR nao e JSON" };
+      }
+    } catch (e) {
+      return { ok: false, dados: [], erro: e instanceof Error ? e.message : String(e) };
     }
-  } catch (e) {
-    return { ok: false, dados: [], erro: e instanceof Error ? e.message : String(e) };
   }
+
+  // 1a tentativa: nome pedido
+  const primeira = await chamar(relatorio);
+  const faltando = (msg?: string) =>
+    !!msg && /404|relatorio nao encontrado|nao encontrado|nao existe|nao cadastrado/i.test(msg);
+  if (primeira.ok || primeira.semConexao || !faltando(primeira.erro)) return primeira;
+
+  // 2a: nomes com prefixo numerico e sinonimos conhecidos
+  const alvo = base(relatorio);
+  const tentativas = new Set<string>();
+  for (const p of ["01", "02", "03", "04"]) tentativas.add(`${p}-${alvo}`);
+  for (const s of SINONIMOS[alvo] ?? []) tentativas.add(s);
+
+  // Se a ponte listou os relatorios disponiveis no erro, usamos essa lista.
+  const lista = primeira.erro?.match(/"disponiveis"\s*:\s*\[([^\]]*)/);
+  if (lista) {
+    const nomes = lista[1].split(",").map((s) => s.replace(/[\\"\s]/g, "")).filter(Boolean);
+    const candidatos = nomes.filter((n) => base(n) === alvo || (SINONIMOS[alvo] ?? []).includes(base(n)));
+    for (const n of candidatos) tentativas.add(n);
+  }
+
+  let ultimo = primeira;
+  for (const nome of tentativas) {
+    if (nome === relatorio) continue;
+    const r = await chamar(nome);
+    if (r.ok) return r;
+    if (r.semConexao) return r;
+    if (!faltando(r.erro)) ultimo = r;
+  }
+  return ultimo;
 }
+

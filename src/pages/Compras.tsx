@@ -171,9 +171,10 @@ const Compras = () => {
       .select("*").eq("store_id", storeId).eq("ano", year).eq("mes", month).maybeSingle();
     if (data) setCfg(data);
     else {
-      // padrao: histórico = os 6 meses fechados anteriores ao mês da meta
+      // padrao (mesmo da Araújo Bocaína): histórico = os 6 meses fechados
+      // anteriores ao mês da meta e excesso diluído em 6 parcelas.
       const { inicio, fim } = janela6Meses(year, month);
-      setCfg({ meta_venda_mes: 0, parcelas_excesso: 3, hist_inicio: inicio, hist_fim: fim });
+      setCfg({ meta_venda_mes: 0, parcelas_excesso: 6, hist_inicio: inicio, hist_fim: fim });
     }
   };
 
@@ -182,6 +183,7 @@ const Compras = () => {
     const { data } = await supabase.from("compras_departamento")
       .select("*").eq("store_id", storeId).order("departamento");
     setDeptos(data || []);
+    return data || [];
   };
 
   const fetchMercadologicos1 = async () => {
@@ -191,10 +193,28 @@ const Compras = () => {
       const nomes = [...new Set(base.map((produto) => produto.n1.trim().toUpperCase()).filter(Boolean))]
         .sort((a, b) => a.localeCompare(b, "pt-BR"));
       setMercadologicos1(nomes);
+      await semearDepartamentos(nomes);
     } catch {
       setMercadologicos1([]);
     }
   };
+
+  // Cria automaticamente os departamentos que existem no mercadológico 1 da loja,
+  // no mesmo padrão da Araújo Bocaína (sem perdas, recuperação 1, ativos).
+  const semearDepartamentos = async (nomes: string[]) => {
+    if (!isAdmin || !storeId || nomes.length === 0) return;
+    const atuais = await fetchDeptos();
+    const existentes = new Set((atuais as any[]).map((d) => chaveDep(d.departamento)));
+    const faltando = nomes.filter((n) => !existentes.has(chaveDep(n)));
+    if (faltando.length === 0) return;
+    const { error } = await supabase.from("compras_departamento").insert(
+      faltando.map((departamento) => ({
+        store_id: storeId, departamento, tx_perdas: 0, tx_recuperacao: 1, ativo: true,
+      })),
+    );
+    if (!error) await fetchDeptos();
+  };
+
 
   const fetchHistorico = async () => {
     const { data } = await supabase.from("compras_historico")
