@@ -424,9 +424,10 @@ export const AnaliseFinanceiraTab = ({ storeId, storeName }: Props) => {
             <FileSpreadsheet className="h-4 w-4 mr-2" /> Exportar Excel
           </Button>
           <p className="text-xs text-muted-foreground ml-auto max-w-[420px]">
-            Títulos em aberto = contas a pagar do sistema da loja menos os pagamentos já
-            registrados no período (inclui pagamentos parciais).
+            Em aberto = títulos sem data de pagamento no sistema da loja. Os valores
+            considerados são sempre o Valor Líquido.
           </p>
+
         </CardContent>
       </Card>
 
