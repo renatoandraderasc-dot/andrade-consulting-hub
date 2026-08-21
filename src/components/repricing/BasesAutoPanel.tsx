@@ -58,10 +58,25 @@ const BasesAutoPanel = ({
     try {
       if (modo === "ativos12m") {
         const r = await carregarProdutosAtivos12m(storeId);
-        const aviso = avisoRelatorio(r);
-        if (!r.itens.length && aviso) {
-          toast.error(aviso);
-          onProdutos([]);
+        if (!r.itens.length) {
+          // A ponte desta loja não publica o relatório de ativos: cai para o
+          // cadastro completo em vez de deixar a tela sem produto nenhum.
+          const base = await carregarBaseCatalogo(storeId);
+          const rows: Linha[] = base.map((p) => ({
+            ean: String(p.ean ?? "").trim(),
+            descricao: p.descricao,
+            custo: p.custo ?? 0,
+            preco: p.precoOferta || p.preco || 0,
+            mercadologico: p.n1 || "Outros",
+          }));
+          onProdutos(rows);
+          setModoCarregado("completo");
+          const comEan = rows.filter((x) => String(x.ean).replace(/\D/g, "").length >= 8).length;
+          rows.length
+            ? toast.warning(
+                `Esta loja não publica a lista de ativos 12 meses — carregamos o cadastro completo: ${rows.length} produtos (${comEan} com código de barras)`,
+              )
+            : toast.error(avisoRelatorio(r) || "Nenhum produto retornado pelo sistema da loja");
           setLoadingP(false);
           return;
         }
@@ -79,9 +94,8 @@ const BasesAutoPanel = ({
         onProdutos(rows);
         setModoCarregado("ativos12m");
         const comEan = rows.filter((x) => String(x.ean).replace(/\D/g, "").length >= 8).length;
-        rows.length
-          ? toast.success(`${rows.length} produtos ativos com movimento em 12 meses (${comEan} com código de barras)`)
-          : toast.error("Nenhum produto ativo retornado pelo sistema da loja");
+        toast.success(`${rows.length} produtos ativos com movimento em 12 meses (${comEan} com código de barras)`);
+
       } else {
         const base = await carregarBaseCatalogo(storeId);
         const rows: Linha[] = base.map((p) => ({
