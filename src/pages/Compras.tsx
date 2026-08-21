@@ -50,6 +50,13 @@ const mercadologico1 = (linha: any) => String(col(
   "grupo_1",
 ) ?? "").trim().toUpperCase();
 
+// Chave de comparacao de departamento: sem acento, sem caixa e sem espacos duplos.
+// O ERP devolve "Acougue"/"Pereciveis" e as metas podem estar como "AÇOUGUE".
+const chaveDep = (s: string) =>
+  (s || "").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
+
+
+
 const monthRange = (year: number, month: number) => {
   const inicio = `${year}-${String(month).padStart(2, "0")}-01`;
   const last = new Date(year, month, 0).getDate();
@@ -380,8 +387,15 @@ const Compras = () => {
 
   // ============ Derived (Aba 1) ============
   const painelRows = useMemo(() => {
+    const indice = new Map<string, { compra: number; venda: number; cmv: number }>();
+    for (const [nome, v] of Object.entries(realizadoDep)) {
+      const k = chaveDep(nome);
+      const cur = indice.get(k) ?? { compra: 0, venda: 0, cmv: 0 };
+      indice.set(k, { compra: cur.compra + v.compra, venda: cur.venda + v.venda, cmv: cur.cmv + v.cmv });
+    }
     return metas.map((m) => {
-      const real = realizadoDep[m.departamento] || { compra: 0, venda: 0, cmv: 0 };
+      const real = indice.get(chaveDep(m.departamento)) || { compra: 0, venda: 0, cmv: 0 };
+
       const meta_compra = Number(m.meta_compra) || 0;
       const saldo = meta_compra - real.compra;
       const consumido = meta_compra > 0 ? (real.compra / meta_compra) * 100 : 0;
@@ -543,12 +557,14 @@ const Compras = () => {
   // mesmo os que ainda não têm cadastro de taxas.
   const deptosView = useMemo(() => {
     const map = new Map<string, any>();
-    for (const d of deptos) map.set(d.departamento, d);
+    for (const d of deptos) map.set(chaveDep(d.departamento), d);
     for (const nome of new Set<string>([...mercadologicos1, ...deptOptions, ...Object.keys(realizadoDep)])) {
-      if (nome && !map.has(nome)) {
-        map.set(nome, { departamento: nome, tx_perdas: 0, tx_recuperacao: 1, ativo: true });
+      const k = chaveDep(nome);
+      if (nome && !map.has(k)) {
+        map.set(k, { departamento: nome, tx_perdas: 0, tx_recuperacao: 1, ativo: true });
       }
     }
+
     return Array.from(map.values())
       .map((d) => ({ ...d, ...(edits[d.departamento] || {}) }))
       .sort((a, b) => String(a.departamento).localeCompare(String(b.departamento)));
