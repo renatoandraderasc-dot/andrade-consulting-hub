@@ -207,20 +207,28 @@ const SitesCatalogoPanel = () => {
       if (cep.length !== 8) return toast.error("Informe o CEP de referência (8 dígitos)");
       if (!regiao) return toast.error("Verifique o CEP antes de cadastrar");
     }
+    if (novaPlataforma === "opencart" && !lojaOc) {
+      return toast.error("Escolha a loja/praça do site antes de cadastrar");
+    }
+    const lojaOcNome = lojasOc.find((l) => String(l.store_id) === lojaOc)?.store_title?.trim();
     const { data, error } = await supabase.from("sites_concorrentes").insert({
       nome: novoNome.trim(),
       host,
       plataforma: novaPlataforma,
+      provedor: deteccao?.provedor ?? null,
+      coletor_disponivel: COLETOR_DISPONIVEL.has(novaPlataforma),
+      deteccao_evidencia: deteccao?.evidencia ?? null,
       sc: Number(novoSc) || 1,
-      praca_esperada: novaPraca.trim() || null,
+      praca_esperada: (novaPraca.trim() || lojaOcNome || null),
       cep_referencia: cep,
       region_id: regiao?.regionId ?? null,
-      loja_externa_id: regiao?.sellers[0]?.id || null,
+      loja_externa_id: novaPlataforma === "opencart" ? lojaOc : (regiao?.sellers[0]?.id || null),
       ativo: true,
     }).select("id").maybeSingle();
     if (error) return toast.error(error.message);
     toast.success("Site cadastrado no catálogo");
-    setNovoNome(""); setNovoHost(""); setNovaPraca(""); setNovoCep(""); setRegiao(null);
+    setNovoNome(""); setNovoHost(""); setNovaPraca(""); setNovoCep("");
+    setRegiao(null); setDeteccao(null); setLojasOc([]); setLojaOc("");
     await carregar();
     if (data?.id) setSelected(data.id);
   };
@@ -234,14 +242,22 @@ const SitesCatalogoPanel = () => {
 
   const siteSel = sites.find((s) => s.id === selected);
   const semColetor = !!siteSel && !COLETOR_DISPONIVEL.has(siteSel.plataforma);
+  const msgSemColetor = siteSel
+    ? `Plataforma ${PLATAFORMAS.find((p) => p.value === siteSel.plataforma)?.label || siteSel.plataforma} reconhecida, mas ainda não há coletor implementado.`
+    : "";
 
   const iniciar = async () => {
     if (!siteSel) return toast.error("Selecione um site do catálogo");
     if (semColetor) return;
-    if (!siteSel.cep_referencia) return toast.error("Cadastre o CEP de referência deste site antes de coletar");
+    if (siteSel.plataforma === "vtex" && !siteSel.cep_referencia) {
+      return toast.error("Cadastre o CEP de referência deste site antes de coletar");
+    }
+    if (siteSel.plataforma === "opencart" && !siteSel.loja_externa_id) {
+      return toast.error("Cadastre a loja/praça deste site antes de coletar");
+    }
     setStarting(true);
-    const { data, error } = await supabase.functions.invoke("vtex-catalog-collector", {
-      body: { action: "start", site_id: siteSel.id, host: siteSel.host, sc: siteSel.sc ?? 1, cep: siteSel.cep_referencia },
+    const { data, error } = await supabase.functions.invoke("coletar-precos", {
+      body: { action: "start", site_id: siteSel.id },
     });
     setStarting(false);
     if (error || !data?.success) return toast.error(error?.message || data?.error || "Falha ao iniciar a coleta");
@@ -252,7 +268,7 @@ const SitesCatalogoPanel = () => {
 
   const cancelar = async () => {
     if (!job) return;
-    await supabase.functions.invoke("vtex-catalog-collector", { body: { action: "cancel", jobId: job.id } });
+    await supabase.functions.invoke("coletar-precos", { body: { action: "cancel", jobId: job.id } });
     const { data: j } = await supabase.from("scrape_jobs").select("*").eq("id", job.id).maybeSingle();
     if (j) setJob(j as unknown as Job);
     toast.success("Coleta cancelada");
@@ -261,7 +277,7 @@ const SitesCatalogoPanel = () => {
   const retomar = async () => {
     if (!job) return;
     setResuming(true);
-    const { data, error } = await supabase.functions.invoke("vtex-catalog-collector", {
+    const { data, error } = await supabase.functions.invoke("coletar-precos", {
       body: { action: "resume", jobId: job.id },
     });
     setResuming(false);
@@ -270,6 +286,7 @@ const SitesCatalogoPanel = () => {
     const { data: j } = await supabase.from("scrape_jobs").select("*").eq("id", job.id).maybeSingle();
     if (j) setJob(j as unknown as Job);
   };
+
 
   const rodando = job && !job.finished_at && (job.status === "pending" || job.status === "crawling");
   const siteJob = sites.find((s) => s.id === job?.site_concorrente_id);
