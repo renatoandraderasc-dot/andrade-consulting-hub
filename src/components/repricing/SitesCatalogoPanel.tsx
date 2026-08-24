@@ -17,16 +17,24 @@ export const PLATAFORMAS = [
   { value: "vtex", label: "VTEX" },
   { value: "opencart", label: "OpenCart" },
   { value: "regex_solutions", label: "Regex Solutions" },
+  { value: "shopify", label: "Shopify" },
+  { value: "magento", label: "Magento" },
+  { value: "tray", label: "Tray" },
+  { value: "nuvemshop", label: "Nuvemshop" },
+  { value: "woocommerce", label: "WooCommerce" },
+  { value: "desconhecida", label: "Não identificada" },
   { value: "outra", label: "Outra" },
 ] as const;
 
-export const COLETOR_DISPONIVEL = new Set(["vtex"]);
+export const COLETOR_DISPONIVEL = new Set(["vtex", "opencart"]);
 
 export interface SiteConcorrente {
   id: string;
   nome: string;
   host: string;
   plataforma: string;
+  provedor?: string | null;
+  deteccao_evidencia?: string | null;
   cep_referencia: string;
   region_id: string | null;
   praca_esperada: string | null;
@@ -88,6 +96,12 @@ const SitesCatalogoPanel = () => {
   const [novoCep, setNovoCep] = useState("");
   const [verificando, setVerificando] = useState(false);
   const [regiao, setRegiao] = useState<{ regionId: string; sellers: { id: string; nome: string }[] } | null>(null);
+  const [detectando, setDetectando] = useState(false);
+  const [deteccao, setDeteccao] = useState<
+    { plataforma: string; provedor: string | null; coletor_disponivel: boolean; evidencia: string } | null
+  >(null);
+  const [lojasOc, setLojasOc] = useState<{ store_id: string; store_title: string }[]>([]);
+  const [lojaOc, setLojaOc] = useState("");
   const [agora, setAgora] = useState(Date.now());
   const timer = useRef<number | null>(null);
 
@@ -137,6 +151,39 @@ const SitesCatalogoPanel = () => {
     return () => { if (timer.current) window.clearInterval(timer.current); };
   }, [job?.id, job?.status]);
 
+  const detectarPlataforma = async () => {
+    const host = novoHost.replace(/^https?:\/\//, "").replace(/\/.*$/, "").trim();
+    if (!host || !host.includes(".")) return;
+    setDetectando(true);
+    setDeteccao(null);
+    const { data, error } = await supabase.functions.invoke("detectar-plataforma", { body: { host } });
+    setDetectando(false);
+    if (error || !data?.success) {
+      return toast.error(error?.message || data?.error || "Não foi possível identificar a plataforma");
+    }
+    setDeteccao(data);
+    setNovaPlataforma(data.plataforma);
+    setRegiao(null);
+    setLojasOc([]);
+    setLojaOc("");
+    if (data.plataforma === "opencart") buscarLojasOpencart(host);
+  };
+
+  const buscarLojasOpencart = async (hostArg?: string) => {
+    const host = (hostArg ?? novoHost).replace(/^https?:\/\//, "").replace(/\/.*$/, "").trim();
+    if (!host) return;
+    setVerificando(true);
+    const { data, error } = await supabase.functions.invoke("opencart-collector", {
+      body: { action: "lojas", host },
+    });
+    setVerificando(false);
+    if (error || !data?.success || !Array.isArray(data.lojas) || !data.lojas.length) {
+      return toast.error("Não foi possível listar as lojas deste site — informe a praça manualmente");
+    }
+    setLojasOc(data.lojas);
+    toast.success(`${data.lojas.length} loja(s) encontradas — escolha a praça`);
+  };
+
   const verificarCep = async () => {
     const host = novoHost.replace(/^https?:\/\//, "").replace(/\/.*$/, "").trim();
     const cep = novoCep.replace(/\D/g, "");
@@ -160,20 +207,28 @@ const SitesCatalogoPanel = () => {
       if (cep.length !== 8) return toast.error("Informe o CEP de referência (8 dígitos)");
       if (!regiao) return toast.error("Verifique o CEP antes de cadastrar");
     }
+    if (novaPlataforma === "opencart" && !lojaOc) {
+      return toast.error("Escolha a loja/praça do site antes de cadastrar");
+    }
+    const lojaOcNome = lojasOc.find((l) => String(l.store_id) === lojaOc)?.store_title?.trim();
     const { data, error } = await supabase.from("sites_concorrentes").insert({
       nome: novoNome.trim(),
       host,
       plataforma: novaPlataforma,
+      provedor: deteccao?.provedor ?? null,
+      coletor_disponivel: COLETOR_DISPONIVEL.has(novaPlataforma),
+      deteccao_evidencia: deteccao?.evidencia ?? null,
       sc: Number(novoSc) || 1,
-      praca_esperada: novaPraca.trim() || null,
+      praca_esperada: (novaPraca.trim() || lojaOcNome || null),
       cep_referencia: cep,
       region_id: regiao?.regionId ?? null,
-      loja_externa_id: regiao?.sellers[0]?.id || null,
+      loja_externa_id: novaPlataforma === "opencart" ? lojaOc : (regiao?.sellers[0]?.id || null),
       ativo: true,
     }).select("id").maybeSingle();
     if (error) return toast.error(error.message);
     toast.success("Site cadastrado no catálogo");
-    setNovoNome(""); setNovoHost(""); setNovaPraca(""); setNovoCep(""); setRegiao(null);
+    setNovoNome(""); setNovoHost(""); setNovaPraca(""); setNovoCep("");
+    setRegiao(null); setDeteccao(null); setLojasOc([]); setLojaOc("");
     await carregar();
     if (data?.id) setSelected(data.id);
   };
@@ -187,14 +242,22 @@ const SitesCatalogoPanel = () => {
 
   const siteSel = sites.find((s) => s.id === selected);
   const semColetor = !!siteSel && !COLETOR_DISPONIVEL.has(siteSel.plataforma);
+  const msgSemColetor = siteSel
+    ? `Plataforma ${PLATAFORMAS.find((p) => p.value === siteSel.plataforma)?.label || siteSel.plataforma} reconhecida, mas ainda não há coletor implementado.`
+    : "";
 
   const iniciar = async () => {
     if (!siteSel) return toast.error("Selecione um site do catálogo");
     if (semColetor) return;
-    if (!siteSel.cep_referencia) return toast.error("Cadastre o CEP de referência deste site antes de coletar");
+    if (siteSel.plataforma === "vtex" && !siteSel.cep_referencia) {
+      return toast.error("Cadastre o CEP de referência deste site antes de coletar");
+    }
+    if (siteSel.plataforma === "opencart" && !siteSel.loja_externa_id) {
+      return toast.error("Cadastre a loja/praça deste site antes de coletar");
+    }
     setStarting(true);
-    const { data, error } = await supabase.functions.invoke("vtex-catalog-collector", {
-      body: { action: "start", site_id: siteSel.id, host: siteSel.host, sc: siteSel.sc ?? 1, cep: siteSel.cep_referencia },
+    const { data, error } = await supabase.functions.invoke("coletar-precos", {
+      body: { action: "start", site_id: siteSel.id },
     });
     setStarting(false);
     if (error || !data?.success) return toast.error(error?.message || data?.error || "Falha ao iniciar a coleta");
@@ -205,7 +268,7 @@ const SitesCatalogoPanel = () => {
 
   const cancelar = async () => {
     if (!job) return;
-    await supabase.functions.invoke("vtex-catalog-collector", { body: { action: "cancel", jobId: job.id } });
+    await supabase.functions.invoke("coletar-precos", { body: { action: "cancel", jobId: job.id } });
     const { data: j } = await supabase.from("scrape_jobs").select("*").eq("id", job.id).maybeSingle();
     if (j) setJob(j as unknown as Job);
     toast.success("Coleta cancelada");
@@ -214,7 +277,7 @@ const SitesCatalogoPanel = () => {
   const retomar = async () => {
     if (!job) return;
     setResuming(true);
-    const { data, error } = await supabase.functions.invoke("vtex-catalog-collector", {
+    const { data, error } = await supabase.functions.invoke("coletar-precos", {
       body: { action: "resume", jobId: job.id },
     });
     setResuming(false);
@@ -223,6 +286,7 @@ const SitesCatalogoPanel = () => {
     const { data: j } = await supabase.from("scrape_jobs").select("*").eq("id", job.id).maybeSingle();
     if (j) setJob(j as unknown as Job);
   };
+
 
   const rodando = job && !job.finished_at && (job.status === "pending" || job.status === "crawling");
   const siteJob = sites.find((s) => s.id === job?.site_concorrente_id);
@@ -257,7 +321,15 @@ const SitesCatalogoPanel = () => {
             </div>
             <div className="md:col-span-2">
               <Label className="text-xs">Endereço do site</Label>
-              <Input value={novoHost} onChange={(e) => setNovoHost(e.target.value)} placeholder="www.savegnago.com.br" />
+              <div className="relative">
+                <Input
+                  value={novoHost}
+                  onChange={(e) => { setNovoHost(e.target.value); setDeteccao(null); }}
+                  onBlur={detectarPlataforma}
+                  placeholder="www.savegnago.com.br"
+                />
+                {detectando && <Loader2 className="w-4 h-4 animate-spin absolute right-2 top-2.5 text-muted-foreground" />}
+              </div>
             </div>
             <div>
               <Label className="text-xs">Plataforma</Label>
@@ -276,20 +348,53 @@ const SitesCatalogoPanel = () => {
               <Label className="text-xs">CEP de referência</Label>
               <Input value={novoCep} onChange={(e) => { setNovoCep(e.target.value); setRegiao(null); }} placeholder="15910000" />
             </div>
-            <div>
-              <Label className="text-xs">Loja/praça esperada</Label>
-              <Input value={novaPraca} onChange={(e) => setNovaPraca(e.target.value)} placeholder="montealto" />
-            </div>
+            {novaPlataforma === "opencart" ? (
+              <div>
+                <Label className="text-xs">Loja/praça do site</Label>
+                <Select value={lojaOc} onValueChange={setLojaOc} disabled={!lojasOc.length}>
+                  <SelectTrigger><SelectValue placeholder={lojasOc.length ? "Selecione a loja" : "Busque as lojas"} /></SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    {lojasOc.map((l) => <SelectItem key={l.store_id} value={String(l.store_id)}>{l.store_title}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div>
+                <Label className="text-xs">Loja/praça esperada</Label>
+                <Input value={novaPraca} onChange={(e) => setNovaPraca(e.target.value)} placeholder="montealto" />
+              </div>
+            )}
             <div className="flex gap-2">
-              <Button variant="outline" onClick={verificarCep} disabled={verificando || novaPlataforma !== "vtex"} className="gap-2">
-                {verificando ? <Loader2 className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" />}
-                Verificar CEP
-              </Button>
+              {novaPlataforma === "opencart" ? (
+                <Button variant="outline" onClick={() => buscarLojasOpencart()} disabled={verificando} className="gap-2">
+                  {verificando ? <Loader2 className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" />}
+                  Buscar lojas
+                </Button>
+              ) : (
+                <Button variant="outline" onClick={verificarCep} disabled={verificando || novaPlataforma !== "vtex"} className="gap-2">
+                  {verificando ? <Loader2 className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" />}
+                  Verificar CEP
+                </Button>
+              )}
               <Button onClick={criarSite} className="gap-2"><Plus className="w-4 h-4" /> Cadastrar</Button>
             </div>
           </div>
 
-          {novaPlataforma !== "vtex" && (
+          {deteccao && (
+            <div className="rounded-md border border-border/60 bg-muted/40 p-3 text-xs space-y-1">
+              <p className="font-medium text-foreground flex items-center gap-2">
+                {deteccao.coletor_disponivel
+                  ? <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+                  : <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />}
+                Plataforma identificada: {PLATAFORMAS.find((p) => p.value === deteccao.plataforma)?.label || deteccao.plataforma}
+                {deteccao.provedor && <span className="opacity-70">· provedor {deteccao.provedor}</span>}
+              </p>
+              <p className="text-muted-foreground break-all">Evidência: {deteccao.evidencia}</p>
+              <p className="text-muted-foreground">Você pode corrigir a plataforma no campo acima antes de cadastrar.</p>
+            </div>
+          )}
+
+          {!COLETOR_DISPONIVEL.has(novaPlataforma) && (
             <p className="text-xs text-amber-600">
               Coletor ainda não disponível para esta plataforma — o site fica no catálogo, mas sem coleta automática.
             </p>
@@ -303,6 +408,7 @@ const SitesCatalogoPanel = () => {
               )) : <p className="text-muted-foreground">Nenhuma loja retornada para este CEP.</p>}
             </div>
           )}
+
         </CardContent>
       </Card>
 
@@ -392,7 +498,7 @@ const SitesCatalogoPanel = () => {
           </div>
 
           {semColetor && (
-            <p className="text-xs text-amber-600">Coletor ainda não disponível para esta plataforma.</p>
+            <p className="text-xs text-amber-600">{msgSemColetor}</p>
           )}
 
           {job && (
