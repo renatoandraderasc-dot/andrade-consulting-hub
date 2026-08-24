@@ -112,7 +112,7 @@ async function carregar(storeId: string, inicio: string, fim: string): Promise<L
       const n1 = txt(pick(l, "secao", "departamento"), "SEM DEPARTAMENTO").toUpperCase();
       const n2 = txt(pick(l, "categoria", "grupo"), "SEM GRUPO").toUpperCase();
       const k = `${n1}|${n2}`;
-      const cur = acc.get(k) ?? { n1, n2, n3: "SEM SUBGRUPO", produto: n2, codigo: "", vendas: 0, lucro: 0, volume: 0 };
+      const cur = acc.get(k) ?? { n1, n2, n3: "SEM SUBGRUPO", produto: n2, codigo: "", ean: "", vendas: 0, lucro: 0, volume: 0 };
       cur.vendas += num(pick(l, "total_vendido", "venda", "vendas"));
       cur.lucro += num(pick(l, "lucro"));
       cur.volume += num(pick(l, "volume", "qtde", "quantidade"));
