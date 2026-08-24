@@ -498,7 +498,7 @@ const SitesCatalogoPanel = () => {
           </div>
 
           {semColetor && (
-            <p className="text-xs text-amber-600">Coletor ainda não disponível para esta plataforma.</p>
+            <p className="text-xs text-amber-600">{msgSemColetor}</p>
           )}
 
           {job && (
