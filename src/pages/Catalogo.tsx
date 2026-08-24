@@ -109,7 +109,19 @@ const Catalogo = () => {
       m3_subgrupo: (col(l, "m3_subgrupo", "subgrupo", "nivel3") as string) ?? null,
       m4_familia: (col(l, "m4_familia", "familia", "nivel4") as string) ?? null,
     }));
-    return { linhas, aviso: avisoRelatorio(r) };
+    // Alguns ERPs repetem o mesmo item (uma linha por tabela de preco/embalagem):
+    // mantemos apenas a primeira ocorrencia de cada codigo (ou codigo de barras).
+    const vistos = new Set<string>();
+    const unicas = linhas.filter((l) => {
+      const chave =
+        String(l.codigo ?? "").trim().replace(/^0+/, "") ||
+        String(l.codigo_barras ?? "").trim() ||
+        l.descricao.trim().toUpperCase();
+      if (!chave || vistos.has(chave)) return false;
+      vistos.add(chave);
+      return true;
+    });
+    return { linhas: unicas, aviso: avisoRelatorio(r) };
   };
 
   const doItem = (p: CatalogoItem): Linha => ({

@@ -74,7 +74,15 @@ const ProdutosSemGiro = ({ storeId, ano, mes }: Props) => {
     const chaves = new Set<string>();
     ants.forEach((a) => a.forEach((_, k) => chaves.add(k)));
 
-    type Item = { produto: string; categoria: string; atualVol: number; mediaVol: number; queda: number };
+    type Item = {
+      produto: string;
+      codigo: string;
+      ean: string;
+      categoria: string;
+      atualVol: number;
+      mediaVol: number;
+      queda: number;
+    };
     const semGiro: Item[] = [];
     const emQueda: Item[] = [];
 
@@ -90,6 +98,8 @@ const ProdutosSemGiro = ({ storeId, ano, mes }: Props) => {
       const ref = atualItem?.linha ?? historicos[0].linha;
       const item: Item = {
         produto: ref.produto,
+        codigo: ref.codigo || "",
+        ean: ref.ean || "",
         categoria: ref.n1 || "SEM DEPARTAMENTO",
         atualVol,
         mediaVol: media,
@@ -176,7 +186,7 @@ const CategoriaBloco = ({
   emQueda,
 }: {
   nome: string;
-  semGiro: { produto: string; mediaVol: number }[];
+  semGiro: { produto: string; codigo: string; ean: string; mediaVol: number }[];
   emQueda: { produto: string; atualVol: number; mediaVol: number; queda: number }[];
 }) => {
   const [aberto, setAberto] = useState(false);
@@ -209,13 +219,17 @@ const CategoriaBloco = ({
               <table className="w-full text-xs font-body">
                 <thead>
                   <tr className="text-muted-foreground border-b border-border">
-                    <th className="text-left py-1">Produto</th>
+                    <th className="text-left py-1">Código de barras</th>
+                    <th className="text-left py-1">Cód. reduzido</th>
+                    <th className="text-left py-1">Descrição</th>
                     <th className="text-right py-1">Volume médio (3 meses)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {semGiro.map((p, i) => (
                     <tr key={i} className="border-b border-border/40">
+                      <td className="py-1 pr-2 font-mono whitespace-nowrap">{p.ean || "—"}</td>
+                      <td className="py-1 pr-2 font-mono whitespace-nowrap">{p.codigo || "—"}</td>
                       <td className="py-1 pr-2">{p.produto}</td>
                       <td className="py-1 text-right font-mono">{fmtVol(p.mediaVol)}</td>
                     </tr>

@@ -154,8 +154,35 @@ export async function carregarBaseCatalogo(storeId: string): Promise<CatalogoIte
     };
   });
 
-  if (lista.length) cache.set(storeId, lista);
-  return lista;
+  // Alguns ERPs repetem o mesmo produto em varias linhas (uma por loja,
+  // por embalagem ou por tabela de preco). Mantemos um registro por codigo
+  // reduzido (ou EAN, quando nao ha codigo), completando os campos vazios.
+  const unicos = new Map<string, CatalogoItem>();
+  for (const item of lista) {
+    const chave = normalizarCodigo(item.codigo) || soDigitos(item.ean) || item.descricao.trim().toUpperCase();
+    if (!chave) continue;
+    const atual = unicos.get(chave);
+    if (!atual) {
+      unicos.set(chave, item);
+      continue;
+    }
+    unicos.set(chave, {
+      ...atual,
+      ean: atual.ean || item.ean,
+      custo: atual.custo ?? item.custo,
+      preco: atual.preco ?? item.preco,
+      precoOferta: atual.precoOferta ?? item.precoOferta,
+      estoque: atual.estoque ?? item.estoque,
+      n1: atual.n1 || item.n1,
+      n2: atual.n2 || item.n2,
+      n3: atual.n3 || item.n3,
+      n4: atual.n4 || item.n4,
+    });
+  }
+
+  const finais = [...unicos.values()];
+  if (finais.length) cache.set(storeId, finais);
+  return finais;
 }
 
 // ==========================================================

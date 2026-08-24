@@ -21,6 +21,8 @@ export interface LinhaHierarquia {
   n3: string;
   produto: string;
   codigo: string;
+  /** codigo de barras (EAN) quando o cadastro da loja publica a coluna */
+  ean: string;
   vendas: number;
   lucro: number;
   volume: number;
@@ -67,6 +69,7 @@ async function carregar(storeId: string, inicio: string, fim: string): Promise<L
       n3: txt(l.nivel3, "SEM SUBGRUPO").toUpperCase(),
       produto: txt(l.produto, "SEM DESCRIÇÃO").toUpperCase(),
       codigo: String(l.codigo ?? ""),
+      ean: String(pick(l, "ean", "codigo_barras", "barcode", "cod_barras", "gtin") ?? ""),
       vendas: num(l.total_vendido),
       lucro: num(l.lucro),
       volume: num(l.volume),
@@ -109,7 +112,7 @@ async function carregar(storeId: string, inicio: string, fim: string): Promise<L
       const n1 = txt(pick(l, "secao", "departamento"), "SEM DEPARTAMENTO").toUpperCase();
       const n2 = txt(pick(l, "categoria", "grupo"), "SEM GRUPO").toUpperCase();
       const k = `${n1}|${n2}`;
-      const cur = acc.get(k) ?? { n1, n2, n3: "SEM SUBGRUPO", produto: n2, codigo: "", vendas: 0, lucro: 0, volume: 0 };
+      const cur = acc.get(k) ?? { n1, n2, n3: "SEM SUBGRUPO", produto: n2, codigo: "", ean: "", vendas: 0, lucro: 0, volume: 0 };
       cur.vendas += num(pick(l, "total_vendido", "venda", "vendas"));
       cur.lucro += num(pick(l, "lucro"));
       cur.volume += num(pick(l, "volume", "qtde", "quantidade"));
@@ -119,27 +122,35 @@ async function carregar(storeId: string, inicio: string, fim: string): Promise<L
   }
 
 
-  const cat = new Map<string, { n1: string; n2: string; n3: string; descricao: string }>();
+  // Chave normalizada (sem zeros a esquerda) para casar o ranking com o cadastro.
+  const chaveCod = (v: unknown) => {
+    const s = String(v ?? "").trim();
+    return s.replace(/^0+/, "") || s;
+  };
+
+  const cat = new Map<string, { n1: string; n2: string; n3: string; descricao: string; ean: string }>();
   for (const p of catalogo) {
-    cat.set(String(pick(p, "codigo") ?? ""), {
+    cat.set(chaveCod(pick(p, "codigo", "cod_produto", "id_produto")), {
       n1: txt(pick(p, "secao"), "SEM DEPARTAMENTO").toUpperCase(),
       n2: txt(pick(p, "grupo"), "SEM GRUPO").toUpperCase(),
       n3: txt(pick(p, "subgrupo"), "SEM SUBGRUPO").toUpperCase(),
-      descricao: txt(pick(p, "descricao"), "SEM DESCRIÇÃO").toUpperCase(),
+      descricao: txt(pick(p, "descricao", "produto"), "SEM DESCRIÇÃO").toUpperCase(),
+      ean: String(pick(p, "codigo_barras", "ean", "barcode", "cod_barras", "gtin") ?? ""),
     });
   }
 
   return ranking.map((l) => {
     const codigo = String(pick(l, "codigo", "codigo_produto", "cod_produto", "ean") ?? "");
-    const c = cat.get(codigo);
+    const c = cat.get(chaveCod(codigo));
     const vendas = num(pick(l, "total_vendido", "venda", "vendas", "valor_venda"));
     const desc = txt(pick(l, "produto", "descricao", "descricao_produto"), "");
     return {
       n1: (c?.n1 ?? txt(pick(l, "nivel1", "secao", "departamento"), "SEM DEPARTAMENTO")).toUpperCase(),
       n2: (c?.n2 ?? txt(pick(l, "nivel2", "categoria", "grupo"), "SEM GRUPO")).toUpperCase(),
       n3: (c?.n3 ?? txt(pick(l, "nivel3", "subcategoria", "subgrupo"), "SEM SUBGRUPO")).toUpperCase(),
-      produto: (desc || c?.descricao || codigo || "SEM DESCRIÇÃO").toUpperCase(),
+      produto: (c?.descricao || desc || codigo || "SEM DESCRIÇÃO").toUpperCase(),
       codigo,
+      ean: String(pick(l, "codigo_barras", "ean", "barcode", "cod_barras", "gtin") ?? c?.ean ?? ""),
       vendas,
       lucro: num(pick(l, "lucro")) || (vendas * num(pick(l, "margem_pct"))) / 100,
       volume: num(pick(l, "quantidade", "volume", "qtde", "qtd")),
