@@ -94,6 +94,7 @@ const navGroups: NavGroup[] = [
     admin: true,
     items: [
       { key: "admin_conexoes", path: "/admin/conexoes", label: "Conexões", icon: Plug },
+      { key: "admin_sites_concorrentes", path: "/admin/sites-concorrentes", label: "Catálogo de Sites", icon: Globe },
       { key: "vtex_collector", path: "/vtex-collector", label: "Coletor de Preços", icon: Database },
       { key: "websac_sync", path: "/websac-sync", label: "Sync WebSac", icon: RefreshCw },
     ],
