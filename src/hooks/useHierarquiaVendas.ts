@@ -21,6 +21,8 @@ export interface LinhaHierarquia {
   n3: string;
   produto: string;
   codigo: string;
+  /** codigo de barras (EAN) quando o cadastro da loja publica a coluna */
+  ean: string;
   vendas: number;
   lucro: number;
   volume: number;
