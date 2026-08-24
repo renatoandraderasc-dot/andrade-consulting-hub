@@ -329,14 +329,31 @@ const CategoriaBloco = ({
 
           {emQueda.length > 0 && (
             <div>
-              <h4 className="text-xs font-semibold text-muted-foreground mb-1 font-body">
-                Queda de volume relevante
-              </h4>
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <h4 className="text-xs font-semibold text-muted-foreground font-body">
+                  Queda de volume relevante
+                </h4>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => exportarCsv(nome, emQueda)}
+                    className="inline-flex items-center gap-1 text-xs font-body px-2 py-1 rounded border border-border hover:bg-muted/30 transition-colors"
+                  >
+                    <Download className="w-3 h-3" /> CSV
+                  </button>
+                  <button
+                    onClick={() => exportarPdf(nome, emQueda)}
+                    className="inline-flex items-center gap-1 text-xs font-body px-2 py-1 rounded border border-border hover:bg-muted/30 transition-colors"
+                  >
+                    <FileText className="w-3 h-3" /> PDF
+                  </button>
+                </div>
+              </div>
               <table className="w-full text-xs font-body">
                 <thead>
                    <tr className="text-muted-foreground border-b border-border">
+                    <th className="text-left py-1">Código de barras</th>
                     <th className="text-left py-1">Cód. reduzido</th>
-                    <th className="text-left py-1">Produto</th>
+                    <th className="text-left py-1">Descrição</th>
                     <th className="text-right py-1">Atual</th>
                     <th className="text-right py-1">Média 3 meses</th>
                     <th className="text-right py-1">Variação</th>
@@ -345,6 +362,7 @@ const CategoriaBloco = ({
                 <tbody>
                   {emQueda.map((p, i) => (
                     <tr key={i} className="border-b border-border/40">
+                      <td className="py-1 pr-2 font-mono whitespace-nowrap">{p.ean || "—"}</td>
                       <td className="py-1 pr-2 font-mono whitespace-nowrap">{p.codigo || "—"}</td>
                       <td className="py-1 pr-2">{p.produto}</td>
                       <td className="py-1 text-right font-mono">{fmtVol(p.atualVol)}</td>
