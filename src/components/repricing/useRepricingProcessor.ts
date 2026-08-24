@@ -130,10 +130,12 @@ export function useRepricingProcessor(
       const ean = eanValido(p[colEanP ?? ""]);
       if (!ean) continue;
 
-      const cells = concPorEan.get(ean);
-      if (!cells || !Object.keys(cells).length) continue;
-
+      const cells = concPorEan.get(ean) ?? {};
       const listaInterna = internaPorEan.get(ean) ?? [];
+      // O produto entra na análise se houver preço de concorrente OU de outra
+      // loja da rede — o cruzamento é loja x concorrentes x base interna.
+      if (!Object.keys(cells).length && !listaInterna.length) continue;
+
       let internaStats: InternaStats | null = null;
       if (listaInterna.length) {
         const precos = listaInterna.map((l) => l.preco);
