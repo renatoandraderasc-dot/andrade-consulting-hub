@@ -167,12 +167,13 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
     <TooltipProvider delayDuration={150}>
       <div className="space-y-4">
         {/* KPIs */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {[
             { label: "Total Cruzados", value: total, color: "text-primary" },
             { label: "Acima", value: acima, color: "text-destructive" },
             { label: "Abaixo", value: abaixo, color: "text-green-600" },
             { label: "Igual", value: igual, color: "text-muted-foreground" },
+            { label: "Sem referência", value: semRef, color: "text-muted-foreground" },
           ].map((k) => (
             <div key={k.label} className="bg-card border border-border rounded-lg p-3">
               <p className="text-[11px] text-muted-foreground uppercase tracking-wide">{k.label}</p>
