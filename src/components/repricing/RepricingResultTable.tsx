@@ -36,26 +36,37 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
   const [search, setSearch] = useState("");
   const [mercFilter, setMercFilter] = useState("todos");
   const [statusFilter, setStatusFilter] = useState("todos");
-  const [baseRef, setBaseRef] = useState("menor");
+  const [baseRef, setBaseRef] = useState("geral");
   const [sortKey, setSortKey] = useState<SortKey>("diferenca");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(0);
   const perPage = 15;
 
   const refNome =
-    baseRef === "menor"
-      ? "menor preço entre todos os concorrentes"
-      : concorrentesMeta.find((c) => c.id === baseRef)?.nome ?? "concorrente";
+    baseRef === "geral"
+      ? "menor preço entre concorrentes e base interna da rede"
+      : baseRef === "menor"
+        ? "menor preço entre todos os concorrentes"
+        : baseRef === "interna"
+          ? "menor preço da base interna da rede"
+          : concorrentesMeta.find((c) => c.id === baseRef)?.nome ?? "concorrente";
 
   const avaliadas = useMemo<RepricingAvaliada[]>(() => {
     return rows.map((r) => {
+      const precosConc = Object.values(r.concorrentes).map((c) => c.preco).filter((p) => p > 0);
+      const precoInterna = r.interna && r.interna.min > 0 ? r.interna.min : null;
       let precoRef: number | null = null;
-      if (baseRef === "menor") {
-        const precos = Object.values(r.concorrentes).map((c) => c.preco).filter((p) => p > 0);
-        precoRef = precos.length ? Math.min(...precos) : null;
+      if (baseRef === "geral") {
+        const todos = [...precosConc, ...(precoInterna != null ? [precoInterna] : [])];
+        precoRef = todos.length ? Math.min(...todos) : null;
+      } else if (baseRef === "menor") {
+        precoRef = precosConc.length ? Math.min(...precosConc) : null;
+      } else if (baseRef === "interna") {
+        precoRef = precoInterna;
       } else {
         precoRef = r.concorrentes[baseRef]?.preco ?? null;
       }
+
       if (precoRef == null) {
         return { ...r, precoRef: null, refNome, diferenca: 0, diferencaPct: 0, status: "sem_ref" as const, novoPreco: null, novaMargem: null };
       }
