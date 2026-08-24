@@ -213,6 +213,8 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
               <SelectItem value="acima">Acima</SelectItem>
               <SelectItem value="abaixo">Abaixo</SelectItem>
               <SelectItem value="igual">Igual</SelectItem>
+              <SelectItem value="sem_ref">Sem referência</SelectItem>
+
             </SelectContent>
           </Select>
           <Button variant="outline" size="sm" onClick={handleExport}>
