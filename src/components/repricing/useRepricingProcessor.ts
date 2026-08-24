@@ -64,7 +64,7 @@ export function useRepricingProcessor(
   interna: Record<string, unknown>[],
 ): RepricingDados {
   return useMemo<RepricingDados>(() => {
-    if (!produtos.length || !concorrentes.length) return { rows: [], concorrentesMeta: [] };
+    if (!produtos.length || (!concorrentes.length && !interna.length)) return { rows: [], concorrentesMeta: [] };
 
     // ---- concorrentes: mapa EAN -> { concId -> preco } ------------------
     const metaMap = new Map<string, ConcorrenteMeta>();
