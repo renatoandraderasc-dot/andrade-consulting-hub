@@ -362,6 +362,14 @@ async function gravarJob(ctx: Ctx, extra: Record<string, unknown> = {}) {
   }).eq("id", ctx.jobId);
 }
 
+async function marcarSite(ctx: Ctx, status: string) {
+  if (!ctx.concorrenteId) return;
+  await supabase.from("sites_concorrentes").update({
+    ultima_coleta: new Date().toISOString(),
+    status_ultima_coleta: status,
+  }).eq("id", ctx.concorrenteId);
+}
+
 async function carregarCtx(jobId: string): Promise<Ctx> {
   const { data: job, error } = await supabase
     .from("scrape_jobs").select("*").eq("id", jobId).maybeSingle();
@@ -440,6 +448,7 @@ async function processarLote(jobId: string) {
         progress_pct: 100,
         finished_at: new Date().toISOString(),
       });
+      await marcarSite(ctx, "concluída");
       return;
     }
     logLine(ctx, `processando lote de ${lote.length} categorias (${pendentes.length} pendentes)`);
@@ -486,16 +495,18 @@ async function processarLote(jobId: string) {
           `${feitas} categorias ok, ${erros} com erro`,
       );
       await gravarJob(ctx, {
-        status: erros > 0 ? "done" : "done",
+        status: "done",
         progress_pct: 100,
         finished_at: new Date().toISOString(),
       });
+      await marcarSite(ctx, erros > 0 ? `concluída com ${erros} erro(s)` : "concluída");
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     logLine(ctx, `FALHA no lote: ${msg}`);
     try { await persist(ctx, buffer, true); } catch (_) { /* ignore */ }
     await gravarJob(ctx, { status: "error", error_message: msg, finished_at: new Date().toISOString() });
+    await marcarSite(ctx, "erro");
   }
 }
 
@@ -526,6 +537,7 @@ async function prepararJob(ctx: Ctx, pracaEsperada: string | null) {
     const msg = e instanceof Error ? e.message : String(e);
     logLine(ctx, `FALHA: ${msg}`);
     await gravarJob(ctx, { status: "error", error_message: msg, finished_at: new Date().toISOString() });
+    await marcarSite(ctx, "erro");
   }
 }
 
