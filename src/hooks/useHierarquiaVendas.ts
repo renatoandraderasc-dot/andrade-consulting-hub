@@ -69,6 +69,7 @@ async function carregar(storeId: string, inicio: string, fim: string): Promise<L
       n3: txt(l.nivel3, "SEM SUBGRUPO").toUpperCase(),
       produto: txt(l.produto, "SEM DESCRIÇÃO").toUpperCase(),
       codigo: String(l.codigo ?? ""),
+      ean: String(pick(l, "ean", "codigo_barras", "barcode", "cod_barras", "gtin") ?? ""),
       vendas: num(l.total_vendido),
       lucro: num(l.lucro),
       volume: num(l.volume),
