@@ -321,7 +321,15 @@ const SitesCatalogoPanel = () => {
             </div>
             <div className="md:col-span-2">
               <Label className="text-xs">Endereço do site</Label>
-              <Input value={novoHost} onChange={(e) => setNovoHost(e.target.value)} placeholder="www.savegnago.com.br" />
+              <div className="relative">
+                <Input
+                  value={novoHost}
+                  onChange={(e) => { setNovoHost(e.target.value); setDeteccao(null); }}
+                  onBlur={detectarPlataforma}
+                  placeholder="www.savegnago.com.br"
+                />
+                {detectando && <Loader2 className="w-4 h-4 animate-spin absolute right-2 top-2.5 text-muted-foreground" />}
+              </div>
             </div>
             <div>
               <Label className="text-xs">Plataforma</Label>
@@ -340,20 +348,53 @@ const SitesCatalogoPanel = () => {
               <Label className="text-xs">CEP de referência</Label>
               <Input value={novoCep} onChange={(e) => { setNovoCep(e.target.value); setRegiao(null); }} placeholder="15910000" />
             </div>
-            <div>
-              <Label className="text-xs">Loja/praça esperada</Label>
-              <Input value={novaPraca} onChange={(e) => setNovaPraca(e.target.value)} placeholder="montealto" />
-            </div>
+            {novaPlataforma === "opencart" ? (
+              <div>
+                <Label className="text-xs">Loja/praça do site</Label>
+                <Select value={lojaOc} onValueChange={setLojaOc} disabled={!lojasOc.length}>
+                  <SelectTrigger><SelectValue placeholder={lojasOc.length ? "Selecione a loja" : "Busque as lojas"} /></SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    {lojasOc.map((l) => <SelectItem key={l.store_id} value={String(l.store_id)}>{l.store_title}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div>
+                <Label className="text-xs">Loja/praça esperada</Label>
+                <Input value={novaPraca} onChange={(e) => setNovaPraca(e.target.value)} placeholder="montealto" />
+              </div>
+            )}
             <div className="flex gap-2">
-              <Button variant="outline" onClick={verificarCep} disabled={verificando || novaPlataforma !== "vtex"} className="gap-2">
-                {verificando ? <Loader2 className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" />}
-                Verificar CEP
-              </Button>
+              {novaPlataforma === "opencart" ? (
+                <Button variant="outline" onClick={() => buscarLojasOpencart()} disabled={verificando} className="gap-2">
+                  {verificando ? <Loader2 className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" />}
+                  Buscar lojas
+                </Button>
+              ) : (
+                <Button variant="outline" onClick={verificarCep} disabled={verificando || novaPlataforma !== "vtex"} className="gap-2">
+                  {verificando ? <Loader2 className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" />}
+                  Verificar CEP
+                </Button>
+              )}
               <Button onClick={criarSite} className="gap-2"><Plus className="w-4 h-4" /> Cadastrar</Button>
             </div>
           </div>
 
-          {novaPlataforma !== "vtex" && (
+          {deteccao && (
+            <div className="rounded-md border border-border/60 bg-muted/40 p-3 text-xs space-y-1">
+              <p className="font-medium text-foreground flex items-center gap-2">
+                {deteccao.coletor_disponivel
+                  ? <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+                  : <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />}
+                Plataforma identificada: {PLATAFORMAS.find((p) => p.value === deteccao.plataforma)?.label || deteccao.plataforma}
+                {deteccao.provedor && <span className="opacity-70">· provedor {deteccao.provedor}</span>}
+              </p>
+              <p className="text-muted-foreground break-all">Evidência: {deteccao.evidencia}</p>
+              <p className="text-muted-foreground">Você pode corrigir a plataforma no campo acima antes de cadastrar.</p>
+            </div>
+          )}
+
+          {!COLETOR_DISPONIVEL.has(novaPlataforma) && (
             <p className="text-xs text-amber-600">
               Coletor ainda não disponível para esta plataforma — o site fica no catálogo, mas sem coleta automática.
             </p>
@@ -367,6 +408,7 @@ const SitesCatalogoPanel = () => {
               )) : <p className="text-muted-foreground">Nenhuma loja retornada para este CEP.</p>}
             </div>
           )}
+
         </CardContent>
       </Card>
 
