@@ -47,7 +47,7 @@ const Repricing = () => {
 
   const { rows, concorrentesMeta } = useRepricingProcessor(produtos, concorrentes, auxiliar);
   const diag = useRepricingDiagnostico(produtos, concorrentes);
-  const allLoaded = produtos.length > 0 && concorrentes.length > 0;
+  const allLoaded = produtos.length > 0 && (concorrentes.length > 0 || auxiliar.length > 0);
 
   const handleReset = () => {
     setProdutos([]);
@@ -141,7 +141,7 @@ const Repricing = () => {
           <div className="text-center py-12 text-muted-foreground">
             <FileSpreadsheet className="w-10 h-10 mx-auto mb-3 opacity-40" />
             <p className="font-medium">Aguardando o carregamento das bases</p>
-            <p className="text-sm mt-1">Carregue pelo menos o <strong>cadastro atual da loja</strong> e a <strong>pesquisa do concorrente</strong> para iniciar a análise.</p>
+            <p className="text-sm mt-1">Carregue o <strong>cadastro atual da loja</strong> e a <strong>pesquisa dos concorrentes</strong> e/ou a <strong>base interna da rede</strong> para iniciar a análise.</p>
           </div>
         )}
           </TabsContent>
