@@ -186,7 +186,7 @@ const CategoriaBloco = ({
   emQueda,
 }: {
   nome: string;
-  semGiro: { produto: string; mediaVol: number }[];
+  semGiro: { produto: string; codigo: string; ean: string; mediaVol: number }[];
   emQueda: { produto: string; atualVol: number; mediaVol: number; queda: number }[];
 }) => {
   const [aberto, setAberto] = useState(false);
