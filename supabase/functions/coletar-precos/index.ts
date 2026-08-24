@@ -103,7 +103,15 @@ Deno.serve(async (req) => {
       return json({ success: false, error: msg, coletor_disponivel: false }, 400);
     }
 
-    const data = await chamar(fn, { ...body, action, site_id: siteId });
+    const data = await chamar(fn, {
+      ...body,
+      action,
+      site_id: siteId,
+      host: body.host ?? site?.host,
+      sc: body.sc ?? site?.sc ?? 1,
+      cep: body.cep ?? site?.cep_referencia,
+      store_id: body.store_id ?? site?.loja_externa_id,
+    });
     return json(data, data?.success === false ? 400 : 200);
   } catch (e) {
     return json(
