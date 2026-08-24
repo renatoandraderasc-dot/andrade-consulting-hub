@@ -103,6 +103,12 @@ const SitesCatalogoPanel = () => {
   >(null);
   const [lojasOc, setLojasOc] = useState<{ store_id: string; store_title: string }[]>([]);
   const [lojaOc, setLojaOc] = useState("");
+  const [diagnosticando, setDiagnosticando] = useState(false);
+  const [diagnostico, setDiagnostico] = useState<{
+    host: string; cep: string | null; conclusao: string; recomendacao: string;
+    tentativas: { endpoint: string; descricao: string; status: number | null; ok: boolean; detalhe: string }[];
+  } | null>(null);
+
   const [agora, setAgora] = useState(Date.now());
   const timer = useRef<number | null>(null);
 
