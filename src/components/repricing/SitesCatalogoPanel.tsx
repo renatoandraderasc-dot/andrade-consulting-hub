@@ -96,6 +96,12 @@ const SitesCatalogoPanel = () => {
   const [novoCep, setNovoCep] = useState("");
   const [verificando, setVerificando] = useState(false);
   const [regiao, setRegiao] = useState<{ regionId: string; sellers: { id: string; nome: string }[] } | null>(null);
+  const [detectando, setDetectando] = useState(false);
+  const [deteccao, setDeteccao] = useState<
+    { plataforma: string; provedor: string | null; coletor_disponivel: boolean; evidencia: string } | null
+  >(null);
+  const [lojasOc, setLojasOc] = useState<{ store_id: string; store_title: string }[]>([]);
+  const [lojaOc, setLojaOc] = useState("");
   const [agora, setAgora] = useState(Date.now());
   const timer = useRef<number | null>(null);
 
