@@ -356,9 +356,25 @@ const CategoriaBloco = ({
         <div className="px-5 pb-4 space-y-4">
           {semGiro.length > 0 && (
             <div>
-              <h4 className="text-xs font-semibold text-muted-foreground mb-1 font-body">
-                Não vendidos neste mês
-              </h4>
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <h4 className="text-xs font-semibold text-muted-foreground font-body">
+                  Não vendidos neste mês
+                </h4>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => exportarCsvSemGiro(nome, semGiro)}
+                    className="inline-flex items-center gap-1 text-xs font-body px-2 py-1 rounded border border-border hover:bg-muted/30 transition-colors"
+                  >
+                    <Download className="w-3 h-3" /> CSV
+                  </button>
+                  <button
+                    onClick={() => exportarPdfSemGiro(nome, semGiro)}
+                    className="inline-flex items-center gap-1 text-xs font-body px-2 py-1 rounded border border-border hover:bg-muted/30 transition-colors"
+                  >
+                    <FileText className="w-3 h-3" /> PDF
+                  </button>
+                </div>
+              </div>
               <table className="w-full text-xs font-body">
                 <thead>
                   <tr className="text-muted-foreground border-b border-border">
