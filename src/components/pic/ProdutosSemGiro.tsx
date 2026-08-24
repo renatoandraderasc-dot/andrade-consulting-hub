@@ -219,6 +219,61 @@ const exportarCsv = (nome: string, itens: ItemQueda[]) => {
   URL.revokeObjectURL(a.href);
 };
 
+type ItemSemGiro = { produto: string; codigo: string; ean: string; mediaVol: number };
+
+const exportarCsvSemGiro = (nome: string, itens: ItemSemGiro[]) => {
+  const head = ["Codigo de barras", "Cod. reduzido", "Descricao", "Volume medio (3 meses)"];
+  const linhas = itens.map((p) => [p.ean || "", p.codigo || "", p.produto, fmtVol(p.mediaVol)]);
+  const csv = [head, ...linhas]
+    .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";"))
+    .join("\n");
+  const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `sem-giro-${slug(nome)}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+
+const exportarPdfSemGiro = async (nome: string, itens: ItemSemGiro[]) => {
+  const { default: JsPDF } = await import("jspdf");
+  const doc = new JsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+  const margem = 32;
+  const larguras = [100, 80, 380, 110];
+  const cabecalho = ["Cód. de barras", "Cód. reduzido", "Descrição", "Volume médio (3 meses)"];
+  let y = margem;
+
+  const linha = (cols: string[], bold: boolean) => {
+    doc.setFont("helvetica", bold ? "bold" : "normal");
+    let x = margem;
+    cols.forEach((c, i) => {
+      doc.text(doc.splitTextToSize(c, larguras[i] - 6)[0] ?? "", x, y);
+      x += larguras[i];
+    });
+    y += 14;
+  };
+
+  doc.setFontSize(13);
+  doc.setFont("helvetica", "bold");
+  doc.text(`Produtos sem giro — ${nome}`, margem, y);
+  y += 20;
+  doc.setFontSize(8);
+  linha(cabecalho, true);
+  doc.setDrawColor(200);
+  doc.line(margem, y - 10, margem + larguras.reduce((a, b) => a + b, 0), y - 10);
+
+  itens.forEach((p) => {
+    if (y > 540) {
+      doc.addPage();
+      y = margem;
+      linha(cabecalho, true);
+    }
+    linha([p.ean || "—", p.codigo || "—", p.produto, fmtVol(p.mediaVol)], false);
+  });
+
+  doc.save(`sem-giro-${slug(nome)}.pdf`);
+};
+
 const exportarPdf = async (nome: string, itens: ItemQueda[]) => {
   const { default: JsPDF } = await import("jspdf");
   const doc = new JsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
