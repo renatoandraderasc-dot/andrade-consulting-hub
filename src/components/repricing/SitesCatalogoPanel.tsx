@@ -9,18 +9,32 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Play, Loader2, Plus, AlertTriangle, CheckCircle2, XCircle, Trash2, Store, MapPin, RefreshCw } from "lucide-react";
+import {
+  Play, Loader2, Plus, AlertTriangle, CheckCircle2, XCircle, MapPin, RefreshCw, Globe, Power,
+} from "lucide-react";
 
-interface Concorrente {
+export const PLATAFORMAS = [
+  { value: "vtex", label: "VTEX" },
+  { value: "opencart", label: "OpenCart" },
+  { value: "regex_solutions", label: "Regex Solutions" },
+  { value: "outra", label: "Outra" },
+] as const;
+
+export const COLETOR_DISPONIVEL = new Set(["vtex"]);
+
+export interface SiteConcorrente {
   id: string;
   nome: string;
   host: string;
-  sales_channel: number;
-  praca_esperada: string | null;
-  cep_referencia: string | null;
-  seller_id: string | null;
-  seller_nome: string | null;
+  plataforma: string;
+  cep_referencia: string;
   region_id: string | null;
+  praca_esperada: string | null;
+  loja_externa_id: string | null;
+  sc: number;
+  ativo: boolean;
+  ultima_coleta: string | null;
+  status_ultima_coleta: string | null;
 }
 
 interface FilaItem {
@@ -35,8 +49,6 @@ interface Job {
   id: string;
   status: string;
   progress_pct: number;
-  pages_crawled: number;
-  total_pages: number;
   products_found: number;
   skus_validos: number;
   skus_indisponiveis: number;
@@ -47,24 +59,30 @@ interface Job {
   categorias_erro: { nome: string; erro: string }[] | null;
   log_lines: string[] | null;
   error_message: string | null;
-  concorrente_id: string | null;
+  site_concorrente_id: string | null;
   fila: FilaItem[] | null;
   ultima_atividade: string | null;
   updated_at: string | null;
   created_at: string | null;
-  region_id: string | null;
+  finished_at?: string | null;
   cep_referencia: string | null;
 }
 
-const ColetaVtexPanel = () => {
-  const [concorrentes, setConcorrentes] = useState<Concorrente[]>([]);
+const dataHora = (s: string | null) =>
+  s ? new Date(s).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "—";
+
+const SitesCatalogoPanel = () => {
+  const [sites, setSites] = useState<SiteConcorrente[]>([]);
+  const [vinculos, setVinculos] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<string>("");
+  const [selected, setSelected] = useState("");
   const [job, setJob] = useState<Job | null>(null);
   const [starting, setStarting] = useState(false);
   const [resuming, setResuming] = useState(false);
+
   const [novoNome, setNovoNome] = useState("");
   const [novoHost, setNovoHost] = useState("");
+  const [novaPlataforma, setNovaPlataforma] = useState("vtex");
   const [novoSc, setNovoSc] = useState("1");
   const [novaPraca, setNovaPraca] = useState("");
   const [novoCep, setNovoCep] = useState("");
@@ -75,34 +93,32 @@ const ColetaVtexPanel = () => {
 
   const carregar = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("concorrentes")
-      .select("id, nome, host, sales_channel, praca_esperada, cep_referencia, seller_id, seller_nome, region_id")
-      .eq("ativo", true)
-      .order("nome");
-    if (error) toast.error("Não foi possível carregar os concorrentes");
-    const list = (data as Concorrente[]) || [];
-    setConcorrentes(list);
-    setSelected((prev) => (prev && list.some((c) => c.id === prev) ? prev : list[0]?.id || ""));
+    const [{ data, error }, { data: links }] = await Promise.all([
+      supabase.from("sites_concorrentes").select("*").order("nome"),
+      supabase.from("cliente_concorrentes").select("site_concorrente_id"),
+    ]);
+    if (error) toast.error("Não foi possível carregar o catálogo de sites");
+    const list = (data as SiteConcorrente[]) || [];
+    setSites(list);
+    const cont: Record<string, number> = {};
+    for (const l of links || []) cont[l.site_concorrente_id] = (cont[l.site_concorrente_id] || 0) + 1;
+    setVinculos(cont);
+    setSelected((prev) => (prev && list.some((s) => s.id === prev) ? prev : list.find((s) => s.ativo)?.id || ""));
     setLoading(false);
   }, []);
 
   useEffect(() => { carregar(); }, [carregar]);
 
-  // recupera a coleta mais recente
   useEffect(() => {
     (async () => {
       const { data } = await supabase
-        .from("scrape_jobs")
-        .select("*")
-        .not("host", "is", null)
-        .order("created_at", { ascending: false })
-        .limit(1);
+        .from("scrape_jobs").select("*")
+        .not("site_concorrente_id", "is", null)
+        .order("created_at", { ascending: false }).limit(1);
       if (data && data.length) setJob(data[0] as unknown as Job);
     })();
   }, []);
 
-  // relógio sempre ativo, para detectar coleta parada mesmo sem novas atualizações
   useEffect(() => {
     const t = window.setInterval(() => setAgora(Date.now()), 5000);
     return () => window.clearInterval(t);
@@ -121,14 +137,6 @@ const ColetaVtexPanel = () => {
     return () => { if (timer.current) window.clearInterval(timer.current); };
   }, [job?.id, job?.status]);
 
-  const cancelar = async () => {
-    if (!job) return;
-    await supabase.functions.invoke("vtex-catalog-collector", { body: { action: "cancel", jobId: job.id } });
-    const { data: j } = await supabase.from("scrape_jobs").select("*").eq("id", job.id).maybeSingle();
-    if (j) setJob(j as unknown as Job);
-    toast.success("Coleta cancelada");
-  };
-
   const verificarCep = async () => {
     const host = novoHost.replace(/^https?:\/\//, "").replace(/\/.*$/, "").trim();
     const cep = novoCep.replace(/\D/g, "");
@@ -144,50 +152,63 @@ const ColetaVtexPanel = () => {
     toast.success("Loja localizada — confira antes de cadastrar");
   };
 
-  const criarConcorrente = async () => {
+  const criarSite = async () => {
     const host = novoHost.replace(/^https?:\/\//, "").replace(/\/.*$/, "").trim();
     const cep = novoCep.replace(/\D/g, "");
-    if (!novoNome.trim() || !host) return toast.error("Informe o nome e o site do concorrente");
-    if (cep.length !== 8) return toast.error("Informe o CEP de referência (8 dígitos)");
-    if (!regiao) return toast.error("Verifique o CEP antes de cadastrar");
-    const { data, error } = await supabase.from("concorrentes").insert({
+    if (!novoNome.trim() || !host) return toast.error("Informe o nome e o site");
+    if (novaPlataforma === "vtex") {
+      if (cep.length !== 8) return toast.error("Informe o CEP de referência (8 dígitos)");
+      if (!regiao) return toast.error("Verifique o CEP antes de cadastrar");
+    }
+    const { data, error } = await supabase.from("sites_concorrentes").insert({
       nome: novoNome.trim(),
       host,
-      plataforma: "vtex",
-      sales_channel: Number(novoSc) || 1,
+      plataforma: novaPlataforma,
+      sc: Number(novoSc) || 1,
       praca_esperada: novaPraca.trim() || null,
       cep_referencia: cep,
-      region_id: regiao.regionId,
-      seller_id: regiao.sellers[0]?.id || null,
-      seller_nome: regiao.sellers[0]?.nome || null,
+      region_id: regiao?.regionId ?? null,
+      loja_externa_id: regiao?.sellers[0]?.id || null,
+      ativo: true,
     }).select("id").maybeSingle();
     if (error) return toast.error(error.message);
-    toast.success("Concorrente cadastrado");
+    toast.success("Site cadastrado no catálogo");
     setNovoNome(""); setNovoHost(""); setNovaPraca(""); setNovoCep(""); setRegiao(null);
     await carregar();
     if (data?.id) setSelected(data.id);
   };
 
-  const removerConcorrente = async (id: string) => {
-    const { error } = await supabase.from("concorrentes").update({ ativo: false }).eq("id", id);
+  const alternarAtivo = async (s: SiteConcorrente) => {
+    const { error } = await supabase.from("sites_concorrentes").update({ ativo: !s.ativo }).eq("id", s.id);
     if (error) return toast.error(error.message);
-    toast.success("Concorrente removido");
+    toast.success(s.ativo ? "Site desativado" : "Site liberado para coleta");
     carregar();
   };
 
+  const siteSel = sites.find((s) => s.id === selected);
+  const semColetor = !!siteSel && !COLETOR_DISPONIVEL.has(siteSel.plataforma);
+
   const iniciar = async () => {
-    if (!selected) return toast.error("Cadastre e selecione um concorrente");
-    const conc = concorrentes.find((c) => c.id === selected);
-    if (!conc?.cep_referencia) return toast.error("Cadastre o CEP de referência deste concorrente antes de coletar");
+    if (!siteSel) return toast.error("Selecione um site do catálogo");
+    if (semColetor) return;
+    if (!siteSel.cep_referencia) return toast.error("Cadastre o CEP de referência deste site antes de coletar");
     setStarting(true);
     const { data, error } = await supabase.functions.invoke("vtex-catalog-collector", {
-      body: { action: "start", concorrente_id: selected, host: conc.host, sc: conc.sales_channel ?? 1, cep: conc.cep_referencia },
+      body: { action: "start", site_id: siteSel.id, host: siteSel.host, sc: siteSel.sc ?? 1, cep: siteSel.cep_referencia },
     });
     setStarting(false);
     if (error || !data?.success) return toast.error(error?.message || data?.error || "Falha ao iniciar a coleta");
     toast.success("Coleta iniciada em segundo plano");
     const { data: j } = await supabase.from("scrape_jobs").select("*").eq("id", data.jobId).maybeSingle();
     if (j) setJob(j as unknown as Job);
+  };
+
+  const cancelar = async () => {
+    if (!job) return;
+    await supabase.functions.invoke("vtex-catalog-collector", { body: { action: "cancel", jobId: job.id } });
+    const { data: j } = await supabase.from("scrape_jobs").select("*").eq("id", job.id).maybeSingle();
+    if (j) setJob(j as unknown as Job);
+    toast.success("Coleta cancelada");
   };
 
   const retomar = async () => {
@@ -203,19 +224,15 @@ const ColetaVtexPanel = () => {
     if (j) setJob(j as unknown as Job);
   };
 
-  const rodando =
-    job && !(job as { finished_at?: string | null }).finished_at &&
-    (job.status === "pending" || job.status === "crawling");
-  const concJob = concorrentes.find((c) => c.id === job?.concorrente_id);
+  const rodando = job && !job.finished_at && (job.status === "pending" || job.status === "crawling");
+  const siteJob = sites.find((s) => s.id === job?.site_concorrente_id);
   const pracaDivergente =
-    job?.lojista_detectado && concJob?.praca_esperada &&
+    job?.lojista_detectado && siteJob?.praca_esperada &&
     !job.lojista_detectado.toUpperCase().replace(/[^A-Z0-9]/g, "")
-      .includes(concJob.praca_esperada.toUpperCase().replace(/[^A-Z0-9]/g, ""));
+      .includes(siteJob.praca_esperada.toUpperCase().replace(/[^A-Z0-9]/g, ""));
 
   const ultimoSinal = job?.ultima_atividade || job?.updated_at || job?.created_at || null;
-  const minutosParado = ultimoSinal
-    ? Math.floor((agora - new Date(ultimoSinal).getTime()) / 60000)
-    : null;
+  const minutosParado = ultimoSinal ? Math.floor((agora - new Date(ultimoSinal).getTime()) / 60000) : null;
   const travado = !!rodando && minutosParado !== null && minutosParado >= 3;
 
   const fila = job?.fila || [];
@@ -228,10 +245,9 @@ const ColetaVtexPanel = () => {
 
   return (
     <div className="space-y-5">
-      {/* Cadastro */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2"><Plus className="w-4 h-4" /> Cadastrar concorrente</CardTitle>
+          <CardTitle className="text-base flex items-center gap-2"><Plus className="w-4 h-4" /> Cadastrar site</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="grid gap-3 md:grid-cols-4 items-end">
@@ -240,8 +256,17 @@ const ColetaVtexPanel = () => {
               <Input value={novoNome} onChange={(e) => setNovoNome(e.target.value)} placeholder="Savegnago" />
             </div>
             <div className="md:col-span-2">
-              <Label className="text-xs">Site do concorrente</Label>
+              <Label className="text-xs">Endereço do site</Label>
               <Input value={novoHost} onChange={(e) => setNovoHost(e.target.value)} placeholder="www.savegnago.com.br" />
+            </div>
+            <div>
+              <Label className="text-xs">Plataforma</Label>
+              <Select value={novaPlataforma} onValueChange={setNovaPlataforma}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-popover z-50">
+                  {PLATAFORMAS.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label className="text-xs">Canal de venda</Label>
@@ -255,16 +280,20 @@ const ColetaVtexPanel = () => {
               <Label className="text-xs">Loja/praça esperada</Label>
               <Input value={novaPraca} onChange={(e) => setNovaPraca(e.target.value)} placeholder="montealto" />
             </div>
-            <div className="flex gap-2 md:col-span-2">
-              <Button variant="outline" onClick={verificarCep} disabled={verificando} className="gap-2">
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={verificarCep} disabled={verificando || novaPlataforma !== "vtex"} className="gap-2">
                 {verificando ? <Loader2 className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" />}
                 Verificar CEP
               </Button>
-              <Button onClick={criarConcorrente} className="gap-2">
-                <Plus className="w-4 h-4" /> Cadastrar
-              </Button>
+              <Button onClick={criarSite} className="gap-2"><Plus className="w-4 h-4" /> Cadastrar</Button>
             </div>
           </div>
+
+          {novaPlataforma !== "vtex" && (
+            <p className="text-xs text-amber-600">
+              Coletor ainda não disponível para esta plataforma — o site fica no catálogo, mas sem coleta automática.
+            </p>
+          )}
 
           {regiao && (
             <div className="rounded-md border border-border/60 bg-muted/40 p-3 text-xs space-y-1">
@@ -277,10 +306,9 @@ const ColetaVtexPanel = () => {
         </CardContent>
       </Card>
 
-      {/* Concorrentes cadastrados */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2"><Store className="w-4 h-4" /> Concorrentes cadastrados</CardTitle>
+          <CardTitle className="text-base flex items-center gap-2"><Globe className="w-4 h-4" /> Catálogo de sites</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
@@ -288,70 +316,84 @@ const ColetaVtexPanel = () => {
               <TableRow className="bg-muted/40">
                 <TableHead>Nome</TableHead>
                 <TableHead>Site</TableHead>
-                <TableHead className="w-[110px]">CEP</TableHead>
-                <TableHead className="w-[200px]">Loja/praça</TableHead>
-                <TableHead className="w-[70px] text-center">Ação</TableHead>
+                <TableHead className="w-[120px]">Plataforma</TableHead>
+                <TableHead className="w-[100px]">CEP</TableHead>
+                <TableHead className="w-[180px]">Praça</TableHead>
+                <TableHead className="w-[90px] text-center">Clientes</TableHead>
+                <TableHead className="w-[170px]">Última coleta</TableHead>
+                <TableHead className="w-[90px] text-center">Ação</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {concorrentes.map((c) => (
-                <TableRow key={c.id}>
-                  <TableCell className="font-medium text-sm">{c.nome}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{c.host}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{c.cep_referencia || "—"}</TableCell>
+              {sites.map((s) => (
+                <TableRow key={s.id} className={s.ativo ? "" : "opacity-60"}>
+                  <TableCell className="font-medium text-sm">
+                    {s.nome}
+                    {!s.ativo && <Badge variant="outline" className="ml-2 text-[10px]">inativo</Badge>}
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{s.host}</TableCell>
+                  <TableCell className="text-xs">
+                    <Badge variant={COLETOR_DISPONIVEL.has(s.plataforma) ? "secondary" : "outline"} className="text-[10px]">
+                      {PLATAFORMAS.find((p) => p.value === s.plataforma)?.label || s.plataforma}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{s.cep_referencia || "—"}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{s.praca_esperada || "—"}</TableCell>
+                  <TableCell className="text-center text-xs">{vinculos[s.id] || 0}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">
-                    {c.seller_nome || c.praca_esperada || "—"}
-                    {!c.cep_referencia && <span className="ml-1 text-destructive">(sem CEP)</span>}
+                    {dataHora(s.ultima_coleta)}
+                    {s.status_ultima_coleta && <span className="ml-1 opacity-70">({s.status_ultima_coleta})</span>}
                   </TableCell>
                   <TableCell className="text-center">
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => removerConcorrente(c.id)}>
-                      <Trash2 className="w-3.5 h-3.5" />
+                    <Button variant="ghost" size="icon" className="h-7 w-7" title={s.ativo ? "Desativar" : "Liberar"} onClick={() => alternarAtivo(s)}>
+                      <Power className={`w-3.5 h-3.5 ${s.ativo ? "text-destructive" : "text-green-600"}`} />
                     </Button>
                   </TableCell>
                 </TableRow>
               ))}
-              {!loading && concorrentes.length === 0 && (
-                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                  Nenhum concorrente cadastrado ainda — use o formulário acima.
+              {!loading && sites.length === 0 && (
+                <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                  Nenhum site no catálogo — use o formulário acima.
                 </TableCell></TableRow>
               )}
               {loading && (
-                <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">Carregando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Carregando...</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
 
-      {/* Coleta */}
       <Card className="border-primary/30">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Coleta de preços do concorrente</CardTitle>
+          <CardTitle className="text-base">Coleta de preços por site</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-3 md:grid-cols-[1fr_auto]">
-            <Select value={selected} onValueChange={setSelected} disabled={concorrentes.length === 0}>
+            <Select value={selected} onValueChange={setSelected} disabled={sites.length === 0}>
               <SelectTrigger>
-                <SelectValue placeholder={concorrentes.length === 0 ? "Cadastre um concorrente primeiro" : "Selecione o concorrente"} />
+                <SelectValue placeholder={sites.length === 0 ? "Cadastre um site primeiro" : "Selecione o site"} />
               </SelectTrigger>
               <SelectContent className="bg-popover z-50">
-                {concorrentes.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.nome} — {c.host}</SelectItem>
+                {sites.filter((s) => s.ativo).map((s) => (
+                  <SelectItem key={s.id} value={s.id}>{s.nome} — {s.host}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <div className="flex gap-2">
-              <Button onClick={iniciar} disabled={starting || (!!rodando && !travado) || !selected} className="gap-2">
+              <Button onClick={iniciar} disabled={starting || semColetor || (!!rodando && !travado) || !selected} className="gap-2">
                 {starting || (rodando && !travado) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
                 {rodando && !travado ? "Coletando..." : "Iniciar coleta"}
               </Button>
               {rodando && (
-                <Button variant="outline" onClick={cancelar} className="gap-2">
-                  <XCircle className="w-4 h-4" /> Parar
-                </Button>
+                <Button variant="outline" onClick={cancelar} className="gap-2"><XCircle className="w-4 h-4" /> Parar</Button>
               )}
             </div>
           </div>
+
+          {semColetor && (
+            <p className="text-xs text-amber-600">Coletor ainda não disponível para esta plataforma.</p>
+          )}
 
           {job && (
             <div className="space-y-3 rounded-lg border border-border/60 p-3">
@@ -360,7 +402,7 @@ const ColetaVtexPanel = () => {
                   {rodando && !travado ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> :
                     job.status === "done" ? <CheckCircle2 className="w-4 h-4 text-green-600" /> :
                     <XCircle className="w-4 h-4 text-destructive" />}
-                  {concJob?.nome || "Coleta"} — {travado ? "interrompida" : statusLabel(job.status)}
+                  {siteJob?.nome || "Coleta"} — {travado ? "interrompida" : statusLabel(job.status)}
                 </span>
                 <Badge variant="outline">{job.progress_pct || 0}%</Badge>
               </div>
@@ -401,9 +443,8 @@ const ColetaVtexPanel = () => {
               <div className={`rounded-md border p-2 text-xs ${pracaDivergente ? "border-destructive/40 bg-destructive/10 text-destructive" : "border-border/60 text-muted-foreground"}`}>
                 <span className="flex items-center gap-2 flex-wrap">
                   {pracaDivergente && <AlertTriangle className="w-3.5 h-3.5" />}
-                  Loja/praça identificada:{" "}
-                  <strong className="text-foreground">{job.lojista_detectado || "—"}</strong>
-                  {concJob?.praca_esperada && <> (esperado: {concJob.praca_esperada})</>}
+                  Loja/praça identificada: <strong className="text-foreground">{job.lojista_detectado || "—"}</strong>
+                  {siteJob?.praca_esperada && <> (esperado: {siteJob.praca_esperada})</>}
                 </span>
                 {pracaDivergente && <p className="mt-1">A praça identificada não é a esperada — os preços podem não corresponder à loja concorrente.</p>}
               </div>
@@ -411,9 +452,7 @@ const ColetaVtexPanel = () => {
               {!!job.categorias_erro?.length && (
                 <div className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive space-y-0.5">
                   <p className="font-medium">{job.categorias_erro.length} categoria(s) falharam:</p>
-                  {job.categorias_erro.slice(0, 6).map((c, i) => (
-                    <p key={i}>• {c.nome} — {c.erro}</p>
-                  ))}
+                  {job.categorias_erro.slice(0, 6).map((c, i) => <p key={i}>• {c.nome} — {c.erro}</p>)}
                 </div>
               )}
 
@@ -441,4 +480,4 @@ const ColetaVtexPanel = () => {
   );
 };
 
-export default ColetaVtexPanel;
+export default SitesCatalogoPanel;

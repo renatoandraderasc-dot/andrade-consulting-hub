@@ -240,6 +240,54 @@ export type Database = {
           },
         ]
       }
+      cliente_concorrentes: {
+        Row: {
+          apelido: string | null
+          ativo: boolean
+          created_at: string
+          id: string
+          prioridade: number
+          site_concorrente_id: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          apelido?: string | null
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          prioridade?: number
+          site_concorrente_id: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          apelido?: string | null
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          prioridade?: number
+          site_concorrente_id?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cliente_concorrentes_site_concorrente_id_fkey"
+            columns: ["site_concorrente_id"]
+            isOneToOne: false
+            referencedRelation: "sites_concorrentes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cliente_concorrentes_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       compras_config: {
         Row: {
           ano: number
@@ -1218,7 +1266,7 @@ export type Database = {
           cep_referencia: string | null
           colecoes: string[] | null
           coletado_em: string
-          concorrente_id: string
+          concorrente_id: string | null
           created_at: string
           disponivel: boolean
           ean: string | null
@@ -1238,6 +1286,7 @@ export type Database = {
           sales_channel: number
           seller_id: string | null
           seller_nome: string | null
+          site_concorrente_id: string | null
           sku: string
           updated_at: string
           url: string | null
@@ -1248,7 +1297,7 @@ export type Database = {
           cep_referencia?: string | null
           colecoes?: string[] | null
           coletado_em?: string
-          concorrente_id: string
+          concorrente_id?: string | null
           created_at?: string
           disponivel?: boolean
           ean?: string | null
@@ -1268,6 +1317,7 @@ export type Database = {
           sales_channel?: number
           seller_id?: string | null
           seller_nome?: string | null
+          site_concorrente_id?: string | null
           sku: string
           updated_at?: string
           url?: string | null
@@ -1278,7 +1328,7 @@ export type Database = {
           cep_referencia?: string | null
           colecoes?: string[] | null
           coletado_em?: string
-          concorrente_id?: string
+          concorrente_id?: string | null
           created_at?: string
           disponivel?: boolean
           ean?: string | null
@@ -1298,6 +1348,7 @@ export type Database = {
           sales_channel?: number
           seller_id?: string | null
           seller_nome?: string | null
+          site_concorrente_id?: string | null
           sku?: string
           updated_at?: string
           url?: string | null
@@ -1315,6 +1366,13 @@ export type Database = {
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "scrape_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "precos_concorrente_site_concorrente_id_fkey"
+            columns: ["site_concorrente_id"]
+            isOneToOne: false
+            referencedRelation: "sites_concorrentes"
             referencedColumns: ["id"]
           },
         ]
@@ -1413,6 +1471,7 @@ export type Database = {
           region_id: string | null
           sales_channel: number | null
           seller_esperado: string | null
+          site_concorrente_id: string | null
           skus_indisponiveis: number | null
           skus_sem_ean: number | null
           skus_validos: number | null
@@ -1446,6 +1505,7 @@ export type Database = {
           region_id?: string | null
           sales_channel?: number | null
           seller_esperado?: string | null
+          site_concorrente_id?: string | null
           skus_indisponiveis?: number | null
           skus_sem_ean?: number | null
           skus_validos?: number | null
@@ -1479,6 +1539,7 @@ export type Database = {
           region_id?: string | null
           sales_channel?: number | null
           seller_esperado?: string | null
+          site_concorrente_id?: string | null
           skus_indisponiveis?: number | null
           skus_sem_ean?: number | null
           skus_validos?: number | null
@@ -1494,6 +1555,13 @@ export type Database = {
             columns: ["concorrente_id"]
             isOneToOne: false
             referencedRelation: "concorrentes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scrape_jobs_site_concorrente_id_fkey"
+            columns: ["site_concorrente_id"]
+            isOneToOne: false
+            referencedRelation: "sites_concorrentes"
             referencedColumns: ["id"]
           },
         ]
@@ -1512,6 +1580,57 @@ export type Database = {
         Update: {
           data?: Json
           id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sites_concorrentes: {
+        Row: {
+          ativo: boolean
+          cep_referencia: string
+          created_at: string
+          host: string
+          id: string
+          loja_externa_id: string | null
+          nome: string
+          plataforma: string
+          praca_esperada: string | null
+          region_id: string | null
+          sc: number
+          status_ultima_coleta: string | null
+          ultima_coleta: string | null
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          cep_referencia?: string
+          created_at?: string
+          host: string
+          id?: string
+          loja_externa_id?: string | null
+          nome: string
+          plataforma?: string
+          praca_esperada?: string | null
+          region_id?: string | null
+          sc?: number
+          status_ultima_coleta?: string | null
+          ultima_coleta?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          cep_referencia?: string
+          created_at?: string
+          host?: string
+          id?: string
+          loja_externa_id?: string | null
+          nome?: string
+          plataforma?: string
+          praca_esperada?: string | null
+          region_id?: string | null
+          sc?: number
+          status_ultima_coleta?: string | null
+          ultima_coleta?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -2291,6 +2410,7 @@ export type Database = {
         Returns: number
       }
       store_sistema: { Args: { _store_id: string }; Returns: string }
+      tem_acesso_loja: { Args: { _store_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "user"

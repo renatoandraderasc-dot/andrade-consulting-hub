@@ -80,7 +80,7 @@ const Repricing = () => {
           </TabsList>
 
           <TabsContent value="concorrentes" className="mt-4">
-            <ConcorrentesTab />
+            <ConcorrentesTab storeId={storeId} />
           </TabsContent>
 
           <TabsContent value="bases" className="mt-4 space-y-5">

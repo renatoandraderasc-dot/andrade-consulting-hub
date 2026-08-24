@@ -72,27 +72,34 @@ const Pricing = () => {
     })();
   }, [user, isAdmin]);
 
-  // Concorrentes cadastrados + data da coleta
+  // Concorrentes vinculados a esta loja + data da coleta
   useEffect(() => {
+    if (!storeId) { setConcorrentes([]); setSelConc([]); return; }
     (async () => {
-      const { data: cs } = await supabase
-        .from("concorrentes")
-        .select("id, nome, host, praca_esperada, ativo")
+      const { data: vs } = await supabase
+        .from("cliente_concorrentes")
+        .select("apelido, prioridade, sites_concorrentes(id, nome, host, praca_esperada, ativo)")
+        .eq("store_id", storeId)
         .eq("ativo", true)
-        .order("nome");
+        .order("prioridade");
+      const sites = ((vs || []) as unknown as {
+        apelido: string | null;
+        sites_concorrentes: { id: string; nome: string; host: string; praca_esperada: string | null; ativo: boolean } | null;
+      }[]).filter((v) => v.sites_concorrentes?.ativo);
       const lista: ConcorrenteInfo[] = [];
-      for (const c of cs || []) {
+      for (const v of sites) {
+        const s = v.sites_concorrentes!;
         const { data: ult } = await supabase
           .from("precos_concorrente")
           .select("coletado_em, lojista")
-          .eq("concorrente_id", c.id)
+          .eq("site_concorrente_id", s.id)
           .order("coletado_em", { ascending: false })
           .limit(1);
         lista.push({
-          id: c.id,
-          nome: c.nome,
-          host: c.host,
-          praca_esperada: c.praca_esperada,
+          id: s.id,
+          nome: v.apelido || s.nome,
+          host: s.host,
+          praca_esperada: s.praca_esperada,
           coletadoEm: ult?.[0]?.coletado_em ?? null,
           lojista: ult?.[0]?.lojista ?? null,
           totalLinhas: 0,
@@ -102,7 +109,7 @@ const Pricing = () => {
       setConcorrentes(lista);
       setSelConc(lista.filter((c) => c.coletadoEm).map((c) => c.id));
     })();
-  }, []);
+  }, [storeId]);
 
   const storeName = stores.find((s) => s.id === storeId)?.name || "";
 
@@ -146,7 +153,7 @@ const Pricing = () => {
           const { data } = await supabase
             .from("precos_concorrente")
             .select("id, ean, preco, preco_auditoria, disponivel, promocao_multipla, lojista, coletado_em, imagem_url")
-            .eq("concorrente_id", c.id)
+            .eq("site_concorrente_id", c.id)
             .order("id", { ascending: true })
             .range(from, from + 999);
           const linhas = data || [];

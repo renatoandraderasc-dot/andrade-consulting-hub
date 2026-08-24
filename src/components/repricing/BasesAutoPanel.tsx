@@ -43,13 +43,27 @@ const BasesAutoPanel = ({
   useEffect(() => {
     (async () => {
       const [{ data: cs }, { data: ls }] = await Promise.all([
-        supabase.from("concorrentes").select("id, nome, host").eq("ativo", true).order("nome"),
+        storeId
+          ? supabase
+              .from("cliente_concorrentes")
+              .select("apelido, prioridade, sites_concorrentes(id, nome, host)")
+              .eq("store_id", storeId)
+              .eq("ativo", true)
+              .order("prioridade")
+          : Promise.resolve({ data: [] as unknown[] }),
         supabase.from("stores").select("id, name").order("name"),
       ]);
-      setConcorrentes((cs as ConcOpt[]) || []);
+      const opts = ((cs || []) as unknown as { apelido: string | null; sites_concorrentes: ConcOpt | null }[])
+        .filter((v) => v.sites_concorrentes)
+        .map((v) => ({
+          id: v.sites_concorrentes!.id,
+          nome: v.apelido || v.sites_concorrentes!.nome,
+          host: v.sites_concorrentes!.host,
+        }));
+      setConcorrentes(opts);
       setLojas((ls as LojaOpt[]) || []);
     })();
-  }, []);
+  }, [storeId]);
 
   // 1) Cadastro da loja — ativos 12 meses (padrao) ou cadastro completo
   const carregarProdutos = useCallback(async () => {
@@ -121,7 +135,7 @@ const BasesAutoPanel = ({
   // 2) Pesquisas dos concorrentes coletadas (uma coluna por concorrente)
   const carregarConcorrente = useCallback(async () => {
     const alvos = concSel === "todos" ? concorrentes : concorrentes.filter((c) => c.id === concSel);
-    if (!alvos.length) return toast.error("Nenhum concorrente cadastrado");
+    if (!alvos.length) return toast.error("Nenhum concorrente vinculado a esta loja");
     setLoadingC(true);
     const rows: Linha[] = [];
     const passo = 1000;
@@ -132,7 +146,7 @@ const BasesAutoPanel = ({
         const { data, error } = await supabase
           .from("precos_concorrente")
           .select("id, ean, nome, preco, preco_de, em_promocao, disponivel, coletado_em")
-          .eq("concorrente_id", c.id)
+          .eq("site_concorrente_id", c.id)
           .eq("disponivel", true)
           .order("id", { ascending: true })
           .range(de, de + passo - 1);
@@ -242,7 +256,7 @@ const BasesAutoPanel = ({
           </p>
           <Select value={concSel} onValueChange={setConcSel} disabled={!concorrentes.length}>
             <SelectTrigger className="h-9">
-              <SelectValue placeholder={concorrentes.length ? "Selecione" : "Nenhum concorrente cadastrado"} />
+              <SelectValue placeholder={concorrentes.length ? "Selecione" : "Nenhum concorrente vinculado a esta loja"} />
             </SelectTrigger>
             <SelectContent className="bg-popover z-50">
               <SelectItem value="todos">Todos os concorrentes</SelectItem>
