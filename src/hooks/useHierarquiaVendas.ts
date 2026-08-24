@@ -122,19 +122,26 @@ async function carregar(storeId: string, inicio: string, fim: string): Promise<L
   }
 
 
-  const cat = new Map<string, { n1: string; n2: string; n3: string; descricao: string }>();
+  // Chave normalizada (sem zeros a esquerda) para casar o ranking com o cadastro.
+  const chaveCod = (v: unknown) => {
+    const s = String(v ?? "").trim();
+    return s.replace(/^0+/, "") || s;
+  };
+
+  const cat = new Map<string, { n1: string; n2: string; n3: string; descricao: string; ean: string }>();
   for (const p of catalogo) {
-    cat.set(String(pick(p, "codigo") ?? ""), {
+    cat.set(chaveCod(pick(p, "codigo", "cod_produto", "id_produto")), {
       n1: txt(pick(p, "secao"), "SEM DEPARTAMENTO").toUpperCase(),
       n2: txt(pick(p, "grupo"), "SEM GRUPO").toUpperCase(),
       n3: txt(pick(p, "subgrupo"), "SEM SUBGRUPO").toUpperCase(),
-      descricao: txt(pick(p, "descricao"), "SEM DESCRIÇÃO").toUpperCase(),
+      descricao: txt(pick(p, "descricao", "produto"), "SEM DESCRIÇÃO").toUpperCase(),
+      ean: String(pick(p, "codigo_barras", "ean", "barcode", "cod_barras", "gtin") ?? ""),
     });
   }
 
   return ranking.map((l) => {
     const codigo = String(pick(l, "codigo", "codigo_produto", "cod_produto", "ean") ?? "");
-    const c = cat.get(codigo);
+    const c = cat.get(chaveCod(codigo));
     const vendas = num(pick(l, "total_vendido", "venda", "vendas", "valor_venda"));
     const desc = txt(pick(l, "produto", "descricao", "descricao_produto"), "");
     return {
