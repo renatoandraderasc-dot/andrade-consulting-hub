@@ -183,7 +183,7 @@ const BasesAutoPanel = ({
     const rows: Linha[] = [];
     for (let i = 0; i < outras.length; i++) {
       const l = outras[i];
-      setProgressoInterna(`${i + 1}/${outras.length} — ${l.name}`);
+      setProgressoInterna(`${Math.round((i / outras.length) * 100)}%`);
       try {
         const base = await carregarBaseCatalogo(l.id);
         for (const p of base) {
