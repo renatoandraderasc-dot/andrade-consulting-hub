@@ -190,12 +190,15 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
             <Input placeholder="Buscar por produto ou código de barras..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} className="pl-9" />
           </div>
           <Select value={baseRef} onValueChange={(v) => { setBaseRef(v); setPage(0); }}>
-            <SelectTrigger className="w-[230px]"><SelectValue placeholder="Base de comparação" /></SelectTrigger>
+            <SelectTrigger className="w-[290px]"><SelectValue placeholder="Base de comparação" /></SelectTrigger>
             <SelectContent className="bg-popover z-50">
+              <SelectItem value="geral">Menor preço (concorrentes + base interna)</SelectItem>
               <SelectItem value="menor">Menor preço entre concorrentes</SelectItem>
+              <SelectItem value="interna">Menor preço da base interna da rede</SelectItem>
               {concorrentesMeta.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
             </SelectContent>
           </Select>
+
           <Select value={mercFilter} onValueChange={(v) => { setMercFilter(v); setPage(0); }}>
             <SelectTrigger className="w-[160px]"><SelectValue placeholder="Mercadológico" /></SelectTrigger>
             <SelectContent className="bg-popover z-50">
