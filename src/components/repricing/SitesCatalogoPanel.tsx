@@ -151,6 +151,39 @@ const SitesCatalogoPanel = () => {
     return () => { if (timer.current) window.clearInterval(timer.current); };
   }, [job?.id, job?.status]);
 
+  const detectarPlataforma = async () => {
+    const host = novoHost.replace(/^https?:\/\//, "").replace(/\/.*$/, "").trim();
+    if (!host || !host.includes(".")) return;
+    setDetectando(true);
+    setDeteccao(null);
+    const { data, error } = await supabase.functions.invoke("detectar-plataforma", { body: { host } });
+    setDetectando(false);
+    if (error || !data?.success) {
+      return toast.error(error?.message || data?.error || "Não foi possível identificar a plataforma");
+    }
+    setDeteccao(data);
+    setNovaPlataforma(data.plataforma);
+    setRegiao(null);
+    setLojasOc([]);
+    setLojaOc("");
+    if (data.plataforma === "opencart") buscarLojasOpencart(host);
+  };
+
+  const buscarLojasOpencart = async (hostArg?: string) => {
+    const host = (hostArg ?? novoHost).replace(/^https?:\/\//, "").replace(/\/.*$/, "").trim();
+    if (!host) return;
+    setVerificando(true);
+    const { data, error } = await supabase.functions.invoke("opencart-collector", {
+      body: { action: "lojas", host },
+    });
+    setVerificando(false);
+    if (error || !data?.success || !Array.isArray(data.lojas) || !data.lojas.length) {
+      return toast.error("Não foi possível listar as lojas deste site — informe a praça manualmente");
+    }
+    setLojasOc(data.lojas);
+    toast.success(`${data.lojas.length} loja(s) encontradas — escolha a praça`);
+  };
+
   const verificarCep = async () => {
     const host = novoHost.replace(/^https?:\/\//, "").replace(/\/.*$/, "").trim();
     const cep = novoCep.replace(/\D/g, "");
