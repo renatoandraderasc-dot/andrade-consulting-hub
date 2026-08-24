@@ -128,6 +128,8 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
   const acima = filtered.filter((r) => r.status === "acima").length;
   const abaixo = filtered.filter((r) => r.status === "abaixo").length;
   const igual = filtered.filter((r) => r.status === "igual").length;
+  const semRef = filtered.filter((r) => r.status === "sem_ref").length;
+
 
   const handleExport = () => {
     const data = filtered.map((r) => {
