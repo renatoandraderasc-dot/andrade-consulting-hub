@@ -141,7 +141,7 @@ const BasesAutoPanel = ({
     const passo = 1000;
     for (let i = 0; i < alvos.length; i++) {
       const c = alvos[i];
-      setProgressoConc(`${i + 1}/${alvos.length} — ${c.nome}`);
+      setProgressoConc(`${Math.round((i / alvos.length) * 100)}%`);
       for (let de = 0; de < 200000; de += passo) {
         const { data, error } = await supabase
           .from("precos_concorrente")
