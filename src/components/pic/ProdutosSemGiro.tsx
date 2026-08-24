@@ -187,7 +187,7 @@ const CategoriaBloco = ({
 }: {
   nome: string;
   semGiro: { produto: string; codigo: string; ean: string; mediaVol: number }[];
-  emQueda: { produto: string; atualVol: number; mediaVol: number; queda: number }[];
+  emQueda: { produto: string; codigo: string; atualVol: number; mediaVol: number; queda: number }[];
 }) => {
   const [aberto, setAberto] = useState(false);
 
@@ -246,7 +246,8 @@ const CategoriaBloco = ({
               </h4>
               <table className="w-full text-xs font-body">
                 <thead>
-                  <tr className="text-muted-foreground border-b border-border">
+                   <tr className="text-muted-foreground border-b border-border">
+                    <th className="text-left py-1">Cód. reduzido</th>
                     <th className="text-left py-1">Produto</th>
                     <th className="text-right py-1">Atual</th>
                     <th className="text-right py-1">Média 3 meses</th>
@@ -256,6 +257,7 @@ const CategoriaBloco = ({
                 <tbody>
                   {emQueda.map((p, i) => (
                     <tr key={i} className="border-b border-border/40">
+                      <td className="py-1 pr-2 font-mono whitespace-nowrap">{p.codigo || "—"}</td>
                       <td className="py-1 pr-2">{p.produto}</td>
                       <td className="py-1 text-right font-mono">{fmtVol(p.atualVol)}</td>
                       <td className="py-1 text-right font-mono">{fmtVol(p.mediaVol)}</td>
