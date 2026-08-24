@@ -206,6 +206,21 @@ const SitesCatalogoPanel = () => {
     toast.success("Loja localizada — confira antes de cadastrar");
   };
 
+  const rodarDiagnostico = async () => {
+    const host = novoHost.replace(/^https?:\/\//, "").replace(/\/.*$/, "").trim();
+    if (!host || !host.includes(".")) return toast.error("Informe o endereço do site");
+    setDiagnosticando(true);
+    setDiagnostico(null);
+    const { data, error } = await supabase.functions.invoke("diagnostico-sellers", {
+      body: { host, cep: novoCep.replace(/\D/g, ""), sc: Number(novoSc) || 1 },
+    });
+    setDiagnosticando(false);
+    if (error || !data?.success) return toast.error(error?.message || data?.error || "Falha ao rodar o diagnóstico");
+    setDiagnostico(data);
+  };
+
+
+
   const criarSite = async () => {
     const host = novoHost.replace(/^https?:\/\//, "").replace(/\/.*$/, "").trim();
     const cep = novoCep.replace(/\D/g, "");
