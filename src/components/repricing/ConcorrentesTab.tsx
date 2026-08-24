@@ -1,5 +1,7 @@
-import ColetaVtexPanel from "./ColetaVtexPanel";
+import ClienteConcorrentesPanel from "./ClienteConcorrentesPanel";
 
-const ConcorrentesTab = () => <ColetaVtexPanel />;
+const ConcorrentesTab = ({ storeId }: { storeId: string }) => (
+  <ClienteConcorrentesPanel storeId={storeId} />
+);
 
 export default ConcorrentesTab;
