@@ -180,6 +180,94 @@ const ProdutosSemGiro = ({ storeId, ano, mes }: Props) => {
   );
 };
 
+type ItemQueda = {
+  produto: string;
+  codigo: string;
+  ean: string;
+  atualVol: number;
+  mediaVol: number;
+  queda: number;
+};
+
+const slug = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w]+/g, "-").toLowerCase();
+
+const exportarCsv = (nome: string, itens: ItemQueda[]) => {
+  const head = [
+    "Codigo de barras",
+    "Cod. reduzido",
+    "Descricao",
+    "Volume atual",
+    "Media 3 meses",
+    "Variacao (%)",
+  ];
+  const linhas = itens.map((p) => [
+    p.ean || "",
+    p.codigo || "",
+    p.produto,
+    fmtVol(p.atualVol),
+    fmtVol(p.mediaVol),
+    `-${p.queda.toFixed(1).replace(".", ",")}`,
+  ]);
+  const csv = [head, ...linhas]
+    .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";"))
+    .join("\n");
+  const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `queda-volume-${slug(nome)}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+
+const exportarPdf = async (nome: string, itens: ItemQueda[]) => {
+  const { default: JsPDF } = await import("jspdf");
+  const doc = new JsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+  const margem = 32;
+  const larguras = [90, 70, 300, 70, 80, 60];
+  const cabecalho = ["Cód. de barras", "Cód. reduzido", "Descrição", "Atual", "Média 3m", "Variação"];
+  let y = margem;
+
+  const linha = (cols: string[], bold: boolean) => {
+    doc.setFont("helvetica", bold ? "bold" : "normal");
+    let x = margem;
+    cols.forEach((c, i) => {
+      doc.text(doc.splitTextToSize(c, larguras[i] - 6)[0] ?? "", x, y);
+      x += larguras[i];
+    });
+    y += 14;
+  };
+
+  doc.setFontSize(13);
+  doc.setFont("helvetica", "bold");
+  doc.text(`Queda de volume relevante — ${nome}`, margem, y);
+  y += 20;
+  doc.setFontSize(8);
+  linha(cabecalho, true);
+  doc.setDrawColor(200);
+  doc.line(margem, y - 10, margem + larguras.reduce((a, b) => a + b, 0), y - 10);
+
+  itens.forEach((p) => {
+    if (y > 540) {
+      doc.addPage();
+      y = margem;
+      linha(cabecalho, true);
+    }
+    linha(
+      [
+        p.ean || "—",
+        p.codigo || "—",
+        p.produto,
+        fmtVol(p.atualVol),
+        fmtVol(p.mediaVol),
+        `-${p.queda.toFixed(1).replace(".", ",")}%`,
+      ],
+      false,
+    );
+  });
+
+  doc.save(`queda-volume-${slug(nome)}.pdf`);
+};
+
 const CategoriaBloco = ({
   nome,
   semGiro,
@@ -187,7 +275,7 @@ const CategoriaBloco = ({
 }: {
   nome: string;
   semGiro: { produto: string; codigo: string; ean: string; mediaVol: number }[];
-  emQueda: { produto: string; codigo: string; atualVol: number; mediaVol: number; queda: number }[];
+  emQueda: ItemQueda[];
 }) => {
   const [aberto, setAberto] = useState(false);
 
