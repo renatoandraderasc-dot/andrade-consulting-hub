@@ -141,7 +141,7 @@ const BasesAutoPanel = ({
     const passo = 1000;
     for (let i = 0; i < alvos.length; i++) {
       const c = alvos[i];
-      setProgressoConc(`${i + 1}/${alvos.length} — ${c.nome}`);
+      setProgressoConc(`${Math.round((i / alvos.length) * 100)}%`);
       for (let de = 0; de < 200000; de += passo) {
         const { data, error } = await supabase
           .from("precos_concorrente")
@@ -183,7 +183,7 @@ const BasesAutoPanel = ({
     const rows: Linha[] = [];
     for (let i = 0; i < outras.length; i++) {
       const l = outras[i];
-      setProgressoInterna(`${i + 1}/${outras.length} — ${l.name}`);
+      setProgressoInterna(`${Math.round((i / outras.length) * 100)}%`);
       try {
         const base = await carregarBaseCatalogo(l.id);
         for (const p of base) {
@@ -266,7 +266,7 @@ const BasesAutoPanel = ({
           <Button size="sm" onClick={carregarConcorrente} disabled={loadingC || !concorrentes.length} className="gap-2 w-full">
             {loadingC ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Carregar pesquisa
           </Button>
-          {loadingC && progressoConc && <p className="text-[11px] text-muted-foreground">{progressoConc}</p>}
+          {loadingC && progressoConc && <p className="text-[11px] text-muted-foreground">Carregando pesquisas… {progressoConc}</p>}
           {concorrenteCount > 0 && <Ok n={concorrenteCount} />}
         </CardContent>
       </Card>
@@ -282,7 +282,7 @@ const BasesAutoPanel = ({
           <Button size="sm" variant="outline" onClick={carregarInterna} disabled={loadingI} className="gap-2 w-full">
             {loadingI ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Carregar base interna
           </Button>
-          {loadingI && progressoInterna && <p className="text-[11px] text-muted-foreground">{progressoInterna}</p>}
+          {loadingI && progressoInterna && <p className="text-[11px] text-muted-foreground">Carregando base interna… {progressoInterna}</p>}
           {internaCount > 0 && <Ok n={internaCount} obs="preços das outras lojas da rede" />}
         </CardContent>
       </Card>
