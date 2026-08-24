@@ -90,12 +90,25 @@ async function pegar(ctx: Ctx, url: string, tries = 3): Promise<{ html: string |
 
 // --------------------------------------------------------------- sessão/loja
 
+// guarda todos os cookies devolvidos pelo site (OCSESSION, favorite_store, etc.)
+function guardarCookies(ctx: Ctx, cookies: string[] | undefined) {
+  if (!cookies?.length) return;
+  const jar = new Map<string, string>();
+  for (const par of ctx.cookie.split("; ").filter(Boolean)) {
+    const i = par.indexOf("=");
+    if (i > 0) jar.set(par.slice(0, i), par.slice(i + 1));
+  }
+  for (const c of cookies) {
+    const par = c.split(";")[0];
+    const i = par.indexOf("=");
+    if (i > 0) jar.set(par.slice(0, i).trim(), par.slice(i + 1));
+  }
+  ctx.cookie = [...jar].map(([k, v]) => `${k}=${v}`).join("; ");
+}
+
 async function abrirSessao(ctx: Ctx) {
   const home = await pegar(ctx, `https://${ctx.host}/`);
-  for (const c of home.cookies || []) {
-    const par = c.split(";")[0];
-    if (/^OCSESSID=|^PHPSESSID=/i.test(par)) ctx.cookie = par;
-  }
+  guardarCookies(ctx, home.cookies);
   if (!ctx.storeId) {
     throw new Error(
       "cadastre a loja/praça deste site (campo Loja externa) antes de coletar — sem isso os preços vêm de uma loja imprevisível",
@@ -105,10 +118,7 @@ async function abrirSessao(ctx: Ctx) {
     ctx,
     `https://${ctx.host}/index.php?route=product/storebyproduct/selectStore&store_id=${ctx.storeId}&pickup=0`,
   );
-  for (const c of sel.cookies || []) {
-    const par = c.split(";")[0];
-    if (/^OCSESSID=|^PHPSESSID=/i.test(par)) ctx.cookie = par;
-  }
+  guardarCookies(ctx, sel.cookies);
   const resposta = (sel.html || "").replace(/<[^>]*>/g, " ").trim().slice(0, 80);
   if (!resposta) throw new Error("o site não confirmou a loja selecionada");
   ctx.lojistas.add(resposta);
