@@ -235,7 +235,7 @@ function mapProduct(item: any, ctx: Ctx, leaf: FilaItem) {
     else ctx.skusIndisponiveis++;
 
     rows.push({
-      concorrente_id: ctx.concorrenteId,
+      site_concorrente_id: ctx.concorrenteId,
       job_id: ctx.jobId,
       sku: String(sku.itemId || sku.id || ""),
       produto_id: String(item.productId || ""),
@@ -274,7 +274,7 @@ async function persist(ctx: Ctx, buffer: any[], force = false) {
     for (const r of chunk) seen.set(r.sku, r);
     const { error } = await supabase
       .from("precos_concorrente")
-      .upsert([...seen.values()], { onConflict: "concorrente_id,sku" });
+      .upsert([...seen.values()], { onConflict: "site_concorrente_id,sku" });
     if (error) logLine(ctx, `ERRO ao gravar: ${error.message}`);
     else ctx.skusGravados += seen.size;
   }
@@ -371,7 +371,7 @@ async function carregarCtx(jobId: string): Promise<Ctx> {
     jobId,
     host: job.host,
     sc: job.sales_channel ?? 1,
-    concorrenteId: job.concorrente_id,
+    concorrenteId: job.site_concorrente_id ?? job.concorrente_id,
     regionId: job.region_id ?? null,
     cep: job.cep_referencia ?? null,
     cookie: job.region_id ? montarCookie(job.region_id, job.sales_channel ?? 1) : null,
@@ -392,9 +392,9 @@ async function carregarCtx(jobId: string): Promise<Ctx> {
     log: (job.log_lines as string[]) || [],
   };
   const { data: conc } = await supabase
-    .from("concorrentes").select("seller_id, seller_nome").eq("id", ctx.concorrenteId).maybeSingle();
-  ctx.sellerId = conc?.seller_id ?? null;
-  ctx.sellerNome = conc?.seller_nome ?? null;
+    .from("sites_concorrentes").select("loja_externa_id, praca_esperada").eq("id", ctx.concorrenteId).maybeSingle();
+  ctx.sellerId = conc?.loja_externa_id ?? null;
+  ctx.sellerNome = conc?.praca_esperada ?? null;
   return ctx;
 }
 
@@ -596,23 +596,27 @@ Deno.serve(async (req) => {
     }
 
     // ---- start
-    const concorrenteId = body.concorrente_id;
-    if (!concorrenteId) throw new Error("selecione um concorrente");
+    const concorrenteId = body.site_id ?? body.concorrente_id;
+    if (!concorrenteId) throw new Error("selecione um site do catálogo");
 
     const { data: conc, error: cErr } = await supabase
-      .from("concorrentes").select("*").eq("id", concorrenteId).maybeSingle();
+      .from("sites_concorrentes").select("*").eq("id", concorrenteId).maybeSingle();
     if (cErr) throw cErr;
-    if (!conc) throw new Error("concorrente não encontrado");
+    if (!conc) throw new Error("site não encontrado no catálogo");
+    if (conc.ativo === false) throw new Error("site ainda não liberado para coleta");
+    if (conc.plataforma && conc.plataforma !== "vtex") {
+      throw new Error("coletor ainda não disponível para esta plataforma");
+    }
 
     const host = String(body.host || conc.host || "")
       .replace(/^https?:\/\//, "").replace(/\/.*$/, "").trim();
     if (!host) throw new Error("site do concorrente não informado");
-    const sc = Number(body.sc ?? conc.sales_channel ?? 1) || 1;
+    const sc = Number(body.sc ?? conc.sc ?? 1) || 1;
     const cep = String(body.cep ?? conc.cep_referencia ?? "").replace(/\D/g, "");
 
     let regionId: string | null = conc.region_id ?? null;
-    let sellerId: string | null = conc.seller_id ?? null;
-    let sellerNome: string | null = conc.seller_nome ?? null;
+    let sellerId: string | null = conc.loja_externa_id ?? null;
+    let sellerNome: string | null = conc.praca_esperada ?? null;
     if (cep.length === 8) {
       const r = await resolverRegiao(host, cep);
       regionId = r.regionId;
@@ -620,18 +624,18 @@ Deno.serve(async (req) => {
         sellerId = r.sellers[0].id;
         sellerNome = r.sellers[0].nome;
       }
-      await supabase.from("concorrentes").update({
-        region_id: regionId, seller_id: sellerId, seller_nome: sellerNome, cep_referencia: cep,
+      await supabase.from("sites_concorrentes").update({
+        region_id: regionId, loja_externa_id: sellerId, cep_referencia: cep,
       }).eq("id", concorrenteId);
     }
     if (!regionId) {
-      throw new Error("cadastre o CEP de referência do concorrente antes de coletar");
+      throw new Error("cadastre o CEP de referência deste site antes de coletar");
     }
 
     const { data: job, error: jErr } = await supabase.from("scrape_jobs").insert({
       competitor_url: `https://${host}`,
       competitor_name: conc.nome,
-      concorrente_id: concorrenteId,
+      site_concorrente_id: concorrenteId,
       host,
       sales_channel: sc,
       status: "pending",
