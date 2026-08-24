@@ -1259,6 +1259,56 @@ export type Database = {
           },
         ]
       }
+      plataformas_detectadas: {
+        Row: {
+          coletor_disponivel: boolean
+          corrigida_manualmente: boolean
+          detectada_em: string
+          evidencia: string | null
+          host: string
+          id: string
+          plataforma: string
+          plataforma_corrigida: string | null
+          provedor: string | null
+          site_concorrente_id: string | null
+          suporta_regiao: boolean
+        }
+        Insert: {
+          coletor_disponivel?: boolean
+          corrigida_manualmente?: boolean
+          detectada_em?: string
+          evidencia?: string | null
+          host: string
+          id?: string
+          plataforma: string
+          plataforma_corrigida?: string | null
+          provedor?: string | null
+          site_concorrente_id?: string | null
+          suporta_regiao?: boolean
+        }
+        Update: {
+          coletor_disponivel?: boolean
+          corrigida_manualmente?: boolean
+          detectada_em?: string
+          evidencia?: string | null
+          host?: string
+          id?: string
+          plataforma?: string
+          plataforma_corrigida?: string | null
+          provedor?: string | null
+          site_concorrente_id?: string | null
+          suporta_regiao?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plataformas_detectadas_site_concorrente_id_fkey"
+            columns: ["site_concorrente_id"]
+            isOneToOne: false
+            referencedRelation: "sites_concorrentes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       precos_concorrente: {
         Row: {
           arvore_categoria: string | null
@@ -1588,13 +1638,17 @@ export type Database = {
         Row: {
           ativo: boolean
           cep_referencia: string
+          coletor_disponivel: boolean
           created_at: string
+          deteccao_evidencia: string | null
           host: string
           id: string
           loja_externa_id: string | null
+          loja_externa_param: string | null
           nome: string
           plataforma: string
           praca_esperada: string | null
+          provedor: string | null
           region_id: string | null
           sc: number
           status_ultima_coleta: string | null
@@ -1604,13 +1658,17 @@ export type Database = {
         Insert: {
           ativo?: boolean
           cep_referencia?: string
+          coletor_disponivel?: boolean
           created_at?: string
+          deteccao_evidencia?: string | null
           host: string
           id?: string
           loja_externa_id?: string | null
+          loja_externa_param?: string | null
           nome: string
           plataforma?: string
           praca_esperada?: string | null
+          provedor?: string | null
           region_id?: string | null
           sc?: number
           status_ultima_coleta?: string | null
@@ -1620,13 +1678,17 @@ export type Database = {
         Update: {
           ativo?: boolean
           cep_referencia?: string
+          coletor_disponivel?: boolean
           created_at?: string
+          deteccao_evidencia?: string | null
           host?: string
           id?: string
           loja_externa_id?: string | null
+          loja_externa_param?: string | null
           nome?: string
           plataforma?: string
           praca_esperada?: string | null
+          provedor?: string | null
           region_id?: string | null
           sc?: number
           status_ultima_coleta?: string | null

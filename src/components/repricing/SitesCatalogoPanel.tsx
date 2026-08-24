@@ -17,16 +17,24 @@ export const PLATAFORMAS = [
   { value: "vtex", label: "VTEX" },
   { value: "opencart", label: "OpenCart" },
   { value: "regex_solutions", label: "Regex Solutions" },
+  { value: "shopify", label: "Shopify" },
+  { value: "magento", label: "Magento" },
+  { value: "tray", label: "Tray" },
+  { value: "nuvemshop", label: "Nuvemshop" },
+  { value: "woocommerce", label: "WooCommerce" },
+  { value: "desconhecida", label: "Não identificada" },
   { value: "outra", label: "Outra" },
 ] as const;
 
-export const COLETOR_DISPONIVEL = new Set(["vtex"]);
+export const COLETOR_DISPONIVEL = new Set(["vtex", "opencart"]);
 
 export interface SiteConcorrente {
   id: string;
   nome: string;
   host: string;
   plataforma: string;
+  provedor?: string | null;
+  deteccao_evidencia?: string | null;
   cep_referencia: string;
   region_id: string | null;
   praca_esperada: string | null;
