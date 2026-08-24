@@ -44,9 +44,9 @@ const BasesAutoPanel = ({
   const [rowsConc, setRowsConc] = useState<Linha[]>([]);
   const [rowsInterna, setRowsInterna] = useState<Linha[]>([]);
 
-  const emitProdutos = (rows: Linha[]) => { setRowsProdutos(rows); emitProdutos(rows); };
-  const emitConc = (rows: Linha[]) => { setRowsConc(rows); emitConc(rows); };
-  const emitInterna = (rows: Linha[]) => { setRowsInterna(rows); emitInterna(rows); };
+  const emitProdutos = (rows: Linha[]) => { setRowsProdutos(rows); onProdutos(rows); };
+  const emitConc = (rows: Linha[]) => { setRowsConc(rows); onConcorrente(rows); };
+  const emitInterna = (rows: Linha[]) => { setRowsInterna(rows); onInterna(rows); };
 
   const exportar = (
     rows: Linha[],
