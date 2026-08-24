@@ -5,8 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Download, CheckCircle2, Package, Store, Building2 } from "lucide-react";
+import { Loader2, Download, CheckCircle2, Package, Store, Building2, FileSpreadsheet } from "lucide-react";
 import { carregarBaseCatalogo, carregarProdutosAtivos12m, avisoRelatorio } from "@/lib/catalogoProdutos";
+import * as XLSX from "xlsx";
 
 export type Linha = Record<string, unknown>;
 
@@ -39,6 +40,33 @@ const BasesAutoPanel = ({
   const [loadingI, setLoadingI] = useState(false);
   const [progressoInterna, setProgressoInterna] = useState("");
   const [progressoConc, setProgressoConc] = useState("");
+  const [rowsProdutos, setRowsProdutos] = useState<Linha[]>([]);
+  const [rowsConc, setRowsConc] = useState<Linha[]>([]);
+  const [rowsInterna, setRowsInterna] = useState<Linha[]>([]);
+
+  const emitProdutos = (rows: Linha[]) => { setRowsProdutos(rows); onProdutos(rows); };
+  const emitConc = (rows: Linha[]) => { setRowsConc(rows); onConcorrente(rows); };
+  const emitInterna = (rows: Linha[]) => { setRowsInterna(rows); onInterna(rows); };
+
+  const exportar = (
+    rows: Linha[],
+    nome: string,
+    campos: { chave: string; titulo: string }[],
+  ) => {
+    if (!rows.length) return toast.error("Nada carregado para exportar");
+    const dados = rows.map((r) =>
+      Object.fromEntries(campos.map((c) => [c.titulo, r[c.chave] ?? ""])),
+    );
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dados), "Base");
+    XLSX.writeFile(wb, `${nome}-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
+  const BotaoExportar = ({ onClick, disabled }: { onClick: () => void; disabled: boolean }) => (
+    <Button size="sm" variant="ghost" onClick={onClick} disabled={disabled} className="gap-2 w-full">
+      <FileSpreadsheet className="w-4 h-4" /> Exportar Excel
+    </Button>
+  );
 
   useEffect(() => {
     (async () => {
@@ -83,7 +111,7 @@ const BasesAutoPanel = ({
             preco: p.precoOferta || p.preco || 0,
             mercadologico: p.n1 || "Outros",
           }));
-          onProdutos(rows);
+          emitProdutos(rows);
           setModoCarregado("completo");
           const comEan = rows.filter((x) => String(x.ean).replace(/\D/g, "").length >= 8).length;
           rows.length
@@ -105,7 +133,7 @@ const BasesAutoPanel = ({
           valor_vendido_12m: p.valorVendido12m,
           ultima_venda: p.ultimaVenda,
         }));
-        onProdutos(rows);
+        emitProdutos(rows);
         setModoCarregado("ativos12m");
         const comEan = rows.filter((x) => String(x.ean).replace(/\D/g, "").length >= 8).length;
         toast.success(`${rows.length} produtos ativos com movimento em 12 meses (${comEan} com código de barras)`);
@@ -119,7 +147,7 @@ const BasesAutoPanel = ({
           preco: p.precoOferta || p.preco || 0,
           mercadologico: p.n1 || "Outros",
         }));
-        onProdutos(rows);
+        emitProdutos(rows);
         setModoCarregado("completo");
         const comEan = rows.filter((x) => String(x.ean).replace(/\D/g, "").length >= 8).length;
         rows.length
@@ -167,7 +195,7 @@ const BasesAutoPanel = ({
       }
     }
     setProgressoConc("");
-    onConcorrente(rows);
+    emitConc(rows);
     setLoadingC(false);
     const comEanC = rows.filter((r) => String(r.ean).replace(/\D/g, "").length >= 8).length;
     rows.length
@@ -201,7 +229,7 @@ const BasesAutoPanel = ({
       }
     }
     setProgressoInterna("");
-    onInterna(rows);
+    emitInterna(rows);
     setLoadingI(false);
     rows.length
       ? toast.success(`${rows.length} preços de outras lojas carregados`)
@@ -243,6 +271,18 @@ const BasesAutoPanel = ({
               obs={modoCarregado === "completo" ? "cadastro completo da loja" : "ativos com movimento em 12 meses"}
             />
           )}
+          <BotaoExportar
+            disabled={!rowsProdutos.length}
+            onClick={() =>
+              exportar(rowsProdutos, "cadastro-loja", [
+                { chave: "ean", titulo: "Cod de Barras" },
+                { chave: "descricao", titulo: "Descrição" },
+                { chave: "preco", titulo: "Preço" },
+                { chave: "custo", titulo: "Custo" },
+                { chave: "mercadologico", titulo: "Mercadológico" },
+              ])
+            }
+          />
         </CardContent>
       </Card>
 
@@ -268,6 +308,19 @@ const BasesAutoPanel = ({
           </Button>
           {loadingC && progressoConc && <p className="text-[11px] text-muted-foreground">Carregando pesquisas… {progressoConc}</p>}
           {concorrenteCount > 0 && <Ok n={concorrenteCount} />}
+          <BotaoExportar
+            disabled={!rowsConc.length}
+            onClick={() =>
+              exportar(rowsConc, "pesquisa-concorrentes", [
+                { chave: "ean", titulo: "Cod de Barras" },
+                { chave: "descricao", titulo: "Descrição" },
+                { chave: "preco", titulo: "Preço" },
+                { chave: "oferta", titulo: "Oferta" },
+                { chave: "concorrente_nome", titulo: "Concorrente" },
+                { chave: "coletado_em", titulo: "Coletado em" },
+              ])
+            }
+          />
         </CardContent>
       </Card>
 
@@ -284,6 +337,18 @@ const BasesAutoPanel = ({
           </Button>
           {loadingI && progressoInterna && <p className="text-[11px] text-muted-foreground">Carregando base interna… {progressoInterna}</p>}
           {internaCount > 0 && <Ok n={internaCount} obs="preços das outras lojas da rede" />}
+          <BotaoExportar
+            disabled={!rowsInterna.length}
+            onClick={() =>
+              exportar(rowsInterna, "base-interna-rede", [
+                { chave: "ean", titulo: "Cod de Barras" },
+                { chave: "descricao", titulo: "Descrição" },
+                { chave: "preco", titulo: "Preço" },
+                { chave: "custo", titulo: "Custo" },
+                { chave: "loja", titulo: "Loja" },
+              ])
+            }
+          />
         </CardContent>
       </Card>
     </div>
