@@ -409,6 +409,42 @@ const SitesCatalogoPanel = () => {
             </div>
           )}
 
+          <div className="flex items-center gap-2 pt-1">
+            <Button variant="ghost" size="sm" onClick={rodarDiagnostico} disabled={diagnosticando} className="gap-2">
+              {diagnosticando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Stethoscope className="w-4 h-4" />}
+              Diagnóstico de praças
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              Testa endpoints alternativos e explica por que o site não devolve lojas/sellers.
+            </span>
+          </div>
+
+          {diagnostico && (
+            <div className="rounded-md border border-border/60 bg-muted/30 p-3 text-xs space-y-2">
+              <p className="font-medium text-foreground">
+                Diagnóstico de {diagnostico.host}{diagnostico.cep ? ` · CEP ${diagnostico.cep}` : ""}
+              </p>
+              <p className="text-foreground">{diagnostico.conclusao}</p>
+              <p className="text-muted-foreground">O que fazer: {diagnostico.recomendacao}</p>
+              <div className="space-y-1 pt-1">
+                {diagnostico.tentativas.map((t, i) => (
+                  <div key={i} className="flex items-start gap-2">
+                    {t.ok
+                      ? <CheckCircle2 className="w-3.5 h-3.5 text-green-600 mt-0.5 shrink-0" />
+                      : <XCircle className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />}
+                    <div className="min-w-0">
+                      <p className="text-foreground">{t.descricao} <span className="opacity-60">· HTTP {t.status ?? "sem resposta"}</span></p>
+                      <p className="text-muted-foreground break-all">{t.endpoint}</p>
+                      <p className="text-muted-foreground">{t.detalhe}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+
+
         </CardContent>
       </Card>
 
