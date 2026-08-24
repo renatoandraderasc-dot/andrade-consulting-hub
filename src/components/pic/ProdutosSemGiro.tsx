@@ -74,7 +74,15 @@ const ProdutosSemGiro = ({ storeId, ano, mes }: Props) => {
     const chaves = new Set<string>();
     ants.forEach((a) => a.forEach((_, k) => chaves.add(k)));
 
-    type Item = { produto: string; categoria: string; atualVol: number; mediaVol: number; queda: number };
+    type Item = {
+      produto: string;
+      codigo: string;
+      ean: string;
+      categoria: string;
+      atualVol: number;
+      mediaVol: number;
+      queda: number;
+    };
     const semGiro: Item[] = [];
     const emQueda: Item[] = [];
 
