@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { AlertTriangle, ChevronDown, PackageX, TrendingDown } from "lucide-react";
+import { AlertTriangle, ChevronDown, Download, FileText, PackageX, TrendingDown } from "lucide-react";
 import { useHierarquiaVendas, LinhaHierarquia } from "@/hooks/useHierarquiaVendas";
 
 // ============================================================
@@ -180,6 +180,94 @@ const ProdutosSemGiro = ({ storeId, ano, mes }: Props) => {
   );
 };
 
+type ItemQueda = {
+  produto: string;
+  codigo: string;
+  ean: string;
+  atualVol: number;
+  mediaVol: number;
+  queda: number;
+};
+
+const slug = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w]+/g, "-").toLowerCase();
+
+const exportarCsv = (nome: string, itens: ItemQueda[]) => {
+  const head = [
+    "Codigo de barras",
+    "Cod. reduzido",
+    "Descricao",
+    "Volume atual",
+    "Media 3 meses",
+    "Variacao (%)",
+  ];
+  const linhas = itens.map((p) => [
+    p.ean || "",
+    p.codigo || "",
+    p.produto,
+    fmtVol(p.atualVol),
+    fmtVol(p.mediaVol),
+    `-${p.queda.toFixed(1).replace(".", ",")}`,
+  ]);
+  const csv = [head, ...linhas]
+    .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";"))
+    .join("\n");
+  const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `queda-volume-${slug(nome)}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+
+const exportarPdf = async (nome: string, itens: ItemQueda[]) => {
+  const { default: JsPDF } = await import("jspdf");
+  const doc = new JsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+  const margem = 32;
+  const larguras = [90, 70, 300, 70, 80, 60];
+  const cabecalho = ["Cód. de barras", "Cód. reduzido", "Descrição", "Atual", "Média 3m", "Variação"];
+  let y = margem;
+
+  const linha = (cols: string[], bold: boolean) => {
+    doc.setFont("helvetica", bold ? "bold" : "normal");
+    let x = margem;
+    cols.forEach((c, i) => {
+      doc.text(doc.splitTextToSize(c, larguras[i] - 6)[0] ?? "", x, y);
+      x += larguras[i];
+    });
+    y += 14;
+  };
+
+  doc.setFontSize(13);
+  doc.setFont("helvetica", "bold");
+  doc.text(`Queda de volume relevante — ${nome}`, margem, y);
+  y += 20;
+  doc.setFontSize(8);
+  linha(cabecalho, true);
+  doc.setDrawColor(200);
+  doc.line(margem, y - 10, margem + larguras.reduce((a, b) => a + b, 0), y - 10);
+
+  itens.forEach((p) => {
+    if (y > 540) {
+      doc.addPage();
+      y = margem;
+      linha(cabecalho, true);
+    }
+    linha(
+      [
+        p.ean || "—",
+        p.codigo || "—",
+        p.produto,
+        fmtVol(p.atualVol),
+        fmtVol(p.mediaVol),
+        `-${p.queda.toFixed(1).replace(".", ",")}%`,
+      ],
+      false,
+    );
+  });
+
+  doc.save(`queda-volume-${slug(nome)}.pdf`);
+};
+
 const CategoriaBloco = ({
   nome,
   semGiro,
@@ -187,7 +275,7 @@ const CategoriaBloco = ({
 }: {
   nome: string;
   semGiro: { produto: string; codigo: string; ean: string; mediaVol: number }[];
-  emQueda: { produto: string; codigo: string; atualVol: number; mediaVol: number; queda: number }[];
+  emQueda: ItemQueda[];
 }) => {
   const [aberto, setAberto] = useState(false);
 
@@ -241,14 +329,31 @@ const CategoriaBloco = ({
 
           {emQueda.length > 0 && (
             <div>
-              <h4 className="text-xs font-semibold text-muted-foreground mb-1 font-body">
-                Queda de volume relevante
-              </h4>
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <h4 className="text-xs font-semibold text-muted-foreground font-body">
+                  Queda de volume relevante
+                </h4>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => exportarCsv(nome, emQueda)}
+                    className="inline-flex items-center gap-1 text-xs font-body px-2 py-1 rounded border border-border hover:bg-muted/30 transition-colors"
+                  >
+                    <Download className="w-3 h-3" /> CSV
+                  </button>
+                  <button
+                    onClick={() => exportarPdf(nome, emQueda)}
+                    className="inline-flex items-center gap-1 text-xs font-body px-2 py-1 rounded border border-border hover:bg-muted/30 transition-colors"
+                  >
+                    <FileText className="w-3 h-3" /> PDF
+                  </button>
+                </div>
+              </div>
               <table className="w-full text-xs font-body">
                 <thead>
                    <tr className="text-muted-foreground border-b border-border">
+                    <th className="text-left py-1">Código de barras</th>
                     <th className="text-left py-1">Cód. reduzido</th>
-                    <th className="text-left py-1">Produto</th>
+                    <th className="text-left py-1">Descrição</th>
                     <th className="text-right py-1">Atual</th>
                     <th className="text-right py-1">Média 3 meses</th>
                     <th className="text-right py-1">Variação</th>
@@ -257,6 +362,7 @@ const CategoriaBloco = ({
                 <tbody>
                   {emQueda.map((p, i) => (
                     <tr key={i} className="border-b border-border/40">
+                      <td className="py-1 pr-2 font-mono whitespace-nowrap">{p.ean || "—"}</td>
                       <td className="py-1 pr-2 font-mono whitespace-nowrap">{p.codigo || "—"}</td>
                       <td className="py-1 pr-2">{p.produto}</td>
                       <td className="py-1 text-right font-mono">{fmtVol(p.atualVol)}</td>
