@@ -5,8 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Download, CheckCircle2, Package, Store, Building2 } from "lucide-react";
+import { Loader2, Download, CheckCircle2, Package, Store, Building2, FileSpreadsheet } from "lucide-react";
 import { carregarBaseCatalogo, carregarProdutosAtivos12m, avisoRelatorio } from "@/lib/catalogoProdutos";
+import * as XLSX from "xlsx";
 
 export type Linha = Record<string, unknown>;
 
