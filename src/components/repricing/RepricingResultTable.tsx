@@ -36,26 +36,37 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
   const [search, setSearch] = useState("");
   const [mercFilter, setMercFilter] = useState("todos");
   const [statusFilter, setStatusFilter] = useState("todos");
-  const [baseRef, setBaseRef] = useState("menor");
+  const [baseRef, setBaseRef] = useState("geral");
   const [sortKey, setSortKey] = useState<SortKey>("diferenca");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(0);
   const perPage = 15;
 
   const refNome =
-    baseRef === "menor"
-      ? "menor preço entre todos os concorrentes"
-      : concorrentesMeta.find((c) => c.id === baseRef)?.nome ?? "concorrente";
+    baseRef === "geral"
+      ? "menor preço entre concorrentes e base interna da rede"
+      : baseRef === "menor"
+        ? "menor preço entre todos os concorrentes"
+        : baseRef === "interna"
+          ? "menor preço da base interna da rede"
+          : concorrentesMeta.find((c) => c.id === baseRef)?.nome ?? "concorrente";
 
   const avaliadas = useMemo<RepricingAvaliada[]>(() => {
     return rows.map((r) => {
+      const precosConc = Object.values(r.concorrentes).map((c) => c.preco).filter((p) => p > 0);
+      const precoInterna = r.interna && r.interna.min > 0 ? r.interna.min : null;
       let precoRef: number | null = null;
-      if (baseRef === "menor") {
-        const precos = Object.values(r.concorrentes).map((c) => c.preco).filter((p) => p > 0);
-        precoRef = precos.length ? Math.min(...precos) : null;
+      if (baseRef === "geral") {
+        const todos = [...precosConc, ...(precoInterna != null ? [precoInterna] : [])];
+        precoRef = todos.length ? Math.min(...todos) : null;
+      } else if (baseRef === "menor") {
+        precoRef = precosConc.length ? Math.min(...precosConc) : null;
+      } else if (baseRef === "interna") {
+        precoRef = precoInterna;
       } else {
         precoRef = r.concorrentes[baseRef]?.preco ?? null;
       }
+
       if (precoRef == null) {
         return { ...r, precoRef: null, refNome, diferenca: 0, diferencaPct: 0, status: "sem_ref" as const, novoPreco: null, novaMargem: null };
       }
@@ -117,6 +128,8 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
   const acima = filtered.filter((r) => r.status === "acima").length;
   const abaixo = filtered.filter((r) => r.status === "abaixo").length;
   const igual = filtered.filter((r) => r.status === "igual").length;
+  const semRef = filtered.filter((r) => r.status === "sem_ref").length;
+
 
   const handleExport = () => {
     const data = filtered.map((r) => {
@@ -154,12 +167,13 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
     <TooltipProvider delayDuration={150}>
       <div className="space-y-4">
         {/* KPIs */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {[
             { label: "Total Cruzados", value: total, color: "text-primary" },
             { label: "Acima", value: acima, color: "text-destructive" },
             { label: "Abaixo", value: abaixo, color: "text-green-600" },
             { label: "Igual", value: igual, color: "text-muted-foreground" },
+            { label: "Sem referência", value: semRef, color: "text-muted-foreground" },
           ].map((k) => (
             <div key={k.label} className="bg-card border border-border rounded-lg p-3">
               <p className="text-[11px] text-muted-foreground uppercase tracking-wide">{k.label}</p>
@@ -176,12 +190,15 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
             <Input placeholder="Buscar por produto ou código de barras..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} className="pl-9" />
           </div>
           <Select value={baseRef} onValueChange={(v) => { setBaseRef(v); setPage(0); }}>
-            <SelectTrigger className="w-[230px]"><SelectValue placeholder="Base de comparação" /></SelectTrigger>
+            <SelectTrigger className="w-[290px]"><SelectValue placeholder="Base de comparação" /></SelectTrigger>
             <SelectContent className="bg-popover z-50">
+              <SelectItem value="geral">Menor preço (concorrentes + base interna)</SelectItem>
               <SelectItem value="menor">Menor preço entre concorrentes</SelectItem>
+              <SelectItem value="interna">Menor preço da base interna da rede</SelectItem>
               {concorrentesMeta.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
             </SelectContent>
           </Select>
+
           <Select value={mercFilter} onValueChange={(v) => { setMercFilter(v); setPage(0); }}>
             <SelectTrigger className="w-[160px]"><SelectValue placeholder="Mercadológico" /></SelectTrigger>
             <SelectContent className="bg-popover z-50">
@@ -196,6 +213,8 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
               <SelectItem value="acima">Acima</SelectItem>
               <SelectItem value="abaixo">Abaixo</SelectItem>
               <SelectItem value="igual">Igual</SelectItem>
+              <SelectItem value="sem_ref">Sem referência</SelectItem>
+
             </SelectContent>
           </Select>
           <Button variant="outline" size="sm" onClick={handleExport}>
