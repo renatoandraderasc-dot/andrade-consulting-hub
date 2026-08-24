@@ -98,6 +98,8 @@ const ProdutosSemGiro = ({ storeId, ano, mes }: Props) => {
       const ref = atualItem?.linha ?? historicos[0].linha;
       const item: Item = {
         produto: ref.produto,
+        codigo: ref.codigo || "",
+        ean: ref.ean || "",
         categoria: ref.n1 || "SEM DEPARTAMENTO",
         atualVol,
         mediaVol: media,
