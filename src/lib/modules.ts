@@ -3,6 +3,7 @@ export const APP_MODULES = [
   { key: "controladoria", label: "Controladoria", path: "/controladoria" },
   { key: "analise_anual", label: "Análise Anual", path: "/analise-anual" },
   { key: "compras", label: "Compras", path: "/compras" },
+  { key: "estoque_dinamico", label: "Estoque Dinâmico", path: "/estoque-dinamico" },
   { key: "pic", label: "PIC", path: "/pic" },
   { key: "pic_percentual", label: "PIC: somente % (visualizador)", path: "/pic" },
   { key: "pic_padaria", label: "Dashboard Padaria", path: "/pic/padaria" },
