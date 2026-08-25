@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { chamarRelatorio, num, pick, carregarCargaCmv, ajustarLucro } from "@/lib/vrReport";
+import { chamarRelatorio, num, pick, lucroDaLinha } from "@/lib/vrReport";
 
 // ============================================================
 // Hierarquia mercadologica de vendas AO VIVO (nada e gravado).
@@ -45,7 +45,6 @@ async function chamar(storeId: string, relatorio: string, params: Record<string,
 }
 
 async function carregar(storeId: string, inicio: string, fim: string): Promise<LinhaHierarquia[]> {
-  const cargaCmv = await carregarCargaCmv(storeId);
   // store_vr_config so e legivel por admin (contem a chave da API), entao o
   // sistema da loja vem por uma funcao segura, disponivel a qualquer usuario
   // autenticado com sessao. Sem isso, usuarios comuns caiam sempre na trilha
@@ -72,7 +71,7 @@ async function carregar(storeId: string, inicio: string, fim: string): Promise<L
       codigo: String(l.codigo ?? ""),
       ean: String(pick(l, "ean", "codigo_barras", "barcode", "cod_barras", "gtin") ?? ""),
       vendas: num(l.total_vendido),
-      lucro: ajustarLucro(num(l.total_vendido), num(l.lucro), cargaCmv),
+      lucro: lucroDaLinha(l, num(l.total_vendido), num(l.lucro)),
       volume: num(l.volume),
     }));
   }
@@ -115,7 +114,7 @@ async function carregar(storeId: string, inicio: string, fim: string): Promise<L
       const k = `${n1}|${n2}`;
       const cur = acc.get(k) ?? { n1, n2, n3: "SEM SUBGRUPO", produto: n2, codigo: "", ean: "", vendas: 0, lucro: 0, volume: 0 };
       cur.vendas += num(pick(l, "total_vendido", "venda", "vendas"));
-      cur.lucro += ajustarLucro(num(pick(l, "total_vendido", "venda", "vendas")), num(pick(l, "lucro")), cargaCmv);
+      cur.lucro += lucroDaLinha(l, num(pick(l, "total_vendido", "venda", "vendas")));
       cur.volume += num(pick(l, "volume", "qtde", "quantidade"));
       acc.set(k, cur);
     }
@@ -153,10 +152,10 @@ async function carregar(storeId: string, inicio: string, fim: string): Promise<L
       codigo,
       ean: String(pick(l, "codigo_barras", "ean", "barcode", "cod_barras", "gtin") ?? c?.ean ?? ""),
       vendas,
-      lucro: ajustarLucro(
+      lucro: lucroDaLinha(
+        l,
         vendas,
         num(pick(l, "lucro")) || (vendas * num(pick(l, "margem_pct"))) / 100,
-        cargaCmv,
       ),
       volume: num(pick(l, "quantidade", "volume", "qtde", "qtd")),
     };

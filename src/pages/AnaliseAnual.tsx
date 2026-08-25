@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { chamarRelatorio, avisoRelatorio, pick, num } from "@/lib/vrReport";
+import { chamarRelatorio, avisoRelatorio, pick, num, lucroDaLinha } from "@/lib/vrReport";
 import ClientLayout from "@/components/ClientLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -57,29 +57,6 @@ const AnaliseAnual = () => {
   const [deptos, setDeptos] = useState<string[]>([]);
   const [cats, setCats] = useState<string[]>([]);
   const [turno, setTurno] = useState<"todos" | Turno>("todos");
-  // Carga tributaria sobre o custo: o conector devolve o CMV sem imposto,
-  // entao a margem correta usa custo * (1 + pct/100).
-  const [cargaCmvPct, setCargaCmvPct] = useState(0);
-  const [salvandoCarga, setSalvandoCarga] = useState(false);
-
-  useEffect(() => {
-    if (!storeId) return;
-    (supabase as any)
-      .from("store_margem_config")
-      .select("carga_tributaria_cmv_pct")
-      .eq("store_id", storeId)
-      .maybeSingle()
-      .then(({ data }: any) => setCargaCmvPct(Number(data?.carga_tributaria_cmv_pct) || 0));
-  }, [storeId]);
-
-  const salvarCarga = async (valor: number) => {
-    if (!storeId) return;
-    setSalvandoCarga(true);
-    await (supabase as any)
-      .from("store_margem_config")
-      .upsert({ store_id: storeId, carga_tributaria_cmv_pct: valor, updated_at: new Date().toISOString() });
-    setSalvandoCarga(false);
-  };
 
   useEffect(() => {
     if (!authLoading && !user) { navigate("/login"); return; }
@@ -123,7 +100,7 @@ const AnaliseAnual = () => {
             ano: Number(a),
             mes: Number(m),
             faturamento: num(pick(l, "receita_bruta", "faturamento", "total_vendido", "vendas")),
-            lucro: num(pick(l, "lucro_bruto", "lucro")),
+            lucro: lucroDaLinha(l, num(pick(l, "receita_bruta", "faturamento", "total_vendido", "vendas")), num(pick(l, "lucro_bruto", "lucro"))),
             volume: num(pick(l, "volume", "quantidade", "qtde", "qtd")),
 
             departamento: dep,
@@ -165,7 +142,7 @@ const AnaliseAnual = () => {
               departamento, secao, categoria, turno,
             };
             cur.faturamento += num(pick(l, "vendas", "total_vendido", "faturamento", "venda", "valor_venda", "valor", "total"));
-            cur.lucro += num(pick(l, "lucro", "lucro_bruto", "margem_valor"));
+            cur.lucro += lucroDaLinha(l, num(pick(l, "vendas", "total_vendido", "faturamento", "venda", "valor_venda", "valor", "total")), num(pick(l, "lucro", "lucro_bruto", "margem_valor")));
             cur.volume += num(pick(l, "volume", "quantidade", "qtde", "qtd"));
 
             acc.set(k, cur);
@@ -322,14 +299,8 @@ const AnaliseAnual = () => {
         .filter(r => (deptos.length === 0 ? true : deptos.includes(r.departamento)))
         .filter(r => (cats.length === 0 ? true : cats.includes(r.categoria)))
         .filter(r => (turno === "todos" ? true : r.turno === turno))
-        // Margem = (Faturamento - CMV com imposto) / Faturamento.
-        // O conector entrega o CMV sem imposto, entao aplicamos a carga da loja.
-        .map(r => {
-          if (!cargaCmvPct) return r;
-          const cmv = r.faturamento - r.lucro;
-          return { ...r, lucro: r.faturamento - cmv * (1 + cargaCmvPct / 100) };
-        }),
-    [baseRows, deptos, cats, turno, anoAtual, mesAtual, cargaCmvPct],
+,
+    [baseRows, deptos, cats, turno, anoAtual, mesAtual],
   );
 
 
@@ -498,20 +469,6 @@ const AnaliseAnual = () => {
 
         <Card className="mb-6">
           <CardContent className="p-4 flex flex-wrap items-end gap-4">
-            {isAdmin && (
-              <div>
-                <label className="text-[11px] text-muted-foreground block mb-1">Carga tributária s/ custo (%)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={cargaCmvPct}
-                  onChange={(e) => setCargaCmvPct(Number(e.target.value) || 0)}
-                  onBlur={(e) => salvarCarga(Number(e.target.value) || 0)}
-                  className="h-9 w-[130px] rounded-md border border-input bg-background px-3 text-sm"
-                />
-                {salvandoCarga && <span className="text-[10px] text-muted-foreground ml-2">salvando…</span>}
-              </div>
-            )}
             <div className="flex items-end gap-2">
               <div>
                 <label className="text-[11px] text-muted-foreground block mb-1">Período de</label>
