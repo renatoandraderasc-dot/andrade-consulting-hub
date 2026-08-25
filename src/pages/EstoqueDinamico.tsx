@@ -282,7 +282,7 @@ const EstoqueDinamico = () => {
       "Departamento": l.departamento,
       "Grupo": l.grupo,
       "ABC": l.abc,
-      "Última compra": l.ultimaCompra,
+      "Última compra": fmtDate(l.ultimaCompra),
       "Dias s/ compra": l.diasSemCompra,
       "Qtd. compra": l.qtdCompra,
       "Valor compra": l.valorCompra,
