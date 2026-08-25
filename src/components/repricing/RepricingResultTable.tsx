@@ -151,6 +151,7 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
         "Rede — Maior": r.interna?.max ?? "",
         "Rede — Médio": r.interna ? Number(r.interna.media.toFixed(2)) : "",
         "Rede — Lojas": r.interna?.lojas ?? "",
+        "Maior preço (todas pesquisas)": r.maiorPesquisa ?? "",
       };
       for (const c of concorrentesMeta) {
         const cell = r.concorrentes[c.id];
