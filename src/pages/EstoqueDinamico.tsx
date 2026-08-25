@@ -62,6 +62,7 @@ interface Linha {
   departamento: string;
   grupo: string;
   ultimaCompra: string;
+  ultimaVenda: string;
   diasSemCompra: number;
   qtdCompra: number;
   valorCompra: number;
@@ -92,7 +93,7 @@ const corProgresso = (p: number) => {
 };
 
 type SortKey =
-  | "codigo" | "descricao" | "departamento" | "abc" | "ultimaCompra"
+  | "codigo" | "descricao" | "departamento" | "abc" | "ultimaCompra" | "ultimaVenda"
   | "qtdCompra" | "valorCompra" | "qtdVenda" | "valorVenda" | "progresso" | "estoqueDinamico";
 
 const PAGE_SIZE = 50;
@@ -187,6 +188,7 @@ const EstoqueDinamico = () => {
         departamento: String(col(l, "departamento", "m1_departamento", "secao") ?? "").trim(),
         grupo: String(col(l, "grupo", "m2_grupo") ?? "").trim(),
         ultimaCompra: String(col(l, "ultima_compra") ?? ""),
+        ultimaVenda: String(col(l, "ultima_venda") ?? ""),
         diasSemCompra: num(col(l, "dias_desde_ultima_compra")),
         qtdCompra,
         valorCompra: num(col(l, "valor_compra", "total_compra")),
@@ -283,6 +285,7 @@ const EstoqueDinamico = () => {
       "Grupo": l.grupo,
       "ABC": l.abc,
       "Última compra": fmtDate(l.ultimaCompra),
+      "Última venda": fmtDate(l.ultimaVenda),
       "Dias s/ compra": l.diasSemCompra,
       "Qtd. compra": l.qtdCompra,
       "Valor compra": l.valorCompra,
@@ -501,6 +504,7 @@ const EstoqueDinamico = () => {
                     {th("departamento", "Departamento")}
                     {th("abc", "ABC")}
                     {th("ultimaCompra", "Última compra")}
+                    {th("ultimaVenda", "Última venda")}
                     {th("qtdCompra", "Qtd. compra", "right")}
                     {th("valorCompra", "Valor compra", "right")}
                     {th("qtdVenda", "Qtd. venda", "right")}
@@ -522,6 +526,7 @@ const EstoqueDinamico = () => {
                           <Badge variant="outline" className={badgeAbc(l.abc)}>{l.abc}</Badge>
                         </td>
                         <td className="px-3 py-2 whitespace-nowrap">{fmtDate(l.ultimaCompra)}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">{fmtDate(l.ultimaVenda)}</td>
                         <td className="px-3 py-2 text-right whitespace-nowrap">{fmtQtd(l.qtdCompra)}</td>
                         <td className="px-3 py-2 text-right whitespace-nowrap">{fmtBRL(l.valorCompra)}</td>
                         <td className="px-3 py-2 text-right whitespace-nowrap">{fmtQtd(l.qtdVenda)}</td>
@@ -546,7 +551,7 @@ const EstoqueDinamico = () => {
                 </tbody>
                 <tfoot className="sticky bottom-0 bg-card border-t-2 border-border font-semibold">
                   <tr>
-                    <td className="px-3 py-2" colSpan={6}>Totais ({filtradas.length} produtos)</td>
+                    <td className="px-3 py-2" colSpan={7}>Totais ({filtradas.length} produtos)</td>
                     <td className="px-3 py-2 text-right">{fmtQtd(totais.qtdCompra)}</td>
                     <td className="px-3 py-2 text-right">{fmtBRL(totais.valorCompra)}</td>
                     <td className="px-3 py-2 text-right">{fmtQtd(totais.qtdVenda)}</td>
