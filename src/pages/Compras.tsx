@@ -455,11 +455,12 @@ const Compras = () => {
         "SEM SEÇÃO",
       qtde_venda: num(col(l, "qtde_venda", "quantidade", "volume")),
       venda: num(col(l, "total_venda", "venda", "total_vendido")),
-      cmv: num(col(l, "cmv", "custo")),
+      // CMV com imposto: o conector devolve o custo sem carga tributaria.
+      cmv: ajustarCmv(num(col(l, "cmv", "custo")), cargaCmv),
       qtde_compra: num(col(l, "qtde_compra")),
       compra: num(col(l, "total_compra", "compra")),
     }));
-  }, [cvLinhas]);
+  }, [cvLinhas, cargaCmv]);
 
 
   const cvOpcoes = useMemo(() => {
