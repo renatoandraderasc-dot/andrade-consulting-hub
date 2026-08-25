@@ -1821,6 +1821,32 @@ export type Database = {
           },
         ]
       }
+      store_margem_config: {
+        Row: {
+          carga_tributaria_cmv_pct: number
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          carga_tributaria_cmv_pct?: number
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          carga_tributaria_cmv_pct?: number
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_margem_config_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_metrics: {
         Row: {
           clientes: number | null
