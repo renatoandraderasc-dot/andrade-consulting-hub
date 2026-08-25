@@ -71,6 +71,7 @@ function inferirDepartamento(secao: string, categoria: string): string | null {
 }
 
 async function loadRaw(storeId: string, inicio: string, fim: string): Promise<RawResult> {
+  const cargaCmv = await carregarCargaCmv(storeId);
   const [{ data: mapas }, { data: proxy, error }, posv] = await Promise.all([
     supabase.from("vr_secao_departamento").select("secao_vr, department").eq("store_id", storeId),
     supabase.functions.invoke("vr-proxy", {
