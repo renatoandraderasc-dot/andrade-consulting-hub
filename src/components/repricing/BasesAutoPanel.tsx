@@ -48,6 +48,17 @@ const BasesAutoPanel = ({
   const emitConc = (rows: Linha[]) => { setRowsConc(rows); onConcorrente(rows); };
   const emitInterna = (rows: Linha[]) => { setRowsInterna(rows); onInterna(rows); };
 
+  /** cód. reduzido do cadastro da loja, indexado por código de barras */
+  const reduzidoPorEan = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const p of rowsProdutos) {
+      const ean = String(p.ean ?? "").replace(/\D/g, "").replace(/^0+/, "");
+      const cod = String(p.codigo_reduzido ?? "");
+      if (ean && cod && !m.has(ean)) m.set(ean, cod);
+    }
+    return m;
+  }, [rowsProdutos]);
+
   const exportar = (
     rows: Linha[],
     nome: string,
@@ -55,12 +66,21 @@ const BasesAutoPanel = ({
   ) => {
     if (!rows.length) return toast.error("Nada carregado para exportar");
     const dados = rows.map((r) =>
-      Object.fromEntries(campos.map((c) => [c.titulo, r[c.chave] ?? ""])),
+      Object.fromEntries(
+        campos.map((c) => {
+          if (c.chave === "codigo_reduzido") {
+            const ean = String(r.ean ?? "").replace(/\D/g, "").replace(/^0+/, "");
+            return [c.titulo, r.codigo_reduzido ?? reduzidoPorEan.get(ean) ?? ""];
+          }
+          return [c.titulo, r[c.chave] ?? ""];
+        }),
+      ),
     );
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dados), "Base");
     XLSX.writeFile(wb, `${nome}-${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
+
 
   const BotaoExportar = ({ onClick, disabled }: { onClick: () => void; disabled: boolean }) => (
     <Button size="sm" variant="ghost" onClick={onClick} disabled={disabled} className="gap-2 w-full">
