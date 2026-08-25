@@ -126,6 +126,7 @@ const Compras = () => {
 
   useEffect(() => {
     if (!storeId) return;
+    carregarCargaCmv(storeId).then(setCargaCmv);
     fetchMetas();
     fetchConfig();
     fetchDeptos();
