@@ -321,8 +321,15 @@ const AnaliseAnual = () => {
         .filter(r => r.ano < anoAtual || (r.ano === anoAtual && r.mes < mesAtual))
         .filter(r => (deptos.length === 0 ? true : deptos.includes(r.departamento)))
         .filter(r => (cats.length === 0 ? true : cats.includes(r.categoria)))
-        .filter(r => (turno === "todos" ? true : r.turno === turno)),
-    [baseRows, deptos, cats, turno, anoAtual, mesAtual],
+        .filter(r => (turno === "todos" ? true : r.turno === turno))
+        // Margem = (Faturamento - CMV com imposto) / Faturamento.
+        // O conector entrega o CMV sem imposto, entao aplicamos a carga da loja.
+        .map(r => {
+          if (!cargaCmvPct) return r;
+          const cmv = r.faturamento - r.lucro;
+          return { ...r, lucro: r.faturamento - cmv * (1 + cargaCmvPct / 100) };
+        }),
+    [baseRows, deptos, cats, turno, anoAtual, mesAtual, cargaCmvPct],
   );
 
 
