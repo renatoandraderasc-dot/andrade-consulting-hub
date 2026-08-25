@@ -127,7 +127,9 @@ const BasesAutoPanel = ({
           host: v.sites_concorrentes!.host,
         }));
       setConcorrentes(opts);
-      setLojas((ls as LojaOpt[]) || []);
+      setLojas(
+        ((ls as LojaOpt[]) || []).map((l) => ({ ...l, host: hostPorLoja.get(l.id) ?? null })),
+      );
     })();
   }, [storeId]);
 
