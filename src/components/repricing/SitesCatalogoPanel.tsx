@@ -266,6 +266,18 @@ const SitesCatalogoPanel = () => {
     carregar();
   };
 
+  const apagarSite = async () => {
+    if (!aExcluir) return;
+    setExcluindo(true);
+    const { error } = await supabase.from("sites_concorrentes").delete().eq("id", aExcluir.id);
+    setExcluindo(false);
+    if (error) return toast.error(error.message);
+    toast.success(`Site "${aExcluir.nome}" apagado do catálogo`);
+    if (selected === aExcluir.id) setSelected("");
+    setAExcluir(null);
+    carregar();
+  };
+
   const siteSel = sites.find((s) => s.id === selected);
   const semColetor = !!siteSel && !COLETOR_DISPONIVEL.has(siteSel.plataforma);
   const msgSemColetor = siteSel
