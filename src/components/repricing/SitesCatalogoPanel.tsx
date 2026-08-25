@@ -10,8 +10,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
-  Play, Loader2, Plus, AlertTriangle, CheckCircle2, XCircle, MapPin, RefreshCw, Globe, Power, Stethoscope,
+  Play, Loader2, Plus, AlertTriangle, CheckCircle2, XCircle, MapPin, RefreshCw, Globe, Power, Stethoscope, Trash2,
 } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 
 export const PLATAFORMAS = [
@@ -85,6 +89,8 @@ const SitesCatalogoPanel = () => {
   const [vinculos, setVinculos] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState("");
+  const [aExcluir, setAExcluir] = useState<SiteConcorrente | null>(null);
+  const [excluindo, setExcluindo] = useState(false);
   const [job, setJob] = useState<Job | null>(null);
   const [starting, setStarting] = useState(false);
   const [resuming, setResuming] = useState(false);
@@ -259,6 +265,18 @@ const SitesCatalogoPanel = () => {
     const { error } = await supabase.from("sites_concorrentes").update({ ativo: !s.ativo }).eq("id", s.id);
     if (error) return toast.error(error.message);
     toast.success(s.ativo ? "Site desativado" : "Site liberado para coleta");
+    carregar();
+  };
+
+  const apagarSite = async () => {
+    if (!aExcluir) return;
+    setExcluindo(true);
+    const { error } = await supabase.from("sites_concorrentes").delete().eq("id", aExcluir.id);
+    setExcluindo(false);
+    if (error) return toast.error(error.message);
+    toast.success(`Site "${aExcluir.nome}" apagado do catálogo`);
+    if (selected === aExcluir.id) setSelected("");
+    setAExcluir(null);
     carregar();
   };
 
@@ -508,9 +526,12 @@ const SitesCatalogoPanel = () => {
                     {dataHora(s.ultima_coleta)}
                     {s.status_ultima_coleta && <span className="ml-1 opacity-70">({s.status_ultima_coleta})</span>}
                   </TableCell>
-                  <TableCell className="text-center">
+                  <TableCell className="text-center whitespace-nowrap">
                     <Button variant="ghost" size="icon" className="h-7 w-7" title={s.ativo ? "Desativar" : "Liberar"} onClick={() => alternarAtivo(s)}>
                       <Power className={`w-3.5 h-3.5 ${s.ativo ? "text-destructive" : "text-green-600"}`} />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" title="Apagar site" onClick={() => setAExcluir(s)}>
+                      <Trash2 className="w-3.5 h-3.5 text-destructive" />
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -640,6 +661,29 @@ const SitesCatalogoPanel = () => {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!aExcluir} onOpenChange={(o) => !o && setAExcluir(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Apagar site do catálogo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              O site <strong>{aExcluir?.nome}</strong> ({aExcluir?.host}) será removido, junto com os preços
+              coletados dele e os vínculos com os clientes ({aExcluir ? vinculos[aExcluir.id] || 0 : 0} cliente(s)).
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={excluindo}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); apagarSite(); }}
+              disabled={excluindo}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {excluindo ? "Apagando..." : "Apagar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
