@@ -22,7 +22,19 @@ interface Props {
 }
 
 interface ConcOpt { id: string; nome: string; host: string }
-interface LojaOpt { id: string; name: string }
+interface LojaOpt { id: string; name: string; host?: string | null }
+
+/** "Sm União - Loja 2" → "sm uniao" — identifica lojas do mesmo cliente */
+const clienteBase = (nome: string) =>
+  String(nome ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\b(loja|filial|unidade)\b\s*\d+/g, "")
+    .replace(/[-–—]/g, " ")
+    .replace(/\d+/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 
 type ModoCadastro = "ativos12m" | "completo";
 
@@ -101,6 +113,12 @@ const BasesAutoPanel = ({
           : Promise.resolve({ data: [] as unknown[] }),
         supabase.from("stores").select("id, name").order("name"),
       ]);
+      const { data: vr } = await supabase.from("store_vr_config").select("store_id, api_url");
+      const hostPorLoja = new Map<string, string>();
+      for (const v of (vr as { store_id: string; api_url: string | null }[]) || []) {
+        const h = String(v.api_url ?? "").replace(/^https?:\/\//, "").split("/")[0].toLowerCase();
+        if (h) hostPorLoja.set(v.store_id, h);
+      }
       const opts = ((cs || []) as unknown as { apelido: string | null; sites_concorrentes: ConcOpt | null }[])
         .filter((v) => v.sites_concorrentes)
         .map((v) => ({
@@ -109,7 +127,9 @@ const BasesAutoPanel = ({
           host: v.sites_concorrentes!.host,
         }));
       setConcorrentes(opts);
-      setLojas((ls as LojaOpt[]) || []);
+      setLojas(
+        ((ls as LojaOpt[]) || []).map((l) => ({ ...l, host: hostPorLoja.get(l.id) ?? null })),
+      );
     })();
   }, [storeId]);
 
@@ -228,8 +248,17 @@ const BasesAutoPanel = ({
 
   // 3) Base interna — preços das demais lojas da rede
   const carregarInterna = useCallback(async () => {
-    const outras = lojas.filter((l) => l.id !== storeId);
-    if (!outras.length) return toast.error("Nenhuma outra loja cadastrada");
+    // Exclui a própria loja e as lojas irmãs do mesmo cliente (mesmo domínio
+    // da ponte ou mesmo nome-base, ex.: "Sm União - Loja 1" e "Loja 2").
+    const atual = lojas.find((l) => l.id === storeId);
+    const baseAtual = atual ? clienteBase(atual.name) : "";
+    const outras = lojas.filter(
+      (l) =>
+        l.id !== storeId &&
+        !(atual?.host && l.host && l.host === atual.host) &&
+        !(baseAtual && clienteBase(l.name) === baseAtual),
+    );
+    if (!outras.length) return toast.error("Nenhuma outra loja de cliente diferente cadastrada");
     setLoadingI(true);
     const rows: Linha[] = [];
     for (let i = 0; i < outras.length; i++) {
