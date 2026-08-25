@@ -22,7 +22,19 @@ interface Props {
 }
 
 interface ConcOpt { id: string; nome: string; host: string }
-interface LojaOpt { id: string; name: string }
+interface LojaOpt { id: string; name: string; host?: string | null }
+
+/** "Sm União - Loja 2" → "sm uniao" — identifica lojas do mesmo cliente */
+const clienteBase = (nome: string) =>
+  String(nome ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\b(loja|filial|unidade)\b\s*\d+/g, "")
+    .replace(/[-–—]/g, " ")
+    .replace(/\d+/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 
 type ModoCadastro = "ativos12m" | "completo";
 
