@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -244,6 +244,7 @@ const BasesAutoPanel = ({
             descricao: p.descricao,
             preco: p.precoOferta || p.preco || 0,
             custo: p.custo ?? 0,
+            codigo_reduzido: p.codigo ?? "",
             loja: l.name,
           });
         }
@@ -337,6 +338,7 @@ const BasesAutoPanel = ({
             onClick={() =>
               exportar(rowsConc, "pesquisa-concorrentes", [
                 { chave: "ean", titulo: "Cod de Barras" },
+                { chave: "codigo_reduzido", titulo: "Cod Reduzido" },
                 { chave: "descricao", titulo: "Descrição" },
                 { chave: "preco", titulo: "Preço" },
                 { chave: "oferta", titulo: "Oferta" },
@@ -366,6 +368,7 @@ const BasesAutoPanel = ({
             onClick={() =>
               exportar(rowsInterna, "base-interna-rede", [
                 { chave: "ean", titulo: "Cod de Barras" },
+                { chave: "codigo_reduzido", titulo: "Cod Reduzido" },
                 { chave: "descricao", titulo: "Descrição" },
                 { chave: "preco", titulo: "Preço" },
                 { chave: "custo", titulo: "Custo" },
