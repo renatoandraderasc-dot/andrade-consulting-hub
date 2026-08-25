@@ -47,20 +47,27 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
       ? "menor preço entre concorrentes e base interna da rede"
       : baseRef === "menor"
         ? "menor preço entre todos os concorrentes"
-        : baseRef === "interna"
-          ? "menor preço da base interna da rede"
-          : concorrentesMeta.find((c) => c.id === baseRef)?.nome ?? "concorrente";
+        : baseRef === "maior"
+          ? "maior preço entre todas as pesquisas"
+          : baseRef === "interna"
+            ? "menor preço da base interna da rede"
+            : concorrentesMeta.find((c) => c.id === baseRef)?.nome ?? "concorrente";
 
-  const avaliadas = useMemo<RepricingAvaliada[]>(() => {
+  const avaliadas = useMemo<(RepricingAvaliada & { maiorPesquisa: number | null })[]>(() => {
     return rows.map((r) => {
       const precosConc = Object.values(r.concorrentes).map((c) => c.preco).filter((p) => p > 0);
       const precoInterna = r.interna && r.interna.min > 0 ? r.interna.min : null;
+      const internaMax = r.interna && r.interna.max > 0 ? r.interna.max : null;
+      const todosPrecos = [...precosConc, ...(internaMax != null ? [internaMax] : [])];
+      const maiorPesquisa = todosPrecos.length ? Math.max(...todosPrecos) : null;
       let precoRef: number | null = null;
       if (baseRef === "geral") {
         const todos = [...precosConc, ...(precoInterna != null ? [precoInterna] : [])];
         precoRef = todos.length ? Math.min(...todos) : null;
       } else if (baseRef === "menor") {
         precoRef = precosConc.length ? Math.min(...precosConc) : null;
+      } else if (baseRef === "maior") {
+        precoRef = maiorPesquisa;
       } else if (baseRef === "interna") {
         precoRef = precoInterna;
       } else {
@@ -68,7 +75,7 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
       }
 
       if (precoRef == null) {
-        return { ...r, precoRef: null, refNome, diferenca: 0, diferencaPct: 0, status: "sem_ref" as const, novoPreco: null, novaMargem: null };
+        return { ...r, maiorPesquisa, precoRef: null, refNome, diferenca: 0, diferencaPct: 0, status: "sem_ref" as const, novoPreco: null, novaMargem: null };
       }
       const diferenca = r.precoAtual - precoRef;
       const diferencaPct = r.precoAtual > 0 ? (diferenca / r.precoAtual) * 100 : 0;
@@ -76,6 +83,7 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
       const novaMargem = novoPreco > 0 ? ((novoPreco - r.custo) / novoPreco) * 100 : null;
       return {
         ...r,
+        maiorPesquisa,
         precoRef,
         refNome,
         diferenca,
@@ -143,6 +151,7 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
         "Rede — Maior": r.interna?.max ?? "",
         "Rede — Médio": r.interna ? Number(r.interna.media.toFixed(2)) : "",
         "Rede — Lojas": r.interna?.lojas ?? "",
+        "Maior preço (todas pesquisas)": r.maiorPesquisa ?? "",
       };
       for (const c of concorrentesMeta) {
         const cell = r.concorrentes[c.id];
@@ -161,7 +170,7 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
     XLSX.writeFile(wb, `repricing-${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
-  const colCount = 4 + 4 + concorrentesMeta.length * 3 + 1;
+  const colCount = 5 + 4 + concorrentesMeta.length * 3 + 1;
 
   return (
     <TooltipProvider delayDuration={150}>
@@ -194,6 +203,7 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
             <SelectContent className="bg-popover z-50">
               <SelectItem value="geral">Menor preço (concorrentes + base interna)</SelectItem>
               <SelectItem value="menor">Menor preço entre concorrentes</SelectItem>
+              <SelectItem value="maior">Maior preço entre todas as pesquisas</SelectItem>
               <SelectItem value="interna">Menor preço da base interna da rede</SelectItem>
               {concorrentesMeta.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
             </SelectContent>
@@ -227,7 +237,7 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/40 hover:bg-muted/40">
-                <TableHead colSpan={4} className="text-[11px] uppercase tracking-wide">Loja</TableHead>
+                <TableHead colSpan={5} className="text-[11px] uppercase tracking-wide">Loja</TableHead>
                 <TableHead colSpan={4} className="text-center text-[11px] uppercase tracking-wide border-l border-border">
                   Base interna da rede
                 </TableHead>
@@ -246,6 +256,7 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
                 <TableHead className="w-[110px]">Código de barras</TableHead>
                 <TableHead className="text-right w-[85px]">Custo</TableHead>
                 <TableHead className="text-right w-[95px] cursor-pointer select-none" onClick={() => toggleSort("precoAtual")}>Preço <SortIcon col="precoAtual" /></TableHead>
+                <TableHead className="text-right w-[110px]">Maior pesquisa</TableHead>
                 <TableHead className="text-right w-[85px] border-l border-border">Menor</TableHead>
                 <TableHead className="text-right w-[85px]">Maior</TableHead>
                 <TableHead className="text-right w-[85px]">Médio</TableHead>
@@ -272,6 +283,7 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
                     <TableCell className="font-mono text-xs text-muted-foreground">{r.ean}</TableCell>
                     <TableCell className="text-right text-sm tabular-nums">{fmt(r.custo)}</TableCell>
                     <TableCell className="text-right text-sm font-semibold tabular-nums">{fmt(r.precoAtual)}</TableCell>
+                    <TableCell className="text-right text-sm tabular-nums">{r.maiorPesquisa != null ? fmt(r.maiorPesquisa) : ""}</TableCell>
 
                     {r.interna ? (
                       <Tooltip>
