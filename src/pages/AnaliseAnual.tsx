@@ -498,6 +498,20 @@ const AnaliseAnual = () => {
 
         <Card className="mb-6">
           <CardContent className="p-4 flex flex-wrap items-end gap-4">
+            {isAdmin && (
+              <div>
+                <label className="text-[11px] text-muted-foreground block mb-1">Carga tributária s/ custo (%)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={cargaCmvPct}
+                  onChange={(e) => setCargaCmvPct(Number(e.target.value) || 0)}
+                  onBlur={(e) => salvarCarga(Number(e.target.value) || 0)}
+                  className="h-9 w-[130px] rounded-md border border-input bg-background px-3 text-sm"
+                />
+                {salvandoCarga && <span className="text-[10px] text-muted-foreground ml-2">salvando…</span>}
+              </div>
+            )}
             <div className="flex items-end gap-2">
               <div>
                 <label className="text-[11px] text-muted-foreground block mb-1">Período de</label>
