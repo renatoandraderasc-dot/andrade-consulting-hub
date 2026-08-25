@@ -57,29 +57,6 @@ const AnaliseAnual = () => {
   const [deptos, setDeptos] = useState<string[]>([]);
   const [cats, setCats] = useState<string[]>([]);
   const [turno, setTurno] = useState<"todos" | Turno>("todos");
-  // Carga tributaria sobre o custo: o conector devolve o CMV sem imposto,
-  // entao a margem correta usa custo * (1 + pct/100).
-  const [cargaCmvPct, setCargaCmvPct] = useState(0);
-  const [salvandoCarga, setSalvandoCarga] = useState(false);
-
-  useEffect(() => {
-    if (!storeId) return;
-    (supabase as any)
-      .from("store_margem_config")
-      .select("carga_tributaria_cmv_pct")
-      .eq("store_id", storeId)
-      .maybeSingle()
-      .then(({ data }: any) => setCargaCmvPct(Number(data?.carga_tributaria_cmv_pct) || 0));
-  }, [storeId]);
-
-  const salvarCarga = async (valor: number) => {
-    if (!storeId) return;
-    setSalvandoCarga(true);
-    await (supabase as any)
-      .from("store_margem_config")
-      .upsert({ store_id: storeId, carga_tributaria_cmv_pct: valor, updated_at: new Date().toISOString() });
-    setSalvandoCarga(false);
-  };
 
   useEffect(() => {
     if (!authLoading && !user) { navigate("/login"); return; }
@@ -322,14 +299,8 @@ const AnaliseAnual = () => {
         .filter(r => (deptos.length === 0 ? true : deptos.includes(r.departamento)))
         .filter(r => (cats.length === 0 ? true : cats.includes(r.categoria)))
         .filter(r => (turno === "todos" ? true : r.turno === turno))
-        // Margem = (Faturamento - CMV com imposto) / Faturamento.
-        // O conector entrega o CMV sem imposto, entao aplicamos a carga da loja.
-        .map(r => {
-          if (!cargaCmvPct) return r;
-          const cmv = r.faturamento - r.lucro;
-          return { ...r, lucro: r.faturamento - cmv * (1 + cargaCmvPct / 100) };
-        }),
-    [baseRows, deptos, cats, turno, anoAtual, mesAtual, cargaCmvPct],
+,
+    [baseRows, deptos, cats, turno, anoAtual, mesAtual],
   );
 
 
@@ -498,20 +469,6 @@ const AnaliseAnual = () => {
 
         <Card className="mb-6">
           <CardContent className="p-4 flex flex-wrap items-end gap-4">
-            {isAdmin && (
-              <div>
-                <label className="text-[11px] text-muted-foreground block mb-1">Carga tributária s/ custo (%)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={cargaCmvPct}
-                  onChange={(e) => setCargaCmvPct(Number(e.target.value) || 0)}
-                  onBlur={(e) => salvarCarga(Number(e.target.value) || 0)}
-                  className="h-9 w-[130px] rounded-md border border-input bg-background px-3 text-sm"
-                />
-                {salvandoCarga && <span className="text-[10px] text-muted-foreground ml-2">salvando…</span>}
-              </div>
-            )}
             <div className="flex items-end gap-2">
               <div>
                 <label className="text-[11px] text-muted-foreground block mb-1">Período de</label>
