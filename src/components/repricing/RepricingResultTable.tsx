@@ -83,6 +83,7 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
       const novaMargem = novoPreco > 0 ? ((novoPreco - r.custo) / novoPreco) * 100 : null;
       return {
         ...r,
+        maiorPesquisa,
         precoRef,
         refNome,
         diferenca,
