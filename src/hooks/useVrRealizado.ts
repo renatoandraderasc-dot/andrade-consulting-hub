@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { carregarCargaCmv, ajustarLucro } from "@/lib/vrReport";
 
 // ============================================================
 // Leitura AO VIVO do realizado do VR (nada e gravado no banco).
@@ -71,6 +72,7 @@ function inferirDepartamento(secao: string, categoria: string): string | null {
 }
 
 async function loadRaw(storeId: string, inicio: string, fim: string): Promise<RawResult> {
+  const cargaCmv = await carregarCargaCmv(storeId);
   const [{ data: mapas }, { data: proxy, error }, posv] = await Promise.all([
     supabase.from("vr_secao_departamento").select("secao_vr, department").eq("store_id", storeId),
     supabase.functions.invoke("vr-proxy", {
@@ -131,7 +133,12 @@ async function loadRaw(storeId: string, inicio: string, fim: string): Promise<Ra
       categoria: String(pick(l, "categoria", "secao") ?? "").trim(),
       grupo: String(pick(l, "grupo") ?? ""),
       vendas: numOf(pick(l, "total_vendido", "venda", "vendas")),
-      lucro: numOf(pick(l, "lucro")),
+      // Margem = (Faturamento - CMV com imposto) / Faturamento.
+      lucro: ajustarLucro(
+        numOf(pick(l, "total_vendido", "venda", "vendas")),
+        numOf(pick(l, "lucro")),
+        cargaCmv,
+      ),
       volume: numOf(pick(l, "volume", "qtde", "quantidade")),
       mix: numOf(pick(l, "mix")),
     });

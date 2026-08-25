@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
-import { chamarRelatorio, avisoRelatorio, pick as col, num } from "@/lib/vrReport";
+import { chamarRelatorio, avisoRelatorio, pick as col, num, carregarCargaCmv, ajustarCmv } from "@/lib/vrReport";
 import { useNavigate } from "react-router-dom";
 import {
   ShoppingCart, TrendingUp, TrendingDown, Wallet, Target, Download, Wand2, Save, RefreshCw, Info,
@@ -94,6 +94,8 @@ const Compras = () => {
   const [cvInicio, setCvInicio] = useState("");
   const [cvFim, setCvFim] = useState("");
   const [cvLinhas, setCvLinhas] = useState<any[]>([]);
+  // Carga tributaria sobre o custo, configurada por loja.
+  const [cargaCmv, setCargaCmv] = useState(0);
   const [cvLoading, setCvLoading] = useState(false);
   const [cvAviso, setCvAviso] = useState<string | null>(null);
   const [fN1, setFN1] = useState("__all__");
@@ -124,6 +126,7 @@ const Compras = () => {
 
   useEffect(() => {
     if (!storeId) return;
+    carregarCargaCmv(storeId).then(setCargaCmv);
     fetchMetas();
     fetchConfig();
     fetchDeptos();
@@ -455,11 +458,12 @@ const Compras = () => {
         "SEM SEÇÃO",
       qtde_venda: num(col(l, "qtde_venda", "quantidade", "volume")),
       venda: num(col(l, "total_venda", "venda", "total_vendido")),
-      cmv: num(col(l, "cmv", "custo")),
+      // CMV com imposto: o conector devolve o custo sem carga tributaria.
+      cmv: ajustarCmv(num(col(l, "cmv", "custo")), cargaCmv),
       qtde_compra: num(col(l, "qtde_compra")),
       compra: num(col(l, "total_compra", "compra")),
     }));
-  }, [cvLinhas]);
+  }, [cvLinhas, cargaCmv]);
 
 
   const cvOpcoes = useMemo(() => {
