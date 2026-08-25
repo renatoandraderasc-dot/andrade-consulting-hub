@@ -526,9 +526,12 @@ const SitesCatalogoPanel = () => {
                     {dataHora(s.ultima_coleta)}
                     {s.status_ultima_coleta && <span className="ml-1 opacity-70">({s.status_ultima_coleta})</span>}
                   </TableCell>
-                  <TableCell className="text-center">
+                  <TableCell className="text-center whitespace-nowrap">
                     <Button variant="ghost" size="icon" className="h-7 w-7" title={s.ativo ? "Desativar" : "Liberar"} onClick={() => alternarAtivo(s)}>
                       <Power className={`w-3.5 h-3.5 ${s.ativo ? "text-destructive" : "text-green-600"}`} />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" title="Apagar site" onClick={() => setAExcluir(s)}>
+                      <Trash2 className="w-3.5 h-3.5 text-destructive" />
                     </Button>
                   </TableCell>
                 </TableRow>
