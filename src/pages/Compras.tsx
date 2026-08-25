@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
-import { chamarRelatorio, avisoRelatorio, pick as col, num } from "@/lib/vrReport";
+import { chamarRelatorio, avisoRelatorio, pick as col, num, carregarCargaCmv, ajustarCmv } from "@/lib/vrReport";
 import { useNavigate } from "react-router-dom";
 import {
   ShoppingCart, TrendingUp, TrendingDown, Wallet, Target, Download, Wand2, Save, RefreshCw, Info,
@@ -94,6 +94,8 @@ const Compras = () => {
   const [cvInicio, setCvInicio] = useState("");
   const [cvFim, setCvFim] = useState("");
   const [cvLinhas, setCvLinhas] = useState<any[]>([]);
+  // Carga tributaria sobre o custo, configurada por loja.
+  const [cargaCmv, setCargaCmv] = useState(0);
   const [cvLoading, setCvLoading] = useState(false);
   const [cvAviso, setCvAviso] = useState<string | null>(null);
   const [fN1, setFN1] = useState("__all__");
