@@ -661,6 +661,29 @@ const SitesCatalogoPanel = () => {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!aExcluir} onOpenChange={(o) => !o && setAExcluir(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Apagar site do catálogo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              O site <strong>{aExcluir?.nome}</strong> ({aExcluir?.host}) será removido, junto com os preços
+              coletados dele e os vínculos com os clientes ({aExcluir ? vinculos[aExcluir.id] || 0 : 0} cliente(s)).
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={excluindo}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); apagarSite(); }}
+              disabled={excluindo}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {excluindo ? "Apagando..." : "Apagar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
