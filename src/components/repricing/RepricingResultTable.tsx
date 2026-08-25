@@ -237,7 +237,7 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/40 hover:bg-muted/40">
-                <TableHead colSpan={4} className="text-[11px] uppercase tracking-wide">Loja</TableHead>
+                <TableHead colSpan={5} className="text-[11px] uppercase tracking-wide">Loja</TableHead>
                 <TableHead colSpan={4} className="text-center text-[11px] uppercase tracking-wide border-l border-border">
                   Base interna da rede
                 </TableHead>
