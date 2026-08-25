@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Download, CheckCircle2, Package, Store, Building2, FileSpreadsheet } from "lucide-react";
-import { carregarBaseCatalogo, carregarProdutosAtivos12m, avisoRelatorio } from "@/lib/catalogoProdutos";
+import { carregarBaseCatalogo, carregarProdutosAtivos12m, carregarCustoUltimaCompra, avisoRelatorio } from "@/lib/catalogoProdutos";
 import * as XLSX from "xlsx";
 
 export type Linha = Record<string, unknown>;
@@ -138,6 +138,15 @@ const BasesAutoPanel = ({
     if (!storeId) return toast.error("Selecione a loja para carregar o cadastro");
     setLoadingP(true);
     try {
+      // Custo da mercadoria = custo unitário da compra mais recente.
+      const compras = await carregarCustoUltimaCompra(storeId);
+      const soDig = (v: unknown) => String(v ?? "").replace(/\D/g, "").replace(/^0+/, "");
+      const normCod = (v: unknown) => String(v ?? "").trim().replace(/^0+/, "");
+      const custoCompra = (codigo: unknown, ean: unknown) =>
+        compras.porCodigo.get(normCod(codigo))?.custo ??
+        compras.porEan.get(soDig(ean))?.custo ??
+        null;
+
       if (modo === "ativos12m") {
         const r = await carregarProdutosAtivos12m(storeId);
         if (!r.itens.length) {
@@ -148,7 +157,7 @@ const BasesAutoPanel = ({
             ean: String(p.ean ?? "").trim(),
             codigo_reduzido: p.codigo ?? "",
             descricao: p.descricao,
-            custo: p.custo ?? 0,
+            custo: custoCompra(p.codigo, p.ean) ?? p.custo ?? 0,
             preco: p.precoOferta || p.preco || 0,
             mercadologico: p.n1 || "Outros",
           }));
@@ -167,18 +176,22 @@ const BasesAutoPanel = ({
           ean: String(p.ean ?? "").trim(),
           codigo_reduzido: p.codigo ?? "",
           descricao: p.descricao,
-          custo: p.custo ?? 0,
+          custo: custoCompra(p.codigo, p.ean) ?? p.custo ?? 0,
           preco: p.preco ?? 0,
           mercadologico: p.secao || "Outros",
           estoque: p.estoque,
           qtd_vendida_12m: p.qtdVendida12m,
           valor_vendido_12m: p.valorVendido12m,
           ultima_venda: p.ultimaVenda,
+          ultima_compra: p.ultimaCompra,
         }));
         emitProdutos(rows);
         setModoCarregado("ativos12m");
         const comEan = rows.filter((x) => String(x.ean).replace(/\D/g, "").length >= 8).length;
-        toast.success(`${rows.length} produtos ativos com movimento em 12 meses (${comEan} com código de barras)`);
+        const comCusto = rows.filter((x) => custoCompra(x.codigo_reduzido, x.ean) != null).length;
+        toast.success(
+          `${rows.length} produtos ativos com movimento em 12 meses (${comEan} com código de barras · ${comCusto} com custo da última compra)`,
+        );
 
       } else {
         const base = await carregarBaseCatalogo(storeId);
@@ -186,7 +199,7 @@ const BasesAutoPanel = ({
           ean: String(p.ean ?? "").trim(),
           codigo_reduzido: p.codigo ?? "",
           descricao: p.descricao,
-          custo: p.custo ?? 0,
+          custo: custoCompra(p.codigo, p.ean) ?? p.custo ?? 0,
           preco: p.precoOferta || p.preco || 0,
           mercadologico: p.n1 || "Outros",
         }));
@@ -202,6 +215,7 @@ const BasesAutoPanel = ({
     }
     setLoadingP(false);
   }, [storeId, modo, onProdutos]);
+
 
   // 2) Pesquisas dos concorrentes coletadas (uma coluna por concorrente)
   const carregarConcorrente = useCallback(async () => {

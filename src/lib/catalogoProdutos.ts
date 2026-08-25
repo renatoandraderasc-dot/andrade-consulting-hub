@@ -239,6 +239,54 @@ export async function carregarProdutosAtivos12m(storeId: string) {
   return { itens, indisponivel: r.indisponivel, offline: r.offline, erro: r.erro };
 }
 
+// ==========================================================
+// Custo da ultima compra.
+// A ponte nao publica a nota de entrada item a item; o unico
+// relatorio com valor de compra por produto e o "estoque_dinamico".
+// Usamos janelas cada vez maiores (30 / 90 / 365 dias) e ficamos
+// com a mais recente que tenha compra: valor_compra / qtd_compra.
+// ==========================================================
+
+export interface CustoCompra {
+  /** custo unitario da compra mais recente encontrada */
+  custo: number;
+  data: string;
+}
+
+export async function carregarCustoUltimaCompra(storeId: string) {
+  const porCodigo = new Map<string, CustoCompra>();
+  const porEan = new Map<string, CustoCompra>();
+  if (!storeId) return { porCodigo, porEan };
+
+  const hoje = new Date();
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+
+  for (const dias of [30, 90, 365]) {
+    const inicio = new Date(hoje.getTime() - dias * 86400000);
+    const r = await chamarRelatorio(storeId, "estoque_dinamico", {
+      inicio: iso(inicio),
+      fim: iso(hoje),
+    });
+    for (const l of r.dados || []) {
+      const qtd = numOrNull(col(l, "qtd_compra", "quantidade_compra")) ?? 0;
+      const valor = numOrNull(col(l, "valor_compra", "total_compra")) ?? 0;
+      if (qtd <= 0 || valor <= 0) continue;
+      const custo = Math.round((valor / qtd) * 100) / 100;
+      const data = String(col(l, "ultima_compra") ?? "");
+      const cod = normalizarCodigo(col(l, "codigo", "cod_produto", "id_produto"));
+      const ean = soDigitos(String(col(l, "codigo_barras", "ean", "barras") ?? ""));
+      const registro: CustoCompra = { custo, data };
+      // janelas menores vem primeiro: nao sobrescrever o mais recente
+      if (cod && !porCodigo.has(cod)) porCodigo.set(cod, registro);
+      if (ean && !porEan.has(ean)) porEan.set(ean, registro);
+    }
+    if (porCodigo.size || porEan.size) break;
+  }
+
+  return { porCodigo, porEan };
+}
+
+
 export function limparCacheCatalogo(storeId?: string) {
   if (storeId) cache.delete(storeId);
   else cache.clear();
