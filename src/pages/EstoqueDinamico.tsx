@@ -115,7 +115,7 @@ const EstoqueDinamico = () => {
   const [loading, setLoading] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
 
-  const [fDep, setFDep] = useState<string[]>([]);
+  const [fDep, setFDep] = useState<string>("__all__");
   const [fAbc1, setFAbc1] = useState<string[]>([]);
   const [fAbc2, setFAbc2] = useState<string>("__all__");
   const [fFaixa, setFFaixa] = useState<string[]>([]);
@@ -231,7 +231,7 @@ const EstoqueDinamico = () => {
   const filtradas = useMemo(() => {
     const q = busca.trim().toLowerCase();
     return (linhas || []).filter((l) => {
-      if (fDep.length && !fDep.includes(l.departamento)) return false;
+      if (fDep !== "__all__" && l.departamento !== fDep) return false;
       if (fAbc1.length && !fAbc1.includes(l.abc[0])) return false;
       if (fAbc2 !== "__all__" && l.abc !== fAbc2) return false;
       if (fFaixa.length && !FAIXAS_PCT.some((f) => fFaixa.includes(f.key) && f.test(l.progresso))) return false;
@@ -411,14 +411,13 @@ const EstoqueDinamico = () => {
           <div className="flex flex-wrap gap-4">
             <div className="space-y-1">
               <div className="text-xs text-muted-foreground">Departamento</div>
-              <div className="flex flex-wrap gap-1 max-w-[520px]">
-                <Button size="sm" variant={fDep.length === 0 ? "default" : "secondary"}
-                  className="h-7 text-[11px]" onClick={() => setFDep([])}>Todos</Button>
-                {departamentos.map((d) => (
-                  <Button key={d} size="sm" variant={fDep.includes(d) ? "default" : "secondary"}
-                    className="h-7 text-[11px]" onClick={() => toggle(fDep, setFDep, d)}>{d}</Button>
-                ))}
-              </div>
+              <Select value={fDep} onValueChange={setFDep}>
+                <SelectTrigger className="h-7 w-[220px] text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-popover">
+                  <SelectItem value="__all__">Todos os departamentos</SelectItem>
+                  {departamentos.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-1">
