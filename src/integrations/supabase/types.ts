@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.1"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -1495,6 +1495,59 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      rede_metricas_mensais: {
+        Row: {
+          arrecadacao: number
+          atualizado_em: string
+          cmv: number
+          compras: number
+          cupons: number
+          faturamento: number
+          margem_pct: number | null
+          mes: string
+          pct_compras_vendas: number | null
+          store_id: string
+          ticket_medio: number | null
+          volume: number
+        }
+        Insert: {
+          arrecadacao?: number
+          atualizado_em?: string
+          cmv?: number
+          compras?: number
+          cupons?: number
+          faturamento?: number
+          margem_pct?: number | null
+          mes: string
+          pct_compras_vendas?: number | null
+          store_id: string
+          ticket_medio?: number | null
+          volume?: number
+        }
+        Update: {
+          arrecadacao?: number
+          atualizado_em?: string
+          cmv?: number
+          compras?: number
+          cupons?: number
+          faturamento?: number
+          margem_pct?: number | null
+          mes?: string
+          pct_compras_vendas?: number | null
+          store_id?: string
+          ticket_medio?: number | null
+          volume?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rede_metricas_mensais_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       scrape_jobs: {
         Row: {

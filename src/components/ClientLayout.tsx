@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import {
   BarChart3, CheckSquare, Settings, Users, LogOut, Menu, X, ArrowLeft,
-  Target, ClipboardList, DollarSign, Database, RefreshCw, Trophy, Store, ShoppingCart, LayoutTemplate, TrendingUp, Package, KeyRound, Plug, ScanLine, Tags, ChevronDown, Globe,
+  Target, ClipboardList, DollarSign, Database, RefreshCw, Trophy, Store, ShoppingCart, LayoutTemplate, TrendingUp, Package, KeyRound, Plug, ScanLine, Tags, ChevronDown, Globe, Network,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -27,6 +27,15 @@ type NavItem = { key: string; path: string; label: string; icon: any };
 type NavGroup = { id: string; label: string; icon: any; admin?: boolean; items: NavItem[] };
 
 const navGroups: NavGroup[] = [
+  {
+    id: "rede",
+    label: "Rede",
+    icon: Network,
+    admin: true,
+    items: [
+      { key: "admin_rede", path: "/admin/rede", label: "Visão da Rede", icon: Network },
+    ],
+  },
   {
     id: "gestao",
     label: "Gestão",
