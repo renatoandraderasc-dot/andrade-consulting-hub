@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.criar_margem_config_padrao() FROM PUBLIC, anon, authenticated;
