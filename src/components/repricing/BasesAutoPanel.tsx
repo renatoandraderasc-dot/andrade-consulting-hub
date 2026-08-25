@@ -106,6 +106,7 @@ const BasesAutoPanel = ({
           const base = await carregarBaseCatalogo(storeId);
           const rows: Linha[] = base.map((p) => ({
             ean: String(p.ean ?? "").trim(),
+            codigo_reduzido: p.codigo ?? "",
             descricao: p.descricao,
             custo: p.custo ?? 0,
             preco: p.precoOferta || p.preco || 0,
@@ -124,6 +125,7 @@ const BasesAutoPanel = ({
         }
         const rows: Linha[] = r.itens.map((p) => ({
           ean: String(p.ean ?? "").trim(),
+          codigo_reduzido: p.codigo ?? "",
           descricao: p.descricao,
           custo: p.custo ?? 0,
           preco: p.preco ?? 0,
@@ -142,6 +144,7 @@ const BasesAutoPanel = ({
         const base = await carregarBaseCatalogo(storeId);
         const rows: Linha[] = base.map((p) => ({
           ean: String(p.ean ?? "").trim(),
+          codigo_reduzido: p.codigo ?? "",
           descricao: p.descricao,
           custo: p.custo ?? 0,
           preco: p.precoOferta || p.preco || 0,
@@ -276,6 +279,7 @@ const BasesAutoPanel = ({
             onClick={() =>
               exportar(rowsProdutos, "cadastro-loja", [
                 { chave: "ean", titulo: "Cod de Barras" },
+                { chave: "codigo_reduzido", titulo: "Cod Reduzido" },
                 { chave: "descricao", titulo: "Descrição" },
                 { chave: "preco", titulo: "Preço" },
                 { chave: "custo", titulo: "Custo" },
