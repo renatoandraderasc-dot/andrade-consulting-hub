@@ -57,6 +57,29 @@ const AnaliseAnual = () => {
   const [deptos, setDeptos] = useState<string[]>([]);
   const [cats, setCats] = useState<string[]>([]);
   const [turno, setTurno] = useState<"todos" | Turno>("todos");
+  // Carga tributaria sobre o custo: o conector devolve o CMV sem imposto,
+  // entao a margem correta usa custo * (1 + pct/100).
+  const [cargaCmvPct, setCargaCmvPct] = useState(0);
+  const [salvandoCarga, setSalvandoCarga] = useState(false);
+
+  useEffect(() => {
+    if (!storeId) return;
+    (supabase as any)
+      .from("store_margem_config")
+      .select("carga_tributaria_cmv_pct")
+      .eq("store_id", storeId)
+      .maybeSingle()
+      .then(({ data }: any) => setCargaCmvPct(Number(data?.carga_tributaria_cmv_pct) || 0));
+  }, [storeId]);
+
+  const salvarCarga = async (valor: number) => {
+    if (!storeId) return;
+    setSalvandoCarga(true);
+    await (supabase as any)
+      .from("store_margem_config")
+      .upsert({ store_id: storeId, carga_tributaria_cmv_pct: valor, updated_at: new Date().toISOString() });
+    setSalvandoCarga(false);
+  };
 
   useEffect(() => {
     if (!authLoading && !user) { navigate("/login"); return; }
