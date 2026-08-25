@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, Download, CheckCircle2, Package, Store, Building2, FileSpreadsheet } from "lucide-react";
-import { carregarBaseCatalogo, carregarProdutosAtivos12m, avisoRelatorio } from "@/lib/catalogoProdutos";
+import { carregarBaseCatalogo, carregarProdutosAtivos12m, carregarCustoUltimaCompra, avisoRelatorio } from "@/lib/catalogoProdutos";
 import * as XLSX from "xlsx";
 
 export type Linha = Record<string, unknown>;
