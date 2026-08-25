@@ -283,6 +283,7 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
                     <TableCell className="font-mono text-xs text-muted-foreground">{r.ean}</TableCell>
                     <TableCell className="text-right text-sm tabular-nums">{fmt(r.custo)}</TableCell>
                     <TableCell className="text-right text-sm font-semibold tabular-nums">{fmt(r.precoAtual)}</TableCell>
+                    <TableCell className="text-right text-sm tabular-nums">{r.maiorPesquisa != null ? fmt(r.maiorPesquisa) : ""}</TableCell>
 
                     {r.interna ? (
                       <Tooltip>
