@@ -32,6 +32,12 @@ const fmtQtd = (v: number) =>
   (Number(v) || 0).toLocaleString("pt-BR", { maximumFractionDigits: 3 });
 const fmtPct = (v: number) =>
   `${(Number(v) || 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`;
+const fmtDate = (v: string | undefined | null) => {
+  if (!v || v === "0000-00-00") return "";
+  const d = new Date(v);
+  if (isNaN(d.getTime())) return String(v);
+  return format(d, "dd/MM/yyyy");
+};
 
 const FAIXAS_ABC = [
   { classe: "A1", ate: 20.3 }, { classe: "A2", ate: 31.5 }, { classe: "A3", ate: 40.5 }, { classe: "A4", ate: 45.0 },
