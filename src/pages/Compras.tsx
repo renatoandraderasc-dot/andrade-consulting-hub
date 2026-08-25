@@ -94,7 +94,6 @@ const Compras = () => {
   const [cvInicio, setCvInicio] = useState("");
   const [cvFim, setCvFim] = useState("");
   const [cvLinhas, setCvLinhas] = useState<any[]>([]);
-  // Carga tributaria sobre o custo, configurada por loja.
   const [cvLoading, setCvLoading] = useState(false);
   const [cvAviso, setCvAviso] = useState<string | null>(null);
   const [fN1, setFN1] = useState("__all__");
