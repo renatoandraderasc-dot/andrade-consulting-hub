@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment as FragmentWithKey, useEffect, useMemo, useState } from "react";
 import { Navigate } from "react-router-dom";
 import * as XLSX from "xlsx";
 import {
@@ -431,9 +431,8 @@ const AdminRedeContent = () => {
                     const s = selo(l.id);
                     const aberta = expandida === l.id;
                     return (
-                      <>
+                      <FragmentWithKey key={l.id}>
                         <tr
-                          key={l.id}
                           className="border-t border-border hover:bg-muted/30 cursor-pointer"
                           onClick={() => setExpandida(aberta ? null : l.id)}
                         >
@@ -465,7 +464,7 @@ const AdminRedeContent = () => {
                             </tr>
                           );
                         })}
-                      </>
+                      </FragmentWithKey>
                     );
                   })}
                   <tr className="border-t-2 border-primary/40 bg-muted/50 font-semibold">
