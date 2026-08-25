@@ -18,6 +18,7 @@ import MetasGerador from "./pages/MetasGerador";
 import Controladoria from "./pages/Controladoria";
 import AnaliseAnual from "./pages/AnaliseAnual";
 import Compras from "./pages/Compras";
+import EstoqueDinamico from "./pages/EstoqueDinamico";
 import Repricing from "./pages/Repricing";
 import Pricing from "./pages/Pricing";
 import VtexCollector from "./pages/VtexCollector";
