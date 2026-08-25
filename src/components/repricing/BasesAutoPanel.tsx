@@ -248,8 +248,17 @@ const BasesAutoPanel = ({
 
   // 3) Base interna — preços das demais lojas da rede
   const carregarInterna = useCallback(async () => {
-    const outras = lojas.filter((l) => l.id !== storeId);
-    if (!outras.length) return toast.error("Nenhuma outra loja cadastrada");
+    // Exclui a própria loja e as lojas irmãs do mesmo cliente (mesmo domínio
+    // da ponte ou mesmo nome-base, ex.: "Sm União - Loja 1" e "Loja 2").
+    const atual = lojas.find((l) => l.id === storeId);
+    const baseAtual = atual ? clienteBase(atual.name) : "";
+    const outras = lojas.filter(
+      (l) =>
+        l.id !== storeId &&
+        !(atual?.host && l.host && l.host === atual.host) &&
+        !(baseAtual && clienteBase(l.name) === baseAtual),
+    );
+    if (!outras.length) return toast.error("Nenhuma outra loja de cliente diferente cadastrada");
     setLoadingI(true);
     const rows: Linha[] = [];
     for (let i = 0; i < outras.length; i++) {
