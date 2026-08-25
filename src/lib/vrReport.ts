@@ -94,43 +94,36 @@ export function avisoRelatorio(r: { indisponivel: boolean; offline: boolean; err
 }
 
 // ============================================================
-// Carga tributaria sobre o custo (CMV).
-// Os conectores devolvem o CMV SEM imposto; a margem correta e
-// (Faturamento - CMV com imposto) / Faturamento. O percentual e
-// configurado por loja em store_margem_config (admin) e usado em
-// todas as telas que calculam margem ao vivo.
+// Custo com imposto.
+// A margem e sempre (Venda - Custo com imposto) / Venda, usando o
+// custo com imposto que o proprio sistema da loja devolve.
 // ============================================================
 
-const cargaCache = new Map<string, Promise<number>>();
+const CHAVES_CUSTO = [
+  "custo_com_imposto",
+  "custo_c_imposto",
+  "custo_com_impostos",
+  "custo_imposto",
+  "cmv_com_imposto",
+  "custo_liquido",
+  "custo_total",
+  "custo_medio",
+  "custo",
+  "cmv",
+];
 
-export function carregarCargaCmv(storeId: string): Promise<number> {
-  if (!storeId) return Promise.resolve(0);
-  const cached = cargaCache.get(storeId);
-  if (cached) return cached;
-  const p = (supabase as any)
-    .from("store_margem_config")
-    .select("carga_tributaria_cmv_pct")
-    .eq("store_id", storeId)
-    .maybeSingle()
-    .then(({ data }: any) => Number(data?.carga_tributaria_cmv_pct) || 0)
-    .catch(() => 0);
-  cargaCache.set(storeId, p);
-  return p;
+/** Custo com imposto da linha do relatorio (null quando o conector nao devolve). */
+export function custoComImposto(l: any): number | null {
+  const v = pick(l, ...CHAVES_CUSTO);
+  if (v === undefined || v === null || String(v).trim() === "") return null;
+  const n = num(v);
+  return n > 0 ? n : null;
 }
 
-export function limparCacheCargaCmv(storeId?: string) {
-  if (storeId) cargaCache.delete(storeId);
-  else cargaCache.clear();
+/** Lucro = Venda - Custo com imposto (usa o lucro do conector so quando nao ha custo). */
+export function lucroDaLinha(l: any, vendas: number, lucroFallback?: number): number {
+  const custo = custoComImposto(l);
+  if (custo !== null) return vendas - custo;
+  return lucroFallback ?? num(pick(l, "lucro"));
 }
 
-/** Recalcula o lucro aplicando a carga tributaria sobre o custo. */
-export function ajustarLucro(faturamento: number, lucro: number, cargaPct: number) {
-  if (!cargaPct) return lucro;
-  const cmv = faturamento - lucro;
-  return faturamento - cmv * (1 + cargaPct / 100);
-}
-
-/** Aplica a carga tributaria sobre um CMV vindo do conector. */
-export function ajustarCmv(cmv: number, cargaPct: number) {
-  return cargaPct ? cmv * (1 + cargaPct / 100) : cmv;
-}
