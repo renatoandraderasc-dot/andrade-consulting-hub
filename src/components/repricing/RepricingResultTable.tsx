@@ -170,7 +170,7 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
     XLSX.writeFile(wb, `repricing-${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
-  const colCount = 4 + 4 + concorrentesMeta.length * 3 + 1;
+  const colCount = 5 + 4 + concorrentesMeta.length * 3 + 1;
 
   return (
     <TooltipProvider delayDuration={150}>
