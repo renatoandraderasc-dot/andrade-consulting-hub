@@ -89,6 +89,8 @@ const SitesCatalogoPanel = () => {
   const [vinculos, setVinculos] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState("");
+  const [aExcluir, setAExcluir] = useState<SiteConcorrente | null>(null);
+  const [excluindo, setExcluindo] = useState(false);
   const [job, setJob] = useState<Job | null>(null);
   const [starting, setStarting] = useState(false);
   const [resuming, setResuming] = useState(false);
