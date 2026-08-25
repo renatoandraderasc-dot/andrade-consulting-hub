@@ -522,7 +522,7 @@ const EstoqueDinamico = () => {
                         <td className="px-3 py-2">
                           <Badge variant="outline" className={badgeAbc(l.abc)}>{l.abc}</Badge>
                         </td>
-                        <td className="px-3 py-2 whitespace-nowrap">{l.ultimaCompra}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">{fmtDate(l.ultimaCompra)}</td>
                         <td className="px-3 py-2 text-right whitespace-nowrap">{fmtQtd(l.qtdCompra)}</td>
                         <td className="px-3 py-2 text-right whitespace-nowrap">{fmtBRL(l.valorCompra)}</td>
                         <td className="px-3 py-2 text-right whitespace-nowrap">{fmtQtd(l.qtdVenda)}</td>
