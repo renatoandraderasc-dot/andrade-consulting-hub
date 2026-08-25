@@ -47,20 +47,27 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
       ? "menor preço entre concorrentes e base interna da rede"
       : baseRef === "menor"
         ? "menor preço entre todos os concorrentes"
-        : baseRef === "interna"
-          ? "menor preço da base interna da rede"
-          : concorrentesMeta.find((c) => c.id === baseRef)?.nome ?? "concorrente";
+        : baseRef === "maior"
+          ? "maior preço entre todas as pesquisas"
+          : baseRef === "interna"
+            ? "menor preço da base interna da rede"
+            : concorrentesMeta.find((c) => c.id === baseRef)?.nome ?? "concorrente";
 
-  const avaliadas = useMemo<RepricingAvaliada[]>(() => {
+  const avaliadas = useMemo<(RepricingAvaliada & { maiorPesquisa: number | null })[]>(() => {
     return rows.map((r) => {
       const precosConc = Object.values(r.concorrentes).map((c) => c.preco).filter((p) => p > 0);
       const precoInterna = r.interna && r.interna.min > 0 ? r.interna.min : null;
+      const internaMax = r.interna && r.interna.max > 0 ? r.interna.max : null;
+      const todosPrecos = [...precosConc, ...(internaMax != null ? [internaMax] : [])];
+      const maiorPesquisa = todosPrecos.length ? Math.max(...todosPrecos) : null;
       let precoRef: number | null = null;
       if (baseRef === "geral") {
         const todos = [...precosConc, ...(precoInterna != null ? [precoInterna] : [])];
         precoRef = todos.length ? Math.min(...todos) : null;
       } else if (baseRef === "menor") {
         precoRef = precosConc.length ? Math.min(...precosConc) : null;
+      } else if (baseRef === "maior") {
+        precoRef = maiorPesquisa;
       } else if (baseRef === "interna") {
         precoRef = precoInterna;
       } else {
@@ -68,7 +75,7 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
       }
 
       if (precoRef == null) {
-        return { ...r, precoRef: null, refNome, diferenca: 0, diferencaPct: 0, status: "sem_ref" as const, novoPreco: null, novaMargem: null };
+        return { ...r, maiorPesquisa, precoRef: null, refNome, diferenca: 0, diferencaPct: 0, status: "sem_ref" as const, novoPreco: null, novaMargem: null };
       }
       const diferenca = r.precoAtual - precoRef;
       const diferencaPct = r.precoAtual > 0 ? (diferenca / r.precoAtual) * 100 : 0;
