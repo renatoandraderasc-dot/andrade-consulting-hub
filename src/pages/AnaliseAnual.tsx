@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { chamarRelatorio, avisoRelatorio, pick, num } from "@/lib/vrReport";
+import { chamarRelatorio, avisoRelatorio, pick, num, lucroDaLinha } from "@/lib/vrReport";
 import ClientLayout from "@/components/ClientLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
