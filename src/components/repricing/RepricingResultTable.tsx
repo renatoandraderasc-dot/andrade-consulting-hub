@@ -203,6 +203,7 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
             <SelectContent className="bg-popover z-50">
               <SelectItem value="geral">Menor preço (concorrentes + base interna)</SelectItem>
               <SelectItem value="menor">Menor preço entre concorrentes</SelectItem>
+              <SelectItem value="maior">Maior preço entre todas as pesquisas</SelectItem>
               <SelectItem value="interna">Menor preço da base interna da rede</SelectItem>
               {concorrentesMeta.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
             </SelectContent>
