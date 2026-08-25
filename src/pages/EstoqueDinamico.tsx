@@ -62,6 +62,7 @@ interface Linha {
   departamento: string;
   grupo: string;
   ultimaCompra: string;
+  ultimaVenda: string;
   diasSemCompra: number;
   qtdCompra: number;
   valorCompra: number;
@@ -92,7 +93,7 @@ const corProgresso = (p: number) => {
 };
 
 type SortKey =
-  | "codigo" | "descricao" | "departamento" | "abc" | "ultimaCompra"
+  | "codigo" | "descricao" | "departamento" | "abc" | "ultimaCompra" | "ultimaVenda"
   | "qtdCompra" | "valorCompra" | "qtdVenda" | "valorVenda" | "progresso" | "estoqueDinamico";
 
 const PAGE_SIZE = 50;
