@@ -256,6 +256,7 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
                 <TableHead className="w-[110px]">Código de barras</TableHead>
                 <TableHead className="text-right w-[85px]">Custo</TableHead>
                 <TableHead className="text-right w-[95px] cursor-pointer select-none" onClick={() => toggleSort("precoAtual")}>Preço <SortIcon col="precoAtual" /></TableHead>
+                <TableHead className="text-right w-[110px]">Maior pesquisa</TableHead>
                 <TableHead className="text-right w-[85px] border-l border-border">Menor</TableHead>
                 <TableHead className="text-right w-[85px]">Maior</TableHead>
                 <TableHead className="text-right w-[85px]">Médio</TableHead>
