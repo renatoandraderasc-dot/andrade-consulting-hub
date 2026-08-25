@@ -92,3 +92,45 @@ export function avisoRelatorio(r: { indisponivel: boolean; offline: boolean; err
   if (r.offline) return "Sem conexão com o sistema da loja.";
   return r.erro;
 }
+
+// ============================================================
+// Carga tributaria sobre o custo (CMV).
+// Os conectores devolvem o CMV SEM imposto; a margem correta e
+// (Faturamento - CMV com imposto) / Faturamento. O percentual e
+// configurado por loja em store_margem_config (admin) e usado em
+// todas as telas que calculam margem ao vivo.
+// ============================================================
+
+const cargaCache = new Map<string, Promise<number>>();
+
+export function carregarCargaCmv(storeId: string): Promise<number> {
+  if (!storeId) return Promise.resolve(0);
+  const cached = cargaCache.get(storeId);
+  if (cached) return cached;
+  const p = (supabase as any)
+    .from("store_margem_config")
+    .select("carga_tributaria_cmv_pct")
+    .eq("store_id", storeId)
+    .maybeSingle()
+    .then(({ data }: any) => Number(data?.carga_tributaria_cmv_pct) || 0)
+    .catch(() => 0);
+  cargaCache.set(storeId, p);
+  return p;
+}
+
+export function limparCacheCargaCmv(storeId?: string) {
+  if (storeId) cargaCache.delete(storeId);
+  else cargaCache.clear();
+}
+
+/** Recalcula o lucro aplicando a carga tributaria sobre o custo. */
+export function ajustarLucro(faturamento: number, lucro: number, cargaPct: number) {
+  if (!cargaPct) return lucro;
+  const cmv = faturamento - lucro;
+  return faturamento - cmv * (1 + cargaPct / 100);
+}
+
+/** Aplica a carga tributaria sobre um CMV vindo do conector. */
+export function ajustarCmv(cmv: number, cargaPct: number) {
+  return cargaPct ? cmv * (1 + cargaPct / 100) : cmv;
+}
