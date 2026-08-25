@@ -100,7 +100,7 @@ const AnaliseAnual = () => {
             ano: Number(a),
             mes: Number(m),
             faturamento: num(pick(l, "receita_bruta", "faturamento", "total_vendido", "vendas")),
-            lucro: num(pick(l, "lucro_bruto", "lucro")),
+            lucro: lucroDaLinha(l, num(pick(l, "receita_bruta", "faturamento", "total_vendido", "vendas")), num(pick(l, "lucro_bruto", "lucro"))),
             volume: num(pick(l, "volume", "quantidade", "qtde", "qtd")),
 
             departamento: dep,
@@ -142,7 +142,7 @@ const AnaliseAnual = () => {
               departamento, secao, categoria, turno,
             };
             cur.faturamento += num(pick(l, "vendas", "total_vendido", "faturamento", "venda", "valor_venda", "valor", "total"));
-            cur.lucro += num(pick(l, "lucro", "lucro_bruto", "margem_valor"));
+            cur.lucro += lucroDaLinha(l, num(pick(l, "vendas", "total_vendido", "faturamento", "venda", "valor_venda", "valor", "total")), num(pick(l, "lucro", "lucro_bruto", "margem_valor")));
             cur.volume += num(pick(l, "volume", "quantidade", "qtde", "qtd"));
 
             acc.set(k, cur);
