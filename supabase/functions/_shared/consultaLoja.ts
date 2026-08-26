@@ -103,7 +103,14 @@ export async function consultarRelatorioLoja(opts: {
     }
     if (!q.has("loja") && cfg.codigo_loja != null) q.set("loja", String(cfg.codigo_loja));
     q.set("chave", cfg.api_key);
-    const url = `${cfg.api_url.replace(/\/+$/, "")}/relatorio/${relatorio}?${q.toString()}`;
+    // Nomes equivalentes na ponte DIRECTOR
+    const ALIAS_DIRECTOR: Record<string, string> = {
+      vendas_secao_periodo: "vendas_departamento_dia",
+      vendas_departamento_periodo: "vendas_departamento_dia",
+      vendas_hierarquia_periodo: "vendas_produto_periodo",
+    };
+    const nome = ALIAS_DIRECTOR[relatorio] ?? relatorio;
+    const url = `${cfg.api_url.replace(/\/+$/, "")}/relatorio/${nome}?${q.toString()}`;
     try {
       const resp = await fetch(url, {
         headers: {
