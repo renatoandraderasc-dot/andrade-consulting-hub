@@ -94,6 +94,50 @@ export async function consultarRelatorioLoja(opts: {
     }
   }
 
+  // ---------- DIRECTOR (SQL Server via ponte HTTP) ----------
+  // GET {api_url}/relatorio/{nome}?loja=&inicio=&fim=&chave=
+  if (sistema === "DIRECTOR") {
+    const q = new URLSearchParams();
+    for (const [k, v] of Object.entries(params ?? {})) {
+      if (v !== undefined && v !== null) q.set(k, String(v));
+    }
+    if (!q.has("loja") && cfg.codigo_loja != null) q.set("loja", String(cfg.codigo_loja));
+    q.set("chave", cfg.api_key);
+    const url = `${cfg.api_url.replace(/\/+$/, "")}/relatorio/${relatorio}?${q.toString()}`;
+    try {
+      const resp = await fetch(url, {
+        headers: {
+          "ngrok-skip-browser-warning": "true",
+          "User-Agent": "AndradeHub/1.0",
+          Accept: "application/json",
+        },
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+      const texto = await resp.text();
+      const pareceHtml = /^\s*<(!doctype|html)/i.test(texto) || /ngrok/i.test(texto.slice(0, 500));
+      if (!resp.ok) {
+        if (pareceHtml) {
+          return { ok: false, dados: [], semConexao: true, erro: `sem conexao DIRECTOR (servidor respondeu ${resp.status})` };
+        }
+        return { ok: false, dados: [], erro: `API DIRECTOR ${resp.status}: ${texto.slice(0, 300)}` };
+      }
+      try {
+        const dados = JSON.parse(texto);
+        if (dados && !Array.isArray(dados) && dados.erro) {
+          return { ok: false, dados: [], erro: String(dados.erro) };
+        }
+        return { ok: true, dados: Array.isArray(dados) ? dados : (dados?.dados ?? []) };
+      } catch {
+        return {
+          ok: false, dados: [], semConexao: pareceHtml,
+          erro: pareceHtml ? "sem conexao DIRECTOR (resposta invalida do tunel)" : "resposta DIRECTOR nao e JSON",
+        };
+      }
+    } catch (e) {
+      return { ok: false, dados: [], erro: e instanceof Error ? e.message : String(e) };
+    }
+  }
+
   // ---------- VR / ORACLE (mesmo contrato HTTP) ----------
   const qs = new URLSearchParams();
   for (const [k, v] of Object.entries(params ?? {})) {
