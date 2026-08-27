@@ -387,6 +387,7 @@ const exportarPdf = async (nome: string, itens: ItemQueda[]) => {
         fmtVol(p.atualVol),
         fmtVol(p.mediaVol),
         `-${p.queda.toFixed(1).replace(".", ",")}%`,
+        fmtEst(p.estoque),
       ],
       false,
     );
@@ -401,7 +402,7 @@ const CategoriaBloco = ({
   emQueda,
 }: {
   nome: string;
-  semGiro: { produto: string; codigo: string; ean: string; mediaVol: number }[];
+  semGiro: ItemSemGiro[];
   emQueda: ItemQueda[];
 }) => {
   const [aberto, setAberto] = useState(false);
