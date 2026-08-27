@@ -180,7 +180,7 @@ const ProdutosSemGiro = ({ storeId, ano, mes }: Props) => {
       semGiro: semGiro.filter((i) => i.categoria === nome).sort((a, b) => b.mediaVol - a.mediaVol),
       emQueda: emQueda.filter((i) => i.categoria === nome).sort((a, b) => b.queda - a.queda),
     }));
-  }, [atual.linhas, m1.linhas, m2.linhas, m3.linhas]);
+  }, [atual.linhas, m1.linhas, m2.linhas, m3.linhas, estoqueDe]);
 
   if (!storeId) return null;
 
