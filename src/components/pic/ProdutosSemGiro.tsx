@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { AlertTriangle, ChevronDown, Download, FileText, PackageX, TrendingDown } from "lucide-react";
 import { useHierarquiaVendas, LinhaHierarquia } from "@/hooks/useHierarquiaVendas";
@@ -100,13 +100,16 @@ const ProdutosSemGiro = ({ storeId, ano, mes }: Props) => {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-01`;
   }, [ano, mes]);
   const estoqueMap = useEstoqueAtual(storeId, inicioEstoque, periodos[0].fim);
-  const estoqueDe = (l: { codigo: string; ean: string }): number | null => {
-    if (!estoqueMap) return null;
-    const c = chaveCod(l.codigo);
-    if (c && estoqueMap.has(`c:${c}`)) return estoqueMap.get(`c:${c}`)!;
-    if (l.ean && estoqueMap.has(`e:${l.ean}`)) return estoqueMap.get(`e:${l.ean}`)!;
-    return null;
-  };
+  const estoqueDe = useCallback(
+    (l: { codigo: string; ean: string }): number | null => {
+      if (!estoqueMap) return null;
+      const c = chaveCod(l.codigo);
+      if (c && estoqueMap.has(`c:${c}`)) return estoqueMap.get(`c:${c}`)!;
+      if (l.ean && estoqueMap.has(`e:${l.ean}`)) return estoqueMap.get(`e:${l.ean}`)!;
+      return null;
+    },
+    [estoqueMap],
+  );
 
   const loading = atual.loading || m1.loading || m2.loading || m3.loading;
 
