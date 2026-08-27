@@ -455,6 +455,7 @@ const CategoriaBloco = ({
                     <th className="text-left py-1">Cód. reduzido</th>
                     <th className="text-left py-1">Descrição</th>
                     <th className="text-right py-1">Volume médio (3 meses)</th>
+                    <th className="text-right py-1">Estoque atual</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -464,6 +465,7 @@ const CategoriaBloco = ({
                       <td className="py-1 pr-2 font-mono whitespace-nowrap">{p.codigo || "—"}</td>
                       <td className="py-1 pr-2">{p.produto}</td>
                       <td className="py-1 text-right font-mono">{fmtVol(p.mediaVol)}</td>
+                      <td className="py-1 text-right font-mono">{fmtEst(p.estoque)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -501,6 +503,7 @@ const CategoriaBloco = ({
                     <th className="text-right py-1">Atual</th>
                     <th className="text-right py-1">Média 3 meses</th>
                     <th className="text-right py-1">Variação</th>
+                    <th className="text-right py-1">Estoque atual</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -514,6 +517,7 @@ const CategoriaBloco = ({
                       <td className="py-1 text-right font-mono text-red-500">
                         -{p.queda.toFixed(1).replace(".", ",")}%
                       </td>
+                      <td className="py-1 text-right font-mono">{fmtEst(p.estoque)}</td>
                     </tr>
                   ))}
                 </tbody>
