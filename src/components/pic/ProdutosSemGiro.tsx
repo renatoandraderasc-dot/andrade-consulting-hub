@@ -138,6 +138,7 @@ const ProdutosSemGiro = ({ storeId, ano, mes }: Props) => {
       atualVol: number;
       mediaVol: number;
       queda: number;
+      estoque: number | null;
     };
     const semGiro: Item[] = [];
     const emQueda: Item[] = [];
@@ -160,6 +161,7 @@ const ProdutosSemGiro = ({ storeId, ano, mes }: Props) => {
         atualVol,
         mediaVol: media,
         queda: media > 0 ? ((media - atualVol) / media) * 100 : 0,
+        estoque: estoqueDe(ref),
       };
 
       if (atualVol <= 0) semGiro.push(item);
