@@ -340,7 +340,7 @@ const exportarPdfSemGiro = async (nome: string, itens: ItemSemGiro[]) => {
       y = margem;
       linha(cabecalho, true);
     }
-    linha([p.ean || "—", p.codigo || "—", p.produto, fmtVol(p.mediaVol)], false);
+    linha([p.ean || "—", p.codigo || "—", p.produto, fmtVol(p.mediaVol), fmtEst(p.estoque)], false);
   });
 
   doc.save(`sem-giro-${slug(nome)}.pdf`);
@@ -350,8 +350,8 @@ const exportarPdf = async (nome: string, itens: ItemQueda[]) => {
   const { default: JsPDF } = await import("jspdf");
   const doc = new JsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
   const margem = 32;
-  const larguras = [90, 70, 300, 70, 80, 60];
-  const cabecalho = ["Cód. de barras", "Cód. reduzido", "Descrição", "Atual", "Média 3m", "Variação"];
+  const larguras = [90, 70, 260, 60, 70, 55, 65];
+  const cabecalho = ["Cód. de barras", "Cód. reduzido", "Descrição", "Atual", "Média 3m", "Variação", "Estoque"];
   let y = margem;
 
   const linha = (cols: string[], bold: boolean) => {
