@@ -1,7 +1,48 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { AlertTriangle, ChevronDown, Download, FileText, PackageX, TrendingDown } from "lucide-react";
 import { useHierarquiaVendas, LinhaHierarquia } from "@/hooks/useHierarquiaVendas";
+import { chamarRelatorio, num, pick } from "@/lib/vrReport";
+
+// Estoque atual por produto, vindo do relatorio estoque_dinamico da loja.
+// Chave: codigo reduzido normalizado (sem zeros a esquerda) ou EAN.
+const chaveCod = (v: unknown) => {
+  const s = String(v ?? "").trim();
+  return s.replace(/^0+/, "") || s;
+};
+
+function useEstoqueAtual(storeId: string, inicio: string, fim: string) {
+  const [mapa, setMapa] = useState<Map<string, number> | null>(null);
+
+  useEffect(() => {
+    let vivo = true;
+    setMapa(null);
+    if (!storeId) return;
+    chamarRelatorio(storeId, "estoque_dinamico", { inicio, fim })
+      .then((r) => {
+        if (!vivo || r.erro) return;
+        const m = new Map<string, number>();
+        for (const l of r.dados as Record<string, unknown>[]) {
+          const estRaw = pick(l, "estoque_dinamico", "estoque", "estoque_atual");
+          const qtdC = num(pick(l, "qtd_compra", "quantidade_compra"));
+          const qtdV = num(pick(l, "qtd_venda", "quantidade_venda"));
+          const est =
+            estRaw !== undefined && String(estRaw).trim() !== "" ? num(estRaw) : qtdC - qtdV;
+          const cod = chaveCod(pick(l, "codigo", "cod_produto", "id_produto"));
+          const ean = String(pick(l, "codigo_barras", "ean", "barras") ?? "").trim();
+          if (cod) m.set(`c:${cod}`, est);
+          if (ean) m.set(`e:${ean}`, est);
+        }
+        setMapa(m);
+      })
+      .catch(() => {});
+    return () => {
+      vivo = false;
+    };
+  }, [storeId, inicio, fim]);
+
+  return mapa;
+}
 
 // ============================================================
 // Produtos sem giro / em queda no mes corrente
