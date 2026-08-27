@@ -248,7 +248,10 @@ type ItemQueda = {
   atualVol: number;
   mediaVol: number;
   queda: number;
+  estoque: number | null;
 };
+
+const fmtEst = (v: number | null) => (v === null ? "—" : fmtVol(v));
 
 const slug = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w]+/g, "-").toLowerCase();
 
@@ -260,6 +263,7 @@ const exportarCsv = (nome: string, itens: ItemQueda[]) => {
     "Volume atual",
     "Media 3 meses",
     "Variacao (%)",
+    "Estoque atual",
   ];
   const linhas = itens.map((p) => [
     p.ean || "",
@@ -268,6 +272,7 @@ const exportarCsv = (nome: string, itens: ItemQueda[]) => {
     fmtVol(p.atualVol),
     fmtVol(p.mediaVol),
     `-${p.queda.toFixed(1).replace(".", ",")}`,
+    p.estoque === null ? "" : fmtVol(p.estoque),
   ]);
   const csv = [head, ...linhas]
     .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";"))
