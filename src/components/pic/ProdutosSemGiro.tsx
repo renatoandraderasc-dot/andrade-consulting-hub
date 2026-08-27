@@ -92,6 +92,21 @@ const ProdutosSemGiro = ({ storeId, ano, mes }: Props) => {
   const m1 = useHierarquiaVendas(storeId, periodos[1].inicio, periodos[1].fim);
   const m2 = useHierarquiaVendas(storeId, periodos[2].inicio, periodos[2].fim);
   const m3 = useHierarquiaVendas(storeId, periodos[3].inicio, periodos[3].fim);
+  // Estoque atual: usa um ano de janela para o relatorio cobrir tambem os
+  // produtos sem movimento no mes (que sao justamente os "sem giro").
+  const inicioEstoque = useMemo(() => {
+    const d = new Date(ano, mes - 1, 1);
+    d.setFullYear(d.getFullYear() - 1);
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-01`;
+  }, [ano, mes]);
+  const estoqueMap = useEstoqueAtual(storeId, inicioEstoque, periodos[0].fim);
+  const estoqueDe = (l: { codigo: string; ean: string }): number | null => {
+    if (!estoqueMap) return null;
+    const c = chaveCod(l.codigo);
+    if (c && estoqueMap.has(`c:${c}`)) return estoqueMap.get(`c:${c}`)!;
+    if (l.ean && estoqueMap.has(`e:${l.ean}`)) return estoqueMap.get(`e:${l.ean}`)!;
+    return null;
+  };
 
   const loading = atual.loading || m1.loading || m2.loading || m3.loading;
 
