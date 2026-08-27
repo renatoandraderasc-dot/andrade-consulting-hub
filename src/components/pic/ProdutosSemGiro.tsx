@@ -285,11 +285,17 @@ const exportarCsv = (nome: string, itens: ItemQueda[]) => {
   URL.revokeObjectURL(a.href);
 };
 
-type ItemSemGiro = { produto: string; codigo: string; ean: string; mediaVol: number };
+type ItemSemGiro = { produto: string; codigo: string; ean: string; mediaVol: number; estoque: number | null };
 
 const exportarCsvSemGiro = (nome: string, itens: ItemSemGiro[]) => {
-  const head = ["Codigo de barras", "Cod. reduzido", "Descricao", "Volume medio (3 meses)"];
-  const linhas = itens.map((p) => [p.ean || "", p.codigo || "", p.produto, fmtVol(p.mediaVol)]);
+  const head = ["Codigo de barras", "Cod. reduzido", "Descricao", "Volume medio (3 meses)", "Estoque atual"];
+  const linhas = itens.map((p) => [
+    p.ean || "",
+    p.codigo || "",
+    p.produto,
+    fmtVol(p.mediaVol),
+    p.estoque === null ? "" : fmtVol(p.estoque),
+  ]);
   const csv = [head, ...linhas]
     .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";"))
     .join("\n");
@@ -305,8 +311,8 @@ const exportarPdfSemGiro = async (nome: string, itens: ItemSemGiro[]) => {
   const { default: JsPDF } = await import("jspdf");
   const doc = new JsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
   const margem = 32;
-  const larguras = [100, 80, 380, 110];
-  const cabecalho = ["Cód. de barras", "Cód. reduzido", "Descrição", "Volume médio (3 meses)"];
+  const larguras = [100, 80, 330, 100, 90];
+  const cabecalho = ["Cód. de barras", "Cód. reduzido", "Descrição", "Vol. médio (3m)", "Estoque"];
   let y = margem;
 
   const linha = (cols: string[], bold: boolean) => {
