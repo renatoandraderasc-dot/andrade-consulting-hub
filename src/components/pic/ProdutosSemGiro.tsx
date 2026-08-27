@@ -1,7 +1,48 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { AlertTriangle, ChevronDown, Download, FileText, PackageX, TrendingDown } from "lucide-react";
 import { useHierarquiaVendas, LinhaHierarquia } from "@/hooks/useHierarquiaVendas";
+import { chamarRelatorio, num, pick } from "@/lib/vrReport";
+
+// Estoque atual por produto, vindo do relatorio estoque_dinamico da loja.
+// Chave: codigo reduzido normalizado (sem zeros a esquerda) ou EAN.
+const chaveCod = (v: unknown) => {
+  const s = String(v ?? "").trim();
+  return s.replace(/^0+/, "") || s;
+};
+
+function useEstoqueAtual(storeId: string, inicio: string, fim: string) {
+  const [mapa, setMapa] = useState<Map<string, number> | null>(null);
+
+  useEffect(() => {
+    let vivo = true;
+    setMapa(null);
+    if (!storeId) return;
+    chamarRelatorio(storeId, "estoque_dinamico", { inicio, fim })
+      .then((r) => {
+        if (!vivo || r.erro) return;
+        const m = new Map<string, number>();
+        for (const l of r.dados as Record<string, unknown>[]) {
+          const estRaw = pick(l, "estoque_dinamico", "estoque", "estoque_atual");
+          const qtdC = num(pick(l, "qtd_compra", "quantidade_compra"));
+          const qtdV = num(pick(l, "qtd_venda", "quantidade_venda"));
+          const est =
+            estRaw !== undefined && String(estRaw).trim() !== "" ? num(estRaw) : qtdC - qtdV;
+          const cod = chaveCod(pick(l, "codigo", "cod_produto", "id_produto"));
+          const ean = String(pick(l, "codigo_barras", "ean", "barras") ?? "").trim();
+          if (cod) m.set(`c:${cod}`, est);
+          if (ean) m.set(`e:${ean}`, est);
+        }
+        setMapa(m);
+      })
+      .catch(() => {});
+    return () => {
+      vivo = false;
+    };
+  }, [storeId, inicio, fim]);
+
+  return mapa;
+}
 
 // ============================================================
 // Produtos sem giro / em queda no mes corrente
@@ -51,6 +92,24 @@ const ProdutosSemGiro = ({ storeId, ano, mes }: Props) => {
   const m1 = useHierarquiaVendas(storeId, periodos[1].inicio, periodos[1].fim);
   const m2 = useHierarquiaVendas(storeId, periodos[2].inicio, periodos[2].fim);
   const m3 = useHierarquiaVendas(storeId, periodos[3].inicio, periodos[3].fim);
+  // Estoque atual: usa um ano de janela para o relatorio cobrir tambem os
+  // produtos sem movimento no mes (que sao justamente os "sem giro").
+  const inicioEstoque = useMemo(() => {
+    const d = new Date(ano, mes - 1, 1);
+    d.setFullYear(d.getFullYear() - 1);
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-01`;
+  }, [ano, mes]);
+  const estoqueMap = useEstoqueAtual(storeId, inicioEstoque, periodos[0].fim);
+  const estoqueDe = useCallback(
+    (l: { codigo: string; ean: string }): number | null => {
+      if (!estoqueMap) return null;
+      const c = chaveCod(l.codigo);
+      if (c && estoqueMap.has(`c:${c}`)) return estoqueMap.get(`c:${c}`)!;
+      if (l.ean && estoqueMap.has(`e:${l.ean}`)) return estoqueMap.get(`e:${l.ean}`)!;
+      return null;
+    },
+    [estoqueMap],
+  );
 
   const loading = atual.loading || m1.loading || m2.loading || m3.loading;
 
@@ -82,6 +141,7 @@ const ProdutosSemGiro = ({ storeId, ano, mes }: Props) => {
       atualVol: number;
       mediaVol: number;
       queda: number;
+      estoque: number | null;
     };
     const semGiro: Item[] = [];
     const emQueda: Item[] = [];
@@ -104,6 +164,7 @@ const ProdutosSemGiro = ({ storeId, ano, mes }: Props) => {
         atualVol,
         mediaVol: media,
         queda: media > 0 ? ((media - atualVol) / media) * 100 : 0,
+        estoque: estoqueDe(ref),
       };
 
       if (atualVol <= 0) semGiro.push(item);
@@ -119,7 +180,7 @@ const ProdutosSemGiro = ({ storeId, ano, mes }: Props) => {
       semGiro: semGiro.filter((i) => i.categoria === nome).sort((a, b) => b.mediaVol - a.mediaVol),
       emQueda: emQueda.filter((i) => i.categoria === nome).sort((a, b) => b.queda - a.queda),
     }));
-  }, [atual.linhas, m1.linhas, m2.linhas, m3.linhas]);
+  }, [atual.linhas, m1.linhas, m2.linhas, m3.linhas, estoqueDe]);
 
   if (!storeId) return null;
 
@@ -187,7 +248,10 @@ type ItemQueda = {
   atualVol: number;
   mediaVol: number;
   queda: number;
+  estoque: number | null;
 };
+
+const fmtEst = (v: number | null) => (v === null ? "—" : fmtVol(v));
 
 const slug = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w]+/g, "-").toLowerCase();
 
@@ -199,6 +263,7 @@ const exportarCsv = (nome: string, itens: ItemQueda[]) => {
     "Volume atual",
     "Media 3 meses",
     "Variacao (%)",
+    "Estoque atual",
   ];
   const linhas = itens.map((p) => [
     p.ean || "",
@@ -207,6 +272,7 @@ const exportarCsv = (nome: string, itens: ItemQueda[]) => {
     fmtVol(p.atualVol),
     fmtVol(p.mediaVol),
     `-${p.queda.toFixed(1).replace(".", ",")}`,
+    p.estoque === null ? "" : fmtVol(p.estoque),
   ]);
   const csv = [head, ...linhas]
     .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";"))
@@ -219,11 +285,17 @@ const exportarCsv = (nome: string, itens: ItemQueda[]) => {
   URL.revokeObjectURL(a.href);
 };
 
-type ItemSemGiro = { produto: string; codigo: string; ean: string; mediaVol: number };
+type ItemSemGiro = { produto: string; codigo: string; ean: string; mediaVol: number; estoque: number | null };
 
 const exportarCsvSemGiro = (nome: string, itens: ItemSemGiro[]) => {
-  const head = ["Codigo de barras", "Cod. reduzido", "Descricao", "Volume medio (3 meses)"];
-  const linhas = itens.map((p) => [p.ean || "", p.codigo || "", p.produto, fmtVol(p.mediaVol)]);
+  const head = ["Codigo de barras", "Cod. reduzido", "Descricao", "Volume medio (3 meses)", "Estoque atual"];
+  const linhas = itens.map((p) => [
+    p.ean || "",
+    p.codigo || "",
+    p.produto,
+    fmtVol(p.mediaVol),
+    p.estoque === null ? "" : fmtVol(p.estoque),
+  ]);
   const csv = [head, ...linhas]
     .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";"))
     .join("\n");
@@ -239,8 +311,8 @@ const exportarPdfSemGiro = async (nome: string, itens: ItemSemGiro[]) => {
   const { default: JsPDF } = await import("jspdf");
   const doc = new JsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
   const margem = 32;
-  const larguras = [100, 80, 380, 110];
-  const cabecalho = ["Cód. de barras", "Cód. reduzido", "Descrição", "Volume médio (3 meses)"];
+  const larguras = [100, 80, 330, 100, 90];
+  const cabecalho = ["Cód. de barras", "Cód. reduzido", "Descrição", "Vol. médio (3m)", "Estoque"];
   let y = margem;
 
   const linha = (cols: string[], bold: boolean) => {
@@ -268,7 +340,7 @@ const exportarPdfSemGiro = async (nome: string, itens: ItemSemGiro[]) => {
       y = margem;
       linha(cabecalho, true);
     }
-    linha([p.ean || "—", p.codigo || "—", p.produto, fmtVol(p.mediaVol)], false);
+    linha([p.ean || "—", p.codigo || "—", p.produto, fmtVol(p.mediaVol), fmtEst(p.estoque)], false);
   });
 
   doc.save(`sem-giro-${slug(nome)}.pdf`);
@@ -278,8 +350,8 @@ const exportarPdf = async (nome: string, itens: ItemQueda[]) => {
   const { default: JsPDF } = await import("jspdf");
   const doc = new JsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
   const margem = 32;
-  const larguras = [90, 70, 300, 70, 80, 60];
-  const cabecalho = ["Cód. de barras", "Cód. reduzido", "Descrição", "Atual", "Média 3m", "Variação"];
+  const larguras = [90, 70, 260, 60, 70, 55, 65];
+  const cabecalho = ["Cód. de barras", "Cód. reduzido", "Descrição", "Atual", "Média 3m", "Variação", "Estoque"];
   let y = margem;
 
   const linha = (cols: string[], bold: boolean) => {
@@ -315,6 +387,7 @@ const exportarPdf = async (nome: string, itens: ItemQueda[]) => {
         fmtVol(p.atualVol),
         fmtVol(p.mediaVol),
         `-${p.queda.toFixed(1).replace(".", ",")}%`,
+        fmtEst(p.estoque),
       ],
       false,
     );
@@ -329,7 +402,7 @@ const CategoriaBloco = ({
   emQueda,
 }: {
   nome: string;
-  semGiro: { produto: string; codigo: string; ean: string; mediaVol: number }[];
+  semGiro: ItemSemGiro[];
   emQueda: ItemQueda[];
 }) => {
   const [aberto, setAberto] = useState(false);
@@ -382,6 +455,7 @@ const CategoriaBloco = ({
                     <th className="text-left py-1">Cód. reduzido</th>
                     <th className="text-left py-1">Descrição</th>
                     <th className="text-right py-1">Volume médio (3 meses)</th>
+                    <th className="text-right py-1">Estoque atual</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -391,6 +465,7 @@ const CategoriaBloco = ({
                       <td className="py-1 pr-2 font-mono whitespace-nowrap">{p.codigo || "—"}</td>
                       <td className="py-1 pr-2">{p.produto}</td>
                       <td className="py-1 text-right font-mono">{fmtVol(p.mediaVol)}</td>
+                      <td className="py-1 text-right font-mono">{fmtEst(p.estoque)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -428,6 +503,7 @@ const CategoriaBloco = ({
                     <th className="text-right py-1">Atual</th>
                     <th className="text-right py-1">Média 3 meses</th>
                     <th className="text-right py-1">Variação</th>
+                    <th className="text-right py-1">Estoque atual</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -441,6 +517,7 @@ const CategoriaBloco = ({
                       <td className="py-1 text-right font-mono text-red-500">
                         -{p.queda.toFixed(1).replace(".", ",")}%
                       </td>
+                      <td className="py-1 text-right font-mono">{fmtEst(p.estoque)}</td>
                     </tr>
                   ))}
                 </tbody>
