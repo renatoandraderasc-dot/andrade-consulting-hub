@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ArrowUp, ArrowDown, Minus, Search, Download, ChevronUp, ChevronDown } from "lucide-react";
 import * as XLSX from "xlsx";
+import { salvarWorkbook } from "@/lib/exportBranding";
 import type { RepricingRow, RepricingAvaliada, ConcorrenteMeta } from "./repricingTypes";
 
 interface Props {
@@ -167,7 +168,7 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Repricing");
-    XLSX.writeFile(wb, `repricing-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    salvarWorkbook(wb, "Repricing");
   };
 
   const colCount = 5 + 4 + concorrentesMeta.length * 3 + 1;

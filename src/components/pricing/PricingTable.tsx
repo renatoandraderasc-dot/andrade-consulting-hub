@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ChevronDown, ChevronUp, AlertTriangle, ImageOff, Download } from "lucide-react";
 import * as XLSX from "xlsx";
+import { salvarWorkbook } from "@/lib/exportBranding";
 import type { ConcorrenteInfo, PricingRow } from "./pricingTypes";
 
 const PAGE_SIZE = 50;
@@ -114,7 +115,7 @@ const PricingTable = ({ rows, concorrentes, semEanTotal }: Props) => {
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Pricing");
-    XLSX.writeFile(wb, `pricing-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    salvarWorkbook(wb, "Pricing");
   };
 
   return (

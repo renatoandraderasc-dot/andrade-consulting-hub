@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { formatBRL } from "@/lib/formatters";
 import { useHierarquiaVendas, type LinhaHierarquia } from "@/hooks/useHierarquiaVendas";
 import * as XLSX from "xlsx";
+import { salvarWorkbook } from "@/lib/exportBranding";
 
 // ============================================================
 // Tabela de vendas com abertura progressiva:
@@ -104,7 +105,7 @@ export default function HierarquiaVendasTable({ storeId, inicio, fim, title }: P
     }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Vendas");
-    XLSX.writeFile(wb, `vendas-mercadologico-${inicio}-a-${fim}.xlsx`);
+    salvarWorkbook(wb, "Vendas por Mercadológico", [["Período", `${inicio} a ${fim}`]]);
   };
 
   const renderNo = (no: No, nivel: number) => {

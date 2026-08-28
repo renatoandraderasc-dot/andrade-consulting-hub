@@ -253,6 +253,8 @@ type ItemQueda = {
 
 const fmtEst = (v: number | null) => (v === null ? "—" : fmtVol(v));
 
+import { cabecalhoPdf, cabecalhoCsv, nomeArquivo } from "@/lib/exportBranding";
+
 const slug = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^\w]+/g, "-").toLowerCase();
 
 const exportarCsv = (nome: string, itens: ItemQueda[]) => {
@@ -277,10 +279,11 @@ const exportarCsv = (nome: string, itens: ItemQueda[]) => {
   const csv = [head, ...linhas]
     .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";"))
     .join("\n");
-  const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+  const titulo = `Queda de volume relevante - ${nome}`;
+  const blob = new Blob(["\ufeff" + cabecalhoCsv(titulo) + csv], { type: "text/csv;charset=utf-8;" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = `queda-volume-${slug(nome)}.csv`;
+  a.download = nomeArquivo(titulo, "csv");
   a.click();
   URL.revokeObjectURL(a.href);
 };
@@ -299,10 +302,11 @@ const exportarCsvSemGiro = (nome: string, itens: ItemSemGiro[]) => {
   const csv = [head, ...linhas]
     .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(";"))
     .join("\n");
-  const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+  const titulo = `Produtos sem giro - ${nome}`;
+  const blob = new Blob(["\ufeff" + cabecalhoCsv(titulo) + csv], { type: "text/csv;charset=utf-8;" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = `sem-giro-${slug(nome)}.csv`;
+  a.download = nomeArquivo(titulo, "csv");
   a.click();
   URL.revokeObjectURL(a.href);
 };
@@ -325,10 +329,7 @@ const exportarPdfSemGiro = async (nome: string, itens: ItemSemGiro[]) => {
     y += 14;
   };
 
-  doc.setFontSize(13);
-  doc.setFont("helvetica", "bold");
-  doc.text(`Produtos sem giro — ${nome}`, margem, y);
-  y += 20;
+  y = await cabecalhoPdf(doc, `Produtos sem giro — ${nome}`, undefined, "pt");
   doc.setFontSize(8);
   linha(cabecalho, true);
   doc.setDrawColor(200);
@@ -343,7 +344,7 @@ const exportarPdfSemGiro = async (nome: string, itens: ItemSemGiro[]) => {
     linha([p.ean || "—", p.codigo || "—", p.produto, fmtVol(p.mediaVol), fmtEst(p.estoque)], false);
   });
 
-  doc.save(`sem-giro-${slug(nome)}.pdf`);
+  doc.save(nomeArquivo(`Produtos sem giro - ${nome}`, "pdf"));
 };
 
 const exportarPdf = async (nome: string, itens: ItemQueda[]) => {
@@ -364,10 +365,7 @@ const exportarPdf = async (nome: string, itens: ItemQueda[]) => {
     y += 14;
   };
 
-  doc.setFontSize(13);
-  doc.setFont("helvetica", "bold");
-  doc.text(`Queda de volume relevante — ${nome}`, margem, y);
-  y += 20;
+  y = await cabecalhoPdf(doc, `Queda de volume relevante — ${nome}`, undefined, "pt");
   doc.setFontSize(8);
   linha(cabecalho, true);
   doc.setDrawColor(200);
@@ -393,7 +391,7 @@ const exportarPdf = async (nome: string, itens: ItemQueda[]) => {
     );
   });
 
-  doc.save(`queda-volume-${slug(nome)}.pdf`);
+  doc.save(nomeArquivo(`Queda de volume relevante - ${nome}`, "pdf"));
 };
 
 const CategoriaBloco = ({

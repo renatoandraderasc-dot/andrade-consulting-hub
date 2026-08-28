@@ -1,4 +1,5 @@
 import * as XLSX from "xlsx";
+import { salvarWorkbook, cabecalhoCsv, nomeArquivo as nomeArquivoMarca } from "@/lib/exportBranding";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Download, FileSpreadsheet } from "lucide-react";
@@ -29,16 +30,16 @@ const ImpressaoTab = ({ itens, nomeEncarte }: Props) => {
     const ws = XLSX.utils.json_to_sheet(linhas);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Impressão");
-    XLSX.writeFile(wb, `${nomeArquivo}.xlsx`);
+    salvarWorkbook(wb, nomeArquivo);
   };
 
   const exportCsv = () => {
     const ws = XLSX.utils.json_to_sheet(linhas);
     const csv = XLSX.utils.sheet_to_csv(ws, { FS: ";" });
-    const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob(["\ufeff" + cabecalhoCsv(nomeArquivo) + csv], { type: "text/csv;charset=utf-8;" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `${nomeArquivo}.csv`;
+    a.download = nomeArquivoMarca(nomeArquivo, "csv");
     a.click();
     URL.revokeObjectURL(a.href);
   };

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { cabecalhoCsv, nomeArquivo as nomeArquivoMarca } from "@/lib/exportBranding";
 import {
   ArrowLeft, Download, Search, TrendingUp, TrendingDown, Minus,
   ArrowUpCircle, ArrowDownCircle, Clock, Package, Tag, Barcode, Image as ImageIcon
@@ -91,11 +92,12 @@ const ConcorrenteAnalise = ({ concorrente, scrapedProducts = [], onBack }: Props
       p.sourceUrl,
     ]);
     const csv = [header, ...rows].map(r => r.map(c => `"${c}"`).join(";")).join("\n");
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const titulo = `Produtos - ${concorrente.nome}`;
+    const blob = new Blob(["\uFEFF" + cabecalhoCsv(titulo) + csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `produtos-${concorrente.nome.replace(/\s+/g, "-").toLowerCase()}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = nomeArquivoMarca(titulo, "csv");
     a.click();
     URL.revokeObjectURL(url);
     toast.success("Arquivo exportado com sucesso");

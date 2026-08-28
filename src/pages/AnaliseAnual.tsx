@@ -10,8 +10,13 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { TrendingUp, RefreshCw, ChevronsUpDown } from "lucide-react";
+import { TrendingUp, RefreshCw, ChevronsUpDown, FileSpreadsheet, FileText } from "lucide-react";
 import { motion } from "framer-motion";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { salvarWorkbook, cabecalhoPdf, nomeArquivo } from "@/lib/exportBranding";
+
 
 const MESES = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
 const ANOS = [2022, 2023, 2024, 2025, 2026];
@@ -446,6 +451,95 @@ const AnaliseAnual = () => {
       }),
     })), [rowsFiltradas, anosSel]);
 
+  // ---------------- exportações ----------------
+  const BLOCOS_EXPORT = () => ([
+    { titulo: "FATURAMENTO", matriz: blocos.faturamento, tipo: "valor" as const },
+    { titulo: "LUCRO", matriz: blocos.lucro, tipo: "valor" as const },
+    { titulo: "MARGEM", matriz: margemMatriz, tipo: "margem" as const },
+    { titulo: "VOLUME", matriz: blocos.volume, tipo: "valor" as const },
+  ]);
+
+  const linhasBloco = (matriz: { ano: number; meses: number[] }[], tipo: "valor" | "margem") =>
+    matriz.map((l) => {
+      const preenchidos = l.meses.filter(Boolean).length;
+      const preenchidosAcum = l.meses.slice(0, mesCorte).filter(Boolean).length;
+      return [
+        String(l.ano),
+        ...l.meses.map((v) => (tipo === "margem" ? fmtPct(v || null) : (v ? fmtNum(v) : ""))),
+        tipo === "margem"
+          ? fmtPct(preenchidos ? soma(l.meses) / preenchidos : null)
+          : fmtNum(soma(l.meses)),
+        tipo === "margem"
+          ? fmtPct(preenchidosAcum ? soma(l.meses.slice(0, mesCorte)) / preenchidosAcum : null)
+          : fmtNum(acum(l.meses)),
+      ];
+    });
+
+  const filtrosTexto = [
+    `Loja: ${storeName || "-"}`,
+    `Período: ${anoIni} a ${anoFim}`,
+    `Departamentos: ${deptos.length ? deptos.join(", ") : "todos"}`,
+    `Categorias: ${cats.length ? cats.join(", ") : "todas"}`,
+    `Horário: ${turno === "todos" ? "Dia inteiro" : turno === "manha" ? "Manhã" : "Tarde"}`,
+  ];
+
+  const exportarExcel = () => {
+    const wb = XLSX.utils.book_new();
+    for (const b of BLOCOS_EXPORT()) {
+      const aoa = [
+        [b.titulo],
+        ["ANO", ...MESES, "TOTAL", "TOTAL ACUM."],
+        ...linhasBloco(b.matriz, b.tipo),
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      ws["!cols"] = [{ wch: 10 }, ...MESES.map(() => ({ wch: 12 })), { wch: 14 }, { wch: 14 }];
+      XLSX.utils.book_append_sheet(wb, ws, b.titulo);
+    }
+    salvarWorkbook(
+      wb,
+      `Análise Anual - ${storeName || "Loja"}`,
+      filtrosTexto.map((t) => {
+        const [k, ...v] = t.split(": ");
+        return [k, v.join(": ")] as [string, string];
+      }),
+    );
+  };
+
+  const exportarPdf = async () => {
+    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    let y = await cabecalhoPdf(
+      doc,
+      `Análise Anual — ${storeName || "Loja"}`,
+      `${anoIni} a ${anoFim}`,
+    );
+    doc.setFontSize(8);
+    doc.setTextColor(110);
+    doc.text(filtrosTexto.slice(2).join("   |   ").slice(0, 220), 12, y);
+    doc.setTextColor(0);
+    y += 6;
+
+    for (const b of BLOCOS_EXPORT()) {
+      autoTable(doc, {
+        startY: y,
+        head: [[b.titulo, ...MESES, "TOTAL", "ACUM."]],
+        body: linhasBloco(b.matriz, b.tipo),
+        styles: { fontSize: 7, cellPadding: 1.4 },
+        headStyles: { fillColor: [20, 33, 61], textColor: 255, fontSize: 7 },
+        columnStyles: { 0: { halign: "left", fontStyle: "bold" } },
+        theme: "grid",
+        margin: { left: 12, right: 12 },
+        didDrawPage: () => {},
+      });
+      y = (doc as any).lastAutoTable.finalY + 6;
+      if (y > doc.internal.pageSize.getHeight() - 30) {
+        doc.addPage();
+        y = 20;
+      }
+    }
+    doc.save(nomeArquivo(`Análise Anual - ${storeName || "Loja"}`, "pdf"));
+  };
+
+
   return (
     <ClientLayout storeName={storeName}>
       <div className="container mx-auto px-4 py-6 max-w-[1600px]">
@@ -460,7 +554,16 @@ const AnaliseAnual = () => {
                 Faturamento, lucro, margem e volume de {anoIni} a {anoFim} — dados da loja logada
               </p>
             </div>
+            <Button variant="outline" size="sm" disabled={loading || !rows.length} onClick={exportarExcel}>
+              <FileSpreadsheet className="w-4 h-4 mr-2" />
+              Excel
+            </Button>
+            <Button variant="outline" size="sm" disabled={loading || !rows.length} onClick={exportarPdf}>
+              <FileText className="w-4 h-4 mr-2" />
+              PDF
+            </Button>
             <Button variant="outline" size="sm" disabled={loading || !storeId} onClick={() => storeId && carregar(storeId)}>
+
               <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
               Atualizar
             </Button>
