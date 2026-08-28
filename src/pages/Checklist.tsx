@@ -23,7 +23,7 @@ interface Question {
 }
 
 interface ScoreState {
-  [questionId: string]: { score: number; photoUrl?: string };
+  [questionId: string]: { score: number; photoUrl?: string; photoPath?: string };
 }
 
 interface SubmissionRecord {
