@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
+import { salvarWorkbook } from "@/lib/exportBranding";
 
 interface Props {
   storeId: string;
@@ -409,7 +410,7 @@ export const AnaliseFinanceiraTab = ({ storeId, storeName }: Props) => {
       }))),
       "Fornecedores",
     );
-    XLSX.writeFile(wb, `analise-financeira-${(storeName ?? "loja").replace(/\s+/g, "-").toLowerCase()}.xlsx`);
+    salvarWorkbook(wb, `Análise Financeira - ${storeName ?? "Loja"}`);
   };
 
   const limparFiltros = () => {

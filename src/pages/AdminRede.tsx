@@ -1,6 +1,7 @@
 import { Fragment as FragmentWithKey, useEffect, useMemo, useState } from "react";
 import { Navigate } from "react-router-dom";
 import * as XLSX from "xlsx";
+import { salvarWorkbook } from "@/lib/exportBranding";
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RTooltip,
   Legend, ResponsiveContainer, LabelList,
@@ -299,7 +300,7 @@ const AdminRedeContent = () => {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(aba1), "Clientes");
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(aba2), "Mensal");
-    XLSX.writeFile(wb, `visao-rede-${ano}.xlsx`);
+    salvarWorkbook(wb, "Visão da Rede", [["Ano", String(ano)]]);
   };
 
   // heatmap: intensidade dentro da linha

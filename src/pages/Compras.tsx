@@ -10,6 +10,7 @@ import {
   LabelList, LineChart, Line, Legend, CartesianGrid,
 } from "recharts";
 import * as XLSX from "xlsx";
+import { salvarWorkbook } from "@/lib/exportBranding";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import ClientLayout from "@/components/ClientLayout";
@@ -549,7 +550,7 @@ const Compras = () => {
     }
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(linhas), "Compras x Vendas");
-    XLSX.writeFile(wb, `compras-vendas-${cvInicio}-a-${cvFim}.xlsx`);
+    salvarWorkbook(wb, "Compras x Vendas", [["Período", `${cvInicio} a ${cvFim}`]]);
   };
 
 

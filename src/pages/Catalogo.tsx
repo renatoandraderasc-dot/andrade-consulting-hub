@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Download, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import * as XLSX from "xlsx";
+import { salvarWorkbook } from "@/lib/exportBranding";
 import { supabase } from "@/integrations/supabase/client";
 import { chamarRelatorio, avisoRelatorio, pick as col } from "@/lib/vrReport";
 import { carregarBaseCatalogo, filtrarCatalogo, type CatalogoItem } from "@/lib/catalogoProdutos";
@@ -230,7 +231,7 @@ const Catalogo = () => {
       const ws = XLSX.utils.json_to_sheet(dados);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Catálogo");
-      XLSX.writeFile(wb, `catalogo-produtos.xlsx`);
+      salvarWorkbook(wb, "Catálogo de Produtos");
       toast({ title: `Exportado`, description: `${dados.length} produto(s) exportado(s).` });
     } catch (err: any) {
       toast({ title: "Falha ao exportar", description: err.message, variant: "destructive" });

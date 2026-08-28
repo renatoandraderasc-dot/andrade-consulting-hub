@@ -4,6 +4,7 @@ import { format, subDays, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
 import * as XLSX from "xlsx";
+import { salvarWorkbook } from "@/lib/exportBranding";
 import {
   CalendarDays, Download, Info, Search, ArrowUp, ArrowDown, PackageSearch,
 } from "lucide-react";
@@ -298,7 +299,7 @@ const EstoqueDinamico = () => {
     }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Estoque Dinâmico");
-    XLSX.writeFile(wb, `estoque-dinamico-${iso(new Date())}.xlsx`);
+    salvarWorkbook(wb, "Estoque Dinâmico");
   };
 
   const toggle = (arr: string[], set: (v: string[]) => void, v: string) =>

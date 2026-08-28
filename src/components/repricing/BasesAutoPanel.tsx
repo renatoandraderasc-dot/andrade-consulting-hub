@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Loader2, Download, CheckCircle2, Package, Store, Building2, FileSpreadsheet } from "lucide-react";
 import { carregarBaseCatalogo, carregarProdutosAtivos12m, carregarCustoUltimaCompra, avisoRelatorio } from "@/lib/catalogoProdutos";
 import * as XLSX from "xlsx";
+import { salvarWorkbook } from "@/lib/exportBranding";
 
 export type Linha = Record<string, unknown>;
 
@@ -90,7 +91,7 @@ const BasesAutoPanel = ({
     );
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dados), "Base");
-    XLSX.writeFile(wb, `${nome}-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    salvarWorkbook(wb, `Repricing - ${nome}`);
   };
 
 

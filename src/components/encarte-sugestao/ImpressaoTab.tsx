@@ -1,4 +1,5 @@
 import * as XLSX from "xlsx";
+import { salvarWorkbook } from "@/lib/exportBranding";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Download, FileSpreadsheet } from "lucide-react";
@@ -29,7 +30,7 @@ const ImpressaoTab = ({ itens, nomeEncarte }: Props) => {
     const ws = XLSX.utils.json_to_sheet(linhas);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Impressão");
-    XLSX.writeFile(wb, `${nomeArquivo}.xlsx`);
+    salvarWorkbook(wb, nomeArquivo);
   };
 
   const exportCsv = () => {
