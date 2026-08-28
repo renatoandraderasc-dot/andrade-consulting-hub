@@ -206,6 +206,37 @@ const ChecklistTemperatura = () => {
     carregar();
   };
 
+  const [seeding, setSeeding] = useState(false);
+  const carregarBasePadrao = async () => {
+    if (!storeId) return;
+    setSeeding(true);
+    const existentes = new Set(equipamentos.map((e) => e.nome.trim().toLowerCase()));
+    const novos = BASE_EQUIPAMENTOS.filter((b) => !existentes.has(b.nome.toLowerCase()));
+    if (novos.length === 0) {
+      toast({ title: "Base padrão já carregada" });
+      setSeeding(false);
+      return;
+    }
+    const { error } = await supabase.from("temperatura_equipamentos").insert(
+      novos.map((b, i) => ({
+        store_id: storeId,
+        nome: b.nome,
+        tipo: b.tipo,
+        temp_min: b.min,
+        temp_max: b.max,
+        turnos: TURNOS_PADRAO,
+        ordem: equipamentos.length + i + 1,
+      }))
+    );
+    setSeeding(false);
+    if (error) {
+      toast({ title: "Erro ao carregar base", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: `${novos.length} equipamentos adicionados` });
+    carregar();
+  };
+
   const equipamentosVisiveis = useMemo(
     () => equipamentos.filter((e) => e.ativo && (filtroDept === "todos" || e.department_id === filtroDept)),
     [equipamentos, filtroDept]
