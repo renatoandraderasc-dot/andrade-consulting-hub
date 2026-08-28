@@ -450,19 +450,24 @@ const Checklist = () => {
                           </div>
                         </div>
                         {q.requires_photo && (
-                          <div className="ml-6 mt-3">
-                            {state.photoUrl ? (
+                          <div className="ml-6 mt-3 space-y-2">
+                            {state.photoUrl && (
                               <div className="flex items-center gap-3">
-                                <img src={state.photoUrl} alt="Foto" className="w-20 h-20 rounded-lg object-cover border border-border" />
+                                <img src={state.photoUrl} alt="Foto do item" className="w-20 h-20 rounded-lg object-cover border border-border" />
                                 <span className="text-green-400 font-body text-xs">Foto enviada ✓</span>
                               </div>
-                            ) : (
-                              <label className="flex items-center gap-2 cursor-pointer text-muted-foreground hover:text-primary font-body text-xs transition-colors">
-                                <Camera className="w-4 h-4" />
-                                {uploading === q.id ? "Enviando..." : "Enviar foto"}
-                                <input type="file" accept="image/*" className="sr-only" onChange={(e) => { const file = e.target.files?.[0]; if (file) handlePhotoUpload(q.id, file); }} />
-                              </label>
                             )}
+                            <label className="flex items-center gap-2 cursor-pointer text-muted-foreground hover:text-primary font-body text-xs transition-colors">
+                              <Camera className="w-4 h-4" />
+                              {uploading === q.id ? "Enviando..." : state.photoUrl ? "Tirar outra foto" : "Tirar foto (obrigatório)"}
+                              <input
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
+                                className="sr-only"
+                                onChange={(e) => { const file = e.target.files?.[0]; if (file) handlePhotoUpload(q.id, file); e.target.value = ""; }}
+                              />
+                            </label>
                           </div>
                         )}
                       </div>
