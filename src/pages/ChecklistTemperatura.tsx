@@ -45,6 +45,34 @@ interface Registro {
 const hoje = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
 const TURNOS_PADRAO = ["Manhã", "Tarde", "Noite"];
 
+// Base padrão de equipamentos com faixas típicas de temperatura
+const BASE_EQUIPAMENTOS: { nome: string; tipo: string; min: number; max: number }[] = [
+  { nome: "Sorvete", tipo: "Freezer", min: -24, max: -18 },
+  { nome: "Danone", tipo: "Freezer", min: -24, max: -18 },
+  { nome: "Ilha Carnes", tipo: "Freezer", min: -22, max: -16 },
+  { nome: "Ilha Carnes 2", tipo: "Freezer", min: -22, max: -16 },
+  { nome: "Ilha Batata 2", tipo: "Freezer", min: -22, max: -16 },
+  { nome: "Ilha Lasanha 3", tipo: "Freezer", min: -22, max: -16 },
+  { nome: "Gelo", tipo: "Freezer", min: -22, max: -14 },
+  { nome: "Refrigerador", tipo: "Refrigerador", min: 0, max: 7 },
+  { nome: "Red", tipo: "Refrigerador", min: 0, max: 6 },
+  { nome: "Monster", tipo: "Refrigerador", min: 0, max: 6 },
+  { nome: "Coca 1", tipo: "Refrigerador", min: 0, max: 6 },
+  { nome: "Coca 2", tipo: "Refrigerador", min: 0, max: 6 },
+  { nome: "Coca 3", tipo: "Refrigerador", min: 0, max: 6 },
+  { nome: "Coca 4", tipo: "Refrigerador", min: 0, max: 6 },
+  { nome: "Coca 5", tipo: "Refrigerador", min: 0, max: 6 },
+  { nome: "Cerveja", tipo: "Refrigerador", min: -2, max: 4 },
+  { nome: "Auto Host", tipo: "Refrigerador", min: 0, max: 7 },
+  { nome: "Padaria 1", tipo: "Refrigerador", min: 0, max: 7 },
+  { nome: "Padaria 2", tipo: "Refrigerador", min: 0, max: 7 },
+  { nome: "Balcão 1", tipo: "Balcão Refrigerado", min: 0, max: 5 },
+  { nome: "Balcão 2", tipo: "Balcão Refrigerado", min: 0, max: 5 },
+  { nome: "Câmara 1", tipo: "Câmara Fria", min: -2, max: 4 },
+  { nome: "Câmara 2", tipo: "Câmara Fria", min: -2, max: 4 },
+  { nome: "Câmara 3", tipo: "Câmara Fria", min: -2, max: 4 },
+];
+
 const ChecklistTemperatura = () => {
   const { user, isAdmin } = useAuth();
   const { toast } = useToast();
