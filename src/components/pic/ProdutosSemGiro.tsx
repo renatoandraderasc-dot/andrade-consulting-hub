@@ -3,46 +3,72 @@ import { motion } from "framer-motion";
 import { AlertTriangle, ChevronDown, Download, FileText, PackageX, TrendingDown } from "lucide-react";
 import { useHierarquiaVendas, LinhaHierarquia } from "@/hooks/useHierarquiaVendas";
 import { chamarRelatorio, num, pick } from "@/lib/vrReport";
+import { carregarBaseCatalogo, normalizarCodigo } from "@/lib/catalogoProdutos";
 
-// Estoque atual por produto, vindo do relatorio estoque_dinamico da loja.
+// Estoque atual e codigo de barras por produto.
+// Fonte 1: relatorio estoque_dinamico (VR/ORACLE).
+// Fonte 2 (fallback, usada pelo WebSac): catalogo da loja
+// (produtos / produtos_precos / estoque_atual), que traz EAN e estoque.
 // Chave: codigo reduzido normalizado (sem zeros a esquerda) ou EAN.
 const chaveCod = (v: unknown) => {
   const s = String(v ?? "").trim();
   return s.replace(/^0+/, "") || s;
 };
 
+interface BaseProduto {
+  estoque: Map<string, number>;
+  ean: Map<string, string>;
+}
+
 function useEstoqueAtual(storeId: string, inicio: string, fim: string) {
-  const [mapa, setMapa] = useState<Map<string, number> | null>(null);
+  const [base, setBase] = useState<BaseProduto | null>(null);
 
   useEffect(() => {
     let vivo = true;
-    setMapa(null);
+    setBase(null);
     if (!storeId) return;
-    chamarRelatorio(storeId, "estoque_dinamico", { inicio, fim })
-      .then((r) => {
-        if (!vivo || r.erro) return;
-        const m = new Map<string, number>();
-        for (const l of r.dados as Record<string, unknown>[]) {
-          const estRaw = pick(l, "estoque_dinamico", "estoque", "estoque_atual");
-          const qtdC = num(pick(l, "qtd_compra", "quantidade_compra"));
-          const qtdV = num(pick(l, "qtd_venda", "quantidade_venda"));
-          const est =
-            estRaw !== undefined && String(estRaw).trim() !== "" ? num(estRaw) : qtdC - qtdV;
-          const cod = chaveCod(pick(l, "codigo", "cod_produto", "id_produto"));
-          const ean = String(pick(l, "codigo_barras", "ean", "barras") ?? "").trim();
-          if (cod) m.set(`c:${cod}`, est);
-          if (ean) m.set(`e:${ean}`, est);
+
+    (async () => {
+      const estoque = new Map<string, number>();
+      const ean = new Map<string, string>();
+
+      const r = await chamarRelatorio(storeId, "estoque_dinamico", { inicio, fim }).catch(() => null);
+      for (const l of (r?.dados ?? []) as Record<string, unknown>[]) {
+        const estRaw = pick(l, "estoque_dinamico", "estoque", "estoque_atual");
+        const qtdC = num(pick(l, "qtd_compra", "quantidade_compra"));
+        const qtdV = num(pick(l, "qtd_venda", "quantidade_venda"));
+        const est =
+          estRaw !== undefined && String(estRaw).trim() !== "" ? num(estRaw) : qtdC - qtdV;
+        const cod = chaveCod(pick(l, "codigo", "cod_produto", "id_produto"));
+        const cb = String(pick(l, "codigo_barras", "ean", "barras") ?? "").trim();
+        if (cod) estoque.set(`c:${cod}`, est);
+        if (cb) estoque.set(`e:${cb}`, est);
+        if (cod && cb) ean.set(cod, cb);
+      }
+
+      // Complementa (ou supre, no WebSac) com o catalogo da loja.
+      const catalogo = await carregarBaseCatalogo(storeId).catch(() => []);
+      for (const p of catalogo) {
+        const cod = normalizarCodigo(p.codigo);
+        const cb = String(p.ean ?? "").trim();
+        if (cod && cb && !ean.has(cod)) ean.set(cod, cb);
+        if (p.estoque !== null && p.estoque !== undefined) {
+          if (cod && !estoque.has(`c:${cod}`)) estoque.set(`c:${cod}`, p.estoque);
+          if (cb && !estoque.has(`e:${cb}`)) estoque.set(`e:${cb}`, p.estoque);
         }
-        setMapa(m);
-      })
-      .catch(() => {});
+      }
+
+      if (vivo) setBase({ estoque, ean });
+    })();
+
     return () => {
       vivo = false;
     };
   }, [storeId, inicio, fim]);
 
-  return mapa;
+  return base;
 }
+
 
 // ============================================================
 // Produtos sem giro / em queda no mes corrente
@@ -99,17 +125,26 @@ const ProdutosSemGiro = ({ storeId, ano, mes }: Props) => {
     d.setFullYear(d.getFullYear() - 1);
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-01`;
   }, [ano, mes]);
-  const estoqueMap = useEstoqueAtual(storeId, inicioEstoque, periodos[0].fim);
+  const baseProduto = useEstoqueAtual(storeId, inicioEstoque, periodos[0].fim);
   const estoqueDe = useCallback(
     (l: { codigo: string; ean: string }): number | null => {
-      if (!estoqueMap) return null;
+      if (!baseProduto) return null;
       const c = chaveCod(l.codigo);
-      if (c && estoqueMap.has(`c:${c}`)) return estoqueMap.get(`c:${c}`)!;
-      if (l.ean && estoqueMap.has(`e:${l.ean}`)) return estoqueMap.get(`e:${l.ean}`)!;
+      if (c && baseProduto.estoque.has(`c:${c}`)) return baseProduto.estoque.get(`c:${c}`)!;
+      if (l.ean && baseProduto.estoque.has(`e:${l.ean}`)) return baseProduto.estoque.get(`e:${l.ean}`)!;
       return null;
     },
-    [estoqueMap],
+    [baseProduto],
   );
+  const eanDe = useCallback(
+    (l: { codigo: string; ean: string }): string => {
+      if (l.ean) return l.ean;
+      const c = chaveCod(l.codigo);
+      return (c && baseProduto?.ean.get(c)) || "";
+    },
+    [baseProduto],
+  );
+
 
   const loading = atual.loading || m1.loading || m2.loading || m3.loading;
 
@@ -159,7 +194,7 @@ const ProdutosSemGiro = ({ storeId, ano, mes }: Props) => {
       const item: Item = {
         produto: ref.produto,
         codigo: ref.codigo || "",
-        ean: ref.ean || "",
+        ean: eanDe(ref),
         categoria: ref.n1 || "SEM DEPARTAMENTO",
         atualVol,
         mediaVol: media,
@@ -180,7 +215,7 @@ const ProdutosSemGiro = ({ storeId, ano, mes }: Props) => {
       semGiro: semGiro.filter((i) => i.categoria === nome).sort((a, b) => b.mediaVol - a.mediaVol),
       emQueda: emQueda.filter((i) => i.categoria === nome).sort((a, b) => b.queda - a.queda),
     }));
-  }, [atual.linhas, m1.linhas, m2.linhas, m3.linhas, estoqueDe]);
+  }, [atual.linhas, m1.linhas, m2.linhas, m3.linhas, estoqueDe, eanDe]);
 
   if (!storeId) return null;
 
