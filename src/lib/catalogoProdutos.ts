@@ -92,7 +92,9 @@ export async function carregarBaseCatalogo(storeId: string): Promise<CatalogoIte
     chamarRelatorio(storeId, "produtos", {}),
     chamarRelatorio(storeId, "produtos_precos", {}),
     chamarRelatorio(storeId, "estoque_atual", {}),
-    chamarRelatorio(storeId, "catalogo_produtos", {}),
+    // O WebSac exige busca/limite/offset nesse relatorio (sem eles a ponte
+    // devolve "parametro ausente" e a loja fica sem EAN/estoque).
+    chamarRelatorio(storeId, "catalogo_produtos", { busca: "", limite: 200000, offset: 0 }),
     chamarRelatorio(storeId, "ranking_produtos", { inicio: iso(inicio90), fim: iso(hoje) }),
   ]);
 
