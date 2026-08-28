@@ -482,9 +482,18 @@ const ChecklistTemperatura = () => {
                   <Input value={novo.turnos} onChange={(e) => setNovo({ ...novo, turnos: e.target.value })} />
                 </div>
               </div>
-              <button onClick={addEquipamento} className="mt-4 flex items-center gap-2 bg-gradient-gold text-primary-foreground font-body font-semibold px-5 py-2 rounded-lg hover:opacity-90">
-                <Plus className="w-4 h-4" /> Adicionar
-              </button>
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <button onClick={addEquipamento} className="flex items-center gap-2 bg-gradient-gold text-primary-foreground font-body font-semibold px-5 py-2 rounded-lg hover:opacity-90">
+                  <Plus className="w-4 h-4" /> Adicionar
+                </button>
+                <button
+                  onClick={carregarBasePadrao}
+                  disabled={seeding}
+                  className="flex items-center gap-2 border border-primary/40 text-primary font-body font-semibold px-5 py-2 rounded-lg hover:bg-primary/10 disabled:opacity-50"
+                >
+                  <Download className="w-4 h-4" /> {seeding ? "Carregando..." : "Carregar base padrão"}
+                </button>
+              </div>
             </div>
 
             <div className="space-y-3">
