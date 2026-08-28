@@ -194,7 +194,7 @@ const ProdutosSemGiro = ({ storeId, ano, mes }: Props) => {
       const item: Item = {
         produto: ref.produto,
         codigo: ref.codigo || "",
-        ean: ref.ean || "",
+        ean: eanDe(ref),
         categoria: ref.n1 || "SEM DEPARTAMENTO",
         atualVol,
         mediaVol: media,
