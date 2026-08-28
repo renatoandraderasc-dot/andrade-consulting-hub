@@ -23,7 +23,7 @@ interface Question {
 }
 
 interface ScoreState {
-  [questionId: string]: { score: number; photoUrl?: string };
+  [questionId: string]: { score: number; photoUrl?: string; photoPath?: string };
 }
 
 interface SubmissionRecord {
@@ -34,7 +34,7 @@ interface SubmissionRecord {
   user_name: string;
   total_score: number;
   max_score: number;
-  answers: { text: string; score: number; max_points: number }[];
+  answers: { text: string; score: number; max_points: number; photoUrl?: string | null }[];
 }
 
 const SCORE_OPTIONS = [5, 6, 7, 8, 9, 10];
@@ -132,8 +132,25 @@ const Checklist = () => {
     const subIds = subs.map((s) => s.id);
     const { data: allAnswers } = await supabase
       .from("checklist_answers")
-      .select("submission_id, question_id, score, checked, checklist_questions(text, points)")
+      .select("submission_id, question_id, score, checked, photo_url, checklist_questions(text, points)")
       .in("submission_id", subIds);
+
+    // Normaliza para caminho do bucket (dados antigos guardaram URL assinada expirada)
+    const toPath = (v?: string | null) => {
+      if (!v) return null;
+      const marker = "/checklist-photos/";
+      const i = v.indexOf(marker);
+      const raw = i >= 0 ? v.slice(i + marker.length) : v;
+      return raw.split("?")[0];
+    };
+    const paths = [...new Set((allAnswers || []).map((a: any) => toPath(a.photo_url)).filter(Boolean))] as string[];
+    const signedMap: Record<string, string> = {};
+    if (paths.length > 0) {
+      const { data: signed } = await supabase.storage.from("checklist-photos").createSignedUrls(paths, 3600);
+      (signed || []).forEach((s: any) => {
+        if (s.path && s.signedUrl) signedMap[s.path] = s.signedUrl;
+      });
+    }
 
     // Fetch store names
     const storeIds = [...new Set(subs.map((s) => s.store_id).filter(Boolean))] as string[];
@@ -179,6 +196,10 @@ const Checklist = () => {
           text: (a as any).checklist_questions?.text || "",
           score: (a as any).score > 0 ? (a as any).score : ((a as any).checked ? (a as any).checklist_questions?.points || 0 : 0),
           max_points: (a as any).checklist_questions?.points || 0,
+          photoUrl: (() => {
+            const p = toPath((a as any).photo_url);
+            return p ? signedMap[p] || null : null;
+          })(),
         })),
       };
     });
@@ -203,8 +224,15 @@ const Checklist = () => {
       const { data: signedData } = await supabase.storage.from("checklist-photos").createSignedUrl(data.path, 3600);
       setScoreState((prev) => ({
         ...prev,
-        [qId]: { ...prev[qId], score: prev[qId]?.score || 5, photoUrl: signedData?.signedUrl || data.path },
+        [qId]: {
+          ...prev[qId],
+          score: prev[qId]?.score || 5,
+          photoUrl: signedData?.signedUrl || undefined,
+          photoPath: data.path,
+        },
       }));
+    } else {
+      toast({ title: "Erro ao enviar foto", description: error?.message || "Tente novamente.", variant: "destructive" });
     }
     setUploading(null);
   };
@@ -216,6 +244,12 @@ const Checklist = () => {
     const unanswered = deptQs.filter((q) => !scoreState[q.id] || scoreState[q.id].score === 0);
     if (unanswered.length > 0) {
       toast({ title: "Preencha todos os itens", description: `${unanswered.length} item(ns) sem nota.`, variant: "destructive" });
+      return;
+    }
+
+    const semFoto = deptQs.filter((q) => q.requires_photo && !scoreState[q.id]?.photoPath);
+    if (semFoto.length > 0) {
+      toast({ title: "Foto obrigatória", description: `${semFoto.length} item(ns) exigem foto tirada na hora.`, variant: "destructive" });
       return;
     }
 
@@ -238,7 +272,7 @@ const Checklist = () => {
         question_id: q.id,
         checked: (scoreState[q.id]?.score || 0) >= 5,
         score: scoreState[q.id]?.score || 0,
-        photo_url: scoreState[q.id]?.photoUrl || null,
+        photo_url: scoreState[q.id]?.photoPath || null,
       }));
 
       const { error: ansError } = await supabase.from("checklist_answers").insert(answers);
@@ -416,19 +450,24 @@ const Checklist = () => {
                           </div>
                         </div>
                         {q.requires_photo && (
-                          <div className="ml-6 mt-3">
-                            {state.photoUrl ? (
+                          <div className="ml-6 mt-3 space-y-2">
+                            {state.photoUrl && (
                               <div className="flex items-center gap-3">
-                                <img src={state.photoUrl} alt="Foto" className="w-20 h-20 rounded-lg object-cover border border-border" />
+                                <img src={state.photoUrl} alt="Foto do item" className="w-20 h-20 rounded-lg object-cover border border-border" />
                                 <span className="text-green-400 font-body text-xs">Foto enviada ✓</span>
                               </div>
-                            ) : (
-                              <label className="flex items-center gap-2 cursor-pointer text-muted-foreground hover:text-primary font-body text-xs transition-colors">
-                                <Camera className="w-4 h-4" />
-                                {uploading === q.id ? "Enviando..." : "Enviar foto"}
-                                <input type="file" accept="image/*" className="sr-only" onChange={(e) => { const file = e.target.files?.[0]; if (file) handlePhotoUpload(q.id, file); }} />
-                              </label>
                             )}
+                            <label className="flex items-center gap-2 cursor-pointer text-muted-foreground hover:text-primary font-body text-xs transition-colors">
+                              <Camera className="w-4 h-4" />
+                              {uploading === q.id ? "Enviando..." : state.photoUrl ? "Tirar outra foto" : "Tirar foto (obrigatório)"}
+                              <input
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
+                                className="sr-only"
+                                onChange={(e) => { const file = e.target.files?.[0]; if (file) handlePhotoUpload(q.id, file); e.target.value = ""; }}
+                              />
+                            </label>
                           </div>
                         )}
                       </div>
@@ -466,10 +505,15 @@ const Checklist = () => {
                         </div>
                       </summary>
                       <div className="px-6 pb-4 border-t border-border">
+                        <p className="mt-3 font-body text-xs text-muted-foreground">
+                          Responsável pelas fotos: <span className="text-foreground font-semibold">{sub.user_name}</span> · Loja/Gerência:{" "}
+                          <span className="text-foreground font-semibold">{sub.store_name}</span>
+                        </p>
                         <table className="w-full mt-3">
                           <thead>
                             <tr className="text-xs font-body text-muted-foreground">
                               <th className="text-left py-2">Item</th>
+                              <th className="text-center py-2 w-24">Foto</th>
                               <th className="text-right py-2 w-24">Nota</th>
                             </tr>
                           </thead>
@@ -477,6 +521,15 @@ const Checklist = () => {
                             {sub.answers.map((a, i) => (
                               <tr key={i} className="border-t border-border/50">
                                 <td className="py-2 font-body text-sm text-foreground">{a.text}</td>
+                                <td className="py-2 text-center">
+                                  {a.photoUrl ? (
+                                    <a href={a.photoUrl} target="_blank" rel="noreferrer">
+                                      <img src={a.photoUrl} alt={`Foto de ${a.text}`} className="w-14 h-14 rounded-lg object-cover border border-border inline-block hover:opacity-80 transition-opacity" />
+                                    </a>
+                                  ) : (
+                                    <span className="text-muted-foreground text-xs">—</span>
+                                  )}
+                                </td>
                                 <td className="py-2 text-right">
                                   <span className={`font-display text-sm font-bold ${a.score >= 8 ? "text-green-400" : a.score >= 6 ? "text-yellow-400" : "text-red-400"}`}>
                                     {a.score}/{a.max_points}
