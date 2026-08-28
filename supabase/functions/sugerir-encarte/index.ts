@@ -230,14 +230,25 @@ Deno.serve(async (req) => {
     }
 
     // ---------- historico (nao repetir) ----------
+    const janelaDias = janelaSemanas * 7;
     const limite = new Date();
-    limite.setDate(limite.getDate() - janelaSemanas * 7);
+    limite.setDate(limite.getDate() - janelaDias);
     const { data: hist } = await service
       .from("encarte_historico_itens")
       .select("codigo, data_fim")
       .eq("store_id", store_id)
       .gte("data_fim", limite.toISOString().slice(0, 10));
+    const hoje = new Date();
+    const diasDesde = (d: string) => {
+      const t = Date.parse(d);
+      return isFinite(t) ? Math.floor((hoje.getTime() - t) / 86400000) : 9999;
+    };
     const usadosRecentes = new Set((hist ?? []).map((h: Row) => txt(h.codigo)));
+    const usadosMetadeJanela = new Set(
+      (hist ?? [])
+        .filter((h: Row) => diasDesde(txt(h.data_fim)) <= janelaDias / 2)
+        .map((h: Row) => txt(h.codigo)),
+    );
 
     // ---------- categorias liberadas para a faixa ----------
     const cats = (catsRes.data ?? []) as Row[];
@@ -274,18 +285,62 @@ Deno.serve(async (req) => {
 
     const pmzDe = (custo: number) => (cargaTrib > 0 ? custo / (1 - cargaTrib / 100) : custo);
 
-    // ---------- elegibilidade ----------
-    const elegiveis = base.filter((p) => {
-      if (p.venda_365d <= 0 && p.venda_90d <= 0 && p.venda_30d <= 0) return false;
-      if (p.estoque <= 0) return false;
-      if (usadosRecentes.has(p.codigo)) return false;
-      const margem = p.preco_venda > 0 ? ((p.preco_venda - pmzDe(p.custo)) / p.preco_venda) * 100 : -1;
-      if (margem < 0) return false;
+    // ---------- regras de capa & verso ----------
+    const { data: regrasPos } = await service
+      .from("encarte_posicao_efetiva").select("*").eq("store_id", store_id).order("prioridade");
+    const regras = (regrasPos ?? []) as Row[];
+    const regraPorCodigo = new Map<string, Row>();
+    const regraPorEan = new Map<string, Row>();
+    const regraPorCategoria = new Map<string, Row>();
+    const regraPorDep = new Map<string, Row>();
+    for (const r of regras) {
+      const tipo = txt(r.tipo_alvo);
+      if (tipo === "produto") {
+        if (txt(r.codigo)) regraPorCodigo.set(txt(r.codigo), r);
+        if (txt(r.ean)) regraPorEan.set(txt(r.ean), r);
+      } else if (tipo === "categoria" && txt(r.categoria_id)) {
+        regraPorCategoria.set(txt(r.categoria_id), r);
+      } else if (tipo === "departamento" && txt(r.departamento)) {
+        regraPorDep.set(norm(txt(r.departamento)), r);
+      }
+    }
+
+    type Prod2 = typeof base[number];
+    /** produto (peso 1) > categoria (2) > departamento (3) */
+    const regraDoProduto = (p: Prod2): Row | null => {
+      const c = catDe.get(p.codigo);
+      return regraPorCodigo.get(p.codigo)
+        ?? (p.ean ? regraPorEan.get(p.ean) ?? null : null)
+        ?? (c ? regraPorCategoria.get(txt(c.id)) ?? null : null)
+        ?? regraPorDep.get(norm(p.secao))
+        ?? (c ? regraPorDep.get(norm(txt(c.departamento))) ?? null : null)
+        ?? null;
+    };
+    const posicaoDoProduto = (p: Prod2): string => txt(regraDoProduto(p)?.posicao) || "ambos";
+    const aceitaFace = (p: Prod2, face: string) => {
+      const pos = posicaoDoProduto(p);
+      if (pos === "excluir") return false;
+      if (pos === "capa" || pos === "verso") return pos === face;
       return true;
-    });
+    };
+
+    // ---------- cortes configuraveis ----------
+    const vendaMinima = num(cfgLoja.data?.venda_minima_periodo);
+    const margemMinimaCfg = num(cfgLoja.data?.margem_minima_pct);
+    const margemMinima = margemMinimaCfg > 0 ? margemMinimaCfg : 0;
+
+    const margemDe = (p: Prod2) =>
+      p.preco_venda > 0 ? ((p.preco_venda - pmzDe(p.custo)) / p.preco_venda) * 100 : -1;
+    const teveVenda = (p: Prod2) =>
+      (p.venda_365d > vendaMinima) || (p.venda_90d > vendaMinima) || (p.venda_30d > vendaMinima);
+
+    const semEanOuPreco = base.filter((p) => !p.ean || p.preco_venda <= 0).length;
+    const poolBase = base.filter((p) => p.ean && p.preco_venda > 0 && posicaoDoProduto(p) !== "excluir");
+    const excluidos = base.length - poolBase.length - semEanOuPreco;
+    console.log(`[sugerir-encarte] loja=${store_id} linhas_ponte=${baseBruta.length} pool=${poolBase.length} sem_ean_ou_preco=${semEanOuPreco} excluidos_por_regra=${excluidos}`);
 
     const janelaGiro = Number(reg.janela_giro_dias ?? 90);
-    const giroDe = (p: Prod) =>
+    const giroDe = (p: Prod2) =>
       janelaGiro <= 30 ? p.venda_30d : janelaGiro <= 90 ? (p.venda_90d || p.venda_30d) : (p.venda_365d || p.venda_90d);
 
     // ---------- montagem por slot ----------
@@ -293,8 +348,9 @@ Deno.serve(async (req) => {
     const usadosCategoriaFace = new Set<string>();
     const itens: Row[] = [];
     const alternativasPorSlot: Record<string, Row[]> = {};
+    const diagnostico: Row[] = [];
 
-    const avaliar = (p: Prod, candidatos: Prod[]) => {
+    const avaliar = (p: Prod2, candidatos: Prod2[]) => {
       const giros = candidatos.map(giroDe);
       const folgas = candidatos.map((c) => (c.preco_venda - pmzDe(c.custo)) / (c.preco_venda || 1));
       const cobs = candidatos.map((c) => c.cobertura_dias);
@@ -317,7 +373,7 @@ Deno.serve(async (req) => {
       return { score, componentes: { giro, folga_margem: folga, competitividade, estoque }, conc };
     };
 
-    const precificar = (p: Prod, concPreco: number | null) => {
+    const precificar = (p: Prod2, concPreco: number | null) => {
       const pmz = pmzDe(p.custo);
       const baseP = p.preco_venda * (1 - agvPct / 100);
       const piso = pmz * (1 + num(reg.margem_minima_pct) / 100);
@@ -327,31 +383,115 @@ Deno.serve(async (req) => {
       return { pmz, preco: arredondar(preco) };
     };
 
-    for (const slot of slots) {
+    const grupoDaCategoria = (nomeCat: string): Set<string> => {
+      const g = new Set<string>();
+      for (const p of poolBase) {
+        const c = catDe.get(p.codigo);
+        if (c && norm(txt(c.nome)) === norm(nomeCat) && p.grupo) g.add(norm(p.grupo));
+      }
+      return g;
+    };
+
+    const NIVEIS = [
+      "todos os filtros",
+      "janela de repeticao reduzida pela metade",
+      "ignorando a janela de repeticao",
+      "margem minima reduzida em 3 pontos",
+      "ignorando estoque",
+      "subindo da categoria para o grupo mercadologico",
+      "qualquer categoria do mesmo departamento e faixa",
+      "qualquer produto do departamento com venda no periodo",
+    ];
+
+    const montarSlot = (slot: Row) => {
       const face = txt(slot.face);
       const dep = norm(txt(slot.departamento));
       const catFixa = txt(slot.categoria);
-      let candidatos = elegiveis.filter((p) => {
-        if (usadosCodigos.has(p.codigo)) return false;
-        const c = catDe.get(p.codigo);
-        if (!c) return false;
-        if (catFixa && norm(txt(c.nome)) !== norm(catFixa)) return false;
-        if (dep) {
-          const bate = norm(p.secao).includes(dep) || dep.includes(norm(p.secao)) ||
-            norm(txt(c.departamento)) === dep;
-          if (!bate) return false;
+      const gruposDaCat = catFixa ? grupoDaCategoria(catFixa) : new Set<string>();
+
+      const bateDepartamento = (p: Prod2, c: Row | null) => {
+        if (!dep) return true;
+        return norm(p.secao).includes(dep) || dep.includes(norm(p.secao)) ||
+          (!!c && norm(txt(c.departamento)) === dep);
+      };
+
+      const funil = {
+        candidatos_brutos: 0, apos_filtro_venda: 0, apos_filtro_margem: 0,
+        apos_filtro_historico: 0, apos_filtro_estoque: 0, apos_dedupe: 0,
+      };
+
+      const filtrar = (nivel: number, registrar: boolean): Prod2[] => {
+        const saida: Prod2[] = [];
+        for (const p of poolBase) {
+          const c = catDe.get(p.codigo) ?? null;
+          // escopo da categoria conforme o nivel
+          let noEscopo: boolean;
+          if (nivel <= 4) {
+            noEscopo = !!c && (!catFixa || norm(txt(c.nome)) === norm(catFixa)) && bateDepartamento(p, c);
+          } else if (nivel === 5) {
+            noEscopo = bateDepartamento(p, c) && (!catFixa || (!!p.grupo && gruposDaCat.has(norm(p.grupo))));
+          } else if (nivel === 6) {
+            noEscopo = !!c && bateDepartamento(p, c);
+          } else {
+            noEscopo = bateDepartamento(p, c);
+          }
+          if (!noEscopo) continue;
+          if (registrar) funil.candidatos_brutos++;
+
+          if (!teveVenda(p)) continue;
+          if (registrar) funil.apos_filtro_venda++;
+
+          const margemMin = nivel >= 3 ? margemMinima - 3 : margemMinima;
+          if (margemDe(p) < margemMin) continue;
+          if (registrar) funil.apos_filtro_margem++;
+
+          const bloqueio = nivel === 0 ? usadosRecentes : nivel === 1 ? usadosMetadeJanela : null;
+          if (bloqueio?.has(p.codigo)) continue;
+          if (registrar) funil.apos_filtro_historico++;
+
+          if (nivel < 4 && p.estoque <= 0) continue;
+          if (registrar) funil.apos_filtro_estoque++;
+
+          if (usadosCodigos.has(p.codigo)) continue;
+          if (!aceitaFace(p, face)) continue;
+          if (nivel <= 2 && c && usadosCategoriaFace.has(`${face}|${txt(c.nome)}`)) continue;
+          if (registrar) funil.apos_dedupe++;
+
+          saida.push(p);
         }
-        if (usadosCategoriaFace.has(`${face}|${txt(c.nome)}`)) return false;
-        return true;
-      });
-      if (candidatos.length === 0) {
-        alternativasPorSlot[`${face}|${slot.posicao}`] = [];
+        return saida;
+      };
+
+      let candidatos: Prod2[] = [];
+      let nivel = 0;
+      for (; nivel < NIVEIS.length; nivel++) {
+        candidatos = filtrar(nivel, nivel === 0);
+        if (candidatos.length) break;
+      }
+
+      const chave = `${face}|${slot.posicao}`;
+      if (!candidatos.length) {
+        alternativasPorSlot[chave] = [];
+        const motivo = funil.candidatos_brutos === 0
+          ? "nenhum produto da loja casa com a categoria/departamento do slot"
+          : funil.apos_filtro_venda === 0
+            ? "os produtos da categoria nao tiveram venda no periodo"
+            : funil.apos_filtro_margem === 0
+              ? "os produtos da categoria estao abaixo da margem minima"
+              : "todos os candidatos ja foram usados em outro slot";
+        diagnostico.push({
+          slot: chave, posicao: slot.posicao, face,
+          departamento: txt(slot.departamento), faixa: txt(slot.tipo_faixa),
+          categoria: catFixa || null, ...funil,
+          escolhido: null, nivel_relaxamento: null, motivo, status: "pendente",
+        });
         itens.push({
           face, posicao: slot.posicao, tipo_faixa: txt(slot.tipo_faixa),
           departamento: txt(slot.departamento), categoria: catFixa || null,
-          codigo: null, descricao: null, alerta: "sem candidato disponivel para este slot",
+          codigo: null, descricao: null, nivel_relaxamento: 0,
+          motivo_escolha: motivo, alerta: `PENDENTE — ${motivo}`,
         });
-        continue;
+        return;
       }
 
       const avaliados = candidatos
@@ -359,7 +499,7 @@ Deno.serve(async (req) => {
         .sort((a, b) => b.score - a.score);
       const melhor = avaliados[0];
       const p = melhor.p;
-      const cat = catDe.get(p.codigo)!;
+      const cat = catDe.get(p.codigo) ?? null;
       const concPreco = melhor.conc?.preco ?? null;
       const { pmz, preco } = precificar(p, concPreco);
       const margemOferta = preco > 0 ? ((preco - pmz) / preco) * 100 : 0;
@@ -374,9 +514,9 @@ Deno.serve(async (req) => {
       }
 
       usadosCodigos.add(p.codigo);
-      usadosCategoriaFace.add(`${face}|${txt(cat.nome)}`);
+      if (cat) usadosCategoriaFace.add(`${face}|${txt(cat.nome)}`);
 
-      alternativasPorSlot[`${face}|${slot.posicao}`] = avaliados.slice(0, 10).map((a) => {
+      alternativasPorSlot[chave] = avaliados.slice(0, 10).map((a) => {
         const cp = a.conc?.preco ?? null;
         const pr = precificar(a.p, cp);
         return {
@@ -390,9 +530,21 @@ Deno.serve(async (req) => {
         };
       });
 
+      const motivoEscolha = nivel === 0
+        ? "preenchido com todos os filtros"
+        : `preenchido ${NIVEIS[nivel]}`;
+
+      diagnostico.push({
+        slot: chave, posicao: slot.posicao, face,
+        departamento: txt(slot.departamento), faixa: txt(slot.tipo_faixa),
+        categoria: txt(cat?.nome ?? catFixa), ...funil,
+        escolhido: p.codigo, nivel_relaxamento: nivel, motivo: motivoEscolha,
+        status: nivel === 0 ? "ok" : "relaxado",
+      });
+
       itens.push({
         face, posicao: slot.posicao, tipo_faixa: txt(slot.tipo_faixa),
-        departamento: txt(slot.departamento), categoria: txt(cat.nome),
+        departamento: txt(slot.departamento), categoria: txt(cat?.nome ?? catFixa),
         codigo: p.codigo, descricao: p.descricao, ean: p.ean,
         custo: p.custo, pmz,
         venda_atual: p.preco_venda,
@@ -401,6 +553,8 @@ Deno.serve(async (req) => {
         estoque: p.estoque, giro_90d: p.venda_90d, volume_30d: p.volume_30d,
         score: melhor.score,
         origem: "sugerido",
+        nivel_relaxamento: nivel,
+        motivo_escolha: motivoEscolha,
         motivo: {
           ...melhor.componentes,
           preco_concorrente: concPreco,
@@ -411,8 +565,86 @@ Deno.serve(async (req) => {
         },
         alerta,
       });
+    };
+
+    // ---------- 1) produtos fixos ----------
+    const slotsLivres = [...slots];
+    const fixos = regras
+      .filter((r) => txt(r.tipo_alvo) === "produto" && r.fixo === true && txt(r.posicao) !== "excluir")
+      .sort((a, b) => num(a.prioridade) - num(b.prioridade));
+    const pendenciasFixos: Row[] = [];
+
+    for (const r of fixos) {
+      const cod = txt(r.codigo);
+      const prod = poolBase.find((p) => p.codigo === cod || (txt(r.ean) && p.ean === txt(r.ean)));
+      if (!prod) {
+        pendenciasFixos.push({ regra: cod, motivo: "produto nao encontrado na base da loja" });
+        continue;
+      }
+      const posRegra = txt(r.posicao);
+      const faixaRegra = txt(r.tipo_faixa);
+      const compativel = (s: Row) => {
+        const face = txt(s.face);
+        if (posRegra === "capa" || posRegra === "verso") { if (face !== posRegra) return false; }
+        if (faixaRegra && norm(txt(s.tipo_faixa)) !== norm(faixaRegra)) return false;
+        const dep = norm(txt(s.departamento));
+        if (dep && !(norm(prod.secao).includes(dep) || dep.includes(norm(prod.secao)))) return false;
+        return true;
+      };
+      const preferido = r.slot_preferido != null
+        ? slotsLivres.find((s) => num(s.posicao) === num(r.slot_preferido) && compativel(s))
+        : null;
+      const slot = preferido ?? slotsLivres.find(compativel);
+      if (!slot) {
+        pendenciasFixos.push({
+          regra: cod,
+          motivo: `${txt(r.descricao) || cod} esta fixado como ${posRegra}, mas nao ha slot compativel livre`,
+        });
+        continue;
+      }
+      slotsLivres.splice(slotsLivres.indexOf(slot), 1);
+
+      const conc = concorrentePorEan.get(prod.ean);
+      const { pmz, preco } = precificar(prod, conc?.preco ?? null);
+      usadosCodigos.add(prod.codigo);
+      const cat = catDe.get(prod.codigo) ?? null;
+      if (cat) usadosCategoriaFace.add(`${txt(slot.face)}|${txt(cat.nome)}`);
+      const chave = `${txt(slot.face)}|${slot.posicao}`;
+      alternativasPorSlot[chave] = [];
+      diagnostico.push({
+        slot: chave, posicao: slot.posicao, face: txt(slot.face),
+        departamento: txt(slot.departamento), faixa: txt(slot.tipo_faixa),
+        categoria: txt(cat?.nome ?? ""), candidatos_brutos: 1, apos_filtro_venda: 1,
+        apos_filtro_margem: 1, apos_filtro_historico: 1, apos_filtro_estoque: 1, apos_dedupe: 1,
+        escolhido: prod.codigo, nivel_relaxamento: 0,
+        motivo: "fixado na aba Capa & Verso", status: "fixo",
+      });
+      itens.push({
+        face: txt(slot.face), posicao: slot.posicao, tipo_faixa: txt(slot.tipo_faixa),
+        departamento: txt(slot.departamento), categoria: txt(cat?.nome ?? ""),
+        codigo: prod.codigo, descricao: prod.descricao, ean: prod.ean,
+        custo: prod.custo, pmz, venda_atual: prod.preco_venda,
+        margem_atual: prod.preco_venda > 0 ? ((prod.preco_venda - pmz) / prod.preco_venda) * 100 : 0,
+        preco_oferta: preco, margem_oferta: preco > 0 ? ((preco - pmz) / preco) * 100 : 0,
+        estoque: prod.estoque, giro_90d: prod.venda_90d, volume_30d: prod.volume_30d,
+        score: null, origem: "fixo", travado: true, regra_posicao_id: r.id,
+        nivel_relaxamento: 0, motivo_escolha: "fixado na aba Capa & Verso",
+        motivo: { fixo: true }, alerta: null,
+      });
     }
 
+    // ---------- 2) sugestao normal nos slots restantes ----------
+    for (const slot of slotsLivres) montarSlot(slot);
+
+    itens.sort((a, b) =>
+      txt(a.face) === txt(b.face) ? num(a.posicao) - num(b.posicao) : txt(a.face) === "capa" ? -1 : 1);
+
+    const totalItensCfg = Number(cfgLoja.data?.total_itens ?? 0);
+    const avisosConfig: string[] = [];
+    if (totalItensCfg && totalItensCfg !== slots.length) {
+      avisosConfig.push(`o modelo tem ${slots.length} slots e a configuração da loja pede ${totalItensCfg} itens`);
+    }
+    for (const p of pendenciasFixos) avisosConfig.push(txt(p.motivo));
     // ---------- persistencia ----------
     const nome = `${txt(cal.data?.nome) || "Encarte"} — ${data_inicio ?? ""} a ${data_fim ?? ""}`;
     const { data: gerado, error: errG } = await service

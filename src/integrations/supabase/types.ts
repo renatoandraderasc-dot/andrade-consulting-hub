@@ -668,12 +668,14 @@ export type Database = {
           fecha_domingo: boolean
           id: string
           janela_nao_repetir_semanas: number
+          margem_minima_pct: number
           split_capa: number
           split_verso: number
           store_id: string
           total_itens: number
           updated_at: string
           variacao_max_pct: number
+          venda_minima_periodo: number
         }
         Insert: {
           carga_tributaria_pct?: number
@@ -681,12 +683,14 @@ export type Database = {
           fecha_domingo?: boolean
           id?: string
           janela_nao_repetir_semanas?: number
+          margem_minima_pct?: number
           split_capa?: number
           split_verso?: number
           store_id: string
           total_itens?: number
           updated_at?: string
           variacao_max_pct?: number
+          venda_minima_periodo?: number
         }
         Update: {
           carga_tributaria_pct?: number
@@ -694,12 +698,14 @@ export type Database = {
           fecha_domingo?: boolean
           id?: string
           janela_nao_repetir_semanas?: number
+          margem_minima_pct?: number
           split_capa?: number
           split_verso?: number
           store_id?: string
           total_itens?: number
           updated_at?: string
           variacao_max_pct?: number
+          venda_minima_periodo?: number
         }
         Relationships: [
           {
@@ -719,7 +725,9 @@ export type Database = {
           criado_por: string | null
           data_fim: string | null
           data_inicio: string | null
+          diagnostico: Json | null
           id: string
+          lista_manual_id: string | null
           modelo_id: string | null
           nome: string
           status: string
@@ -734,7 +742,9 @@ export type Database = {
           criado_por?: string | null
           data_fim?: string | null
           data_inicio?: string | null
+          diagnostico?: Json | null
           id?: string
+          lista_manual_id?: string | null
           modelo_id?: string | null
           nome: string
           status?: string
@@ -749,7 +759,9 @@ export type Database = {
           criado_por?: string | null
           data_fim?: string | null
           data_inicio?: string | null
+          diagnostico?: Json | null
           id?: string
+          lista_manual_id?: string | null
           modelo_id?: string | null
           nome?: string
           status?: string
@@ -763,6 +775,13 @@ export type Database = {
             columns: ["calendario_id"]
             isOneToOne: false
             referencedRelation: "encarte_calendario"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "encarte_gerado_lista_manual_id_fkey"
+            columns: ["lista_manual_id"]
+            isOneToOne: false
+            referencedRelation: "encarte_manual_lista"
             referencedColumns: ["id"]
           },
           {
@@ -802,12 +821,15 @@ export type Database = {
           margem_atual: number | null
           margem_oferta: number | null
           motivo: Json | null
+          motivo_escolha: string | null
+          nivel_relaxamento: number
           observacao: string | null
           ordem: number
           origem: string
           pmz: number | null
           posicao: number | null
           preco_oferta: number | null
+          regra_posicao_id: string | null
           score: number | null
           tipo_faixa: string | null
           travado: boolean
@@ -834,12 +856,15 @@ export type Database = {
           margem_atual?: number | null
           margem_oferta?: number | null
           motivo?: Json | null
+          motivo_escolha?: string | null
+          nivel_relaxamento?: number
           observacao?: string | null
           ordem?: number
           origem?: string
           pmz?: number | null
           posicao?: number | null
           preco_oferta?: number | null
+          regra_posicao_id?: string | null
           score?: number | null
           tipo_faixa?: string | null
           travado?: boolean
@@ -866,12 +891,15 @@ export type Database = {
           margem_atual?: number | null
           margem_oferta?: number | null
           motivo?: Json | null
+          motivo_escolha?: string | null
+          nivel_relaxamento?: number
           observacao?: string | null
           ordem?: number
           origem?: string
           pmz?: number | null
           posicao?: number | null
           preco_oferta?: number | null
+          regra_posicao_id?: string | null
           score?: number | null
           tipo_faixa?: string | null
           travado?: boolean
@@ -892,6 +920,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "encarte_historico_itens"
             referencedColumns: ["encarte_id"]
+          },
+          {
+            foreignKeyName: "encarte_item_regra_posicao_id_fkey"
+            columns: ["regra_posicao_id"]
+            isOneToOne: false
+            referencedRelation: "encarte_posicao_efetiva"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "encarte_item_regra_posicao_id_fkey"
+            columns: ["regra_posicao_id"]
+            isOneToOne: false
+            referencedRelation: "encarte_posicao_regra"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -942,6 +984,121 @@ export type Database = {
             columns: ["produto_id"]
             isOneToOne: false
             referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      encarte_manual_item: {
+        Row: {
+          codigo: string | null
+          codigo_digitado: string | null
+          created_at: string
+          custo: number | null
+          descricao: string | null
+          descricao_encarte: string | null
+          ean: string | null
+          encontrado: boolean
+          estoque: number | null
+          grupo: string | null
+          id: string
+          lista_id: string
+          margem_encarte_pct: number | null
+          margem_pct: number | null
+          ordem: number
+          posicao: string
+          preco_encarte: number | null
+          preco_venda: number | null
+          secao: string | null
+          snapshot: Json | null
+        }
+        Insert: {
+          codigo?: string | null
+          codigo_digitado?: string | null
+          created_at?: string
+          custo?: number | null
+          descricao?: string | null
+          descricao_encarte?: string | null
+          ean?: string | null
+          encontrado?: boolean
+          estoque?: number | null
+          grupo?: string | null
+          id?: string
+          lista_id: string
+          margem_encarte_pct?: number | null
+          margem_pct?: number | null
+          ordem?: number
+          posicao?: string
+          preco_encarte?: number | null
+          preco_venda?: number | null
+          secao?: string | null
+          snapshot?: Json | null
+        }
+        Update: {
+          codigo?: string | null
+          codigo_digitado?: string | null
+          created_at?: string
+          custo?: number | null
+          descricao?: string | null
+          descricao_encarte?: string | null
+          ean?: string | null
+          encontrado?: boolean
+          estoque?: number | null
+          grupo?: string | null
+          id?: string
+          lista_id?: string
+          margem_encarte_pct?: number | null
+          margem_pct?: number | null
+          ordem?: number
+          posicao?: string
+          preco_encarte?: number | null
+          preco_venda?: number | null
+          secao?: string | null
+          snapshot?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "encarte_manual_item_lista_id_fkey"
+            columns: ["lista_id"]
+            isOneToOne: false
+            referencedRelation: "encarte_manual_lista"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      encarte_manual_lista: {
+        Row: {
+          created_at: string
+          criado_por: string | null
+          data_referencia: string
+          id: string
+          nome: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          criado_por?: string | null
+          data_referencia?: string
+          id?: string
+          nome: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          criado_por?: string | null
+          data_referencia?: string
+          id?: string
+          nome?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "encarte_manual_lista_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
         ]
@@ -1018,6 +1175,87 @@ export type Database = {
             columns: ["modelo_id"]
             isOneToOne: false
             referencedRelation: "encarte_modelo"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      encarte_posicao_regra: {
+        Row: {
+          ativo: boolean
+          categoria_id: string | null
+          codigo: string | null
+          created_at: string
+          departamento: string | null
+          descricao: string | null
+          ean: string | null
+          fixo: boolean
+          id: string
+          observacao: string | null
+          posicao: string
+          prioridade: number
+          slot_preferido: number | null
+          store_id: string
+          tipo_alvo: string
+          tipo_faixa: string | null
+          updated_at: string
+          vigencia_fim: string | null
+          vigencia_inicio: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          categoria_id?: string | null
+          codigo?: string | null
+          created_at?: string
+          departamento?: string | null
+          descricao?: string | null
+          ean?: string | null
+          fixo?: boolean
+          id?: string
+          observacao?: string | null
+          posicao?: string
+          prioridade?: number
+          slot_preferido?: number | null
+          store_id: string
+          tipo_alvo?: string
+          tipo_faixa?: string | null
+          updated_at?: string
+          vigencia_fim?: string | null
+          vigencia_inicio?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          categoria_id?: string | null
+          codigo?: string | null
+          created_at?: string
+          departamento?: string | null
+          descricao?: string | null
+          ean?: string | null
+          fixo?: boolean
+          id?: string
+          observacao?: string | null
+          posicao?: string
+          prioridade?: number
+          slot_preferido?: number | null
+          store_id?: string
+          tipo_alvo?: string
+          tipo_faixa?: string | null
+          updated_at?: string
+          vigencia_fim?: string | null
+          vigencia_inicio?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "encarte_posicao_regra_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "encarte_categoria"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "encarte_posicao_regra_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
         ]
@@ -2516,6 +2754,90 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "encarte_gerado_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      encarte_posicao_efetiva: {
+        Row: {
+          ativo: boolean | null
+          categoria_id: string | null
+          codigo: string | null
+          created_at: string | null
+          departamento: string | null
+          descricao: string | null
+          ean: string | null
+          fixo: boolean | null
+          id: string | null
+          observacao: string | null
+          peso: number | null
+          posicao: string | null
+          prioridade: number | null
+          slot_preferido: number | null
+          store_id: string | null
+          tipo_alvo: string | null
+          tipo_faixa: string | null
+          updated_at: string | null
+          vigencia_fim: string | null
+          vigencia_inicio: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          categoria_id?: string | null
+          codigo?: string | null
+          created_at?: string | null
+          departamento?: string | null
+          descricao?: string | null
+          ean?: string | null
+          fixo?: boolean | null
+          id?: string | null
+          observacao?: string | null
+          peso?: never
+          posicao?: string | null
+          prioridade?: number | null
+          slot_preferido?: number | null
+          store_id?: string | null
+          tipo_alvo?: string | null
+          tipo_faixa?: string | null
+          updated_at?: string | null
+          vigencia_fim?: string | null
+          vigencia_inicio?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          categoria_id?: string | null
+          codigo?: string | null
+          created_at?: string | null
+          departamento?: string | null
+          descricao?: string | null
+          ean?: string | null
+          fixo?: boolean | null
+          id?: string | null
+          observacao?: string | null
+          peso?: never
+          posicao?: string | null
+          prioridade?: number | null
+          slot_preferido?: number | null
+          store_id?: string | null
+          tipo_alvo?: string | null
+          tipo_faixa?: string | null
+          updated_at?: string | null
+          vigencia_fim?: string | null
+          vigencia_inicio?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "encarte_posicao_regra_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "encarte_categoria"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "encarte_posicao_regra_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
