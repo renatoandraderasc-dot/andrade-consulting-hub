@@ -4,7 +4,7 @@ import { Search, Download, RefreshCw, ChevronLeft, ChevronRight } from "lucide-r
 import * as XLSX from "xlsx";
 import { salvarWorkbook } from "@/lib/exportBranding";
 import { supabase } from "@/integrations/supabase/client";
-import { chamarRelatorio, avisoRelatorio, pick as col } from "@/lib/vrReport";
+import { ALIAS_EAN, chamarRelatorio, avisoRelatorio, pick as col } from "@/lib/vrReport";
 import { carregarBaseCatalogo, filtrarCatalogo, type CatalogoItem } from "@/lib/catalogoProdutos";
 import { useAuth } from "@/hooks/useAuth";
 import ClientLayout from "@/components/ClientLayout";
@@ -104,7 +104,7 @@ const Catalogo = () => {
       custo: col(l, "custo", "preco_custo") ?? null,
       preco_venda: col(l, "preco_venda", "preco", "venda") ?? null,
       preco_oferta: col(l, "preco_oferta", "oferta") ?? null,
-      codigo_barras: (col(l, "codigo_barras", "ean", "barras") as string) ?? null,
+      codigo_barras: (col(l, ...ALIAS_EAN) as string) ?? null,
       m1_departamento: (col(l, "m1_departamento", "departamento", "nivel1", "secao") as string) ?? null,
       m2_grupo: (col(l, "m2_grupo", "grupo", "nivel2", "categoria") as string) ?? null,
       m3_subgrupo: (col(l, "m3_subgrupo", "subgrupo", "nivel3") as string) ?? null,
