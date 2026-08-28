@@ -554,7 +554,16 @@ const AnaliseAnual = () => {
                 Faturamento, lucro, margem e volume de {anoIni} a {anoFim} — dados da loja logada
               </p>
             </div>
+            <Button variant="outline" size="sm" disabled={loading || !rows.length} onClick={exportarExcel}>
+              <FileSpreadsheet className="w-4 h-4 mr-2" />
+              Excel
+            </Button>
+            <Button variant="outline" size="sm" disabled={loading || !rows.length} onClick={exportarPdf}>
+              <FileText className="w-4 h-4 mr-2" />
+              PDF
+            </Button>
             <Button variant="outline" size="sm" disabled={loading || !storeId} onClick={() => storeId && carregar(storeId)}>
+
               <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
               Atualizar
             </Button>
