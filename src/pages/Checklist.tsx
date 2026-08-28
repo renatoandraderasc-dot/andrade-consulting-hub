@@ -247,6 +247,12 @@ const Checklist = () => {
       return;
     }
 
+    const semFoto = deptQs.filter((q) => q.requires_photo && !scoreState[q.id]?.photoPath);
+    if (semFoto.length > 0) {
+      toast({ title: "Foto obrigatória", description: `${semFoto.length} item(ns) exigem foto tirada na hora.`, variant: "destructive" });
+      return;
+    }
+
     setSubmitting(true);
     try {
       const { data: submission, error: subError } = await supabase
