@@ -505,10 +505,15 @@ const Checklist = () => {
                         </div>
                       </summary>
                       <div className="px-6 pb-4 border-t border-border">
+                        <p className="mt-3 font-body text-xs text-muted-foreground">
+                          Responsável pelas fotos: <span className="text-foreground font-semibold">{sub.user_name}</span> · Loja/Gerência:{" "}
+                          <span className="text-foreground font-semibold">{sub.store_name}</span>
+                        </p>
                         <table className="w-full mt-3">
                           <thead>
                             <tr className="text-xs font-body text-muted-foreground">
                               <th className="text-left py-2">Item</th>
+                              <th className="text-center py-2 w-24">Foto</th>
                               <th className="text-right py-2 w-24">Nota</th>
                             </tr>
                           </thead>
@@ -516,6 +521,15 @@ const Checklist = () => {
                             {sub.answers.map((a, i) => (
                               <tr key={i} className="border-t border-border/50">
                                 <td className="py-2 font-body text-sm text-foreground">{a.text}</td>
+                                <td className="py-2 text-center">
+                                  {a.photoUrl ? (
+                                    <a href={a.photoUrl} target="_blank" rel="noreferrer">
+                                      <img src={a.photoUrl} alt={`Foto de ${a.text}`} className="w-14 h-14 rounded-lg object-cover border border-border inline-block hover:opacity-80 transition-opacity" />
+                                    </a>
+                                  ) : (
+                                    <span className="text-muted-foreground text-xs">—</span>
+                                  )}
+                                </td>
                                 <td className="py-2 text-right">
                                   <span className={`font-display text-sm font-bold ${a.score >= 8 ? "text-green-400" : a.score >= 6 ? "text-yellow-400" : "text-red-400"}`}>
                                     {a.score}/{a.max_points}
