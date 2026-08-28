@@ -45,6 +45,34 @@ interface Registro {
 const hoje = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
 const TURNOS_PADRAO = ["Manhã", "Tarde", "Noite"];
 
+// Base padrão de equipamentos com faixas típicas de temperatura
+const BASE_EQUIPAMENTOS: { nome: string; tipo: string; min: number; max: number }[] = [
+  { nome: "Sorvete", tipo: "Freezer", min: -24, max: -18 },
+  { nome: "Danone", tipo: "Freezer", min: -24, max: -18 },
+  { nome: "Ilha Carnes", tipo: "Freezer", min: -22, max: -16 },
+  { nome: "Ilha Carnes 2", tipo: "Freezer", min: -22, max: -16 },
+  { nome: "Ilha Batata 2", tipo: "Freezer", min: -22, max: -16 },
+  { nome: "Ilha Lasanha 3", tipo: "Freezer", min: -22, max: -16 },
+  { nome: "Gelo", tipo: "Freezer", min: -22, max: -14 },
+  { nome: "Refrigerador", tipo: "Refrigerador", min: 0, max: 7 },
+  { nome: "Red", tipo: "Refrigerador", min: 0, max: 6 },
+  { nome: "Monster", tipo: "Refrigerador", min: 0, max: 6 },
+  { nome: "Coca 1", tipo: "Refrigerador", min: 0, max: 6 },
+  { nome: "Coca 2", tipo: "Refrigerador", min: 0, max: 6 },
+  { nome: "Coca 3", tipo: "Refrigerador", min: 0, max: 6 },
+  { nome: "Coca 4", tipo: "Refrigerador", min: 0, max: 6 },
+  { nome: "Coca 5", tipo: "Refrigerador", min: 0, max: 6 },
+  { nome: "Cerveja", tipo: "Refrigerador", min: -2, max: 4 },
+  { nome: "Auto Host", tipo: "Refrigerador", min: 0, max: 7 },
+  { nome: "Padaria 1", tipo: "Refrigerador", min: 0, max: 7 },
+  { nome: "Padaria 2", tipo: "Refrigerador", min: 0, max: 7 },
+  { nome: "Balcão 1", tipo: "Balcão Refrigerado", min: 0, max: 5 },
+  { nome: "Balcão 2", tipo: "Balcão Refrigerado", min: 0, max: 5 },
+  { nome: "Câmara 1", tipo: "Câmara Fria", min: -2, max: 4 },
+  { nome: "Câmara 2", tipo: "Câmara Fria", min: -2, max: 4 },
+  { nome: "Câmara 3", tipo: "Câmara Fria", min: -2, max: 4 },
+];
+
 const ChecklistTemperatura = () => {
   const { user, isAdmin } = useAuth();
   const { toast } = useToast();
@@ -175,6 +203,37 @@ const ChecklistTemperatura = () => {
 
   const deleteEquipamento = async (id: string) => {
     await supabase.from("temperatura_equipamentos").delete().eq("id", id);
+    carregar();
+  };
+
+  const [seeding, setSeeding] = useState(false);
+  const carregarBasePadrao = async () => {
+    if (!storeId) return;
+    setSeeding(true);
+    const existentes = new Set(equipamentos.map((e) => e.nome.trim().toLowerCase()));
+    const novos = BASE_EQUIPAMENTOS.filter((b) => !existentes.has(b.nome.toLowerCase()));
+    if (novos.length === 0) {
+      toast({ title: "Base padrão já carregada" });
+      setSeeding(false);
+      return;
+    }
+    const { error } = await supabase.from("temperatura_equipamentos").insert(
+      novos.map((b, i) => ({
+        store_id: storeId,
+        nome: b.nome,
+        tipo: b.tipo,
+        temp_min: b.min,
+        temp_max: b.max,
+        turnos: TURNOS_PADRAO,
+        ordem: equipamentos.length + i + 1,
+      }))
+    );
+    setSeeding(false);
+    if (error) {
+      toast({ title: "Erro ao carregar base", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: `${novos.length} equipamentos adicionados` });
     carregar();
   };
 
@@ -423,9 +482,18 @@ const ChecklistTemperatura = () => {
                   <Input value={novo.turnos} onChange={(e) => setNovo({ ...novo, turnos: e.target.value })} />
                 </div>
               </div>
-              <button onClick={addEquipamento} className="mt-4 flex items-center gap-2 bg-gradient-gold text-primary-foreground font-body font-semibold px-5 py-2 rounded-lg hover:opacity-90">
-                <Plus className="w-4 h-4" /> Adicionar
-              </button>
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <button onClick={addEquipamento} className="flex items-center gap-2 bg-gradient-gold text-primary-foreground font-body font-semibold px-5 py-2 rounded-lg hover:opacity-90">
+                  <Plus className="w-4 h-4" /> Adicionar
+                </button>
+                <button
+                  onClick={carregarBasePadrao}
+                  disabled={seeding}
+                  className="flex items-center gap-2 border border-primary/40 text-primary font-body font-semibold px-5 py-2 rounded-lg hover:bg-primary/10 disabled:opacity-50"
+                >
+                  <Download className="w-4 h-4" /> {seeding ? "Carregando..." : "Carregar base padrão"}
+                </button>
+              </div>
             </div>
 
             <div className="space-y-3">
