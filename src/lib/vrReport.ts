@@ -83,8 +83,34 @@ export async function chamarRelatorio(
 
   const d = (data as any)?.dados ?? data;
   const dados = Array.isArray(d) ? d : Array.isArray(d?.dados) ? d.dados : [];
+  if (await usaCustoReposicao(storeId)) {
+    for (const l of dados) if (l && typeof l === "object") (l as any).__custoReposicao = true;
+  }
   return { dados, indisponivel: false, offline: false, erro: null };
 }
+
+// ============================================================
+// Lojas que calculam a margem pelo CUSTO DE REPOSICAO.
+// (Sm Maninho pediu esse criterio; as demais seguem custo com imposto.)
+// ============================================================
+
+const LOJAS_CUSTO_REPOSICAO = /maninho/i;
+const prefCusto = new Map<string, Promise<boolean>>();
+
+export async function usaCustoReposicao(storeId: string): Promise<boolean> {
+  if (!storeId) return false;
+  let p = prefCusto.get(storeId);
+  if (!p) {
+    p = (async () => {
+      const { data } = await supabase.from("stores").select("name").eq("id", storeId).maybeSingle();
+      return LOJAS_CUSTO_REPOSICAO.test(String((data as any)?.name ?? ""));
+    })();
+
+    prefCusto.set(storeId, p);
+  }
+  return p;
+}
+
 
 /** Texto padrao de aviso para a UI. */
 export function avisoRelatorio(r: { indisponivel: boolean; offline: boolean; erro: string | null }): string | null {
@@ -112,13 +138,48 @@ const CHAVES_CUSTO = [
   "cmv",
 ];
 
-/** Custo com imposto da linha do relatorio (null quando o conector nao devolve). */
+/** Chaves de custo de reposicao (lojas que usam esse criterio de margem). */
+const CHAVES_CUSTO_REPOSICAO_TOTAL = [
+  "custo_reposicao_total",
+  "total_custo_reposicao",
+  "valor_custo_reposicao",
+  "cmv_reposicao",
+];
+const CHAVES_CUSTO_REPOSICAO_UNIT = [
+  "custo_reposicao",
+  "custo_reposicao_com_imposto",
+  "custo_rep",
+  "custo_ultima_compra",
+  "preco_reposicao",
+];
+
+/** Custo de reposicao da linha, ja convertido para valor total quando vier unitario. */
+function custoReposicao(l: any): number | null {
+  const total = pick(l, ...CHAVES_CUSTO_REPOSICAO_TOTAL);
+  if (total !== undefined && total !== null && String(total).trim() !== "") {
+    const n = num(total);
+    if (n > 0) return n;
+  }
+  const unit = pick(l, ...CHAVES_CUSTO_REPOSICAO_UNIT);
+  if (unit === undefined || unit === null || String(unit).trim() === "") return null;
+  const u = num(unit);
+  if (u <= 0) return null;
+  const qtd = num(pick(l, "volume", "quantidade", "qtde", "qtd"));
+  return qtd > 0 ? u * qtd : u;
+}
+
+/** Custo usado na margem (reposicao nas lojas configuradas, senao custo com imposto). */
 export function custoComImposto(l: any): number | null {
+  if (l?.__custoReposicao) {
+    const rep = custoReposicao(l);
+    if (rep !== null) return rep;
+  }
   const v = pick(l, ...CHAVES_CUSTO);
   if (v === undefined || v === null || String(v).trim() === "") return null;
   const n = num(v);
   return n > 0 ? n : null;
 }
+
 
 /** Lucro = Venda - Custo com imposto (usa o lucro do conector so quando nao ha custo). */
 export function lucroDaLinha(l: any, vendas: number, lucroFallback?: number): number {
