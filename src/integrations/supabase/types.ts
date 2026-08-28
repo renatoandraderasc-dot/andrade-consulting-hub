@@ -2042,6 +2042,129 @@ export type Database = {
         }
         Relationships: []
       }
+      temperatura_equipamentos: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          department_id: string | null
+          exige_foto: boolean
+          id: string
+          nome: string
+          ordem: number
+          store_id: string
+          temp_max: number
+          temp_min: number
+          tipo: string
+          turnos: string[]
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          department_id?: string | null
+          exige_foto?: boolean
+          id?: string
+          nome: string
+          ordem?: number
+          store_id: string
+          temp_max?: number
+          temp_min?: number
+          tipo?: string
+          turnos?: string[]
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          department_id?: string | null
+          exige_foto?: boolean
+          id?: string
+          nome?: string
+          ordem?: number
+          store_id?: string
+          temp_max?: number
+          temp_min?: number
+          tipo?: string
+          turnos?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "temperatura_equipamentos_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "temperatura_equipamentos_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      temperatura_registros: {
+        Row: {
+          conforme: boolean
+          created_at: string
+          data: string
+          equipamento_id: string
+          id: string
+          observacao: string | null
+          photo_url: string | null
+          store_id: string
+          temperatura: number
+          turno: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          conforme?: boolean
+          created_at?: string
+          data?: string
+          equipamento_id: string
+          id?: string
+          observacao?: string | null
+          photo_url?: string | null
+          store_id: string
+          temperatura: number
+          turno?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          conforme?: boolean
+          created_at?: string
+          data?: string
+          equipamento_id?: string
+          id?: string
+          observacao?: string | null
+          photo_url?: string | null
+          store_id?: string
+          temperatura?: number
+          turno?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "temperatura_registros_equipamento_id_fkey"
+            columns: ["equipamento_id"]
+            isOneToOne: false
+            referencedRelation: "temperatura_equipamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "temperatura_registros_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       titulo_planejamento: {
         Row: {
           categoria: string | null
