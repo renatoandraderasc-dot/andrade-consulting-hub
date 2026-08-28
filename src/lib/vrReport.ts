@@ -101,12 +101,11 @@ export async function usaCustoReposicao(storeId: string): Promise<boolean> {
   if (!storeId) return false;
   let p = prefCusto.get(storeId);
   if (!p) {
-    p = supabase
-      .from("stores")
-      .select("name")
-      .eq("id", storeId)
-      .maybeSingle()
-      .then(({ data }) => LOJAS_CUSTO_REPOSICAO.test(String((data as any)?.name ?? "")));
+    p = (async () => {
+      const { data } = await supabase.from("stores").select("name").eq("id", storeId).maybeSingle();
+      return LOJAS_CUSTO_REPOSICAO.test(String((data as any)?.name ?? ""));
+    })();
+
     prefCusto.set(storeId, p);
   }
   return p;
