@@ -132,8 +132,25 @@ const Checklist = () => {
     const subIds = subs.map((s) => s.id);
     const { data: allAnswers } = await supabase
       .from("checklist_answers")
-      .select("submission_id, question_id, score, checked, checklist_questions(text, points)")
+      .select("submission_id, question_id, score, checked, photo_url, checklist_questions(text, points)")
       .in("submission_id", subIds);
+
+    // Normaliza para caminho do bucket (dados antigos guardaram URL assinada expirada)
+    const toPath = (v?: string | null) => {
+      if (!v) return null;
+      const marker = "/checklist-photos/";
+      const i = v.indexOf(marker);
+      const raw = i >= 0 ? v.slice(i + marker.length) : v;
+      return raw.split("?")[0];
+    };
+    const paths = [...new Set((allAnswers || []).map((a: any) => toPath(a.photo_url)).filter(Boolean))] as string[];
+    const signedMap: Record<string, string> = {};
+    if (paths.length > 0) {
+      const { data: signed } = await supabase.storage.from("checklist-photos").createSignedUrls(paths, 3600);
+      (signed || []).forEach((s: any) => {
+        if (s.path && s.signedUrl) signedMap[s.path] = s.signedUrl;
+      });
+    }
 
     // Fetch store names
     const storeIds = [...new Set(subs.map((s) => s.store_id).filter(Boolean))] as string[];
