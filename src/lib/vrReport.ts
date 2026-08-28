@@ -83,8 +83,35 @@ export async function chamarRelatorio(
 
   const d = (data as any)?.dados ?? data;
   const dados = Array.isArray(d) ? d : Array.isArray(d?.dados) ? d.dados : [];
+  if (await usaCustoReposicao(storeId)) {
+    for (const l of dados) if (l && typeof l === "object") (l as any).__custoReposicao = true;
+  }
   return { dados, indisponivel: false, offline: false, erro: null };
 }
+
+// ============================================================
+// Lojas que calculam a margem pelo CUSTO DE REPOSICAO.
+// (Sm Maninho pediu esse criterio; as demais seguem custo com imposto.)
+// ============================================================
+
+const LOJAS_CUSTO_REPOSICAO = /maninho/i;
+const prefCusto = new Map<string, Promise<boolean>>();
+
+export async function usaCustoReposicao(storeId: string): Promise<boolean> {
+  if (!storeId) return false;
+  let p = prefCusto.get(storeId);
+  if (!p) {
+    p = supabase
+      .from("stores")
+      .select("name")
+      .eq("id", storeId)
+      .maybeSingle()
+      .then(({ data }) => LOJAS_CUSTO_REPOSICAO.test(String((data as any)?.name ?? "")));
+    prefCusto.set(storeId, p);
+  }
+  return p;
+}
+
 
 /** Texto padrao de aviso para a UI. */
 export function avisoRelatorio(r: { indisponivel: boolean; offline: boolean; erro: string | null }): string | null {
