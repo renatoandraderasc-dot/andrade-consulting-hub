@@ -196,6 +196,10 @@ const Checklist = () => {
           text: (a as any).checklist_questions?.text || "",
           score: (a as any).score > 0 ? (a as any).score : ((a as any).checked ? (a as any).checklist_questions?.points || 0 : 0),
           max_points: (a as any).checklist_questions?.points || 0,
+          photoUrl: (() => {
+            const p = toPath((a as any).photo_url);
+            return p ? signedMap[p] || null : null;
+          })(),
         })),
       };
     });
