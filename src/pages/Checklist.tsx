@@ -224,8 +224,15 @@ const Checklist = () => {
       const { data: signedData } = await supabase.storage.from("checklist-photos").createSignedUrl(data.path, 3600);
       setScoreState((prev) => ({
         ...prev,
-        [qId]: { ...prev[qId], score: prev[qId]?.score || 5, photoUrl: signedData?.signedUrl || data.path },
+        [qId]: {
+          ...prev[qId],
+          score: prev[qId]?.score || 5,
+          photoUrl: signedData?.signedUrl || undefined,
+          photoPath: data.path,
+        },
       }));
+    } else {
+      toast({ title: "Erro ao enviar foto", description: error?.message || "Tente novamente.", variant: "destructive" });
     }
     setUploading(null);
   };
