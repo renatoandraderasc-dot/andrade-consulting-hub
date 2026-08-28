@@ -82,6 +82,29 @@ const AdminQuestions = () => {
     fetchData();
   };
 
+  const addDepartment = async () => {
+    if (!newDeptName.trim()) return;
+    const maxOrder = departments.reduce((m, d) => Math.max(m, d.sort_order), 0);
+    const { error } = await supabase
+      .from("departments")
+      .insert({ name: newDeptName.trim(), sort_order: maxOrder + 1 });
+    if (!error) {
+      setNewDeptName("");
+      fetchData();
+    }
+  };
+
+  const renameDepartment = async (id: string, name: string) => {
+    setDepartments((prev) => prev.map((d) => (d.id === id ? { ...d, name } : d)));
+    await supabase.from("departments").update({ name }).eq("id", id);
+  };
+
+  const deleteDepartment = async (id: string) => {
+    await supabase.from("departments").delete().eq("id", id);
+    if (selectedDept === id) setSelectedDept("");
+    fetchData();
+  };
+
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
