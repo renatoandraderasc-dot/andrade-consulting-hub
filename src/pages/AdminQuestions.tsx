@@ -31,6 +31,7 @@ const AdminQuestions = () => {
   const [newText, setNewText] = useState("");
   const [newPoints, setNewPoints] = useState(10);
   const [newRequiresPhoto, setNewRequiresPhoto] = useState(false);
+  const [newDeptName, setNewDeptName] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
