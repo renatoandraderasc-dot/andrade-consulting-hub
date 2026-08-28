@@ -44,32 +44,37 @@ export const cabecalhoPdf = async (
   doc: any,
   titulo: string,
   subtitulo?: string,
+  unidade: "mm" | "pt" = "mm",
   d = new Date(),
 ) => {
+  const k = unidade === "pt" ? 2.83465 : 1;
   const largura = doc.internal.pageSize.getWidth();
-  let x = 12;
+  let x = 12 * k;
   try {
     const { dataUrl, w, h } = await carregarLogo();
-    const alturaLogo = 12;
-    const larguraLogo = Math.max(12, (w / h) * alturaLogo);
-    doc.addImage(dataUrl, "PNG", 12, 8, larguraLogo, alturaLogo);
-    x = 12 + larguraLogo + 6;
+    const alturaLogo = 12 * k;
+    const larguraLogo = Math.max(12 * k, (w / h) * alturaLogo);
+    doc.addImage(dataUrl, "PNG", 12 * k, 8 * k, larguraLogo, alturaLogo);
+    x = 12 * k + larguraLogo + 6 * k;
   } catch {
     /* segue sem logo */
   }
+  doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
   doc.setTextColor(20, 33, 61);
-  doc.text(titulo, x, 14);
+  doc.text(titulo, x, 14 * k);
+  doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.setTextColor(110);
-  doc.text(EMPRESA, x, 19.5);
-  if (subtitulo) doc.text(subtitulo, x, 24.5);
-  doc.text(`Exportado em ${carimboData(d)}`, largura - 12, 14, { align: "right" });
+  doc.text(EMPRESA, x, 19.5 * k);
+  if (subtitulo) doc.text(subtitulo, x, 24.5 * k);
+  doc.text(`Exportado em ${carimboData(d)}`, largura - 12 * k, 14 * k, { align: "right" });
   doc.setTextColor(0);
   doc.setDrawColor(220);
-  doc.line(12, 28, largura - 12, 28);
-  return 34;
+  doc.line(12 * k, 28 * k, largura - 12 * k, 28 * k);
+  return 34 * k;
 };
+
 
 /** Aba de identificacao com marca e data/hora, inserida como primeira aba. */
 export const adicionarAbaMarca = (
