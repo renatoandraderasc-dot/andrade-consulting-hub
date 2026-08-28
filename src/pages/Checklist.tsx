@@ -34,7 +34,7 @@ interface SubmissionRecord {
   user_name: string;
   total_score: number;
   max_score: number;
-  answers: { text: string; score: number; max_points: number }[];
+  answers: { text: string; score: number; max_points: number; photoUrl?: string | null }[];
 }
 
 const SCORE_OPTIONS = [5, 6, 7, 8, 9, 10];
