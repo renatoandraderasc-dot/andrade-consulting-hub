@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ScanLine, Search, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { chamarRelatorio, avisoRelatorio, pick as col } from "@/lib/vrReport";
+import { ALIAS_EAN, ALIAS_ESTOQUE, chamarRelatorio, avisoRelatorio, pick as col } from "@/lib/vrReport";
 import { carregarBaseCatalogo, filtrarCatalogo } from "@/lib/catalogoProdutos";
 import { useAuth } from "@/hooks/useAuth";
 import ClientLayout from "@/components/ClientLayout";
@@ -92,11 +92,11 @@ const ConsultaPreco = () => {
   const mapear = (l: any, t: string): Produto => ({
     codigo: String(col(l, "codigo", "cod_produto", "codigo_reduzido", "produto") ?? ""),
     descricao: String(col(l, "descricao", "produto", "nome") ?? ""),
-    estoque: col(l, "estoque", "saldo_estoque", "qtd_estoque", "estoque_atual") ?? null,
+    estoque: col(l, ...ALIAS_ESTOQUE) ?? null,
     categoria: String(col(l, "m2_grupo", "categoria", "m1_departamento", "departamento", "secao") ?? "—"),
     preco: col(l, "preco_venda", "preco", "venda") ?? null,
     precoOferta: col(l, "preco_oferta", "oferta") ?? null,
-    ean: String(col(l, "codigo_barras", "ean", "barras") ?? t),
+    ean: String(col(l, ...ALIAS_EAN) ?? t),
   });
 
   // Algumas lojas nao publicam o relatorio "catalogo_produtos"
@@ -140,7 +140,7 @@ const ConsultaPreco = () => {
         if (linhas.length) {
           const exato = linhas.find(
             (l: any) =>
-              String(col(l, "codigo_barras", "ean", "barras") ?? "").replace(/^0+/, "") ===
+              String(col(l, ...ALIAS_EAN) ?? "").replace(/^0+/, "") ===
               v.replace(/\D/g, "").replace(/^0+/, ""),
           );
           if (exato || linhas.length === 1) {

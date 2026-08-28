@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { AlertTriangle, ChevronDown, Download, FileText, PackageX, TrendingDown } from "lucide-react";
 import { useHierarquiaVendas, LinhaHierarquia } from "@/hooks/useHierarquiaVendas";
-import { chamarRelatorio, num, pick } from "@/lib/vrReport";
+import { ALIAS_EAN, ALIAS_ESTOQUE, chamarRelatorio, num, pick } from "@/lib/vrReport";
 import { carregarBaseCatalogo, normalizarCodigo } from "@/lib/catalogoProdutos";
 
 // Estoque atual e codigo de barras por produto.
@@ -34,13 +34,13 @@ function useEstoqueAtual(storeId: string, inicio: string, fim: string) {
 
       const r = await chamarRelatorio(storeId, "estoque_dinamico", { inicio, fim }).catch(() => null);
       for (const l of (r?.dados ?? []) as Record<string, unknown>[]) {
-        const estRaw = pick(l, "estoque_dinamico", "estoque", "estoque_atual");
+        const estRaw = pick(l, ...ALIAS_ESTOQUE);
         const qtdC = num(pick(l, "qtd_compra", "quantidade_compra"));
         const qtdV = num(pick(l, "qtd_venda", "quantidade_venda"));
         const est =
           estRaw !== undefined && String(estRaw).trim() !== "" ? num(estRaw) : qtdC - qtdV;
         const cod = chaveCod(pick(l, "codigo", "cod_produto", "id_produto"));
-        const cb = String(pick(l, "codigo_barras", "ean", "barras") ?? "").trim();
+        const cb = String(pick(l, ...ALIAS_EAN) ?? "").trim();
         if (cod) estoque.set(`c:${cod}`, est);
         if (cb) estoque.set(`e:${cb}`, est);
         if (cod && cb) ean.set(cod, cb);

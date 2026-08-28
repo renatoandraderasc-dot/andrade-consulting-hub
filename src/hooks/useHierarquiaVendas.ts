@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { chamarRelatorio, num, pick, lucroDaLinha } from "@/lib/vrReport";
+import { ALIAS_EAN, chamarRelatorio, num, pick, lucroDaLinha } from "@/lib/vrReport";
 
 // ============================================================
 // Hierarquia mercadologica de vendas AO VIVO (nada e gravado).
@@ -69,7 +69,7 @@ async function carregar(storeId: string, inicio: string, fim: string): Promise<L
       n3: txt(l.nivel3, "SEM SUBGRUPO").toUpperCase(),
       produto: txt(l.produto, "SEM DESCRIÇÃO").toUpperCase(),
       codigo: String(l.codigo ?? ""),
-      ean: String(pick(l, "ean", "codigo_barras", "barcode", "cod_barras", "gtin") ?? ""),
+      ean: String(pick(l, ...ALIAS_EAN) ?? ""),
       vendas: num(l.total_vendido),
       lucro: lucroDaLinha(l, num(l.total_vendido), num(l.lucro)),
       volume: num(l.volume),
@@ -135,7 +135,7 @@ async function carregar(storeId: string, inicio: string, fim: string): Promise<L
       n2: txt(pick(p, "grupo"), "SEM GRUPO").toUpperCase(),
       n3: txt(pick(p, "subgrupo"), "SEM SUBGRUPO").toUpperCase(),
       descricao: txt(pick(p, "descricao", "produto"), "SEM DESCRIÇÃO").toUpperCase(),
-      ean: String(pick(p, "codigo_barras", "ean", "barcode", "cod_barras", "gtin") ?? ""),
+      ean: String(pick(p, ...ALIAS_EAN) ?? ""),
     });
   }
 
@@ -150,7 +150,7 @@ async function carregar(storeId: string, inicio: string, fim: string): Promise<L
       n3: (c?.n3 ?? txt(pick(l, "nivel3", "subcategoria", "subgrupo"), "SEM SUBGRUPO")).toUpperCase(),
       produto: (c?.descricao || desc || codigo || "SEM DESCRIÇÃO").toUpperCase(),
       codigo,
-      ean: String(pick(l, "codigo_barras", "ean", "barcode", "cod_barras", "gtin") ?? c?.ean ?? ""),
+      ean: String(pick(l, ...ALIAS_EAN) ?? c?.ean ?? ""),
       vendas,
       lucro: lucroDaLinha(
         l,
