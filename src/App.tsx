@@ -10,6 +10,7 @@ import AdminSetup from "./pages/AdminSetup";
 import AdminQuestions from "./pages/AdminQuestions";
 import AdminUsers from "./pages/AdminUsers";
 import Checklist from "./pages/Checklist";
+import ChecklistTemperatura from "./pages/ChecklistTemperatura";
 import Catalogo from "./pages/Catalogo";
 import ConsultaPreco from "./pages/ConsultaPreco";
 import Dashboard from "./pages/Dashboard";
@@ -60,6 +61,7 @@ const App = () => (
             <Route path="/admin/questions" element={g("admin_questions", <AdminQuestions />)} />
             <Route path="/admin/users" element={g("admin_users", <AdminUsers />)} />
             <Route path="/checklist" element={g("checklist", <Checklist />)} />
+            <Route path="/checklist-temperatura" element={g("checklist_temperatura", <ChecklistTemperatura />)} />
             <Route path="/catalogo" element={g("catalogo", <Catalogo />)} />
             <Route path="/consulta-preco" element={g("consulta_preco", <ConsultaPreco />)} />
             <Route path="/dashboard" element={g("dashboard", <Dashboard />)} />

@@ -11,6 +11,7 @@ export const APP_MODULES = [
   { key: "repricing", label: "Re-PRICING", path: "/repricing" },
   { key: "pricing", label: "Pricing", path: "/precificacao/pricing" },
   { key: "checklist", label: "Checklist", path: "/checklist" },
+  { key: "checklist_temperatura", label: "Checklist de Temperaturas", path: "/checklist-temperatura" },
   { key: "catalogo", label: "Catálogo de Produtos", path: "/catalogo" },
   { key: "consulta_preco", label: "Consulta de Preços", path: "/consulta-preco" },
   { key: "admin_rede", label: "Admin: Visão da Rede", path: "/admin/rede" },

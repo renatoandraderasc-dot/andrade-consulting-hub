@@ -31,6 +31,7 @@ const AdminQuestions = () => {
   const [newText, setNewText] = useState("");
   const [newPoints, setNewPoints] = useState(10);
   const [newRequiresPhoto, setNewRequiresPhoto] = useState(false);
+  const [newDeptName, setNewDeptName] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -82,6 +83,29 @@ const AdminQuestions = () => {
     fetchData();
   };
 
+  const addDepartment = async () => {
+    if (!newDeptName.trim()) return;
+    const maxOrder = departments.reduce((m, d) => Math.max(m, d.sort_order), 0);
+    const { error } = await supabase
+      .from("departments")
+      .insert({ name: newDeptName.trim(), sort_order: maxOrder + 1 });
+    if (!error) {
+      setNewDeptName("");
+      fetchData();
+    }
+  };
+
+  const renameDepartment = async (id: string, name: string) => {
+    setDepartments((prev) => prev.map((d) => (d.id === id ? { ...d, name } : d)));
+    await supabase.from("departments").update({ name }).eq("id", id);
+  };
+
+  const deleteDepartment = async (id: string) => {
+    await supabase.from("departments").delete().eq("id", id);
+    if (selectedDept === id) setSelectedDept("");
+    fetchData();
+  };
+
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -116,6 +140,32 @@ const AdminQuestions = () => {
               {dept.name}
             </button>
           ))}
+        </div>
+
+        <div className="bg-card border border-border rounded-2xl p-6 mb-6">
+          <h2 className="font-display text-lg font-semibold mb-4">Departamentos</h2>
+          <div className="flex gap-3 mb-4 flex-wrap items-end">
+            <div className="space-y-2 flex-1 min-w-[220px]">
+              <Label className="font-body">Novo departamento</Label>
+              <Input value={newDeptName} onChange={(e) => setNewDeptName(e.target.value)} placeholder="Ex: Açougue" />
+            </div>
+            <button
+              onClick={addDepartment}
+              className="bg-gradient-gold text-primary-foreground font-body font-semibold px-5 py-2 rounded-lg flex items-center gap-2 hover:opacity-90 transition-opacity"
+            >
+              <Plus className="w-4 h-4" /> Adicionar
+            </button>
+          </div>
+          <div className="space-y-2">
+            {departments.map((d) => (
+              <div key={d.id} className="flex items-center gap-3">
+                <Input value={d.name} onChange={(e) => renameDepartment(d.id, e.target.value)} className="font-body text-sm" />
+                <button onClick={() => deleteDepartment(d.id)} className="text-destructive hover:text-destructive/80 transition-colors shrink-0">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="bg-card border border-border rounded-2xl p-6 mb-6">

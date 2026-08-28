@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   BarChart3, CheckSquare, Settings, Users, LogOut, Menu, X, ArrowLeft,
   Target, ClipboardList, DollarSign, Database, RefreshCw, Trophy, Store, ShoppingCart, LayoutTemplate, TrendingUp, Package, KeyRound, Plug, ScanLine, Tags, ChevronDown, Globe, Network,
+  Thermometer,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -82,6 +83,7 @@ const navGroups: NavGroup[] = [
     icon: CheckSquare,
     items: [
       { key: "checklist", path: "/checklist", label: "Checklist", icon: CheckSquare },
+      { key: "checklist_temperatura", path: "/checklist-temperatura", label: "Temperaturas", icon: Thermometer },
     ],
   },
   {
