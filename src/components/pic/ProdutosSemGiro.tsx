@@ -125,17 +125,26 @@ const ProdutosSemGiro = ({ storeId, ano, mes }: Props) => {
     d.setFullYear(d.getFullYear() - 1);
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-01`;
   }, [ano, mes]);
-  const estoqueMap = useEstoqueAtual(storeId, inicioEstoque, periodos[0].fim);
+  const baseProduto = useEstoqueAtual(storeId, inicioEstoque, periodos[0].fim);
   const estoqueDe = useCallback(
     (l: { codigo: string; ean: string }): number | null => {
-      if (!estoqueMap) return null;
+      if (!baseProduto) return null;
       const c = chaveCod(l.codigo);
-      if (c && estoqueMap.has(`c:${c}`)) return estoqueMap.get(`c:${c}`)!;
-      if (l.ean && estoqueMap.has(`e:${l.ean}`)) return estoqueMap.get(`e:${l.ean}`)!;
+      if (c && baseProduto.estoque.has(`c:${c}`)) return baseProduto.estoque.get(`c:${c}`)!;
+      if (l.ean && baseProduto.estoque.has(`e:${l.ean}`)) return baseProduto.estoque.get(`e:${l.ean}`)!;
       return null;
     },
-    [estoqueMap],
+    [baseProduto],
   );
+  const eanDe = useCallback(
+    (l: { codigo: string; ean: string }): string => {
+      if (l.ean) return l.ean;
+      const c = chaveCod(l.codigo);
+      return (c && baseProduto?.ean.get(c)) || "";
+    },
+    [baseProduto],
+  );
+
 
   const loading = atual.loading || m1.loading || m2.loading || m3.loading;
 
