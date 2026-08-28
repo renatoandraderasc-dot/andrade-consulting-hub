@@ -230,14 +230,25 @@ Deno.serve(async (req) => {
     }
 
     // ---------- historico (nao repetir) ----------
+    const janelaDias = janelaSemanas * 7;
     const limite = new Date();
-    limite.setDate(limite.getDate() - janelaSemanas * 7);
+    limite.setDate(limite.getDate() - janelaDias);
     const { data: hist } = await service
       .from("encarte_historico_itens")
       .select("codigo, data_fim")
       .eq("store_id", store_id)
       .gte("data_fim", limite.toISOString().slice(0, 10));
+    const hoje = new Date();
+    const diasDesde = (d: string) => {
+      const t = Date.parse(d);
+      return isFinite(t) ? Math.floor((hoje.getTime() - t) / 86400000) : 9999;
+    };
     const usadosRecentes = new Set((hist ?? []).map((h: Row) => txt(h.codigo)));
+    const usadosMetadeJanela = new Set(
+      (hist ?? [])
+        .filter((h: Row) => diasDesde(txt(h.data_fim)) <= janelaDias / 2)
+        .map((h: Row) => txt(h.codigo)),
+    );
 
     // ---------- categorias liberadas para a faixa ----------
     const cats = (catsRes.data ?? []) as Row[];
