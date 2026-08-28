@@ -272,7 +272,7 @@ const Checklist = () => {
         question_id: q.id,
         checked: (scoreState[q.id]?.score || 0) >= 5,
         score: scoreState[q.id]?.score || 0,
-        photo_url: scoreState[q.id]?.photoUrl || null,
+        photo_url: scoreState[q.id]?.photoPath || null,
       }));
 
       const { error: ansError } = await supabase.from("checklist_answers").insert(answers);
