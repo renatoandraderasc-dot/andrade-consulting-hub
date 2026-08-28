@@ -39,6 +39,16 @@ export function pick(o: any, ...keys: string[]): any {
   return undefined;
 }
 
+/** Nomes equivalentes usados pelos conectores para EAN e estoque. */
+export const ALIAS_EAN = [
+  "codigo_barras", "ean", "barcode", "barras", "cod_barras", "gtin", "código de barras",
+] as const;
+
+export const ALIAS_ESTOQUE = [
+  "estoque", "saldo_estoque", "qtd_estoque", "estoque_atual",
+  "estoque_sistema", "estoque_dinamico", "saldo_atual", "sldatual",
+] as const;
+
 export const num = (v: unknown) => {
   const n = parseFloat(String(v ?? "").replace(/\s/g, ""));
   return isNaN(n) ? 0 : n;

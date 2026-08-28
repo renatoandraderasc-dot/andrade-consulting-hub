@@ -1,4 +1,4 @@
-import { chamarRelatorio, avisoRelatorio, pick as col } from "@/lib/vrReport";
+import { ALIAS_EAN, ALIAS_ESTOQUE, chamarRelatorio, avisoRelatorio, pick as col } from "@/lib/vrReport";
 
 // ==========================================================
 // Catalogo unificado de produtos.
@@ -42,11 +42,11 @@ export function mapearLinhaCatalogo(l: any): CatalogoItem {
   return {
     codigo: String(col(l, "codigo", "cod_produto", "codigo_reduzido", "id_produto", "produto_id") ?? ""),
     descricao: String(col(l, "descricao", "produto", "nome") ?? ""),
-    ean: String(col(l, "codigo_barras", "ean", "barcode", "barras", "cod_barras", "gtin") ?? ""),
+    ean: String(col(l, ...ALIAS_EAN) ?? ""),
     custo: numOrNull(col(l, "custo", "preco_custo")),
     preco: numOrNull(col(l, "preco_venda", "preco", "venda")),
     precoOferta: numOrNull(col(l, "preco_oferta", "oferta")),
-    estoque: numOrNull(col(l, "estoque", "saldo_estoque", "qtd_estoque", "estoque_atual")),
+    estoque: numOrNull(col(l, ...ALIAS_ESTOQUE)),
     n1: String(col(
       l,
       "m1_departamento",
@@ -223,14 +223,14 @@ export async function carregarProdutosAtivos12m(storeId: string) {
 
   const itens: ProdutoAtivo12m[] = (r.dados || []).map((l: any) => ({
     codigo: String(col(l, "codigo", "cod_produto", "id_produto") ?? ""),
-    ean: String(col(l, "barcode", "codigo_barras", "ean", "cod_barras", "gtin") ?? ""),
+    ean: String(col(l, ...ALIAS_EAN) ?? ""),
     descricao: String(col(l, "produto", "descricao", "nome") ?? ""),
     secao: String(col(l, "secao", "departamento") ?? ""),
     grupo: String(col(l, "grupo", "categoria") ?? ""),
     preco: numOrNull(col(l, "preco_atual", "preco_venda", "preco")),
     custo: numOrNull(col(l, "custo", "preco_custo")),
     margem: numOrNull(col(l, "margem_atual", "margem")),
-    estoque: numOrNull(col(l, "estoque", "estoque_atual")),
+    estoque: numOrNull(col(l, ...ALIAS_ESTOQUE)),
     qtdVendida12m: numOrNull(col(l, "qtd_vendida_12m", "qtd_vendida")),
     valorVendido12m: numOrNull(col(l, "valor_vendido_12m", "valor_vendido")),
     ultimaVenda: String(col(l, "ultima_venda") ?? ""),
@@ -276,7 +276,7 @@ export async function carregarCustoUltimaCompra(storeId: string) {
       const custo = Math.round((valor / qtd) * 100) / 100;
       const data = String(col(l, "ultima_compra") ?? "");
       const cod = normalizarCodigo(col(l, "codigo", "cod_produto", "id_produto"));
-      const ean = soDigitos(String(col(l, "codigo_barras", "ean", "barras") ?? ""));
+      const ean = soDigitos(String(col(l, ...ALIAS_EAN) ?? ""));
       const registro: CustoCompra = { custo, data };
       // janelas menores vem primeiro: nao sobrescrever o mais recente
       if (cod && !porCodigo.has(cod)) porCodigo.set(cod, registro);

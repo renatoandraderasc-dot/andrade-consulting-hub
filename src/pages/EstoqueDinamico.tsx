@@ -12,7 +12,7 @@ import {
 import ClientLayout from "@/components/ClientLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { chamarRelatorio, avisoRelatorio, pick as col, num } from "@/lib/vrReport";
+import { ALIAS_EAN, chamarRelatorio, avisoRelatorio, pick as col, num } from "@/lib/vrReport";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -185,7 +185,7 @@ const EstoqueDinamico = () => {
       return {
         codigo: String(col(l, "codigo", "cod_produto", "id_produto") ?? ""),
         descricao: String(col(l, "descricao", "produto") ?? ""),
-        barras: String(col(l, "codigo_barras", "ean", "barras") ?? ""),
+        barras: String(col(l, ...ALIAS_EAN) ?? ""),
         departamento: String(col(l, "departamento", "m1_departamento", "secao") ?? "").trim(),
         grupo: String(col(l, "grupo", "m2_grupo") ?? "").trim(),
         ultimaCompra: String(col(l, "ultima_compra") ?? ""),
