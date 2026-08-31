@@ -381,6 +381,26 @@ const PIC = () => {
               <SelectTrigger className="w-[100px] bg-card border-border"><SelectValue /></SelectTrigger>
               <SelectContent>{[2024, 2025, 2026].map((y) => (<SelectItem key={y} value={String(y)}>{y}</SelectItem>))}</SelectContent>
             </Select>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] text-muted-foreground">Dias</span>
+              <Select value={String(diaIniEfetivo)} onValueChange={(v) => setDiaInicio(Number(v))}>
+                <SelectTrigger className="w-[70px] bg-card border-border"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: diasNoMesSel }, (_, i) => i + 1).map((d) => (
+                    <SelectItem key={d} value={String(d)}>{d}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span className="text-[11px] text-muted-foreground">até</span>
+              <Select value={String(diaFimEfetivo)} onValueChange={(v) => setDiaFim(Number(v))}>
+                <SelectTrigger className="w-[70px] bg-card border-border"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: diasNoMesSel }, (_, i) => i + 1).map((d) => (
+                    <SelectItem key={d} value={String(d)}>{d}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as any)} className="ml-2">
               <TabsList className="bg-card border border-border">
                 <TabsTrigger value="mes" className="text-xs">Mensal</TabsTrigger>
