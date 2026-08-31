@@ -128,40 +128,53 @@ Deno.serve(async (req) => {
     // Algumas pontes registram o relatorio com prefixo (ex.: "02-encarte_base")
     // ou com nome alternativo ("candidatos_encarte"). Tentamos em cascata e,
     // se a ponte devolver a lista `disponiveis`, escolhemos o nome compativel.
+    // Varias pontes so devolvem linhas quando recebem a janela de analise
+    // (inicio/fim). Sem isso o relatorio volta vazio e a tela parecia "sem
+    // relatorio instalado".
+    const hojeIso = new Date().toISOString().slice(0, 10);
+    const inicio90 = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
+    const paramsBase = { inicio: inicio90, fim: hojeIso, limite: 5000, offset: 0 };
+
     const consultarVr = async (nome: string) => {
       const resp = await fetch(`${supabaseUrl}/functions/v1/vr-proxy`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: authHeader, apikey: anonKey },
-        body: JSON.stringify({ store_id, relatorio: nome, params: {} }),
+        body: JSON.stringify({ store_id, relatorio: nome, params: paramsBase }),
       });
       const body = await resp.json().catch(() => null) as Row | null;
       return { erro: txt(body?.erro), dados: (body?.dados as Row[]) ?? [] };
     };
 
-    const tentativas = ["encarte_base", "02-encarte_base", "candidatos_encarte"];
+    const tentativas = ["candidatos_encarte", "encarte_base", "02-encarte_base"];
+
     let erroVr = "";
     let baseBruta: Row[] = [];
     const jaTentados = new Set<string>();
 
-    for (const nome of tentativas) {
-      if (jaTentados.has(nome)) continue;
+    const tentar = async (nome: string) => {
+      if (jaTentados.has(nome)) return false;
       jaTentados.add(nome);
-      const r = await consultarVr(nome);
-      if (r.dados.length > 0) { baseBruta = r.dados; erroVr = ""; break; }
-      erroVr = r.erro;
+      // uma repeticao: a ponte as vezes devolve vazio na primeira chamada
+      for (let t = 0; t < 2; t++) {
+        const r = await consultarVr(nome);
+        console.log(`[sugerir-encarte] relatorio=${nome} tentativa=${t + 1} linhas=${r.dados.length} erro=${r.erro.slice(0, 120)}`);
+        if (r.dados.length > 0) { baseBruta = r.dados; erroVr = ""; return true; }
+        if (r.erro) { erroVr = r.erro; if (/404|nao existe|not found/i.test(r.erro)) return false; }
+      }
+      return false;
+    };
+
+    for (const nome of tentativas) {
+      if (await tentar(nome)) break;
       // extrai nomes disponiveis do erro e tenta o que casar com encarte
-      const m = r.erro.match(/"disponiveis"\s*:\s*\[([^\]]*)/);
+      const m = erroVr.match(/"disponiveis"\s*:\s*\[([^\]]*)/);
       if (m) {
         const nomes = m[1].split(",").map((s) => s.replace(/[\\"\s]/g, "")).filter(Boolean);
         const alvo = nomes.find((n) => /encarte_base$/i.test(n)) ?? nomes.find((n) => /encarte/i.test(n) && !/migration/i.test(n));
-        if (alvo && !jaTentados.has(alvo)) {
-          jaTentados.add(alvo);
-          const r2 = await consultarVr(alvo);
-          if (r2.dados.length > 0) { baseBruta = r2.dados; erroVr = ""; break; }
-          erroVr = r2.erro || erroVr;
-        }
+        if (alvo && await tentar(alvo)) break;
       }
     }
+
 
     if (erroVr && baseBruta.length === 0) {
       const faltaRelatorio = /404|nao encontrado|nao existe|nao cadastrado|not found/i.test(erroVr);
@@ -180,8 +193,15 @@ Deno.serve(async (req) => {
     const base = baseBruta.map(lower).map((r) => {
       const preco = num(pick(r, "preco_venda", "preco", "venda", "preco_atual"));
       const custo = num(pick(r, "custo", "custo_medio", "custo_liquido"));
+      // algumas pontes publicam a margem em fracao (0,48 = 48%)
+      let margem = num(pick(r, "margem_atual", "margem"));
+      if (margem > 0 && margem <= 1.5) margem *= 100;
+      if (!margem && preco > 0 && custo > 0) margem = ((preco - custo) / preco) * 100;
+      // "candidatos_encarte" traz volume/faturamento do periodo consultado (90d)
+      const volumePeriodo = num(pick(r, "volume_90d", "qtd_90d", "volume", "quantidade", "qtd"));
+      const vendaPeriodo = num(pick(r, "venda_90d", "faturamento", "total_vendido", "valor_venda"));
       return {
-        codigo: txt(pick(r, "codigo", "cod", "codigo_interno", "cod_reduzido")),
+        codigo: txt(pick(r, "codigo", "cod", "codigo_interno", "cod_reduzido", "id_produto", "produto_id")),
         descricao: txt(pick(r, "descricao", "produto", "nome")),
         ean: txt(pick(r, "ean", "codigo_barras", "cod_barras", "barcode", "gtin")),
         secao: txt(pick(r, "secao", "departamento", "n1")),
@@ -190,20 +210,21 @@ Deno.serve(async (req) => {
         preco_venda: preco,
         custo,
         custo_medio: num(pick(r, "custo_medio", "custo")),
-        margem_atual: num(pick(r, "margem_atual", "margem")),
+        margem_atual: margem,
         estoque: num(pick(r, "estoque", "estoque_atual")),
         venda_7d: num(pick(r, "venda_7d")),
-        venda_30d: num(pick(r, "venda_30d")),
-        venda_90d: num(pick(r, "venda_90d")),
+        venda_30d: num(pick(r, "venda_30d")) || vendaPeriodo / 3,
+        venda_90d: vendaPeriodo,
         venda_365d: num(pick(r, "venda_365d")),
-        volume_30d: num(pick(r, "volume_30d", "qtd_30d")),
-        volume_90d: num(pick(r, "volume_90d", "qtd_90d")),
-        margem_90d: num(pick(r, "margem_90d")),
+        volume_30d: num(pick(r, "volume_30d", "qtd_30d")) || volumePeriodo / 3,
+        volume_90d: volumePeriodo,
+        margem_90d: num(pick(r, "margem_90d")) || margem,
         cobertura_dias: num(pick(r, "cobertura_dias", "cobertura")),
-        ultima_oferta_fim: txt(pick(r, "ultima_oferta_fim")),
+        ultima_oferta_fim: txt(pick(r, "ultima_oferta_fim", "ultima_oferta")),
         ofertas_90d: num(pick(r, "ofertas_90d")),
       };
     }).filter((p) => p.codigo && p.preco_venda > 0);
+
 
     // ---------- concorrencia por EAN ----------
     const eans = Array.from(new Set(base.map((p) => p.ean).filter((e) => e && e.length >= 8)));
@@ -334,9 +355,12 @@ Deno.serve(async (req) => {
     const teveVenda = (p: Prod2) =>
       (p.venda_365d > vendaMinima) || (p.venda_90d > vendaMinima) || (p.venda_30d > vendaMinima);
 
-    const semEanOuPreco = base.filter((p) => !p.ean || p.preco_venda <= 0).length;
-    const poolBase = base.filter((p) => p.ean && p.preco_venda > 0 && posicaoDoProduto(p) !== "excluir");
+    // O EAN e usado apenas para cruzar com a concorrencia — nao pode ser
+    // exigido, pois varias pontes nao publicam codigo de barras nesse relatorio.
+    const semEanOuPreco = base.filter((p) => p.preco_venda <= 0).length;
+    const poolBase = base.filter((p) => p.preco_venda > 0 && posicaoDoProduto(p) !== "excluir");
     const excluidos = base.length - poolBase.length - semEanOuPreco;
+
     console.log(`[sugerir-encarte] loja=${store_id} linhas_ponte=${baseBruta.length} pool=${poolBase.length} sem_ean_ou_preco=${semEanOuPreco} excluidos_por_regra=${excluidos}`);
 
     const janelaGiro = Number(reg.janela_giro_dias ?? 90);
