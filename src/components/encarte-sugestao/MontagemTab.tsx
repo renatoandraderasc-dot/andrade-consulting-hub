@@ -434,8 +434,9 @@ const MontagemTab = (p: Props) => {
 
       <DiagnosticoPanel diagnostico={p.diagnostico ?? null} />
 
-      <Tabela face="capa" />
-      <Tabela face="verso" />
+      {Tabela({ face: "capa" })}
+      {Tabela({ face: "verso" })}
+
 
       <TrocaProdutoDialog
         open={!!troca}
