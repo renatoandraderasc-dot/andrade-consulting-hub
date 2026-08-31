@@ -145,31 +145,36 @@ Deno.serve(async (req) => {
       return { erro: txt(body?.erro), dados: (body?.dados as Row[]) ?? [] };
     };
 
-    const tentativas = ["encarte_base", "02-encarte_base", "candidatos_encarte"];
+    const tentativas = ["candidatos_encarte", "encarte_base", "02-encarte_base"];
 
     let erroVr = "";
     let baseBruta: Row[] = [];
     const jaTentados = new Set<string>();
 
-    for (const nome of tentativas) {
-      if (jaTentados.has(nome)) continue;
+    const tentar = async (nome: string) => {
+      if (jaTentados.has(nome)) return false;
       jaTentados.add(nome);
-      const r = await consultarVr(nome);
-      if (r.dados.length > 0) { baseBruta = r.dados; erroVr = ""; break; }
-      erroVr = r.erro;
+      // uma repeticao: a ponte as vezes devolve vazio na primeira chamada
+      for (let t = 0; t < 2; t++) {
+        const r = await consultarVr(nome);
+        console.log(`[sugerir-encarte] relatorio=${nome} tentativa=${t + 1} linhas=${r.dados.length} erro=${r.erro.slice(0, 120)}`);
+        if (r.dados.length > 0) { baseBruta = r.dados; erroVr = ""; return true; }
+        if (r.erro) { erroVr = r.erro; if (/404|nao existe|not found/i.test(r.erro)) return false; }
+      }
+      return false;
+    };
+
+    for (const nome of tentativas) {
+      if (await tentar(nome)) break;
       // extrai nomes disponiveis do erro e tenta o que casar com encarte
-      const m = r.erro.match(/"disponiveis"\s*:\s*\[([^\]]*)/);
+      const m = erroVr.match(/"disponiveis"\s*:\s*\[([^\]]*)/);
       if (m) {
         const nomes = m[1].split(",").map((s) => s.replace(/[\\"\s]/g, "")).filter(Boolean);
         const alvo = nomes.find((n) => /encarte_base$/i.test(n)) ?? nomes.find((n) => /encarte/i.test(n) && !/migration/i.test(n));
-        if (alvo && !jaTentados.has(alvo)) {
-          jaTentados.add(alvo);
-          const r2 = await consultarVr(alvo);
-          if (r2.dados.length > 0) { baseBruta = r2.dados; erroVr = ""; break; }
-          erroVr = r2.erro || erroVr;
-        }
+        if (alvo && await tentar(alvo)) break;
       }
     }
+
 
     if (erroVr && baseBruta.length === 0) {
       const faltaRelatorio = /404|nao encontrado|nao existe|nao cadastrado|not found/i.test(erroVr);
