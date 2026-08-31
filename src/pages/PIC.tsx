@@ -534,6 +534,8 @@ interface KpiSectionProps {
 
 const KpiSection = ({ label, kpi, viewMode, today, soPct }: KpiSectionProps) => {
   const [expanded, setExpanded] = useState(false);
+  const acumValido = kpi.metaAcumulada > 0;
+  const totalValido = kpi.metaMensal > 0;
   const acumColor = kpi.pctAcumulado >= 100 ? "bg-emerald-500" : kpi.pctAcumulado >= 80 ? "bg-blue-500" : "bg-red-500";
   const totalColor = kpi.pctTotal >= 100 ? "bg-emerald-500" : kpi.pctTotal >= 80 ? "bg-blue-500" : "bg-amber-500";
   const isCurrency = label !== "Volume" && label !== "MIX de Produtos";
@@ -549,24 +551,28 @@ const KpiSection = ({ label, kpi, viewMode, today, soPct }: KpiSectionProps) => 
     barColor: string,
     tooltipTitle: string,
     tooltipSub: string,
+    valido = true,
   ) => (
     <div className="flex items-center gap-2 mb-1" title={`${tooltipTitle}\n${tooltipSub}`}>
       <span className="text-[10px] text-muted-foreground font-mono w-16 shrink-0">{labelBar}</span>
       <div className="flex-1 h-5 bg-muted/40 rounded-sm overflow-hidden relative">
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: `${Math.min(pct, 120)}%` }}
-          transition={{ duration: 1, ease: "easeOut" }}
-          className={`h-full ${barColor} rounded-sm`}
-          style={{ maxWidth: "100%" }}
-        />
+        {valido && (
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${Math.min(pct, 120)}%` }}
+            transition={{ duration: 1, ease: "easeOut" }}
+            className={`h-full ${barColor} rounded-sm`}
+            style={{ maxWidth: "100%" }}
+          />
+        )}
         <div className="absolute top-0 bottom-0 w-px bg-foreground/20" style={{ left: "100%" }} />
       </div>
-      <span className={`text-xs font-mono font-bold w-20 text-right ${pct >= 100 ? "text-emerald-500" : pct >= 80 ? "text-blue-500" : "text-red-500"}`}>
-        {pctFmt(pct)}
+      <span className={`text-xs font-mono font-bold w-20 text-right ${!valido ? "text-muted-foreground" : pct >= 100 ? "text-emerald-500" : pct >= 80 ? "text-blue-500" : "text-red-500"}`}>
+        {valido ? pctFmt(pct) : "—"}
       </span>
     </div>
   );
+
 
   return (
     <div translate="no">
