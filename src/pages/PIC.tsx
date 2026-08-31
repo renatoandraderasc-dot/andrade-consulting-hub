@@ -65,6 +65,8 @@ const PIC = () => {
   const [storeName, setStoreName] = useState("");
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [diaInicio, setDiaInicio] = useState(1);
+  const [diaFim, setDiaFim] = useState(0); // 0 = último dia do mês
   const [viewMode, setViewMode] = useState<"mes" | "dia">("mes");
   const [metasData, setMetasData] = useState<Record<string, any[]>>({});
   const [metaMix, setMetaMix] = useState<Record<string, number>>({});
@@ -73,8 +75,12 @@ const PIC = () => {
 
   const [loading, setLoading] = useState(true);
 
-  const periodStart = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}-01`;
-  const periodEnd = new Date(selectedYear, selectedMonth, 0).toISOString().slice(0, 10);
+  const diasNoMesSel = new Date(selectedYear, selectedMonth, 0).getDate();
+  const diaIniEfetivo = Math.min(Math.max(diaInicio, 1), diasNoMesSel);
+  const diaFimEfetivo = Math.min(Math.max(diaFim || diasNoMesSel, diaIniEfetivo), diasNoMesSel);
+  const pad2 = (n: number) => String(n).padStart(2, "0");
+  const periodStart = `${selectedYear}-${pad2(selectedMonth)}-${pad2(diaIniEfetivo)}`;
+  const periodEnd = `${selectedYear}-${pad2(selectedMonth)}-${pad2(diaFimEfetivo)}`;
 
   // Realizado sempre ao vivo, via vr-proxy (nada vem de realizado_* do banco)
   const {
@@ -113,7 +119,7 @@ const PIC = () => {
 
   useEffect(() => {
     if (storeId) fetchMetas();
-  }, [storeId, selectedMonth, selectedYear]);
+  }, [storeId, selectedMonth, selectedYear, diaIniEfetivo, diaFimEfetivo]);
 
   useEffect(() => {
     if (!storeId) return;
@@ -238,7 +244,10 @@ const PIC = () => {
   const isPastMonth =
     selectedYear < todayDate.getFullYear() ||
     (selectedYear === todayDate.getFullYear() && selectedMonth < todayDate.getMonth() + 1);
-  const cutoffDay = isCurrentMonth ? todayDate.getDate() : isPastMonth ? 31 : 0;
+  const cutoffDay = Math.min(
+    isCurrentMonth ? todayDate.getDate() : isPastMonth ? 31 : 0,
+    diaFimEfetivo,
+  );
 
 
   // Build KPI data per department
@@ -372,6 +381,26 @@ const PIC = () => {
               <SelectTrigger className="w-[100px] bg-card border-border"><SelectValue /></SelectTrigger>
               <SelectContent>{[2024, 2025, 2026].map((y) => (<SelectItem key={y} value={String(y)}>{y}</SelectItem>))}</SelectContent>
             </Select>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] text-muted-foreground">Dias</span>
+              <Select value={String(diaIniEfetivo)} onValueChange={(v) => setDiaInicio(Number(v))}>
+                <SelectTrigger className="w-[70px] bg-card border-border"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: diasNoMesSel }, (_, i) => i + 1).map((d) => (
+                    <SelectItem key={d} value={String(d)}>{d}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span className="text-[11px] text-muted-foreground">até</span>
+              <Select value={String(diaFimEfetivo)} onValueChange={(v) => setDiaFim(Number(v))}>
+                <SelectTrigger className="w-[70px] bg-card border-border"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: diasNoMesSel }, (_, i) => i + 1).map((d) => (
+                    <SelectItem key={d} value={String(d)}>{d}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as any)} className="ml-2">
               <TabsList className="bg-card border border-border">
                 <TabsTrigger value="mes" className="text-xs">Mensal</TabsTrigger>
