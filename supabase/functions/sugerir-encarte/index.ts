@@ -646,6 +646,19 @@ Deno.serve(async (req) => {
     }
     for (const p of pendenciasFixos) avisosConfig.push(txt(p.motivo));
     // ---------- persistencia ----------
+    const resumoDiag = {
+      slots: slots.length,
+      preenchidos: itens.filter((i) => i.codigo).length,
+      relaxados: diagnostico.filter((d) => txt(d.status) === "relaxado").length,
+      fixos: diagnostico.filter((d) => txt(d.status) === "fixo").length,
+      pendentes: diagnostico.filter((d) => txt(d.status) === "pendente").length,
+      produtos_base: base.length,
+      linhas_ponte: baseBruta.length,
+      sem_ean_ou_preco: semEanOuPreco,
+      excluidos_por_regra: excluidos,
+      avisos: avisosConfig,
+    };
+
     const nome = `${txt(cal.data?.nome) || "Encarte"} — ${data_inicio ?? ""} a ${data_fim ?? ""}`;
     const { data: gerado, error: errG } = await service
       .from("encarte_gerado")
@@ -653,6 +666,7 @@ Deno.serve(async (req) => {
         store_id, nome, data_inicio: data_inicio || null, data_fim: data_fim || null,
         agv_pct: agvPct, criado_por: userId, calendario_id: calendario_id ?? null,
         modelo_id, tipo_faixa: faixaEncarte, status: "rascunho",
+        diagnostico: { resumo: resumoDiag, slots: diagnostico },
       })
       .select("id").single();
     if (errG) return json({ erro: errG.message }, 500);
@@ -667,8 +681,12 @@ Deno.serve(async (req) => {
       venda_atual: it.venda_atual ?? null, margem_atual: it.margem_atual ?? null,
       preco_oferta: it.preco_oferta ?? null, margem_oferta: it.margem_oferta ?? null,
       estoque: it.estoque ?? null, giro_90d: it.giro_90d ?? null, volume_30d: it.volume_30d ?? null,
-      score: it.score ?? null, origem: "sugerido", motivo: it.motivo ?? null,
+      score: it.score ?? null, origem: txt(it.origem) || "sugerido", motivo: it.motivo ?? null,
       alerta: it.alerta ?? null,
+      travado: it.travado === true,
+      nivel_relaxamento: num(it.nivel_relaxamento),
+      motivo_escolha: it.motivo_escolha ?? null,
+      regra_posicao_id: it.regra_posicao_id ?? null,
     }));
     const { error: errI } = await service.from("encarte_item").insert(linhas);
     if (errI) return json({ erro: errI.message }, 500);
@@ -678,11 +696,11 @@ Deno.serve(async (req) => {
       encarte_id: gerado.id,
       itens: linhas,
       alternativas: alternativasPorSlot,
+      diagnostico: { resumo: resumoDiag, slots: diagnostico },
+      avisos: avisosConfig,
       resumo: {
-        slots: slots.length,
-        preenchidos: linhas.filter((l) => l.codigo).length,
+        ...resumoDiag,
         com_alerta: linhas.filter((l) => l.alerta).length,
-        produtos_base: base.length,
         com_concorrente: concorrentePorEan.size,
       },
     });

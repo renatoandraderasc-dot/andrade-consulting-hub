@@ -6,11 +6,14 @@ import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tags } from "lucide-react";
 import MontagemTab from "@/components/encarte-sugestao/MontagemTab";
+import InserirManualTab from "@/components/encarte-sugestao/InserirManualTab";
+import CapaVersoTab from "@/components/encarte-sugestao/CapaVersoTab";
 import ModeloTab from "@/components/encarte-sugestao/ModeloTab";
 import ImpressaoTab from "@/components/encarte-sugestao/ImpressaoTab";
 import {
-  Alternativa, CalendarioRow, Face, ItemEncarte, ModeloRow,
+  Alternativa, CalendarioRow, CategoriaRow, DiagnosticoEncarte, Face, ItemEncarte, ModeloRow,
 } from "@/components/encarte-sugestao/types";
+import { LinhaManual, margemEncarte } from "@/components/encarte-sugestao/manualTypes";
 
 interface Store { id: string; name: string }
 
@@ -39,6 +42,9 @@ const EncarteSugestao = () => {
   const [loading, setLoading] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [aba, setAba] = useState("montagem");
+  const [diagnostico, setDiagnostico] = useState<DiagnosticoEncarte | null>(null);
+  const [categorias, setCategorias] = useState<CategoriaRow[]>([]);
 
   // lojas do usuário
   useEffect(() => {
@@ -82,6 +88,12 @@ const EncarteSugestao = () => {
 
   useEffect(() => { carregarCalendario(); carregarModelos(); }, [carregarCalendario, carregarModelos]);
 
+  useEffect(() => {
+    supabase.from("encarte_categoria").select("*").order("ordem").then(({ data }) =>
+      setCategorias((data as CategoriaRow[]) ?? []),
+    );
+  }, []);
+
   // sistema da loja
   useEffect(() => {
     if (!storeId) return;
@@ -101,7 +113,8 @@ const EncarteSugestao = () => {
   const trocarLoja = (id: string) => {
     setStoreId(id);
     sessionStorage.setItem("selectedStoreId", id);
-    setItens([]); setAlternativas({}); setEncarteId(null); setStatus("rascunho"); setAviso(null);
+    setItens([]); setAlternativas({}); setEncarteId(null); setStatus("rascunho");
+    setAviso(null); setDiagnostico(null);
   };
 
   const lojaVr = sistema !== "WEBSAC";
@@ -138,6 +151,7 @@ const EncarteSugestao = () => {
       : novos;
     setItens(mesclados);
     setAlternativas((resp?.alternativas as Record<string, Alternativa[]>) ?? {});
+    setDiagnostico((resp?.diagnostico as DiagnosticoEncarte) ?? null);
     setEncarteId(String(resp?.encarte_id ?? ""));
     setStatus("rascunho");
     const resumo = resp?.resumo as Record<string, number> | undefined;
@@ -177,6 +191,55 @@ const EncarteSugestao = () => {
     toast.success(aprovar ? "Encarte aprovado" : "Rascunho salvo");
   };
 
+  const enviarManualParaImpressao = async (linhas: LinhaManual[], nomeLista: string) => {
+    if (!storeId || !linhas.length) return;
+    const nome = nomeLista.trim() || `Lista manual ${new Date().toLocaleDateString("pt-BR")}`;
+    const { data: gerado, error } = await supabase
+      .from("encarte_gerado")
+      .insert({
+        store_id: storeId, nome, status: "rascunho",
+        data_inicio: dataInicio || null, data_fim: dataFim || null,
+        criado_por: user?.id ?? null,
+      })
+      .select("id").single();
+    if (error || !gerado) { toast.error(error?.message ?? "Falha ao criar o encarte"); return; }
+
+    let capa = 0;
+    let verso = 0;
+    const novos: ItemEncarte[] = linhas.map((l) => {
+      const face: Face = l.posicao === "verso" ? "verso" : "capa";
+      const posicao = face === "capa" ? ++capa : ++verso;
+      return {
+        face, posicao, tipo_faixa: "neutro",
+        departamento: l.secao || null, categoria: l.grupo || null,
+        codigo: l.codigo, descricao: l.descricao_encarte || l.descricao, ean: l.ean || null,
+        custo: l.custo, pmz: l.custo, venda_atual: l.preco_venda, margem_atual: l.margem_pct,
+        preco_oferta: l.preco_encarte, margem_encarte: null as never,
+        margem_oferta: margemEncarte(l.preco_encarte, l.custo),
+        estoque: l.estoque, origem: "manual", ciente: true, travado: true, aprovado: false,
+      } as ItemEncarte;
+    });
+
+    const { error: e2 } = await supabase.from("encarte_item").insert(
+      novos.map((i, idx) => ({
+        encarte_id: gerado.id, ordem: idx + 1,
+        face: i.face, posicao: i.posicao, tipo_faixa: i.tipo_faixa,
+        departamento: i.departamento, categoria: i.categoria,
+        codigo: i.codigo, descricao: i.descricao, ean: i.ean ?? null,
+        custo: i.custo, pmz: i.pmz, venda_atual: i.venda_atual, margem_atual: i.margem_atual,
+        preco_oferta: i.preco_oferta, margem_oferta: i.margem_oferta,
+        estoque: i.estoque ?? null, origem: "manual", travado: true,
+      })),
+    );
+    if (e2) { toast.error(e2.message); return; }
+
+    setEncarteId(gerado.id);
+    setItens(novos);
+    setStatus("rascunho");
+    setAba("impressao");
+    toast.success("Lista enviada para Impressão / Export");
+  };
+
   const itensOrdenados = useMemo(
     () =>
       [...itens].sort((a, b) =>
@@ -198,10 +261,12 @@ const EncarteSugestao = () => {
           </div>
         </div>
 
-        <Tabs defaultValue="montagem">
+        <Tabs value={aba} onValueChange={setAba}>
           <TabsList>
             <TabsTrigger value="montagem">Montagem</TabsTrigger>
             {isAdmin && <TabsTrigger value="modelo">Modelo e calendário</TabsTrigger>}
+            <TabsTrigger value="manual">Inserir manualmente</TabsTrigger>
+            <TabsTrigger value="capaverso">Capa &amp; Verso</TabsTrigger>
             <TabsTrigger value="impressao">Impressão / Export</TabsTrigger>
           </TabsList>
 
@@ -228,6 +293,7 @@ const EncarteSugestao = () => {
               aviso={aviso}
               status={status}
               lojaVr={lojaVr}
+              diagnostico={diagnostico}
               isAdmin={isAdmin}
               onGerar={gerar}
               onSalvar={() => persistir(false)}
@@ -247,6 +313,19 @@ const EncarteSugestao = () => {
               />
             </TabsContent>
           )}
+
+          <TabsContent value="manual" className="mt-4">
+            <InserirManualTab
+              stores={stores}
+              storeId={storeId}
+              onStoreChange={trocarLoja}
+              onEnviarImpressao={enviarManualParaImpressao}
+            />
+          </TabsContent>
+
+          <TabsContent value="capaverso" className="mt-4">
+            <CapaVersoTab storeId={storeId} categorias={categorias} />
+          </TabsContent>
 
           <TabsContent value="impressao" className="mt-4">
             <ImpressaoTab itens={itensOrdenados} nomeEncarte={nomeEncarte} />
