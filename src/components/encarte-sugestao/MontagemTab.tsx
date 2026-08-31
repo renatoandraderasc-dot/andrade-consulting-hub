@@ -9,13 +9,15 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  AlertTriangle, Check, Lock, Unlock, RefreshCw, Repeat, Save, Sparkles, Trash2,
+  AlertTriangle, Check, Lock, Unlock, Pin, RefreshCw, Repeat, Save, Sparkles, Trash2,
 } from "lucide-react";
 import { formatBRL } from "@/lib/formatters";
 import {
-  Alternativa, CalendarioRow, Face, ItemEncarte, ModeloRow, faixaClass, faixaLabel, pct,
+  Alternativa, CalendarioRow, DiagnosticoEncarte, Face, ItemEncarte, ModeloRow,
+  faixaClass, faixaLabel, pct,
 } from "./types";
 import TrocaProdutoDialog from "./TrocaProdutoDialog";
+import DiagnosticoPanel from "./DiagnosticoPanel";
 
 interface Store { id: string; name: string }
 
@@ -42,6 +44,7 @@ interface Props {
   status: string;
   lojaVr: boolean;
   isAdmin: boolean;
+  diagnostico?: DiagnosticoEncarte | null;
   onGerar: (manterTravados: boolean) => void;
   onSalvar: () => void;
   onAprovar: () => void;
@@ -173,6 +176,30 @@ const MontagemTab = (p: Props) => {
                               <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
                             </TooltipTrigger>
                             <TooltipContent>{i.alerta}</TooltipContent>
+                          </Tooltip>
+                        )}
+                        {i.origem === "fixo" && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Pin className="w-3.5 h-3.5 text-primary shrink-0" />
+                            </TooltipTrigger>
+                            <TooltipContent>fixado em Capa &amp; Verso</TooltipContent>
+                          </Tooltip>
+                        )}
+                        {!!i.nivel_relaxamento && i.nivel_relaxamento > 0 && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span
+                                className={`px-1.5 py-0.5 rounded border text-[10px] shrink-0 ${
+                                  i.nivel_relaxamento >= 5
+                                    ? "bg-orange-500/20 text-orange-700 dark:text-orange-400 border-orange-500/30"
+                                    : "bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30"
+                                }`}
+                              >
+                                N{i.nivel_relaxamento}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>{i.motivo_escolha ?? "regra relaxada"}</TooltipContent>
                           </Tooltip>
                         )}
                         {i.motivo ? (
@@ -404,6 +431,8 @@ const MontagemTab = (p: Props) => {
           </Tooltip>
         </div>
       </Card>
+
+      <DiagnosticoPanel diagnostico={p.diagnostico ?? null} />
 
       <Tabela face="capa" />
       <Tabela face="verso" />
