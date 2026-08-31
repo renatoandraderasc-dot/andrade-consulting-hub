@@ -244,7 +244,10 @@ const PIC = () => {
   const isPastMonth =
     selectedYear < todayDate.getFullYear() ||
     (selectedYear === todayDate.getFullYear() && selectedMonth < todayDate.getMonth() + 1);
-  const cutoffDay = isCurrentMonth ? todayDate.getDate() : isPastMonth ? 31 : 0;
+  const cutoffDay = Math.min(
+    isCurrentMonth ? todayDate.getDate() : isPastMonth ? 31 : 0,
+    diaFimEfetivo,
+  );
 
 
   // Build KPI data per department
