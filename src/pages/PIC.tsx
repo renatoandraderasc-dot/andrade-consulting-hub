@@ -70,6 +70,7 @@ const PIC = () => {
   const [viewMode, setViewMode] = useState<"mes" | "dia">("mes");
   const [metasData, setMetasData] = useState<Record<string, any[]>>({});
   const [metaMix, setMetaMix] = useState<Record<string, number>>({});
+  const [metasMes, setMetasMes] = useState<Record<string, { vendas: number; lucro: number; volume: number; mix: number }>>({});
   const picMode = usePicDisplayMode(storeId);
   const soPct = picMode === "percentual";
 
@@ -176,7 +177,9 @@ const PIC = () => {
   // Metas continuam vindo de store_daily_metrics (colunas meta_*)
   const fetchMetas = async () => {
     setLoading(true);
-    const [{ data }, { data: mixRows }] = await Promise.all([
+    const mesInicio = `${selectedYear}-${pad2(selectedMonth)}-01`;
+    const mesFim = `${selectedYear}-${pad2(selectedMonth)}-${pad2(diasNoMesSel)}`;
+    const [{ data }, { data: mixRows }, { data: mesRows }] = await Promise.all([
       supabase
         .from("store_daily_metrics")
         .select("date, department, meta_vendas, meta_lucro, meta_margem_pct, meta_volume, meta_mix")
@@ -190,14 +193,31 @@ const PIC = () => {
         .eq("store_id", storeId)
         .eq("ano", selectedYear)
         .eq("mes", selectedMonth),
+      supabase
+        .from("store_daily_metrics")
+        .select("department, meta_vendas, meta_lucro, meta_volume, meta_mix")
+        .eq("store_id", storeId)
+        .gte("date", mesInicio)
+        .lte("date", mesFim),
     ]);
 
     const results: Record<string, any[]> = {};
     for (const d of data || []) (results[d.department] ||= []).push(d);
     setMetasData(results);
+    // Meta do mês inteiro (denominador do TOTAL), independente do filtro de dias
+    const mes: Record<string, { vendas: number; lucro: number; volume: number; mix: number }> = {};
+    for (const r of mesRows || []) {
+      const acc = (mes[r.department] ||= { vendas: 0, lucro: 0, volume: 0, mix: 0 });
+      acc.vendas += Number(r.meta_vendas) || 0;
+      acc.lucro += Number(r.meta_lucro) || 0;
+      acc.volume += Number(r.meta_volume) || 0;
+      acc.mix += Number(r.meta_mix) || 0;
+    }
+    setMetasMes(mes);
     setMetaMix(Object.fromEntries((mixRows || []).map((m: any) => [m.department, Number(m.meta_mix) || 0])));
     setLoading(false);
   };
+
 
 
   // Combina metas (banco) com realizado ao vivo (VR)
@@ -235,19 +255,21 @@ const PIC = () => {
   }, [refresh]);
 
 
-  // Determina o "dia de hoje" para cálculo de meta acumulada.
+  // Determina o "dia de hoje" (fuso de Brasília) para o corte do acumulado.
   // Se o mês selecionado é o mês atual → dia corrente.
   // Se for mês passado → último dia com dados; se futuro → 0.
-  const todayDate = new Date();
-  const isCurrentMonth =
-    todayDate.getFullYear() === selectedYear && todayDate.getMonth() + 1 === selectedMonth;
+  const hojeSP = new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }); // YYYY-MM-DD
+  const spYear = Number(hojeSP.slice(0, 4));
+  const spMonth = Number(hojeSP.slice(5, 7));
+  const spDay = Number(hojeSP.slice(8, 10));
+  const isCurrentMonth = spYear === selectedYear && spMonth === selectedMonth;
   const isPastMonth =
-    selectedYear < todayDate.getFullYear() ||
-    (selectedYear === todayDate.getFullYear() && selectedMonth < todayDate.getMonth() + 1);
+    selectedYear < spYear || (selectedYear === spYear && selectedMonth < spMonth);
   const cutoffDay = Math.min(
-    isCurrentMonth ? todayDate.getDate() : isPastMonth ? 31 : 0,
+    isCurrentMonth ? spDay : isPastMonth ? 31 : 0,
     diaFimEfetivo,
   );
+
 
 
   // Build KPI data per department
@@ -270,14 +292,23 @@ const PIC = () => {
 
       result[dept] = {};
 
-      const calcKpi = (metaKey: keyof DayMetric, realKey: keyof DayMetric) => {
-        let metaMensal = 0, metaAcumulada = 0, realizado = 0;
+      const mesDept = metasMes[dept];
+
+      // realizado = soma dos dias já decorridos (data <= hoje em Brasília)
+      // ACUMUL. = realizado / soma das metas dos dias <= hoje
+      // TOTAL   = realizado / meta do mês inteiro
+      const calcKpi = (
+        metaKey: keyof DayMetric,
+        realKey: keyof DayMetric,
+        metaMesTotal?: number,
+      ) => {
+        let metaPeriodo = 0, metaAcumulada = 0, realizado = 0;
         let accMetaRun = 0, accRealRun = 0;
         const daily: KpiData["daily"] = [];
         for (const r of rows) {
           const m = Number(r[metaKey]) || 0;
           const v = Number(r[realKey]) || 0;
-          metaMensal += m;
+          metaPeriodo += m;
           accMetaRun += m;
           accRealRun += v;
           if (r.day <= cutoffDay) {
@@ -287,26 +318,39 @@ const PIC = () => {
           const pct = accMetaRun > 0 ? (accRealRun / accMetaRun) * 100 : 0;
           daily.push({ day: r.day, pct, realizado: v, meta: m, hasMeta: m > 0 });
         }
+        const metaMensal = Number(metaMesTotal) > 0 ? Number(metaMesTotal) : metaPeriodo;
         const pctTotal = metaMensal > 0 ? (realizado / metaMensal) * 100 : 0;
         const pctAcumulado = metaAcumulada > 0 ? (realizado / metaAcumulada) * 100 : 0;
-        return { pctTotal, pctAcumulado, realizado, metaMensal, metaAcumulada, hasMeta: metaMensal > 0, daily };
+        return {
+          pctTotal,
+          pctAcumulado,
+          realizado,
+          metaMensal,
+          metaAcumulada,
+          hasMeta: metaMensal > 0 || metaAcumulada > 0,
+          daily,
+        };
       };
 
-
-
-      result[dept].faturamento = calcKpi("meta_vendas", "realizado_vendas");
-      result[dept].quantidade = calcKpi("meta_volume", "realizado_volume");
-      result[dept].arrecadacao = calcKpi("meta_lucro", "realizado_lucro");
-      // Mix: realizado ao vivo (positivação acumulada) x meta mensal de meta_mix
+      result[dept].faturamento = calcKpi("meta_vendas", "realizado_vendas", mesDept?.vendas);
+      result[dept].quantidade = calcKpi("meta_volume", "realizado_volume", mesDept?.volume);
+      result[dept].arrecadacao = calcKpi("meta_lucro", "realizado_lucro", mesDept?.lucro);
+      // Mix: realizado ao vivo (positivação acumulada) x meta mensal de meta_mix.
+      // A meta de mix é mensal: o acumulado até hoje é pro-rata dos dias decorridos.
       const metaMensalMix =
         Number(metaMix[dept]) ||
+        Number(mesDept?.mix) ||
         rows.reduce((a, r) => a + (Number(r.meta_mix) || 0), 0);
       {
         let realizado = 0, acumulado = 0;
+        let diasDecorridos = 0;
         const daily: KpiData["daily"] = [];
         for (const r of rows) {
           acumulado += Number(r.realizado_mix) || 0;
-          if (r.day <= cutoffDay) realizado = acumulado;
+          if (r.day <= cutoffDay) {
+            realizado = acumulado;
+            diasDecorridos += 1;
+          }
           daily.push({
             day: r.day,
             pct: metaMensalMix > 0 ? (acumulado / metaMensalMix) * 100 : 0,
@@ -315,21 +359,24 @@ const PIC = () => {
             hasMeta: metaMensalMix > 0,
           });
         }
-        const pct = metaMensalMix > 0 ? (realizado / metaMensalMix) * 100 : 0;
+        const totalDias = rows.length || diasNoMesSel;
+        const metaAcumMix =
+          totalDias > 0 ? (metaMensalMix * diasDecorridos) / totalDias : 0;
         result[dept].volume = {
-          pctTotal: pct,
-          pctAcumulado: pct,
+          pctTotal: metaMensalMix > 0 ? (realizado / metaMensalMix) * 100 : 0,
+          pctAcumulado: metaAcumMix > 0 ? (realizado / metaAcumMix) * 100 : 0,
           realizado,
           metaMensal: metaMensalMix,
-          metaAcumulada: metaMensalMix,
+          metaAcumulada: metaAcumMix,
           hasMeta: metaMensalMix > 0,
           daily,
         };
       }
 
+
     }
     return result;
-  }, [rawData, cutoffDay, metaMix]);
+  }, [rawData, cutoffDay, metaMix, metasMes, diasNoMesSel]);
 
 
   // AI Analysis
@@ -534,6 +581,8 @@ interface KpiSectionProps {
 
 const KpiSection = ({ label, kpi, viewMode, today, soPct }: KpiSectionProps) => {
   const [expanded, setExpanded] = useState(false);
+  const acumValido = kpi.metaAcumulada > 0;
+  const totalValido = kpi.metaMensal > 0;
   const acumColor = kpi.pctAcumulado >= 100 ? "bg-emerald-500" : kpi.pctAcumulado >= 80 ? "bg-blue-500" : "bg-red-500";
   const totalColor = kpi.pctTotal >= 100 ? "bg-emerald-500" : kpi.pctTotal >= 80 ? "bg-blue-500" : "bg-amber-500";
   const isCurrency = label !== "Volume" && label !== "MIX de Produtos";
@@ -549,24 +598,28 @@ const KpiSection = ({ label, kpi, viewMode, today, soPct }: KpiSectionProps) => 
     barColor: string,
     tooltipTitle: string,
     tooltipSub: string,
+    valido = true,
   ) => (
     <div className="flex items-center gap-2 mb-1" title={`${tooltipTitle}\n${tooltipSub}`}>
       <span className="text-[10px] text-muted-foreground font-mono w-16 shrink-0">{labelBar}</span>
       <div className="flex-1 h-5 bg-muted/40 rounded-sm overflow-hidden relative">
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: `${Math.min(pct, 120)}%` }}
-          transition={{ duration: 1, ease: "easeOut" }}
-          className={`h-full ${barColor} rounded-sm`}
-          style={{ maxWidth: "100%" }}
-        />
+        {valido && (
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${Math.min(pct, 120)}%` }}
+            transition={{ duration: 1, ease: "easeOut" }}
+            className={`h-full ${barColor} rounded-sm`}
+            style={{ maxWidth: "100%" }}
+          />
+        )}
         <div className="absolute top-0 bottom-0 w-px bg-foreground/20" style={{ left: "100%" }} />
       </div>
-      <span className={`text-xs font-mono font-bold w-20 text-right ${pct >= 100 ? "text-emerald-500" : pct >= 80 ? "text-blue-500" : "text-red-500"}`}>
-        {pctFmt(pct)}
+      <span className={`text-xs font-mono font-bold w-20 text-right ${!valido ? "text-muted-foreground" : pct >= 100 ? "text-emerald-500" : pct >= 80 ? "text-blue-500" : "text-red-500"}`}>
+        {valido ? pctFmt(pct) : "—"}
       </span>
     </div>
   );
+
 
   return (
     <div translate="no">
@@ -583,6 +636,7 @@ const KpiSection = ({ label, kpi, viewMode, today, soPct }: KpiSectionProps) => 
             acumColor,
             `Progresso da Meta Acumulada até hoje`,
             soPct ? "" : `Realizado ${valueFmt(kpi.realizado)} / Meta acum. ${valueFmt(kpi.metaAcumulada)}`,
+            acumValido,
           )}
           {renderBar(
             "TOTAL",
@@ -590,6 +644,7 @@ const KpiSection = ({ label, kpi, viewMode, today, soPct }: KpiSectionProps) => 
             totalColor,
             `Progresso Total do mês`,
             soPct ? "" : `Realizado ${valueFmt(kpi.realizado)} / Meta mensal ${valueFmt(kpi.metaMensal)}`,
+            totalValido,
           )}
           {!soPct && (
             <p className="ml-[4.5rem] text-[10px] text-muted-foreground font-mono">
