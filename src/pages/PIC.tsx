@@ -119,7 +119,7 @@ const PIC = () => {
 
   useEffect(() => {
     if (storeId) fetchMetas();
-  }, [storeId, selectedMonth, selectedYear]);
+  }, [storeId, selectedMonth, selectedYear, diaIniEfetivo, diaFimEfetivo]);
 
   useEffect(() => {
     if (!storeId) return;
