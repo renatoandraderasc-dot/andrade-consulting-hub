@@ -589,6 +589,7 @@ const KpiSection = ({ label, kpi, viewMode, today, soPct }: KpiSectionProps) => 
             acumColor,
             `Progresso da Meta Acumulada até hoje`,
             soPct ? "" : `Realizado ${valueFmt(kpi.realizado)} / Meta acum. ${valueFmt(kpi.metaAcumulada)}`,
+            acumValido,
           )}
           {renderBar(
             "TOTAL",
@@ -596,6 +597,7 @@ const KpiSection = ({ label, kpi, viewMode, today, soPct }: KpiSectionProps) => 
             totalColor,
             `Progresso Total do mês`,
             soPct ? "" : `Realizado ${valueFmt(kpi.realizado)} / Meta mensal ${valueFmt(kpi.metaMensal)}`,
+            totalValido,
           )}
           {!soPct && (
             <p className="ml-[4.5rem] text-[10px] text-muted-foreground font-mono">
