@@ -176,7 +176,9 @@ const PIC = () => {
   // Metas continuam vindo de store_daily_metrics (colunas meta_*)
   const fetchMetas = async () => {
     setLoading(true);
-    const [{ data }, { data: mixRows }] = await Promise.all([
+    const mesInicio = `${selectedYear}-${pad2(selectedMonth)}-01`;
+    const mesFim = `${selectedYear}-${pad2(selectedMonth)}-${pad2(diasNoMesSel)}`;
+    const [{ data }, { data: mixRows }, { data: mesRows }] = await Promise.all([
       supabase
         .from("store_daily_metrics")
         .select("date, department, meta_vendas, meta_lucro, meta_margem_pct, meta_volume, meta_mix")
@@ -190,14 +192,31 @@ const PIC = () => {
         .eq("store_id", storeId)
         .eq("ano", selectedYear)
         .eq("mes", selectedMonth),
+      supabase
+        .from("store_daily_metrics")
+        .select("department, meta_vendas, meta_lucro, meta_volume, meta_mix")
+        .eq("store_id", storeId)
+        .gte("date", mesInicio)
+        .lte("date", mesFim),
     ]);
 
     const results: Record<string, any[]> = {};
     for (const d of data || []) (results[d.department] ||= []).push(d);
     setMetasData(results);
+    // Meta do mês inteiro (denominador do TOTAL), independente do filtro de dias
+    const mes: Record<string, { vendas: number; lucro: number; volume: number; mix: number }> = {};
+    for (const r of mesRows || []) {
+      const acc = (mes[r.department] ||= { vendas: 0, lucro: 0, volume: 0, mix: 0 });
+      acc.vendas += Number(r.meta_vendas) || 0;
+      acc.lucro += Number(r.meta_lucro) || 0;
+      acc.volume += Number(r.meta_volume) || 0;
+      acc.mix += Number(r.meta_mix) || 0;
+    }
+    setMetasMes(mes);
     setMetaMix(Object.fromEntries((mixRows || []).map((m: any) => [m.department, Number(m.meta_mix) || 0])));
     setLoading(false);
   };
+
 
 
   // Combina metas (banco) com realizado ao vivo (VR)
