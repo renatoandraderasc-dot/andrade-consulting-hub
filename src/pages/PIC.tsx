@@ -255,19 +255,21 @@ const PIC = () => {
   }, [refresh]);
 
 
-  // Determina o "dia de hoje" para cálculo de meta acumulada.
+  // Determina o "dia de hoje" (fuso de Brasília) para o corte do acumulado.
   // Se o mês selecionado é o mês atual → dia corrente.
   // Se for mês passado → último dia com dados; se futuro → 0.
-  const todayDate = new Date();
-  const isCurrentMonth =
-    todayDate.getFullYear() === selectedYear && todayDate.getMonth() + 1 === selectedMonth;
+  const hojeSP = new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }); // YYYY-MM-DD
+  const spYear = Number(hojeSP.slice(0, 4));
+  const spMonth = Number(hojeSP.slice(5, 7));
+  const spDay = Number(hojeSP.slice(8, 10));
+  const isCurrentMonth = spYear === selectedYear && spMonth === selectedMonth;
   const isPastMonth =
-    selectedYear < todayDate.getFullYear() ||
-    (selectedYear === todayDate.getFullYear() && selectedMonth < todayDate.getMonth() + 1);
+    selectedYear < spYear || (selectedYear === spYear && selectedMonth < spMonth);
   const cutoffDay = Math.min(
-    isCurrentMonth ? todayDate.getDate() : isPastMonth ? 31 : 0,
+    isCurrentMonth ? spDay : isPastMonth ? 31 : 0,
     diaFimEfetivo,
   );
+
 
 
   // Build KPI data per department
