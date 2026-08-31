@@ -65,6 +65,8 @@ const PIC = () => {
   const [storeName, setStoreName] = useState("");
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [diaInicio, setDiaInicio] = useState(1);
+  const [diaFim, setDiaFim] = useState(0); // 0 = último dia do mês
   const [viewMode, setViewMode] = useState<"mes" | "dia">("mes");
   const [metasData, setMetasData] = useState<Record<string, any[]>>({});
   const [metaMix, setMetaMix] = useState<Record<string, number>>({});
