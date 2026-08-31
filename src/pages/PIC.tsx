@@ -75,8 +75,12 @@ const PIC = () => {
 
   const [loading, setLoading] = useState(true);
 
-  const periodStart = `${selectedYear}-${String(selectedMonth).padStart(2, "0")}-01`;
-  const periodEnd = new Date(selectedYear, selectedMonth, 0).toISOString().slice(0, 10);
+  const diasNoMesSel = new Date(selectedYear, selectedMonth, 0).getDate();
+  const diaIniEfetivo = Math.min(Math.max(diaInicio, 1), diasNoMesSel);
+  const diaFimEfetivo = Math.min(Math.max(diaFim || diasNoMesSel, diaIniEfetivo), diasNoMesSel);
+  const pad2 = (n: number) => String(n).padStart(2, "0");
+  const periodStart = `${selectedYear}-${pad2(selectedMonth)}-${pad2(diaIniEfetivo)}`;
+  const periodEnd = `${selectedYear}-${pad2(selectedMonth)}-${pad2(diaFimEfetivo)}`;
 
   // Realizado sempre ao vivo, via vr-proxy (nada vem de realizado_* do banco)
   const {
