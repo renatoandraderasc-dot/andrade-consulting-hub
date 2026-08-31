@@ -70,6 +70,7 @@ const PIC = () => {
   const [viewMode, setViewMode] = useState<"mes" | "dia">("mes");
   const [metasData, setMetasData] = useState<Record<string, any[]>>({});
   const [metaMix, setMetaMix] = useState<Record<string, number>>({});
+  const [metasMes, setMetasMes] = useState<Record<string, { vendas: number; lucro: number; volume: number; mix: number }>>({});
   const picMode = usePicDisplayMode(storeId);
   const soPct = picMode === "percentual";
 
