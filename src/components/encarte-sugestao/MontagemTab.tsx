@@ -100,8 +100,9 @@ const MontagemTab = (p: Props) => {
   const Tabela = ({ face }: { face: Face }) => {
     const linhas = useMemo(
       () => p.itens.filter((i) => i.face === face).sort((a, b) => a.posicao - b.posicao),
-      [face],
+      [face, p.itens],
     );
+
     const preenchidos = linhas.filter((i) => i.codigo).length;
     const invest = linhas.reduce(
       (s, i) => s + Math.max(0, (i.venda_atual ?? 0) - (i.preco_oferta ?? 0)) * (i.volume_30d ?? 0),
