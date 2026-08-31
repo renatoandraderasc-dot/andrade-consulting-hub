@@ -30,6 +30,40 @@ export interface ItemEncarte {
   aprovado?: boolean;
   observacao?: string | null;
   ordem?: number;
+  nivel_relaxamento?: number | null;
+  motivo_escolha?: string | null;
+  regra_posicao_id?: string | null;
+}
+
+export interface DiagnosticoSlot {
+  slot: string;
+  face: string;
+  posicao: number;
+  departamento: string | null;
+  faixa: string;
+  categoria: string | null;
+  candidatos_brutos: number;
+  apos_filtro_venda: number;
+  apos_filtro_margem: number;
+  apos_filtro_historico: number;
+  apos_filtro_estoque: number;
+  apos_dedupe: number;
+  escolhido: string | null;
+  nivel_relaxamento: number | null;
+  motivo: string;
+  status: "ok" | "relaxado" | "pendente" | "fixo";
+}
+
+export interface DiagnosticoEncarte {
+  resumo: {
+    slots: number;
+    preenchidos: number;
+    relaxados: number;
+    fixos: number;
+    pendentes: number;
+    avisos?: string[];
+  };
+  slots: DiagnosticoSlot[];
 }
 
 export interface Alternativa {
