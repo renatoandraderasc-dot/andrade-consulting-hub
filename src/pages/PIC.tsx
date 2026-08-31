@@ -292,14 +292,23 @@ const PIC = () => {
 
       result[dept] = {};
 
-      const calcKpi = (metaKey: keyof DayMetric, realKey: keyof DayMetric) => {
-        let metaMensal = 0, metaAcumulada = 0, realizado = 0;
+      const mesDept = metasMes[dept];
+
+      // realizado = soma dos dias já decorridos (data <= hoje em Brasília)
+      // ACUMUL. = realizado / soma das metas dos dias <= hoje
+      // TOTAL   = realizado / meta do mês inteiro
+      const calcKpi = (
+        metaKey: keyof DayMetric,
+        realKey: keyof DayMetric,
+        metaMesTotal?: number,
+      ) => {
+        let metaPeriodo = 0, metaAcumulada = 0, realizado = 0;
         let accMetaRun = 0, accRealRun = 0;
         const daily: KpiData["daily"] = [];
         for (const r of rows) {
           const m = Number(r[metaKey]) || 0;
           const v = Number(r[realKey]) || 0;
-          metaMensal += m;
+          metaPeriodo += m;
           accMetaRun += m;
           accRealRun += v;
           if (r.day <= cutoffDay) {
@@ -309,26 +318,39 @@ const PIC = () => {
           const pct = accMetaRun > 0 ? (accRealRun / accMetaRun) * 100 : 0;
           daily.push({ day: r.day, pct, realizado: v, meta: m, hasMeta: m > 0 });
         }
+        const metaMensal = Number(metaMesTotal) > 0 ? Number(metaMesTotal) : metaPeriodo;
         const pctTotal = metaMensal > 0 ? (realizado / metaMensal) * 100 : 0;
         const pctAcumulado = metaAcumulada > 0 ? (realizado / metaAcumulada) * 100 : 0;
-        return { pctTotal, pctAcumulado, realizado, metaMensal, metaAcumulada, hasMeta: metaMensal > 0, daily };
+        return {
+          pctTotal,
+          pctAcumulado,
+          realizado,
+          metaMensal,
+          metaAcumulada,
+          hasMeta: metaMensal > 0 || metaAcumulada > 0,
+          daily,
+        };
       };
 
-
-
-      result[dept].faturamento = calcKpi("meta_vendas", "realizado_vendas");
-      result[dept].quantidade = calcKpi("meta_volume", "realizado_volume");
-      result[dept].arrecadacao = calcKpi("meta_lucro", "realizado_lucro");
-      // Mix: realizado ao vivo (positivação acumulada) x meta mensal de meta_mix
+      result[dept].faturamento = calcKpi("meta_vendas", "realizado_vendas", mesDept?.vendas);
+      result[dept].quantidade = calcKpi("meta_volume", "realizado_volume", mesDept?.volume);
+      result[dept].arrecadacao = calcKpi("meta_lucro", "realizado_lucro", mesDept?.lucro);
+      // Mix: realizado ao vivo (positivação acumulada) x meta mensal de meta_mix.
+      // A meta de mix é mensal: o acumulado até hoje é pro-rata dos dias decorridos.
       const metaMensalMix =
         Number(metaMix[dept]) ||
+        Number(mesDept?.mix) ||
         rows.reduce((a, r) => a + (Number(r.meta_mix) || 0), 0);
       {
         let realizado = 0, acumulado = 0;
+        let diasDecorridos = 0;
         const daily: KpiData["daily"] = [];
         for (const r of rows) {
           acumulado += Number(r.realizado_mix) || 0;
-          if (r.day <= cutoffDay) realizado = acumulado;
+          if (r.day <= cutoffDay) {
+            realizado = acumulado;
+            diasDecorridos += 1;
+          }
           daily.push({
             day: r.day,
             pct: metaMensalMix > 0 ? (acumulado / metaMensalMix) * 100 : 0,
@@ -337,17 +359,20 @@ const PIC = () => {
             hasMeta: metaMensalMix > 0,
           });
         }
-        const pct = metaMensalMix > 0 ? (realizado / metaMensalMix) * 100 : 0;
+        const totalDias = rows.length || diasNoMesSel;
+        const metaAcumMix =
+          totalDias > 0 ? (metaMensalMix * diasDecorridos) / totalDias : 0;
         result[dept].volume = {
-          pctTotal: pct,
-          pctAcumulado: pct,
+          pctTotal: metaMensalMix > 0 ? (realizado / metaMensalMix) * 100 : 0,
+          pctAcumulado: metaAcumMix > 0 ? (realizado / metaAcumMix) * 100 : 0,
           realizado,
           metaMensal: metaMensalMix,
-          metaAcumulada: metaMensalMix,
+          metaAcumulada: metaAcumMix,
           hasMeta: metaMensalMix > 0,
           daily,
         };
       }
+
 
     }
     return result;
