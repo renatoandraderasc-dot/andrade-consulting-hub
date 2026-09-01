@@ -23,7 +23,7 @@ interface Props {
 }
 
 interface ConcOpt { id: string; nome: string; host: string }
-interface LojaOpt { id: string; name: string; host?: string | null }
+interface LojaOpt { id: string; name: string; host?: string | null; conectada?: boolean }
 
 /** "Sm União - Loja 2" → "sm uniao" — identifica lojas do mesmo cliente */
 const clienteBase = (nome: string) =>
