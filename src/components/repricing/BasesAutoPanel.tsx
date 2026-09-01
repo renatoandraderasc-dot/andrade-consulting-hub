@@ -279,35 +279,74 @@ const BasesAutoPanel = ({
         !(atual?.host && l.host && l.host === atual.host) &&
         !(baseAtual && clienteBase(l.name) === baseAtual),
     );
-    if (!outras.length) return toast.error("Nenhuma outra loja de cliente diferente cadastrada");
+    // Só faz sentido consultar lojas que têm conexão ativa com o ERP —
+    // as demais só fariam a carga demorar sem devolver preço nenhum.
+    const alvos = outras.filter((l) => l.conectada);
+    if (!alvos.length)
+      return toast.error(
+        outras.length
+          ? "Nenhuma outra loja da rede está com a conexão do ERP ativa"
+          : "Nenhuma outra loja de cliente diferente cadastrada",
+      );
+
     setLoadingI(true);
     const rows: Linha[] = [];
-    for (let i = 0; i < outras.length; i++) {
-      const l = outras[i];
-      setProgressoInterna(`${Math.round((i / outras.length) * 100)}%`);
+    let prontas = 0;
+    let comPreco = 0;
+    const falhas: string[] = [];
+
+    const carregarLoja = async (l: LojaOpt) => {
       try {
         const base = await carregarBaseCatalogo(l.id);
+        const doLoja: Linha[] = [];
         for (const p of base) {
-          if (!String(p.ean ?? "").trim()) continue;
-          rows.push({
+          const ean = String(p.ean ?? "").replace(/\D/g, "");
+          const preco = Number(p.precoOferta || p.preco || 0);
+          if (ean.length < 8 || !(preco > 0)) continue;
+          doLoja.push({
             ean: String(p.ean).trim(),
             descricao: p.descricao,
-            preco: p.precoOferta || p.preco || 0,
+            preco,
             custo: p.custo ?? 0,
             codigo_reduzido: p.codigo ?? "",
             loja: l.name,
           });
         }
+        if (doLoja.length) comPreco++;
+        else falhas.push(l.name);
+        rows.push(...doLoja);
       } catch {
-        /* loja sem conexão — segue para a próxima */
+        falhas.push(l.name);
+      } finally {
+        prontas++;
+        setProgressoInterna(`${Math.round((prontas / alvos.length) * 100)}%`);
       }
-    }
+    };
+
+    // 3 lojas por vez: rápido sem estourar o limite das pontes ngrok.
+    const fila = [...alvos];
+    await Promise.all(
+      Array.from({ length: Math.min(3, fila.length) }, async () => {
+        while (fila.length) {
+          const l = fila.shift();
+          if (l) await carregarLoja(l);
+        }
+      }),
+    );
+
     setProgressoInterna("");
     emitInterna(rows);
     setLoadingI(false);
-    rows.length
-      ? toast.success(`${rows.length} preços de outras lojas carregados`)
-      : toast.error("Nenhuma outra loja respondeu com cadastro de preços");
+    if (rows.length) {
+      toast.success(
+        `${rows.length.toLocaleString("pt-BR")} preços de ${comPreco} loja(s) da rede` +
+          (falhas.length ? ` · sem resposta: ${falhas.slice(0, 4).join(", ")}` : ""),
+      );
+    } else {
+      toast.error(
+        `Nenhuma loja respondeu com preços (tentamos ${alvos.length}): ${falhas.slice(0, 5).join(", ")}`,
+      );
+    }
   }, [lojas, storeId, onInterna]);
 
   const Ok = ({ n, obs }: { n: number; obs?: string }) => (
