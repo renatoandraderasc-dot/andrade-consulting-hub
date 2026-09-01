@@ -131,7 +131,11 @@ const BasesAutoPanel = ({
         }));
       setConcorrentes(opts);
       setLojas(
-        ((ls as LojaOpt[]) || []).map((l) => ({ ...l, host: hostPorLoja.get(l.id) ?? null })),
+        ((ls as LojaOpt[]) || []).map((l) => ({
+          ...l,
+          host: hostPorLoja.get(l.id) ?? null,
+          conectada: conectadas.has(l.id),
+        })),
       );
     })();
   }, [storeId]);
