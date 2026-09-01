@@ -114,11 +114,13 @@ const BasesAutoPanel = ({
           : Promise.resolve({ data: [] as unknown[] }),
         supabase.from("stores").select("id, name").order("name"),
       ]);
-      const { data: vr } = await supabase.from("store_vr_config").select("store_id, api_url");
+      const { data: vr } = await supabase.from("store_vr_config").select("store_id, api_url, enabled");
       const hostPorLoja = new Map<string, string>();
-      for (const v of (vr as { store_id: string; api_url: string | null }[]) || []) {
+      const conectadas = new Set<string>();
+      for (const v of (vr as { store_id: string; api_url: string | null; enabled: boolean }[]) || []) {
         const h = String(v.api_url ?? "").replace(/^https?:\/\//, "").split("/")[0].toLowerCase();
         if (h) hostPorLoja.set(v.store_id, h);
+        if (v.enabled) conectadas.add(v.store_id);
       }
       const opts = ((cs || []) as unknown as { apelido: string | null; sites_concorrentes: ConcOpt | null }[])
         .filter((v) => v.sites_concorrentes)
