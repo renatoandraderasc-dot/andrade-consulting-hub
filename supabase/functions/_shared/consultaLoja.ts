@@ -16,7 +16,7 @@ export interface ConfigLoja {
   api_url: string;
   api_key: string;
   sistema?: string | null;
-  codigo_loja?: number | null;
+  codigo_loja?: string | number | null;
 }
 
 export interface ResultadoConsulta {
