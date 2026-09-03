@@ -67,7 +67,7 @@ const CapaVersoTab = ({ storeId, categorias }: Props) => {
   const [posCategoria, setPosCategoria] = useState<Posicao>("capa");
   const [novoDep, setNovoDep] = useState("");
   const [posDep, setPosDep] = useState<Posicao>("verso");
-  const [codigoLoja, setCodigoLoja] = useState<number | null>(null);
+  const [codigoLoja, setCodigoLoja] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
     if (!storeId) return setRegras([]);
