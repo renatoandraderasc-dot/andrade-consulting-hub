@@ -2210,7 +2210,7 @@ export type Database = {
         Row: {
           api_key: string
           api_url: string
-          codigo_loja: number | null
+          codigo_loja: string | null
           created_at: string
           enabled: boolean
           health_error: string | null
@@ -2225,7 +2225,7 @@ export type Database = {
         Insert: {
           api_key: string
           api_url: string
-          codigo_loja?: number | null
+          codigo_loja?: string | null
           created_at?: string
           enabled?: boolean
           health_error?: string | null
@@ -2240,7 +2240,7 @@ export type Database = {
         Update: {
           api_key?: string
           api_url?: string
-          codigo_loja?: number | null
+          codigo_loja?: string | null
           created_at?: string
           enabled?: boolean
           health_error?: string | null
