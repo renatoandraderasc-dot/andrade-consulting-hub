@@ -13,7 +13,7 @@ interface Row {
   api_key: string | null;
   sistema: string | null;
   enabled: boolean | null;
-  codigo_loja: number | null;
+  codigo_loja: string | null;
   online?: boolean | null;
   latency?: number | null;
   erro?: string | null;
