@@ -660,9 +660,17 @@ const KpiSection = ({ label, kpi, viewMode, today, soPct }: KpiSectionProps) => 
             soPct ? "" : `Realizado ${valueFmt(kpi.realizado)} / Meta mensal ${valueFmt(kpi.metaMensal)}`,
             totalValido,
           )}
+          {renderBar(
+            "PROJ.",
+            kpi.pctProjecao,
+            projColor,
+            `Projeção do mês`,
+            soPct ? "" : `Realizado até ontem + metas até o fim do mês: ${valueFmt(kpi.projecao)}`,
+            totalValido,
+          )}
           {!soPct && (
             <p className="ml-[4.5rem] text-[10px] text-muted-foreground font-mono">
-              Meta acum. {valueFmt(kpi.metaAcumulada)} · Meta mês {valueFmt(kpi.metaMensal)} · Realizado {valueFmt(kpi.realizado)}
+              Meta acum. {valueFmt(kpi.metaAcumulada)} · Meta mês {valueFmt(kpi.metaMensal)} · Realizado {valueFmt(kpi.realizado)} · Projeção {valueFmt(kpi.projecao)}
             </p>
           )}
         </>
