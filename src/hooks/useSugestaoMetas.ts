@@ -11,6 +11,23 @@ export const OUTROS = "OUTROS";
 const norm = (s: string) =>
   (s || "").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
 
+// Fallback quando a loja nao tem de-para cadastrado (mesma logica do PIC).
+function inferirDepartamento(secao: string, categoria: string): string | null {
+  const t = `${norm(categoria)} ${norm(secao)}`;
+  if (/\bACOUGUE\b|CARNE|AVES|SUINO|BOVIN|FRIGORIFIC|PEIXAR|PESCAD/.test(t)) return "AÇOUGUE";
+  if (/HORTIFRUTI|HORTI|FLV|FRUTA|VERDURA|LEGUME/.test(t)) return "HORTIFRUTI";
+  if (/PADARIA|PANIFIC|CONFEITAR/.test(t)) return "PADARIA";
+  if (/ROTISSERIA|ROTISSERIE|RESTAURANTE|PRATO/.test(t)) return "ROTISSERIA";
+  if (/FRIOS|LATICIN|QUEIJO|IOGURTE/.test(t)) return "FRIOS E LATICÍNIOS";
+  if (/BEBIDA|CERVEJ|REFRIGER|VINHO|DESTILAD/.test(t)) return "BEBIDAS";
+  if (/LIMPEZA|SANEANTE/.test(t)) return "LIMPEZA";
+  if (/PERFUMARIA|HIGIENE|BELEZA/.test(t)) return "PERFUMARIA";
+  if (/BAZAR|UTILID|TEXTIL|PAPELARIA/.test(t)) return "BAZAR";
+  if (/MERCEARIA|SECOS|ALIMENT/.test(t)) return "MERCEARIA";
+  return null;
+}
+
+
 export interface DeptHistorico {
   departamento: string;
   dias: DiaVenda[];        // todos os dias dos dois ranges
@@ -80,7 +97,7 @@ async function carregar(storeId: string, anoAlvo: number): Promise<SugestaoMetas
     };
     const secao = String(pick(linha, "secao", "departamento") ?? "");
     const categoria = String(pick(linha, "categoria") ?? secao).trim() || OUTROS;
-    const dep = mapa.get(norm(secao)) ?? OUTROS;
+    const dep = mapa.get(norm(secao)) ?? inferirDepartamento(secao, categoria) ?? (norm(secao) || OUTROS);
     add(LOJA, item);
     if (dep !== LOJA) add(dep, item);
     somar(accCat, categoria.toUpperCase(), item);
@@ -97,7 +114,7 @@ async function carregar(storeId: string, anoAlvo: number): Promise<SugestaoMetas
     if (!item.mix) continue;
     const secao = String(pick(linha, "secao", "departamento", "categoria") ?? "");
     const categoria = String(pick(linha, "categoria") ?? secao).trim() || OUTROS;
-    const dep = mapa.get(norm(secao)) ?? OUTROS;
+    const dep = mapa.get(norm(secao)) ?? inferirDepartamento(secao, categoria) ?? (norm(secao) || OUTROS);
     add(LOJA, item);
     if (dep !== LOJA) add(dep, item);
     somar(accCat, categoria.toUpperCase(), item);
