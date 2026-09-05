@@ -44,7 +44,6 @@ const MetasSugestao = () => {
   const [margens, setMargens] = useState<Record<string, number>>({});
   const [volumes, setVolumes] = useState<Record<string, number>>({});
   const [mixes, setMixes] = useState<Record<string, number>>({});
-  const [visao, setVisao] = useState<"departamento" | "categoria">("departamento");
   const [ajustes, setAjustes] = useState<Record<string, Record<string, AjusteDia>>>({});
   const [abaDept, setAbaDept] = useState<string>(LOJA);
   const [salvando, setSalvando] = useState(false);
