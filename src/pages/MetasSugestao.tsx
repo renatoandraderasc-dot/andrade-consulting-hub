@@ -550,7 +550,7 @@ const MetasSugestao = () => {
                               const valor = raw.endsWith("%")
                                 ? base * (1 + parseNum(raw.slice(0, -1)) / 100)
                                 : parseNum(raw);
-                              setMetas((p) => ({ ...p, [dep]: Math.max(0, valor) }));
+                              setMetas((p) => ({ ...p, [dep]: piso1000(Math.max(0, valor)) }));
                             }}
                           />
                         </td>
