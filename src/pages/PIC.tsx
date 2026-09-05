@@ -326,7 +326,6 @@ const PIC = () => {
           }
         }
         // Projeção: realizado até o dia anterior + metas do dia atual ao fim do mês
-        const metaDoDia = metaAcumulada - (metaAcumulada - 0) + 0; // placeholder removido
         const metaHojeEmDiante =
           metaRestante + (rows.find((r) => r.day === cutoffDay) ? Number(rows.find((r) => r.day === cutoffDay)![metaKey]) || 0 : 0);
         const projecao = realizadoOntem + metaHojeEmDiante;
