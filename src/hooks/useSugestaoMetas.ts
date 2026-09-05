@@ -97,7 +97,7 @@ async function carregar(storeId: string, anoAlvo: number): Promise<SugestaoMetas
     };
     const secao = String(pick(linha, "secao", "departamento") ?? "");
     const categoria = String(pick(linha, "categoria") ?? secao).trim() || OUTROS;
-    const dep = mapa.get(norm(secao)) ?? OUTROS;
+    const dep = mapa.get(norm(secao)) ?? inferirDepartamento(secao, categoria) ?? (norm(secao) || OUTROS);
     add(LOJA, item);
     if (dep !== LOJA) add(dep, item);
     somar(accCat, categoria.toUpperCase(), item);
@@ -114,7 +114,7 @@ async function carregar(storeId: string, anoAlvo: number): Promise<SugestaoMetas
     if (!item.mix) continue;
     const secao = String(pick(linha, "secao", "departamento", "categoria") ?? "");
     const categoria = String(pick(linha, "categoria") ?? secao).trim() || OUTROS;
-    const dep = mapa.get(norm(secao)) ?? OUTROS;
+    const dep = mapa.get(norm(secao)) ?? inferirDepartamento(secao, categoria) ?? (norm(secao) || OUTROS);
     add(LOJA, item);
     if (dep !== LOJA) add(dep, item);
     somar(accCat, categoria.toUpperCase(), item);
