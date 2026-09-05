@@ -51,6 +51,8 @@ interface KpiData {
   realizado: number;      // realizado até hoje (ou fim de mês, se mês passado)
   metaMensal: number;     // meta total do mês
   metaAcumulada: number;  // meta até o dia de hoje
+  projecao: number;       // realizado até ontem + metas de hoje até o fim do mês
+  pctProjecao: number;    // projeção / meta mensal
   hasMeta: boolean;
   daily: { day: number; pct: number; realizado: number; meta: number; hasMeta: boolean }[];
 }
