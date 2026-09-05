@@ -359,11 +359,10 @@ const PIC = () => {
         let diasDecorridos = 0;
         const daily: KpiData["daily"] = [];
         for (const r of rows) {
+          if (r.day > cutoffDay) continue; // dias futuros não entram no acumulado
           acumulado += Number(r.realizado_mix) || 0;
-          if (r.day <= cutoffDay) {
-            realizado = acumulado;
-            diasDecorridos += 1;
-          }
+          realizado = acumulado;
+          diasDecorridos += 1;
           daily.push({
             day: r.day,
             pct: metaMensalMix > 0 ? (acumulado / metaMensalMix) * 100 : 0,
