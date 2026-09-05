@@ -410,24 +410,28 @@ const MetasSugestao = () => {
               })()}
             </div>
 
-            <div className={card}>
-              <p className="text-xs font-semibold mb-2">Evolução mensal (13 meses) — ano atual vs ano anterior</p>
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={grafico13} margin={{ top: 20, right: 10, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-                  <XAxis dataKey="label" tick={{ fontSize: 10 }} />
-                  <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => fmtNum(v / 1000) + "k"} />
-                  <Tooltip formatter={(v: any) => fmtBRL(Number(v))} />
-                  <Legend />
-                  <Bar dataKey="anterior" name="Ano anterior" fill="#94a3b8">
-                    <LabelList dataKey="anterior" position="top" formatter={(v: any) => fmtNum(Number(v) / 1000) + "k"} style={{ fontSize: 9 }} />
-                  </Bar>
-                  <Bar dataKey="atual" name="Ano atual" fill="hsl(var(--primary))">
-                    <LabelList dataKey="atual" position="top" formatter={(v: any) => fmtNum(Number(v) / 1000) + "k"} style={{ fontSize: 9 }} />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            {METRICAS.map((mt) => (
+              <div className={card} key={mt.key}>
+                <p className="text-xs font-semibold mb-2">
+                  Evolução mensal de {mt.label} (13 meses) — ano atual vs ano anterior
+                </p>
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={grafico13} margin={{ top: 20, right: 10, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
+                    <XAxis dataKey="label" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => mt.fmtCurto(Number(v))} />
+                    <Tooltip formatter={(v: any) => mt.fmt(Number(v))} />
+                    <Legend />
+                    <Bar dataKey={mt.anterior} name="Ano anterior" fill="#94a3b8">
+                      <LabelList dataKey={mt.anterior} position="top" formatter={(v: any) => mt.fmtCurto(Number(v))} style={{ fontSize: 9 }} />
+                    </Bar>
+                    <Bar dataKey={mt.atual} name="Ano atual" fill="hsl(var(--primary))">
+                      <LabelList dataKey={mt.atual} position="top" formatter={(v: any) => mt.fmtCurto(Number(v))} style={{ fontSize: 9 }} />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ))}
 
             <div className={`${card} overflow-x-auto`}>
               <table className="w-full text-xs">
