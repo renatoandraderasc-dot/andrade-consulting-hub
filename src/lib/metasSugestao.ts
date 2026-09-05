@@ -8,6 +8,7 @@ export interface DiaVenda {
   vendas: number;
   lucro: number;
   volume: number;
+  mix?: number;
 }
 
 export interface MesSerie {
@@ -17,6 +18,7 @@ export interface MesSerie {
   vendas: number;
   lucro: number;
   volume: number;
+  mix: number;
 }
 
 export interface Crescimentos {
@@ -27,6 +29,7 @@ export interface Crescimentos {
   base: number;          // base sazonal usada nos cenarios
   margemEspelhoPct: number;
   volumeEspelho: number;
+  mixEspelho: number;
 }
 
 export interface Cenarios {
@@ -126,10 +129,12 @@ export function serieMensal(dias: DiaVenda[]): MesSerie[] {
       vendas: 0,
       lucro: 0,
       volume: 0,
+      mix: 0,
     };
     cur.vendas += d.vendas;
     cur.lucro += d.lucro;
     cur.volume += d.volume;
+    cur.mix += d.mix ?? 0;
     acc.set(key, cur);
   }
   return [...acc.values()].sort((a, b) => a.ym.localeCompare(b.ym));
@@ -186,6 +191,7 @@ export function calcularCrescimentos(
     base,
     margemEspelhoPct: espelho && espelho.vendas > 0 ? (espelho.lucro / espelho.vendas) * 100 : 0,
     volumeEspelho: espelho?.volume ?? 0,
+    mixEspelho: espelho?.mix ?? 0,
   };
 }
 

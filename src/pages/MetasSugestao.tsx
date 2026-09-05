@@ -43,6 +43,7 @@ const MetasSugestao = () => {
   const [metas, setMetas] = useState<Record<string, number>>({});
   const [margens, setMargens] = useState<Record<string, number>>({});
   const [volumes, setVolumes] = useState<Record<string, number>>({});
+  const [mixes, setMixes] = useState<Record<string, number>>({});
   const [ajustes, setAjustes] = useState<Record<string, Record<string, AjusteDia>>>({});
   const [abaDept, setAbaDept] = useState<string>(LOJA);
   const [salvando, setSalvando] = useState(false);
@@ -83,6 +84,17 @@ const MetasSugestao = () => {
     return out;
   }, [data, ano, mes]);
 
+  const analiseCategoria = useMemo(() => {
+    if (!data) return [] as { nome: string; h: typeof data.porCategoria[string]; cres: Crescimentos }[];
+    return data.categorias
+      .filter((c) => c !== LOJA)
+      .map((nome) => {
+        const h = data.porCategoria[nome];
+        return { nome, h, cres: calcularCrescimentos(h.dias, { ano, mes }, h.ytdAtual, h.ytdAnterior) };
+      })
+      .sort((a, b) => b.h.ytdAtual - a.h.ytdAtual);
+  }, [data, ano, mes]);
+
   const deps = useMemo(
     () => (data ? data.departamentos.filter((d) => d !== LOJA && selecionados.includes(d)) : []),
     [data, selecionados],
@@ -93,12 +105,21 @@ const MetasSugestao = () => {
     setCenario(key);
     const novas: Record<string, number> = {};
     const novasMargens: Record<string, number> = { ...margens };
+    const novosVolumes: Record<string, number> = { ...volumes };
+    const novosMix: Record<string, number> = { ...mixes };
     for (const dep of deps) {
-      novas[dep] = analise[dep]?.cen[key] ?? 0;
-      if (novasMargens[dep] === undefined) novasMargens[dep] = analise[dep]?.cres.margemEspelhoPct ?? 0;
+      const c = analise[dep]?.cres;
+      const meta = analise[dep]?.cen[key] ?? 0;
+      novas[dep] = meta;
+      const cresc = (c?.base ?? 0) > 0 ? meta / (c!.base) - 1 : 0;
+      if (novasMargens[dep] === undefined) novasMargens[dep] = c?.margemEspelhoPct ?? 0;
+      novosVolumes[dep] = Math.max(0, (c?.volumeEspelho ?? 0) * (1 + cresc));
+      if (novosMix[dep] === undefined) novosMix[dep] = Math.round(c?.mixEspelho ?? 0);
     }
     setMetas(novas);
     setMargens(novasMargens);
+    setVolumes(novosVolumes);
+    setMixes(novosMix);
   };
 
   useEffect(() => {
@@ -177,6 +198,7 @@ const MetasSugestao = () => {
       for (const dep of deps) {
         const margem = margens[dep] ?? 0;
         const volumeMes = volumes[dep] ?? 0;
+        const mixMes = mixes[dep] ?? 0;
         const metaDep = metas[dep] ?? 0;
         for (const d of distribuicao[dep] ?? []) {
           const partic = metaDep > 0 ? d.meta / metaDep : 0;
@@ -188,6 +210,7 @@ const MetasSugestao = () => {
             meta_margem_pct: margem,
             meta_lucro: (d.meta * margem) / 100,
             ...(volumeMes > 0 ? { meta_volume: volumeMes * partic } : {}),
+            ...(mixMes > 0 ? { meta_mix: mixMes * partic } : {}),
           });
         }
       }
@@ -390,7 +413,8 @@ const MetasSugestao = () => {
                 <thead className="text-muted-foreground">
                   <tr><th className="text-left p-1">Departamento</th><th className="text-right p-1">Mês anterior</th>
                     <th className="text-right p-1">YTD atual</th><th className="text-right p-1">YTD anterior</th>
-                    <th className="text-right p-1">Espelho</th><th className="text-right p-1">Margem espelho</th></tr>
+                    <th className="text-right p-1">Espelho</th><th className="text-right p-1">Margem %</th>
+                    <th className="text-right p-1">Volume espelho</th><th className="text-right p-1">Mix espelho</th></tr>
                 </thead>
                 <tbody>
                   {deps.map((dep) => {
@@ -405,9 +429,36 @@ const MetasSugestao = () => {
                         <td className="p-1 text-right">{fmtBRL(h.ytdAnterior)}</td>
                         <td className="p-1 text-right">{fmtBRL(c?.espelho?.vendas ?? 0)}</td>
                         <td className="p-1 text-right">{fmtPct(c?.margemEspelhoPct ?? 0)}</td>
+                        <td className="p-1 text-right">{fmtNum(c?.volumeEspelho ?? 0)}</td>
+                        <td className="p-1 text-right">{fmtNum(c?.mixEspelho ?? 0)}</td>
                       </tr>
                     );
                   })}
+                </tbody>
+              </table>
+            </div>
+
+            <div className={`${card} overflow-x-auto`}>
+              <p className="text-xs font-semibold mb-2">Por categoria (mercadológico) — {MESES[mes]}/{ano - 1} e ano corrente</p>
+              <table className="w-full text-xs">
+                <thead className="text-muted-foreground">
+                  <tr><th className="text-left p-1">Categoria</th><th className="text-right p-1">YTD atual</th>
+                    <th className="text-right p-1">YTD anterior</th><th className="text-right p-1">Espelho</th>
+                    <th className="text-right p-1">Margem %</th><th className="text-right p-1">Volume espelho</th>
+                    <th className="text-right p-1">Mix espelho</th></tr>
+                </thead>
+                <tbody>
+                  {analiseCategoria.map(({ nome, h, cres }) => (
+                    <tr key={nome} className="border-t border-border">
+                      <td className="p-1">{nome}</td>
+                      <td className="p-1 text-right">{fmtBRL(h.ytdAtual)}</td>
+                      <td className="p-1 text-right">{fmtBRL(h.ytdAnterior)}</td>
+                      <td className="p-1 text-right">{fmtBRL(cres.espelho?.vendas ?? 0)}</td>
+                      <td className="p-1 text-right">{fmtPct(cres.margemEspelhoPct)}</td>
+                      <td className="p-1 text-right">{fmtNum(cres.volumeEspelho)}</td>
+                      <td className="p-1 text-right">{fmtNum(cres.mixEspelho)}</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -440,6 +491,8 @@ const MetasSugestao = () => {
                     <th className="text-right p-1">Agressivo</th>
                     <th className="text-right p-1">Meta escolhida</th>
                     <th className="text-right p-1">Margem-alvo %</th>
+                    <th className="text-right p-1">Volume-alvo</th>
+                    <th className="text-right p-1">Mix-alvo</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -484,6 +537,22 @@ const MetasSugestao = () => {
                             onBlur={(e) => setMargens((p) => ({ ...p, [dep]: parseNum(e.target.value) }))}
                           />
                         </td>
+                        <td className="p-1 text-right">
+                          <input
+                            className={`${inputCls} text-right w-24`}
+                            defaultValue={fmtNum(volumes[dep] ?? a?.cres.volumeEspelho ?? 0)}
+                            key={`v-${dep}-${volumes[dep]}`}
+                            onBlur={(e) => setVolumes((p) => ({ ...p, [dep]: parseNum(e.target.value) }))}
+                          />
+                        </td>
+                        <td className="p-1 text-right">
+                          <input
+                            className={`${inputCls} text-right w-20`}
+                            defaultValue={fmtNum(mixes[dep] ?? a?.cres.mixEspelho ?? 0)}
+                            key={`mx-${dep}-${mixes[dep]}`}
+                            onBlur={(e) => setMixes((p) => ({ ...p, [dep]: parseNum(e.target.value) }))}
+                          />
+                        </td>
                       </tr>
                     );
                   })}
@@ -493,6 +562,8 @@ const MetasSugestao = () => {
                     <td colSpan={5}></td>
                     <td className="p-1 text-right">{fmtBRL(totalMeta)}</td>
                     <td></td>
+                    <td className="p-1 text-right">{fmtNum(deps.reduce((a, d) => a + (volumes[d] ?? 0), 0))}</td>
+                    <td className="p-1 text-right">{fmtNum(deps.reduce((a, d) => a + (mixes[d] ?? 0), 0))}</td>
                   </tr>
                 </tbody>
               </table>
@@ -639,6 +710,7 @@ const MetasSugestao = () => {
                     <th className="text-right p-1">% vs espelho</th><th className="text-right p-1">% vs mês anterior</th>
                     <th className="text-right p-1">Margem-alvo</th><th className="text-right p-1">Meta de lucro</th>
                     <th className="text-right p-1">Volume sugerido</th>
+                    <th className="text-right p-1">Mix</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -664,13 +736,22 @@ const MetasSugestao = () => {
                             key={`vol-${dep}-${volSug}`}
                             onBlur={(e) => setVolumes((p) => ({ ...p, [dep]: parseNum(e.target.value) }))} />
                         </td>
+                        <td className="p-1 text-right">
+                          <input className={`${inputCls} text-right w-20`}
+                            defaultValue={fmtNum(mixes[dep] ?? c?.mixEspelho ?? 0)}
+                            key={`mix4-${dep}-${mixes[dep]}`}
+                            onBlur={(e) => setMixes((p) => ({ ...p, [dep]: parseNum(e.target.value) }))} />
+                        </td>
                       </tr>
                     );
                   })}
                   <tr className="border-t-2 border-border font-bold">
                     <td className="p-1">TOTAL LOJA</td>
                     <td className="p-1 text-right">{fmtBRL(totalMeta)}</td>
-                    <td colSpan={5}></td>
+                    <td colSpan={3}></td>
+                    <td className="p-1 text-right">{fmtBRL(deps.reduce((a, d) => a + ((metas[d] ?? 0) * (margens[d] ?? analise[d]?.cres.margemEspelhoPct ?? 0)) / 100, 0))}</td>
+                    <td className="p-1 text-right">{fmtNum(deps.reduce((a, d) => a + (volumes[d] ?? 0), 0))}</td>
+                    <td className="p-1 text-right">{fmtNum(deps.reduce((a, d) => a + (mixes[d] ?? 0), 0))}</td>
                   </tr>
                 </tbody>
               </table>
