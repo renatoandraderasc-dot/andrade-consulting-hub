@@ -380,6 +380,8 @@ const PIC = () => {
           realizado,
           metaMensal: metaMensalMix,
           metaAcumulada: metaAcumMix,
+          projecao: metaMensalMix,
+          pctProjecao: metaMensalMix > 0 ? 100 : 0,
           hasMeta: metaMensalMix > 0,
           daily,
         };
