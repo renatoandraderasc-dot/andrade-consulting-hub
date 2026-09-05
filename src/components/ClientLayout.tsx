@@ -95,6 +95,7 @@ const navGroups: NavGroup[] = [
       { key: "admin_stores", path: "/admin/stores", label: "Lojas", icon: Store },
       { key: "admin_users", path: "/admin/users", label: "Usuários", icon: Users },
       { key: "admin_metas", path: "/admin/metas", label: "Metas", icon: Target },
+      { key: "admin_pic_departamentos", path: "/admin/pic-departamentos", label: "Parametrizações Pic", icon: Trophy },
       { key: "admin_questions", path: "/admin/questions", label: "Perguntas", icon: Settings },
       { key: "admin_site", path: "/admin/site", label: "Página Inicial", icon: LayoutTemplate },
     ],
