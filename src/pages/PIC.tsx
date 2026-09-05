@@ -599,6 +599,7 @@ const KpiSection = ({ label, kpi, viewMode, today, soPct }: KpiSectionProps) => 
   const totalValido = kpi.metaMensal > 0;
   const acumColor = kpi.pctAcumulado >= 100 ? "bg-emerald-500" : kpi.pctAcumulado >= 80 ? "bg-blue-500" : "bg-red-500";
   const totalColor = kpi.pctTotal >= 100 ? "bg-emerald-500" : kpi.pctTotal >= 80 ? "bg-blue-500" : "bg-amber-500";
+  const projColor = kpi.pctProjecao >= 100 ? "bg-emerald-500" : kpi.pctProjecao >= 80 ? "bg-blue-500" : "bg-red-500";
   const isCurrency = label !== "Volume" && label !== "MIX de Produtos";
   const valueFmt = (value: number) => {
     if (soPct) return "—";
