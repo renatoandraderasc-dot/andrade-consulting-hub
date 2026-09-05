@@ -305,21 +305,31 @@ const PIC = () => {
         metaMesTotal?: number,
       ) => {
         let metaPeriodo = 0, metaAcumulada = 0, realizado = 0;
+        let realizadoOntem = 0, metaRestante = 0;
         let accMetaRun = 0, accRealRun = 0;
         const daily: KpiData["daily"] = [];
         for (const r of rows) {
           const m = Number(r[metaKey]) || 0;
           const v = Number(r[realKey]) || 0;
           metaPeriodo += m;
-          accMetaRun += m;
-          accRealRun += v;
           if (r.day <= cutoffDay) {
             metaAcumulada += m;
             realizado += v;
+            accMetaRun += m;
+            accRealRun += v;
+            if (r.day < cutoffDay) realizadoOntem += v;
+            const pct = accMetaRun > 0 ? (accRealRun / accMetaRun) * 100 : 0;
+            // Só dias já ocorridos entram no acumulado diário
+            daily.push({ day: r.day, pct, realizado: v, meta: m, hasMeta: m > 0 });
+          } else {
+            metaRestante += m;
           }
-          const pct = accMetaRun > 0 ? (accRealRun / accMetaRun) * 100 : 0;
-          daily.push({ day: r.day, pct, realizado: v, meta: m, hasMeta: m > 0 });
         }
+        // Projeção: realizado até o dia anterior + metas do dia atual ao fim do mês
+        const metaDoDia = metaAcumulada - (metaAcumulada - 0) + 0; // placeholder removido
+        const metaHojeEmDiante =
+          metaRestante + (rows.find((r) => r.day === cutoffDay) ? Number(rows.find((r) => r.day === cutoffDay)![metaKey]) || 0 : 0);
+        const projecao = realizadoOntem + metaHojeEmDiante;
         const metaMensal = Number(metaMesTotal) > 0 ? Number(metaMesTotal) : metaPeriodo;
         const pctTotal = metaMensal > 0 ? (realizado / metaMensal) * 100 : 0;
         const pctAcumulado = metaAcumulada > 0 ? (realizado / metaAcumulada) * 100 : 0;
@@ -329,6 +339,8 @@ const PIC = () => {
           realizado,
           metaMensal,
           metaAcumulada,
+          projecao,
+          pctProjecao: metaMensal > 0 ? (projecao / metaMensal) * 100 : 0,
           hasMeta: metaMensal > 0 || metaAcumulada > 0,
           daily,
         };
