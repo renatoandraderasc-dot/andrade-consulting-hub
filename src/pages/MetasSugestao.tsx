@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useSugestaoMetas, LOJA } from "@/hooks/useSugestaoMetas";
 import {
   calcularCrescimentos, calcularCenarios, calcularPesosDiarios, distribuirMeta,
-  feriadosDoMes, alertasFeriadosMoveis, proximoMes, ultimoMesFechado,
+  feriadosDoMes, alertasFeriadosMoveis, proximoMes, ultimoMesFechado, piso1000,
   fmtBRL, fmtPct, fmtNum, MESES, DOW_LABEL, diasNoMes,
   type AjusteDia, type MetaDia, type Crescimentos, type Cenarios,
 } from "@/lib/metasSugestao";
