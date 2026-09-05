@@ -251,16 +251,37 @@ const MetasSugestao = () => {
   const ultimoFechado = ultimoMesFechado();
   const serieLoja = data?.porDept[LOJA]?.serie ?? [];
   const grafico13 = useMemo(() => {
-    const out: { label: string; atual: number; anterior: number }[] = [];
+    const out: {
+      label: string; atual: number; anterior: number;
+      volumeAtual: number; volumeAnterior: number;
+      mixAtual: number; mixAnterior: number;
+      margemAtual: number; margemAnterior: number;
+    }[] = [];
+    const mg = (s?: { vendas: number; lucro: number }) =>
+      s && s.vendas > 0 ? (s.lucro / s.vendas) * 100 : 0;
     for (let i = 12; i >= 0; i--) {
       const d = new Date(Date.UTC(ultimoFechado.ano, ultimoFechado.mes - 1 - i, 1));
       const a = d.getUTCFullYear(), m = d.getUTCMonth() + 1;
-      const atual = serieLoja.find((s) => s.ano === a && s.mes === m)?.vendas ?? 0;
-      const anterior = serieLoja.find((s) => s.ano === a - 1 && s.mes === m)?.vendas ?? 0;
-      out.push({ label: `${MESES[m].slice(0, 3)}/${String(a).slice(2)}`, atual, anterior });
+      const sA = serieLoja.find((s) => s.ano === a && s.mes === m);
+      const sB = serieLoja.find((s) => s.ano === a - 1 && s.mes === m);
+      out.push({
+        label: `${MESES[m].slice(0, 3)}/${String(a).slice(2)}`,
+        atual: sA?.vendas ?? 0, anterior: sB?.vendas ?? 0,
+        volumeAtual: sA?.volume ?? 0, volumeAnterior: sB?.volume ?? 0,
+        mixAtual: sA?.mix ?? 0, mixAnterior: sB?.mix ?? 0,
+        margemAtual: mg(sA), margemAnterior: mg(sB),
+      });
     }
     return out;
   }, [serieLoja.length, ultimoFechado.ano, ultimoFechado.mes]);
+
+  const METRICAS = [
+    { key: "vendas", label: "Vendas", atual: "atual", anterior: "anterior", fmt: (v: number) => fmtBRL(v), fmtCurto: (v: number) => fmtNum(v / 1000) + "k" },
+    { key: "volume", label: "Volume", atual: "volumeAtual", anterior: "volumeAnterior", fmt: (v: number) => fmtNum(v), fmtCurto: (v: number) => fmtNum(v) },
+    { key: "mix", label: "Mix", atual: "mixAtual", anterior: "mixAnterior", fmt: (v: number) => fmtNum(v), fmtCurto: (v: number) => fmtNum(v) },
+    { key: "margem", label: "Margem %", atual: "margemAtual", anterior: "margemAnterior", fmt: (v: number) => fmtPct(v), fmtCurto: (v: number) => fmtPct(v) },
+  ] as const;
+
 
   const feriados = feriadosDoMes(ano, mes);
   const alertasMoveis = alertasFeriadosMoveis(ano, mes);
