@@ -195,11 +195,14 @@ export function calcularCrescimentos(
   };
 }
 
+/** Arredonda sempre para baixo em multiplos de R$ 1.000. */
+export const piso1000 = (v: number) => (v > 0 ? Math.floor(v / 1000) * 1000 : 0);
+
 export function calcularCenarios(base: number, gAno: number, gRecente: number): Cenarios {
   const min = Math.min(gAno, gRecente);
   const max = Math.max(gAno, gRecente);
   const med = (gAno + gRecente) / 2;
-  const pos = (v: number) => (v > 0 ? v : 0);
+  const pos = (v: number) => piso1000(v > 0 ? v : 0);
   return {
     conservador: pos(base * (1 + min)),
     moderado: pos(base * (1 + med)),
