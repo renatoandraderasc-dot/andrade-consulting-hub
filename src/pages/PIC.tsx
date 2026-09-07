@@ -299,7 +299,7 @@ const PIC = () => {
 
       result[dept] = {};
 
-      const mesDept = metasMes[dept];
+      const mesDept = metasMes[canonDept(dept)];
 
       // realizado = soma dos dias já decorridos (data <= hoje em Brasília)
       // ACUMUL. = realizado / soma das metas dos dias <= hoje
@@ -357,7 +357,7 @@ const PIC = () => {
       // Mix: realizado ao vivo (positivação acumulada) x meta mensal de meta_mix.
       // A meta de mix é mensal: o acumulado até hoje é pro-rata dos dias decorridos.
       const metaMensalMix =
-        Number(metaMix[dept]) ||
+        Number(metaMix[canonDept(dept)]) ||
         Number(mesDept?.mix) ||
         rows.reduce((a, r) => a + (Number(r.meta_mix) || 0), 0);
       {
