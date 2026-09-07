@@ -162,6 +162,42 @@ const MetasPremiacao = () => {
   const todas = kpis.length > 0 && kpis.every((k) => k.pago);
   const carregando = atual.loading || carregandoMetas;
 
+  const cartazRef = useRef<HTMLDivElement>(null);
+  const [compartilhando, setCompartilhando] = useState(false);
+
+  const compartilhar = async () => {
+    if (!cartazRef.current) return;
+    setCompartilhando(true);
+    try {
+      const canvas = await html2canvas(cartazRef.current, {
+        backgroundColor: "#ffffff", scale: 2, useCORS: true,
+      });
+      const blob: Blob = await new Promise((res) =>
+        canvas.toBlob((b) => res(b as Blob), "image/png"),
+      );
+      const nome = `Premiacao-${titulo}-${MESES[mes]}-${ano} - Andrade Consultoria Ltda.png`
+        .replace(/[\\/:*?"<>|]/g, "-");
+      const file = new File([blob], nome, { type: "image/png" });
+      const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
+      if (nav.canShare?.({ files: [file] })) {
+        await nav.share({ files: [file], title: nome });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = nome; a.click();
+        URL.revokeObjectURL(url);
+        toast({ title: "Imagem gerada", description: "O print do demonstrativo foi baixado." });
+      }
+    } catch (e: any) {
+      if (e?.name !== "AbortError") {
+        toast({ title: "Erro ao compartilhar", description: e?.message, variant: "destructive" });
+      }
+    } finally {
+      setCompartilhando(false);
+    }
+  };
+
+
   return (
     <ClientLayout>
       {carregando && <CartProgressOverlay label="Carregando demonstrativo..." />}
