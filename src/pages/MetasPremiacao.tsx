@@ -335,7 +335,7 @@ const MetasPremiacao = () => {
                     <p className={`text-4xl font-extrabold ${k.pago ? "text-emerald-600" : "text-red-600"}`}>
                       {k.meta > 0 ? fmtPct(k.atingimento, 2) : "—"}
                     </p>
-                    {cfg.mostrar_valores && (
+                    {mostrarValores && (
                       <p className="mt-1 text-xs text-muted-foreground">
                         {k.meta > 0 ? `${f(k.real)} de ${f(k.meta)}` : "Meta não cadastrada"}
                       </p>
@@ -346,7 +346,7 @@ const MetasPremiacao = () => {
                     </p>
                     <p className="mt-2 text-xs text-muted-foreground">
                       Peso {fmtPct(k.peso)}
-                      {cfg.mostrar_valores
+                      {mostrarValores
                         ? ` · ${fmtBRL(k.pago ? (cfg.valor_premiacao * (k.peso || 0)) / 100 : 0)}`
                         : ""}
                     </p>
