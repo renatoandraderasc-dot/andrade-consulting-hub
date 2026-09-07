@@ -8,6 +8,8 @@ Além disso, mesmo quando algum dado chegava, o mesmo número de MIX era colocad
 
 ## O que será feito
 
+Escopo: a mudança vale **apenas para as lojas Nascimento (Embu e Osasco)**. As demais lojas continuam com o comportamento atual, sem qualquer alteração.
+
 1. Passar a usar o relatório de positivação de mix (`mix_positivacao_periodo`) — o mesmo que o painel PIC já usa e que existe nas lojas Nascimento. Ele devolve, por dia e por departamento, quantos códigos diferentes foram vendidos pela primeira vez; somando o mês, tem-se a quantidade de códigos distintos vendidos no mês.
 2. Manter o caminho antigo como alternativa: se a loja não publicar esse relatório, tenta a lista por produto (`vendas_produto_periodo` ou `vendas_hierarquia_periodo`) contando códigos distintos.
 3. Guardar o MIX por mês **e por departamento**, para que os filtros de departamento/categoria e os totais somem corretamente, sem repetir o mesmo número em várias linhas.
@@ -17,7 +19,8 @@ Além disso, mesmo quando algum dado chegava, o mesmo número de MIX era colocad
 ## Detalhes técnicos
 
 - Arquivo: `src/pages/AnaliseAnual.tsx`, função `carregarMix`.
-- Nova ordem de tentativa por loja: `mix_positivacao_periodo` → `vendas_produto_periodo` → `vendas_hierarquia_periodo`.
+- Novo caminho aplicado somente quando a loja selecionada é Nascimento (detecção pelo nome da loja / conexão WebSac das duas lojas). Fora disso, a função segue exatamente como hoje.
+- Ordem de tentativa nas lojas Nascimento: `mix_positivacao_periodo` → `vendas_hierarquia_periodo`.
 - Acumulador passa de `Map<"ano-mes", number>` para `Map<"ano-mes-departamento", number>`; o merge em `rows` casa por ano/mês/departamento (com a mesma normalização de departamento já usada na tela) e cai para rateio no `TOTAL` quando o relatório não trouxer departamento.
 - Aliases lidos via `pick`: `mix`, `positivacao`, `qtd_itens`, `itens`, `codigos`.
 - Sem mudanças em outras telas, no PIC ou no banco.
