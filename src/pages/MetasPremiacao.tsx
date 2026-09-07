@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Award, RefreshCw, Save, Settings2, CheckCircle2, XCircle, Gift } from "lucide-react";
+import { Award, RefreshCw, Save, Settings2, CheckCircle2, XCircle, Gift, Image as ImageIcon, Eye, Percent } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import ClientLayout from "@/components/ClientLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -248,6 +249,10 @@ const MetasPremiacao = () => {
             </Select>
             <Button variant="outline" size="sm" onClick={() => { atual.refresh(); carregarMetas(); }}>
               <RefreshCw className="h-4 w-4 mr-1" /> Atualizar
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setCfg({ ...cfg, mostrar_valores: !cfg.mostrar_valores })}>
+              {cfg.mostrar_valores ? <Eye className="h-4 w-4 mr-1" /> : <Percent className="h-4 w-4 mr-1" />}
+              {cfg.mostrar_valores ? "Valores e %" : "Apenas %"}
             </Button>
             <Button variant="outline" size="sm" onClick={() => setMostrarParam((v) => !v)}>
               <Settings2 className="h-4 w-4 mr-1" /> Parametrização
