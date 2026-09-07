@@ -1858,6 +1858,42 @@ export type Database = {
           },
         ]
       }
+      saas_config: {
+        Row: {
+          categoria: string
+          chave: string
+          created_at: string
+          descricao: string | null
+          id: string
+          opcoes: Json | null
+          tipo: string
+          updated_at: string
+          valor: string | null
+        }
+        Insert: {
+          categoria?: string
+          chave: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          opcoes?: Json | null
+          tipo?: string
+          updated_at?: string
+          valor?: string | null
+        }
+        Update: {
+          categoria?: string
+          chave?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          opcoes?: Json | null
+          tipo?: string
+          updated_at?: string
+          valor?: string | null
+        }
+        Relationships: []
+      }
       scrape_jobs: {
         Row: {
           categorias_erro: Json
@@ -3030,6 +3066,7 @@ export type Database = {
         }[]
       }
       importar_lancamentos_vr_auto: { Args: never; Returns: number }
+      minutos_para_cron: { Args: { minutos: number }; Returns: string }
       semear_taxas_padrao: {
         Args: {
           p_department: string
@@ -3041,6 +3078,7 @@ export type Database = {
         Returns: number
       }
       store_sistema: { Args: { _store_id: string }; Returns: string }
+      sync_rede_mensal_auto: { Args: never; Returns: number }
       tem_acesso_loja: { Args: { _store_id: string }; Returns: boolean }
     }
     Enums: {
