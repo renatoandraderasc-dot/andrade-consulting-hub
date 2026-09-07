@@ -549,6 +549,49 @@ const MetasPremiacao = () => {
             </div>
           </div>
 
+          {/* Departamentos */}
+          {departamentos.length > 0 && (
+            <div className="px-5 pt-5">
+              <p className="mb-3 text-center text-xs font-bold uppercase tracking-[0.25em] text-muted-foreground">
+                Desempenho por departamento
+              </p>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {departamentos.map((d) => (
+                  <div
+                    key={d.dep}
+                    className={`overflow-hidden rounded-xl border-2 text-center ${
+                      d.atingiu ? "border-emerald-600/60" : "border-border"
+                    }`}
+                  >
+                    <div className="relative h-20 w-full">
+                      {d.foto ? (
+                        <img src={d.foto} alt={d.dep} className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="h-full w-full bg-gradient-to-br from-muted to-muted/40" />
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-foreground/85 to-foreground/20" />
+                      <p className="absolute inset-x-0 bottom-2 text-sm font-extrabold uppercase text-background">
+                        {d.dep}
+                      </p>
+                    </div>
+                    <div className="p-3">
+                      <p className={`text-2xl font-extrabold ${d.atingiu ? "text-emerald-600" : "text-red-600"}`}>
+                        {d.meta.vendas > 0 ? fmtPct(d.atingimento, 2) : "—"}
+                      </p>
+                      {cfg.mostrar_valores && (
+                        <p className="text-[11px] text-muted-foreground">
+                          {d.meta.vendas > 0
+                            ? `${fmtBRL(d.real.vendas)} de ${fmtBRL(d.meta.vendas)}`
+                            : "Meta não cadastrada"}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Rodape */}
           <div className="relative m-5 overflow-hidden rounded-2xl">
             {cfg.foto_rodape ? (
