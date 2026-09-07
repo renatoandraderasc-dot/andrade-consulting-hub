@@ -1,75 +1,23 @@
+# Análise Anual: trazer o MIX (códigos diferentes vendidos)
 
+## O que está acontecendo
 
-# Plano: Motor Generico de Coleta em Background com Firecrawl Crawl
+A linha de MIX fica vazia porque a tela pede um relatório chamado `vendas_produto_periodo`, que não existe nas lojas Nascimento (WebSac). A lista de relatórios dessas lojas tem `mix_positivacao_periodo`, `vendas_hierarquia_periodo` etc., mas não aquele. Como a falha é silenciosa (o MIX é opcional), a linha simplesmente aparece sem números.
 
-## Problema Raiz
-O VIPCommerce (e outras plataformas não-VTEX) bloqueia acesso à API de categorias/produtos. A tentativa de usar endpoints internos falha (0 categorias encontradas). A abordagem atual tenta tudo em uma única chamada de Edge Function que tem timeout limitado.
+Além disso, mesmo quando algum dado chegava, o mesmo número de MIX era colocado em todas as linhas do mês, o que faz o total ficar multiplicado quando se filtra por departamento/categoria.
 
-## Solucao Definitiva
-Usar o **Firecrawl Crawl** (crawl assíncrono que renderiza JavaScript) como motor principal para qualquer site que não seja VTEX. O crawl visita todas as páginas do site, renderiza o JS (funciona com Angular SPAs como VIPCommerce), e extrai produtos do HTML/markdown. O processo roda em background com progresso persistido no banco.
+## O que será feito
 
-```text
-┌─────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│  Frontend   │────>│  Edge Function   │────>│  Firecrawl API  │
-│  (iniciar)  │     │  (iniciar job)   │     │  /v1/crawl      │
-└─────────────┘     └──────────────────┘     └─────────────────┘
-       │                                            │
-       │ polling                                    │ webhook/poll
-       ▼                                            ▼
-┌─────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│  Progress   │<────│  Edge Function   │<────│  Crawl Results  │
-│  Bar UI     │     │  (check status)  │     │  (all pages)    │
-└─────────────┘     └──────────────────┘     └─────────────────┘
-```
+1. Passar a usar o relatório de positivação de mix (`mix_positivacao_periodo`) — o mesmo que o painel PIC já usa e que existe nas lojas Nascimento. Ele devolve, por dia e por departamento, quantos códigos diferentes foram vendidos pela primeira vez; somando o mês, tem-se a quantidade de códigos distintos vendidos no mês.
+2. Manter o caminho antigo como alternativa: se a loja não publicar esse relatório, tenta a lista por produto (`vendas_produto_periodo` ou `vendas_hierarquia_periodo`) contando códigos distintos.
+3. Guardar o MIX por mês **e por departamento**, para que os filtros de departamento/categoria e os totais somem corretamente, sem repetir o mesmo número em várias linhas.
+4. Buscar ano a ano, em paralelo, com a barra de progresso do carrinho já usada na tela, e sem travar a tela caso a loja não tenha o dado.
+5. O MIX continua aparecendo logo abaixo de LUCRO, no mesmo formato, e também nas exportações em Excel e PDF.
 
-## Etapas de Implementacao
+## Detalhes técnicos
 
-### 1. Criar tabela `scrape_jobs` (migration)
-Armazena o estado de cada coleta em background:
-- `id`, `competitor_url`, `competitor_name`, `status` (pending/mapping/crawling/extracting/done/error)
-- `firecrawl_crawl_id` (ID retornado pelo Firecrawl)
-- `total_urls_found`, `pages_crawled`, `products_found`
-- `progress_pct`, `error_message`
-- `products_json` (JSONB com todos os produtos extraidos)
-- `created_at`, `updated_at`
-- RLS: admins full access, authenticated users can read
-
-### 2. Reescrever Edge Function `scrape-competitor-prices`
-Nova logica em 2 modos:
-
-**Modo 1 - Iniciar coleta** (`action: "start"`):
-- Para VTEX: manter estrategia atual (sincrona, funciona bem)
-- Para qualquer outro site: usar Firecrawl `/v1/map` (descobrir URLs) + `/v1/crawl` (crawl assincrono com `limit: 5000`, `scrapeOptions: { formats: ['html'], waitFor: 3000 }`)
-- Salvar o `crawl_id` na tabela `scrape_jobs`
-- Retornar imediatamente com `jobId`
-
-**Modo 2 - Verificar progresso** (`action: "check"`, `jobId`):
-- Consultar Firecrawl `/v1/crawl/{crawl_id}` para status
-- Se completo: extrair produtos de todas as paginas (JSON-LD, precos no HTML, markdown)
-- Atualizar `scrape_jobs` com progresso e produtos
-- Retornar status + produtos quando pronto
-
-### 3. Atualizar Frontend `ConcorrentesTab.tsx`
-- Ao clicar "Coletar": iniciar job e receber `jobId`
-- Polling a cada 5 segundos para verificar progresso
-- Mostrar barra de progresso com: URLs encontradas, paginas processadas, produtos extraidos
-- Quando finalizado: exibir resultado e permitir analise
-
-### 4. Atualizar `firecrawl.ts` (API client)
-- Adicionar metodos `startScrapeJob(url)` e `checkScrapeJob(jobId)`
-
-## Detalhes Tecnicos
-
-- **Firecrawl Crawl** renderiza JavaScript (resolve o problema do Angular SPA do VIPCommerce)
-- **Limit de 5000 paginas** no crawl garante cobertura completa
-- **waitFor: 3000ms** da tempo para SPAs carregarem produtos
-- **Extracao dupla**: JSON-LD structured data + regex de precos no markdown
-- **Sem timeout**: o crawl roda nos servidores do Firecrawl, a Edge Function so consulta o status
-- **Creditos**: usa creditos do Firecrawl proporcionais ao numero de paginas, mas e o unico metodo que garante cobertura total para sites nao-VTEX
-
-## Arquivos Modificados
-1. `supabase/migrations/new` - Tabela `scrape_jobs`
-2. `supabase/functions/scrape-competitor-prices/index.ts` - Logica de job assincrono
-3. `src/lib/api/firecrawl.ts` - Novos metodos de job
-4. `src/components/repricing/ConcorrentesTab.tsx` - UI de progresso
-
+- Arquivo: `src/pages/AnaliseAnual.tsx`, função `carregarMix`.
+- Nova ordem de tentativa por loja: `mix_positivacao_periodo` → `vendas_produto_periodo` → `vendas_hierarquia_periodo`.
+- Acumulador passa de `Map<"ano-mes", number>` para `Map<"ano-mes-departamento", number>`; o merge em `rows` casa por ano/mês/departamento (com a mesma normalização de departamento já usada na tela) e cai para rateio no `TOTAL` quando o relatório não trouxer departamento.
+- Aliases lidos via `pick`: `mix`, `positivacao`, `qtd_itens`, `itens`, `codigos`.
+- Sem mudanças em outras telas, no PIC ou no banco.
