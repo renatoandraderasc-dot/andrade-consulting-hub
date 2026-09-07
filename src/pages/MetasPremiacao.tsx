@@ -76,10 +76,11 @@ const MetasPremiacao = () => {
 
   const [cfg, setCfg] = useState<Config>(PADRAO);
   const [salvando, setSalvando] = useState(false);
-  const [enviando, setEnviando] = useState<FotoKey | null>(null);
+  const [enviando, setEnviando] = useState<string | null>(null);
   const [mostrarParam, setMostrarParam] = useState(false);
 
   const [metas, setMetas] = useState({ vendas: 0, lucro: 0, volume: 0, mix: 0 });
+  const [metasDep, setMetasDep] = useState<Record<string, { vendas: number; lucro: number; volume: number; mix: number }>>({});
   const [carregandoMetas, setCarregandoMetas] = useState(false);
 
   useEffect(() => {
