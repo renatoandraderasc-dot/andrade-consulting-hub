@@ -104,7 +104,6 @@ const MetasPremiacao = () => {
         acc.vendas += v.vendas; acc.lucro += v.lucro; acc.volume += v.volume; acc.mix += v.mix;
       }
     }
-    console.log("DBG carregarMetas", storeId, inicio, fim, JSON.stringify(porDep), JSON.stringify(acc));
     setMetas(acc);
     setMetasDep(porDep);
     setCarregandoMetas(false);
