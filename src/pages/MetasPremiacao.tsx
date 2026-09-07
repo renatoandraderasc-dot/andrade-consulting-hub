@@ -33,6 +33,7 @@ interface Config {
   foto_volume: string | null;
   foto_mix: string | null;
   mostrar_valores: boolean;
+  fotos_departamentos: Record<string, string>;
 }
 
 const PADRAO: Config = {
