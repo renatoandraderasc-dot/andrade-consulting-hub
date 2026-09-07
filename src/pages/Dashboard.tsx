@@ -14,7 +14,7 @@ import DashboardFilterBar, { Periodo, periodoFromPreset, TODA_LOJA } from "@/com
 import HierarquiaVendasTable from "@/components/relatorios/HierarquiaVendasTable";
 
 import VrOfflineNotice from "@/components/VrOfflineNotice";
-import { useVrRealizado } from "@/hooks/useVrRealizado";
+import { useVrRealizado, canonDept } from "@/hooks/useVrRealizado";
 import MascotPersona from "@/components/poster/MascotPersona";
 import CouponDivider from "@/components/poster/CouponDivider";
 
@@ -178,7 +178,8 @@ const Dashboard = () => {
   const dailyData: DailyRow[] = useMemo(() => {
     if (!vr) return [];
     // Sem departamento selecionado (loja sem metas por departamento), usa o total da loja
-    const serie = (selectedDept && vr[selectedDept]) || vr["LOJA"] || [];
+    const key = selectedDept ? canonDept(selectedDept) : "";
+    const serie = (key && (vr[key] || vr[selectedDept])) || vr["LOJA"] || [];
     const real = new Map(serie.map((r) => [r.date, r]));
     const dates = [...new Set<string>([...metaRows.map((m: any) => m.date), ...real.keys()])].sort();
 
@@ -340,7 +341,7 @@ const Dashboard = () => {
   }, [dailyData, storeMetrics]);
 
   // Lojas Nascimento: exibir apenas o bloco "Vendas da Loja"
-  const soLoja = /nascimento/i.test(storeName);
+  const soLoja = false;
 
   if (authLoading) {
 
