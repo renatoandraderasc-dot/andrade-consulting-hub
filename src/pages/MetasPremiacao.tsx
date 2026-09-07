@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Award, RefreshCw, Settings2, CheckCircle2, XCircle, Gift } from "lucide-react";
+import html2canvas from "html2canvas";
+import { Award, RefreshCw, Settings2, CheckCircle2, XCircle, Gift, Share2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import ClientLayout from "@/components/ClientLayout";
