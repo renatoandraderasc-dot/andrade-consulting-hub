@@ -102,21 +102,35 @@ const MetasPremiacao = () => {
 
   useEffect(() => { carregarMetas(); }, [storeId, inicio, fim]);
 
-  const realizado = useMemo(() => {
-    const t = { vendas: 0, lucro: 0, volume: 0, mix: 0 };
-    for (const d of atual.data?.[LOJA] ?? []) {
-      t.vendas += d.vendas; t.lucro += d.lucro; t.volume += d.volume; t.mix += d.mix;
+  const realizadoDep = useMemo(() => {
+    const out: Record<string, { vendas: number; lucro: number; volume: number; mix: number }> = {};
+    for (const k of Object.keys(atual.data ?? {})) {
+      const key = k === LOJA ? LOJA : k.toUpperCase();
+      const t = out[key] ?? (out[key] = { vendas: 0, lucro: 0, volume: 0, mix: 0 });
+      for (const d of atual.data![k]) {
+        t.vendas += d.vendas; t.lucro += d.lucro; t.volume += d.volume; t.mix += d.mix;
+      }
     }
-    return t;
+    return out;
   }, [atual.data]);
+
+  const departamentosDisponiveis = useMemo(() => {
+    const nomes = new Set<string>();
+    Object.keys(metasDep).forEach((d) => nomes.add(d));
+    Object.keys(realizadoDep).forEach((d) => { if (d !== LOJA) nomes.add(d); });
+    return Array.from(nomes).sort();
+  }, [metasDep, realizadoDep]);
+
+  const metasSel = dep === LOJA ? metas : (metasDep[dep] ?? { vendas: 0, lucro: 0, volume: 0, mix: 0 });
+  const realizado = realizadoDep[dep] ?? { vendas: 0, lucro: 0, volume: 0, mix: 0 };
 
   const kpis = useMemo(() => {
     const min = cfg.atingimento_minimo || 99;
     const base: { key: KpiKey; label: string; sub?: string; meta: number; real: number; peso: number }[] = [
-      { key: "faturamento", label: "FATURAMENTO", meta: metas.vendas, real: realizado.vendas, peso: cfg.peso_faturamento },
-      { key: "arrecadacao", label: "MARGEM", sub: "(ARRECADAÇÃO)", meta: metas.lucro, real: realizado.lucro, peso: cfg.peso_arrecadacao },
-      { key: "volume", label: "VOLUME", meta: metas.volume, real: realizado.volume, peso: cfg.peso_volume },
-      { key: "mix", label: "MIX", meta: metas.mix, real: realizado.mix, peso: cfg.peso_mix },
+      { key: "faturamento", label: "FATURAMENTO", meta: metasSel.vendas, real: realizado.vendas, peso: cfg.peso_faturamento },
+      { key: "arrecadacao", label: "MARGEM", sub: "(ARRECADAÇÃO)", meta: metasSel.lucro, real: realizado.lucro, peso: cfg.peso_arrecadacao },
+      { key: "volume", label: "VOLUME", meta: metasSel.volume, real: realizado.volume, peso: cfg.peso_volume },
+      { key: "mix", label: "MIX", meta: metasSel.mix, real: realizado.mix, peso: cfg.peso_mix },
     ];
     const calc = base.map((k) => ({ ...k, atingimento: pct(k.real, k.meta), atingiu: k.meta > 0 && pct(k.real, k.meta) >= min }));
     const gatilho = calc.some((k) => (k.key === "faturamento" || k.key === "arrecadacao") && k.atingiu);
@@ -125,30 +139,11 @@ const MetasPremiacao = () => {
       pago: k.key === "volume" || k.key === "mix" ? k.atingiu && gatilho : k.atingiu,
       bloqueado: (k.key === "volume" || k.key === "mix") && k.atingiu && !gatilho,
     }));
-  }, [metas, realizado, cfg]);
+  }, [metasSel, realizado, cfg]);
 
-  const departamentos = useMemo(() => {
-    const min = cfg.atingimento_minimo || 99;
-    const nomes = new Set<string>();
-    Object.keys(metasDep).forEach((d) => nomes.add(d));
-    Object.keys(atual.data ?? {}).forEach((d) => { if (d !== LOJA) nomes.add(d.toUpperCase()); });
-    return Array.from(nomes).sort().map((dep) => {
-      const meta = metasDep[dep] ?? { vendas: 0, lucro: 0, volume: 0, mix: 0 };
-      const real = { vendas: 0, lucro: 0, volume: 0, mix: 0 };
-      for (const k of Object.keys(atual.data ?? {})) {
-        if (k.toUpperCase() !== dep) continue;
-        for (const d of atual.data![k]) {
-          real.vendas += d.vendas; real.lucro += d.lucro; real.volume += d.volume; real.mix += d.mix;
-        }
-      }
-      const atingimento = pct(real.vendas, meta.vendas);
-      return {
-        dep, meta, real, atingimento,
-        atingiu: meta.vendas > 0 && atingimento >= min,
-        foto: cfg.fotos_departamentos?.[dep] || null,
-      };
-    });
-  }, [metasDep, atual.data, cfg]);
+  const fotoTopo = dep === LOJA ? cfg.foto_cabecalho : (cfg.fotos_departamentos?.[dep] || cfg.foto_cabecalho);
+  const titulo = dep === LOJA ? (storeName || "LOJA") : dep;
+
 
   const pctPago = kpis.reduce((s, k) => s + (k.pago ? k.peso || 0 : 0), 0);
   const valorPago = (cfg.valor_premiacao * pctPago) / 100;
