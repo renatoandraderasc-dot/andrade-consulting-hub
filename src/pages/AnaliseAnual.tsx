@@ -363,8 +363,10 @@ const AnaliseAnual = () => {
     if (mixCarregado) return;
     setMixLoading(true);
     try {
-      if (ehNascimento) {
-        const ok = await carregarMixPositivacao(sid);
+      // Vale para todas as lojas, independente do sistema (VR, WebSac,
+      // Oracle, Director): tenta os relatorios por produto mes a mes.
+      for (const rel of ["vendas_hierarquia_periodo", "vendas_produto_periodo", "mix_positivacao_periodo"]) {
+        const ok = await carregarMixPositivacao(sid, rel);
         if (ok) return;
       }
       const hoje0 = new Date();
