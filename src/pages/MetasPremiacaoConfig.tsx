@@ -207,7 +207,7 @@ const MetasPremiacaoConfig = () => {
             <Select value={String(mes)} onValueChange={(v) => setMes(Number(v))}>
               <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {MESES.map((m, i) => <SelectItem key={m} value={String(i + 1)}>{m}</SelectItem>)}
+                {MESES.slice(1).map((m, i) => <SelectItem key={m} value={String(i + 1)}>{m}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={String(ano)} onValueChange={(v) => setAno(Number(v))}>
@@ -306,7 +306,7 @@ const MetasPremiacaoConfig = () => {
           <h2 className="text-sm font-semibold">Fotos por departamento</h2>
           {departamentos.length === 0 ? (
             <p className="text-xs text-muted-foreground">
-              Nenhum departamento com metas gravadas em {MESES[mes - 1]}/{ano}.
+              Nenhum departamento com metas gravadas em {MESES[mes]}/{ano}.
             </p>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
