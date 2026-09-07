@@ -33,6 +33,7 @@ interface Config {
   foto_volume: string | null;
   foto_mix: string | null;
   mostrar_valores: boolean;
+  fotos_departamentos: Record<string, string>;
 }
 
 const PADRAO: Config = {
@@ -49,6 +50,7 @@ const PADRAO: Config = {
   foto_volume: null,
   foto_mix: null,
   mostrar_valores: true,
+  fotos_departamentos: {},
 };
 
 type FotoKey = "foto_cabecalho" | "foto_rodape" | "foto_faturamento" | "foto_arrecadacao" | "foto_volume" | "foto_mix";
@@ -74,10 +76,11 @@ const MetasPremiacao = () => {
 
   const [cfg, setCfg] = useState<Config>(PADRAO);
   const [salvando, setSalvando] = useState(false);
-  const [enviando, setEnviando] = useState<FotoKey | null>(null);
+  const [enviando, setEnviando] = useState<string | null>(null);
   const [mostrarParam, setMostrarParam] = useState(false);
 
   const [metas, setMetas] = useState({ vendas: 0, lucro: 0, volume: 0, mix: 0 });
+  const [metasDep, setMetasDep] = useState<Record<string, { vendas: number; lucro: number; volume: number; mix: number }>>({});
   const [carregandoMetas, setCarregandoMetas] = useState(false);
 
   useEffect(() => {
@@ -117,15 +120,30 @@ const MetasPremiacao = () => {
           foto_volume: (data as any).foto_volume ?? null,
           foto_mix: (data as any).foto_mix ?? null,
           mostrar_valores: (data as any).mostrar_valores ?? true,
+          fotos_departamentos: ((data as any).fotos_departamentos ?? {}) as Record<string, string>,
         } : PADRAO);
       });
   }, [storeId]);
 
-  const enviarFoto = async (campo: FotoKey, file: File) => {
+  const gravarConfig = async (novo: Config, silencioso = false) => {
     if (!storeId) return;
-    setEnviando(campo);
+    const { error } = await supabase.from("premiacao_config")
+      .upsert({ store_id: storeId, ...novo } as any, { onConflict: "store_id" });
+    if (error) {
+      toast({ title: "Não foi possível salvar", description: error.message, variant: "destructive" });
+      return;
+    }
+    if (!silencioso) toast({ title: "Parametrização salva" });
+  };
+
+  // Envia a foto e ja grava na parametrizacao (nao depende de clicar em Salvar)
+  const enviarFoto = async (campo: FotoKey, file: File, departamento?: string) => {
+    if (!storeId) return;
+    const chave = departamento ? (`dep:${departamento}` as FotoKey) : campo;
+    setEnviando(chave);
     const ext = file.name.split(".").pop() || "jpg";
-    const path = `premiacao/${storeId}/${campo}-${Date.now()}.${ext}`;
+    const slug = (departamento || campo).toLowerCase().replace(/[^a-z0-9]+/gi, "-");
+    const path = `premiacao/${storeId}/${slug}-${Date.now()}.${ext}`;
     const { error } = await supabase.storage.from("imagens").upload(path, file, { upsert: true });
     if (error) {
       setEnviando(null);
@@ -133,27 +151,46 @@ const MetasPremiacao = () => {
       return;
     }
     const { data } = await supabase.storage.from("imagens").createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
-    setCfg((c) => ({ ...c, [campo]: data?.signedUrl ?? null }));
+    const url = data?.signedUrl ?? null;
+    let atualizado: Config = cfg;
+    setCfg((c) => {
+      atualizado = departamento
+        ? { ...c, fotos_departamentos: { ...c.fotos_departamentos, [departamento]: url || "" } }
+        : { ...c, [campo]: url };
+      return atualizado;
+    });
+    await gravarConfig(atualizado, true);
     setEnviando(null);
-    toast({ title: "Foto carregada", description: "Clique em Salvar para gravar." });
+    toast({ title: "Foto salva" });
+  };
+
+  const removerFoto = async (campo: FotoKey, departamento?: string) => {
+    let atualizado: Config = cfg;
+    setCfg((c) => {
+      if (departamento) {
+        const fotos = { ...c.fotos_departamentos };
+        delete fotos[departamento];
+        atualizado = { ...c, fotos_departamentos: fotos };
+      } else {
+        atualizado = { ...c, [campo]: null };
+      }
+      return atualizado;
+    });
+    await gravarConfig(atualizado, true);
   };
 
   const salvarConfig = async () => {
-    if (!storeId) return;
     setSalvando(true);
-    const { error } = await supabase.from("premiacao_config")
-      .upsert({ store_id: storeId, ...cfg }, { onConflict: "store_id" });
+    await gravarConfig(cfg);
     setSalvando(false);
-    toast(error
-      ? { title: "Não foi possível salvar", description: error.message, variant: "destructive" }
-      : { title: "Parametrização salva" });
   };
 
-  // Metas gravadas do mes (soma da loja)
+  // Metas gravadas do mes (soma da loja e por departamento)
   const carregarMetas = async () => {
     if (!storeId) return;
     setCarregandoMetas(true);
     const acc = { vendas: 0, lucro: 0, volume: 0, mix: 0 };
+    const porDep: Record<string, { vendas: number; lucro: number; volume: number; mix: number }> = {};
     let from = 0;
     for (;;) {
       const { data, error } = await supabase
@@ -169,11 +206,18 @@ const MetasPremiacao = () => {
         acc.lucro += Number(r.meta_lucro) || 0;
         acc.volume += Number(r.meta_volume) || 0;
         acc.mix += Number(r.meta_mix) || 0;
+        const dep = (r.department || "OUTROS").toUpperCase();
+        const d = porDep[dep] ?? (porDep[dep] = { vendas: 0, lucro: 0, volume: 0, mix: 0 });
+        d.vendas += Number(r.meta_vendas) || 0;
+        d.lucro += Number(r.meta_lucro) || 0;
+        d.volume += Number(r.meta_volume) || 0;
+        d.mix += Number(r.meta_mix) || 0;
       }
       if (data.length < 1000) break;
       from += 1000;
     }
     setMetas(acc);
+    setMetasDep(porDep);
     setCarregandoMetas(false);
   };
 
@@ -203,6 +247,33 @@ const MetasPremiacao = () => {
       bloqueado: (k.key === "volume" || k.key === "mix") && k.atingiu && !gatilho,
     }));
   }, [metas, realizado, cfg]);
+
+  // Departamentos: metas gravadas + realizado ao vivo
+  const departamentos = useMemo(() => {
+    const min = cfg.atingimento_minimo || 99;
+    const nomes = new Set<string>();
+    Object.keys(metasDep).forEach((d) => nomes.add(d));
+    Object.keys(atual.data ?? {}).forEach((d) => { if (d !== LOJA) nomes.add(d.toUpperCase()); });
+    return Array.from(nomes).sort().map((dep) => {
+      const meta = metasDep[dep] ?? { vendas: 0, lucro: 0, volume: 0, mix: 0 };
+      const real = { vendas: 0, lucro: 0, volume: 0, mix: 0 };
+      for (const k of Object.keys(atual.data ?? {})) {
+        if (k.toUpperCase() !== dep) continue;
+        for (const d of atual.data![k]) {
+          real.vendas += d.vendas; real.lucro += d.lucro; real.volume += d.volume; real.mix += d.mix;
+        }
+      }
+      const atingimento = pct(real.vendas, meta.vendas);
+      return {
+        dep,
+        meta,
+        real,
+        atingimento,
+        atingiu: meta.vendas > 0 && atingimento >= min,
+        foto: cfg.fotos_departamentos?.[dep] || null,
+      };
+    });
+  }, [metasDep, atual.data, cfg]);
 
   const pesoTotal = kpis.reduce((s, k) => s + (k.peso || 0), 0);
   const pctPago = kpis.reduce((s, k) => s + (k.pago ? k.peso || 0 : 0), 0);
@@ -309,7 +380,7 @@ const MetasPremiacao = () => {
                     <button
                       type="button"
                       className="text-xs text-muted-foreground underline"
-                      onClick={() => setCfg({ ...cfg, [f.k]: null })}
+                      onClick={() => removerFoto(f.k)}
                     >
                       Remover foto
                     </button>
@@ -317,6 +388,48 @@ const MetasPremiacao = () => {
                 </div>
               ))}
             </div>
+
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold">Fotos por departamento</h3>
+              {departamentos.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  Nenhum departamento encontrado para este mês.
+                </p>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+                  {departamentos.map((d) => (
+                    <div key={d.dep} className="space-y-1">
+                      <Label className="text-xs">{d.dep}</Label>
+                      <div className="flex h-20 items-center justify-center overflow-hidden rounded-lg border border-dashed border-border bg-muted/30">
+                        {d.foto
+                          ? <img src={d.foto} alt={d.dep} className="h-full w-full object-cover" />
+                          : <ImageIcon className="h-5 w-5 text-muted-foreground" />}
+                      </div>
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        className="text-xs"
+                        disabled={enviando === `dep:${d.dep}`}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) enviarFoto("foto_cabecalho", file, d.dep);
+                        }}
+                      />
+                      {d.foto && (
+                        <button
+                          type="button"
+                          className="text-xs text-muted-foreground underline"
+                          onClick={() => removerFoto("foto_cabecalho", d.dep)}
+                        >
+                          Remover foto
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
 
             <div className="flex items-center gap-2">
               <Switch
@@ -435,6 +548,49 @@ const MetasPremiacao = () => {
               </p>
             </div>
           </div>
+
+          {/* Departamentos */}
+          {departamentos.length > 0 && (
+            <div className="px-5 pt-5">
+              <p className="mb-3 text-center text-xs font-bold uppercase tracking-[0.25em] text-muted-foreground">
+                Desempenho por departamento
+              </p>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {departamentos.map((d) => (
+                  <div
+                    key={d.dep}
+                    className={`overflow-hidden rounded-xl border-2 text-center ${
+                      d.atingiu ? "border-emerald-600/60" : "border-border"
+                    }`}
+                  >
+                    <div className="relative h-20 w-full">
+                      {d.foto ? (
+                        <img src={d.foto} alt={d.dep} className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="h-full w-full bg-gradient-to-br from-muted to-muted/40" />
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-foreground/85 to-foreground/20" />
+                      <p className="absolute inset-x-0 bottom-2 text-sm font-extrabold uppercase text-background">
+                        {d.dep}
+                      </p>
+                    </div>
+                    <div className="p-3">
+                      <p className={`text-2xl font-extrabold ${d.atingiu ? "text-emerald-600" : "text-red-600"}`}>
+                        {d.meta.vendas > 0 ? fmtPct(d.atingimento, 2) : "—"}
+                      </p>
+                      {cfg.mostrar_valores && (
+                        <p className="text-[11px] text-muted-foreground">
+                          {d.meta.vendas > 0
+                            ? `${fmtBRL(d.real.vendas)} de ${fmtBRL(d.meta.vendas)}`
+                            : "Meta não cadastrada"}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Rodape */}
           <div className="relative m-5 overflow-hidden rounded-2xl">
