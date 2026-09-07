@@ -19,7 +19,8 @@ Escopo: a mudança vale **apenas para as lojas Nascimento (Embu e Osasco)**. As 
 ## Detalhes técnicos
 
 - Arquivo: `src/pages/AnaliseAnual.tsx`, função `carregarMix`.
-- Nova ordem de tentativa por loja: `mix_positivacao_periodo` → `vendas_produto_periodo` → `vendas_hierarquia_periodo`.
+- Novo caminho aplicado somente quando a loja selecionada é Nascimento (detecção pelo nome da loja / conexão WebSac das duas lojas). Fora disso, a função segue exatamente como hoje.
+- Ordem de tentativa nas lojas Nascimento: `mix_positivacao_periodo` → `vendas_hierarquia_periodo`.
 - Acumulador passa de `Map<"ano-mes", number>` para `Map<"ano-mes-departamento", number>`; o merge em `rows` casa por ano/mês/departamento (com a mesma normalização de departamento já usada na tela) e cai para rateio no `TOTAL` quando o relatório não trouxer departamento.
 - Aliases lidos via `pick`: `mix`, `positivacao`, `qtd_itens`, `itens`, `codigos`.
 - Sem mudanças em outras telas, no PIC ou no banco.
