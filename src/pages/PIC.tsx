@@ -382,8 +382,8 @@ const PIC = () => {
           realizado,
           metaMensal: metaMensalMix,
           metaAcumulada: metaAcumMix,
-          projecao: metaMensalMix,
-          pctProjecao: metaMensalMix > 0 ? 100 : 0,
+          projecao: isCurrentMonth ? metaMensalMix : realizado,
+          pctProjecao: metaMensalMix > 0 ? (isCurrentMonth ? 100 : (realizado / metaMensalMix) * 100) : 0,
           hasMeta: metaMensalMix > 0,
           daily,
         };
@@ -392,7 +392,7 @@ const PIC = () => {
 
     }
     return result;
-  }, [rawData, cutoffDay, metaMix, metasMes, diasNoMesSel]);
+  }, [rawData, cutoffDay, metaMix, metasMes, diasNoMesSel, isCurrentMonth]);
 
 
   // AI Analysis
