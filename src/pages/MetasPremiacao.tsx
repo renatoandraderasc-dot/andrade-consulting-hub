@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Award, RefreshCw, Settings2, CheckCircle2, XCircle, Gift } from "lucide-react";
+import html2canvas from "html2canvas";
+import { Award, RefreshCw, Settings2, CheckCircle2, XCircle, Gift, Share2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import ClientLayout from "@/components/ClientLayout";
@@ -28,6 +30,8 @@ const pct = (a: number, b: number) => (b > 0 ? (a / b) * 100 : 0);
 const MetasPremiacao = () => {
   const { user, isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
+
 
   const [stores, setStores] = useState<Store[]>([]);
   const [storeId, setStoreId] = useState("");
@@ -160,6 +164,42 @@ const MetasPremiacao = () => {
   const todas = kpis.length > 0 && kpis.every((k) => k.pago);
   const carregando = atual.loading || carregandoMetas;
 
+  const cartazRef = useRef<HTMLDivElement>(null);
+  const [compartilhando, setCompartilhando] = useState(false);
+
+  const compartilhar = async () => {
+    if (!cartazRef.current) return;
+    setCompartilhando(true);
+    try {
+      const canvas = await html2canvas(cartazRef.current, {
+        backgroundColor: "#ffffff", scale: 2, useCORS: true,
+      });
+      const blob: Blob = await new Promise((res) =>
+        canvas.toBlob((b) => res(b as Blob), "image/png"),
+      );
+      const nome = `Premiacao-${titulo}-${MESES[mes]}-${ano} - Andrade Consultoria Ltda.png`
+        .replace(/[\\/:*?"<>|]/g, "-");
+      const file = new File([blob], nome, { type: "image/png" });
+      const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
+      if (nav.canShare?.({ files: [file] })) {
+        await nav.share({ files: [file], title: nome });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = nome; a.click();
+        URL.revokeObjectURL(url);
+        toast({ title: "Imagem gerada", description: "O print do demonstrativo foi baixado." });
+      }
+    } catch (e: any) {
+      if (e?.name !== "AbortError") {
+        toast({ title: "Erro ao compartilhar", description: e?.message, variant: "destructive" });
+      }
+    } finally {
+      setCompartilhando(false);
+    }
+  };
+
+
   return (
     <ClientLayout>
       {carregando && <CartProgressOverlay label="Carregando demonstrativo..." />}
@@ -184,7 +224,7 @@ const MetasPremiacao = () => {
             <Select value={String(mes)} onValueChange={(v) => setMes(Number(v))}>
               <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {MESES.map((m, i) => <SelectItem key={m} value={String(i + 1)}>{m}</SelectItem>)}
+                {MESES.slice(1).map((m, i) => <SelectItem key={m} value={String(i + 1)}>{m}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={String(ano)} onValueChange={(v) => setAno(Number(v))}>
@@ -209,11 +249,14 @@ const MetasPremiacao = () => {
             <Button variant="outline" size="sm" onClick={() => navigate("/metas/premiacao/config")}>
               <Settings2 className="h-4 w-4 mr-1" /> Parametrização
             </Button>
+            <Button size="sm" onClick={compartilhar} disabled={compartilhando}>
+              <Share2 className="h-4 w-4 mr-1" /> {compartilhando ? "Gerando..." : "Compartilhar"}
+            </Button>
           </div>
         </div>
 
         {/* Demonstrativo — layout de cartaz */}
-        <div className="mx-auto w-full max-w-3xl overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
+        <div ref={cartazRef} className="mx-auto w-full max-w-3xl overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
           <div className="relative overflow-hidden">
             {fotoTopo ? (
               <img src={fotoTopo} alt="Cabeçalho" className="h-48 w-full object-cover" />
@@ -225,7 +268,7 @@ const MetasPremiacao = () => {
               <div className="flex items-start justify-end gap-4">
                 <div className="rounded-xl bg-background/90 px-3 py-2 text-right shadow">
                   <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Competência</p>
-                  <p className="text-sm font-bold">{MESES[mes - 1]}/{ano}</p>
+                  <p className="text-sm font-bold">{MESES[mes]}/{ano}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">

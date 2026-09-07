@@ -159,7 +159,7 @@ const MetasRealizado = () => {
     .map((l) => ({ dept: l.dept, Meta: Math.round(l.meta), Realizado: Math.round(l.realizado), Espelho: Math.round(l.espelho) }));
 
   const exportar = () => {
-    const titulo = `Metas vs Realizado - ${storeName} - ${MESES[mes - 1]}/${ano}`;
+    const titulo = `Metas vs Realizado - ${storeName} - ${MESES[mes]}/${ano}`;
     const wb = XLSX.utils.book_new();
     for (const i of INDICADORES) {
       const valorDe = (t: { vendas: number; lucro: number; volume: number; mix: number }) =>
@@ -184,7 +184,7 @@ const MetasRealizado = () => {
       });
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), i.label.slice(0, 28));
     }
-    salvarWorkbook(wb, titulo, [["Loja", storeName], ["Competência", `${MESES[mes - 1]}/${ano}`]]);
+    salvarWorkbook(wb, titulo, [["Loja", storeName], ["Competência", `${MESES[mes]}/${ano}`]]);
   };
 
   const recarregar = () => { atual.refresh(); espelho.refresh(); carregarMetas(); };
@@ -217,7 +217,7 @@ const MetasRealizado = () => {
             <Select value={String(mes)} onValueChange={(v) => setMes(Number(v))}>
               <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {MESES.map((m, i) => <SelectItem key={m} value={String(i + 1)}>{m}</SelectItem>)}
+                {MESES.slice(1).map((m, i) => <SelectItem key={m} value={String(i + 1)}>{m}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={String(ano)} onValueChange={(v) => setAno(Number(v))}>
@@ -246,7 +246,7 @@ const MetasRealizado = () => {
         {semMetas && !carregando && (
           <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/40 p-3 text-sm">
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-            Nenhuma meta gravada para {MESES[mes - 1]}/{ano} nesta loja.
+            Nenhuma meta gravada para {MESES[mes]}/{ano} nesta loja.
           </div>
         )}
 
@@ -268,7 +268,7 @@ const MetasRealizado = () => {
               value: totalLoja && totalLoja.meta > 0 ? `${fmtPct(pct(totalLoja.realizado, totalLoja.meta))}` : "—",
             },
             {
-              label: `Espelho ${MESES[mes - 1]}/${ano - 1}`,
+              label: `Espelho ${MESES[mes]}/${ano - 1}`,
               value: config.fmt(totalLoja?.espelho ?? 0),
             },
           ].map((c) => (
