@@ -267,21 +267,32 @@ const AnaliseAnual = () => {
 
   const carregarMixPositivacao = async (sid: string) => {
     const hoje0 = new Date();
-    const anosBusca: number[] = [];
-    for (let a = ANOS[0]; a <= hoje0.getFullYear(); a++) anosBusca.push(a);
+    const p2 = (n: number) => String(n).padStart(2, "0");
+    // Uma consulta por MES: o relatorio de positivacao conta o produto apenas
+    // na primeira venda do periodo, entao janelas anuais jogam tudo em janeiro.
+    const janelas: { inicio: string; fim: string }[] = [];
+    for (let a = ANOS[0]; a <= hoje0.getFullYear(); a++) {
+      for (let m = 1; m <= 12; m++) {
+        if (a === hoje0.getFullYear() && m > hoje0.getMonth() + 1) break;
+        const ultimo =
+          a === hoje0.getFullYear() && m === hoje0.getMonth() + 1
+            ? hoje0.getDate()
+            : new Date(a, m, 0).getDate();
+        janelas.push({ inicio: `${a}-${p2(m)}-01`, fim: `${a}-${p2(m)}-${p2(ultimo)}` });
+      }
+    }
     const porDep = new Map<string, number>();
     const porMes = new Map<string, number>();
-    const partes = await Promise.all(
-      anosBusca.map((a) =>
-        chamarRelatorio(sid, "mix_positivacao_periodo", {
-          inicio: `${a}-01-01`,
-          fim:
-            a === hoje0.getFullYear()
-              ? `${a}-${String(hoje0.getMonth() + 1).padStart(2, "0")}-${String(hoje0.getDate()).padStart(2, "0")}`
-              : `${a}-12-31`,
-        }).catch(() => null),
-      ),
-    );
+    const partes: any[] = [];
+    const LOTE = 6;
+    for (let i = 0; i < janelas.length; i += LOTE) {
+      const lote = await Promise.all(
+        janelas.slice(i, i + LOTE).map((j) =>
+          chamarRelatorio(sid, "mix_positivacao_periodo", j).catch(() => null),
+        ),
+      );
+      partes.push(...lote);
+    }
     for (const p of partes) {
       if (!p || p.indisponivel || p.offline || p.erro) continue;
       for (const l of p.dados) {
