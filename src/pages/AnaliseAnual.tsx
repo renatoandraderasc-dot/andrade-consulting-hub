@@ -48,6 +48,14 @@ const extrairTurno = (l: any): Turno => {
 const extrairMix = (l: any) =>
   num(pick(l, "mix", "itens", "qtd_itens", "quantidade_itens", "sku", "codigos", "positivacao"));
 
+const chaveTexto = (v: unknown) =>
+  String(v ?? "")
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
 const nfInt = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 });
 const fmtNum = (v: number | null) => (v == null || !isFinite(v) ? "" : nfInt.format(Math.round(v)));
 const fmtPct = (v: number | null) =>
@@ -260,6 +268,7 @@ const AnaliseAnual = () => {
 
   // ---- mix (itens distintos vendidos) ----
   const [mixCarregado, setMixCarregado] = useState(false);
+  const [mixLoading, setMixLoading] = useState(false);
 
   // Nascimento (WebSac) nao publica "vendas_produto_periodo": usamos a
   // positivacao de mix, o mesmo relatorio do PIC.
@@ -281,48 +290,66 @@ const AnaliseAnual = () => {
         janelas.push({ inicio: `${a}-${p2(m)}-01`, fim: `${a}-${p2(m)}-${p2(ultimo)}` });
       }
     }
-    const porDep = new Map<string, number>();
-    const porMes = new Map<string, number>();
-    const partes: any[] = [];
+    // O relatorio hierarquico devolve uma linha por produto no periodo. Ele e
+    // a fonte autoritativa do MIX: o Set garante um unico codigo por mes.
+    const codigosPorDep = new Map<string, Set<string>>();
+    const codigosPorMes = new Map<string, Set<string>>();
+    const partes: { janela: { inicio: string; fim: string }; relatorio: any }[] = [];
     const LOTE = 6;
     for (let i = 0; i < janelas.length; i += LOTE) {
       const lote = await Promise.all(
         janelas.slice(i, i + LOTE).map((j) =>
-          chamarRelatorio(sid, "mix_positivacao_periodo", j).catch(() => null),
+          chamarRelatorio(sid, "vendas_hierarquia_periodo", j)
+            .then((relatorio) => ({ janela: j, relatorio }))
+            .catch(() => ({ janela: j, relatorio: null })),
         ),
       );
       partes.push(...lote);
     }
-    for (const p of partes) {
+    for (const { janela, relatorio: p } of partes) {
       if (!p || p.indisponivel || p.offline || p.erro) continue;
       for (const l of p.dados) {
-        const dia = String(pick(l, "dia", "data") ?? "");
-        const ano = Number(dia.slice(0, 4));
-        const mes = Number(dia.slice(5, 7));
-        if (!ano || !mes) continue;
-        const qtd = num(pick(l, "mix", "positivacao", "qtd_itens", "itens", "codigos", "quantidade"));
-        if (!qtd) continue;
-        const dep = String(pick(l, "categoria", "secao", "departamento", "nivel1") ?? "TOTAL").toUpperCase();
-        porDep.set(`${ano}-${mes}-${dep}`, (porDep.get(`${ano}-${mes}-${dep}`) ?? 0) + qtd);
-        porMes.set(`${ano}-${mes}`, (porMes.get(`${ano}-${mes}`) ?? 0) + qtd);
+        const codigo = String(pick(l, "codigo", "codigo_produto", "cod_produto", "ean", "codigo_barras") ?? "").trim();
+        if (!codigo) continue;
+        const ano = Number(janela.inicio.slice(0, 4));
+        const mes = Number(janela.inicio.slice(5, 7));
+        const dep = chaveTexto(pick(l, "nivel1", "departamento", "secao", "categoria") ?? "SEM DEPARTAMENTO");
+        const chaveDep = `${ano}-${mes}-${dep}`;
+        const chaveMes = `${ano}-${mes}`;
+        const setDep = codigosPorDep.get(chaveDep) ?? new Set<string>();
+        const setMes = codigosPorMes.get(chaveMes) ?? new Set<string>();
+        setDep.add(codigo);
+        setMes.add(codigo);
+        codigosPorDep.set(chaveDep, setDep);
+        codigosPorMes.set(chaveMes, setMes);
       }
     }
-    if (!porDep.size) return false;
-    setRows((prev) =>
-      prev.map((r) => {
-        const m =
-          porDep.get(`${r.ano}-${r.mes}-${r.departamento}`) ??
-          porDep.get(`${r.ano}-${r.mes}-${r.categoria}`) ??
-          porDep.get(`${r.ano}-${r.mes}-${r.secao}`) ??
-          (r.departamento === "TOTAL" ? porMes.get(`${r.ano}-${r.mes}`) : undefined);
-        return m ? { ...r, mix: m } : r;
-      }),
-    );
+    if (!codigosPorDep.size) return false;
+    setRows((prev) => {
+      const aplicadas = new Set<string>();
+      return prev.map((r) => {
+        const nomes = [r.secao, r.departamento, r.categoria].map(chaveTexto);
+        const chaveEncontrada = nomes
+          .map((nome) => `${r.ano}-${r.mes}-${nome}`)
+          .find((chave) => codigosPorDep.has(chave));
+        if (chaveEncontrada && !aplicadas.has(chaveEncontrada)) {
+          aplicadas.add(chaveEncontrada);
+          return { ...r, mix: codigosPorDep.get(chaveEncontrada)?.size ?? 0 };
+        }
+        const chaveMes = `${r.ano}-${r.mes}`;
+        if (chaveTexto(r.departamento) === "TOTAL" && !aplicadas.has(chaveMes)) {
+          aplicadas.add(chaveMes);
+          return { ...r, mix: codigosPorMes.get(chaveMes)?.size ?? 0 };
+        }
+        return { ...r, mix: 0 };
+      });
+    });
     return true;
   };
 
   const carregarMix = async (sid: string) => {
     if (mixCarregado) return;
+    setMixLoading(true);
     try {
       if (ehNascimento) {
         const ok = await carregarMixPositivacao(sid);
@@ -367,6 +394,7 @@ const AnaliseAnual = () => {
       // mix é opcional; falhas não bloqueiam a tela
     } finally {
       setMixCarregado(true);
+      setMixLoading(false);
     }
   };
 
