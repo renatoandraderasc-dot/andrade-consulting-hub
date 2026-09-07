@@ -70,7 +70,6 @@ const MetasPremiacao = () => {
   const carregarMetas = async () => {
     if (!storeId) return;
     setCarregandoMetas(true);
-    const acc = { vendas: 0, lucro: 0, volume: 0, mix: 0 };
     const porDep: Record<string, { vendas: number; lucro: number; volume: number; mix: number }> = {};
     let from = 0;
     for (;;) {
@@ -83,10 +82,6 @@ const MetasPremiacao = () => {
         .range(from, from + 999);
       if (error || !data?.length) break;
       for (const r of data) {
-        acc.vendas += Number(r.meta_vendas) || 0;
-        acc.lucro += Number(r.meta_lucro) || 0;
-        acc.volume += Number(r.meta_volume) || 0;
-        acc.mix += Number(r.meta_mix) || 0;
         const dep = (r.department || "OUTROS").toUpperCase();
         const d = porDep[dep] ?? (porDep[dep] = { vendas: 0, lucro: 0, volume: 0, mix: 0 });
         d.vendas += Number(r.meta_vendas) || 0;
@@ -96,6 +91,18 @@ const MetasPremiacao = () => {
       }
       if (data.length < 1000) break;
       from += 1000;
+    }
+    // Total da loja: usa a linha consolidada (LOJA/GERAL) quando existir;
+    // caso contrário soma os departamentos, sem duplicar o consolidado.
+    const consolidado = porDep[LOJA] ?? porDep["GERAL"];
+    const acc = { vendas: 0, lucro: 0, volume: 0, mix: 0 };
+    if (consolidado && consolidado.vendas > 0) {
+      Object.assign(acc, consolidado);
+    } else {
+      for (const [k, v] of Object.entries(porDep)) {
+        if (k === LOJA || k === "GERAL") continue;
+        acc.vendas += v.vendas; acc.lucro += v.lucro; acc.volume += v.volume; acc.mix += v.mix;
+      }
     }
     setMetas(acc);
     setMetasDep(porDep);
@@ -118,10 +125,11 @@ const MetasPremiacao = () => {
 
   const departamentosDisponiveis = useMemo(() => {
     const nomes = new Set<string>();
-    Object.keys(metasDep).forEach((d) => nomes.add(d));
+    Object.keys(metasDep).forEach((d) => { if (d !== LOJA && d !== "GERAL") nomes.add(d); });
     Object.keys(realizadoDep).forEach((d) => { if (d !== LOJA) nomes.add(d); });
     return Array.from(nomes).sort();
   }, [metasDep, realizadoDep]);
+
 
   const metasSel = dep === LOJA ? metas : (metasDep[dep] ?? { vendas: 0, lucro: 0, volume: 0, mix: 0 });
   const realizado = realizadoDep[dep] ?? { vendas: 0, lucro: 0, volume: 0, mix: 0 };
