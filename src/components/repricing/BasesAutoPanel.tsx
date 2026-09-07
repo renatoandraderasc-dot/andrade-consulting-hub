@@ -9,6 +9,7 @@ import { Loader2, Download, CheckCircle2, Package, Store, Building2, FileSpreads
 import { carregarBaseCatalogo, carregarProdutosAtivos12m, carregarCustoUltimaCompra, avisoRelatorio } from "@/lib/catalogoProdutos";
 import * as XLSX from "xlsx";
 import { salvarWorkbook } from "@/lib/exportBranding";
+import { CartProgress } from "@/components/CartProgress";
 
 export type Linha = Record<string, unknown>;
 

@@ -14,6 +14,7 @@ import HierarquiaVendasTable from "@/components/relatorios/HierarquiaVendasTable
 import { usePicDepartments } from "@/hooks/usePicDepartments";
 import { usePicDisplayMode } from "@/hooks/usePicDisplay";
 import ProdutosSemGiro from "@/components/pic/ProdutosSemGiro";
+import { CartProgress } from "@/components/CartProgress";
 
 
 

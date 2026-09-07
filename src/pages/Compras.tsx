@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import HierarquiaVendasTable from "@/components/relatorios/HierarquiaVendasTable";
 import { carregarBaseCatalogo } from "@/lib/catalogoProdutos";
+import { CartProgress } from "@/components/CartProgress";
 
 
 interface Store { id: string; name: string }

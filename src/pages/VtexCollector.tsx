@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import {
+import { CartProgress } from "@/components/CartProgress";
   Play, Loader2, Download, Search, Package, AlertTriangle,
   CheckCircle2, BarChart3, Filter, RefreshCw, Database
 } from "lucide-react";

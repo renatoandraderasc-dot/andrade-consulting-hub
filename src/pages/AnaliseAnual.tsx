@@ -16,6 +16,7 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { salvarWorkbook, cabecalhoPdf, nomeArquivo } from "@/lib/exportBranding";
+import { CartProgress } from "@/components/CartProgress";
 
 
 const MESES = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
