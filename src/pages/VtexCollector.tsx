@@ -15,7 +15,7 @@ import {
   Play, Loader2, Download, Search, Package, AlertTriangle,
   CheckCircle2, BarChart3, Filter, RefreshCw, Database
 } from "lucide-react";
-import { CartProgress } from "@/components/CartProgress";
+import { CartProgressOverlay } from "@/components/CartProgress";
 
 interface VtexProduct {
   id_produto: string;
@@ -190,7 +190,7 @@ const VtexCollector = () => {
         {loading && (
           <Card>
             <CardContent className="p-4 space-y-2">
-              <CartProgress
+              <CartProgressOverlay
                 label="Coletando catálogo do concorrente..."
                 detail="Varrendo categorias e marcas do site"
               />
