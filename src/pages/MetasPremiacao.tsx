@@ -119,15 +119,30 @@ const MetasPremiacao = () => {
           foto_volume: (data as any).foto_volume ?? null,
           foto_mix: (data as any).foto_mix ?? null,
           mostrar_valores: (data as any).mostrar_valores ?? true,
+          fotos_departamentos: ((data as any).fotos_departamentos ?? {}) as Record<string, string>,
         } : PADRAO);
       });
   }, [storeId]);
 
-  const enviarFoto = async (campo: FotoKey, file: File) => {
+  const gravarConfig = async (novo: Config, silencioso = false) => {
     if (!storeId) return;
-    setEnviando(campo);
+    const { error } = await supabase.from("premiacao_config")
+      .upsert({ store_id: storeId, ...novo } as any, { onConflict: "store_id" });
+    if (error) {
+      toast({ title: "Não foi possível salvar", description: error.message, variant: "destructive" });
+      return;
+    }
+    if (!silencioso) toast({ title: "Parametrização salva" });
+  };
+
+  // Envia a foto e ja grava na parametrizacao (nao depende de clicar em Salvar)
+  const enviarFoto = async (campo: FotoKey, file: File, departamento?: string) => {
+    if (!storeId) return;
+    const chave = departamento ? (`dep:${departamento}` as FotoKey) : campo;
+    setEnviando(chave);
     const ext = file.name.split(".").pop() || "jpg";
-    const path = `premiacao/${storeId}/${campo}-${Date.now()}.${ext}`;
+    const slug = (departamento || campo).toLowerCase().replace(/[^a-z0-9]+/gi, "-");
+    const path = `premiacao/${storeId}/${slug}-${Date.now()}.${ext}`;
     const { error } = await supabase.storage.from("imagens").upload(path, file, { upsert: true });
     if (error) {
       setEnviando(null);
@@ -135,27 +150,46 @@ const MetasPremiacao = () => {
       return;
     }
     const { data } = await supabase.storage.from("imagens").createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
-    setCfg((c) => ({ ...c, [campo]: data?.signedUrl ?? null }));
+    const url = data?.signedUrl ?? null;
+    let atualizado: Config = cfg;
+    setCfg((c) => {
+      atualizado = departamento
+        ? { ...c, fotos_departamentos: { ...c.fotos_departamentos, [departamento]: url || "" } }
+        : { ...c, [campo]: url };
+      return atualizado;
+    });
+    await gravarConfig(atualizado, true);
     setEnviando(null);
-    toast({ title: "Foto carregada", description: "Clique em Salvar para gravar." });
+    toast({ title: "Foto salva" });
+  };
+
+  const removerFoto = async (campo: FotoKey, departamento?: string) => {
+    let atualizado: Config = cfg;
+    setCfg((c) => {
+      if (departamento) {
+        const fotos = { ...c.fotos_departamentos };
+        delete fotos[departamento];
+        atualizado = { ...c, fotos_departamentos: fotos };
+      } else {
+        atualizado = { ...c, [campo]: null };
+      }
+      return atualizado;
+    });
+    await gravarConfig(atualizado, true);
   };
 
   const salvarConfig = async () => {
-    if (!storeId) return;
     setSalvando(true);
-    const { error } = await supabase.from("premiacao_config")
-      .upsert({ store_id: storeId, ...cfg }, { onConflict: "store_id" });
+    await gravarConfig(cfg);
     setSalvando(false);
-    toast(error
-      ? { title: "Não foi possível salvar", description: error.message, variant: "destructive" }
-      : { title: "Parametrização salva" });
   };
 
-  // Metas gravadas do mes (soma da loja)
+  // Metas gravadas do mes (soma da loja e por departamento)
   const carregarMetas = async () => {
     if (!storeId) return;
     setCarregandoMetas(true);
     const acc = { vendas: 0, lucro: 0, volume: 0, mix: 0 };
+    const porDep: Record<string, { vendas: number; lucro: number; volume: number; mix: number }> = {};
     let from = 0;
     for (;;) {
       const { data, error } = await supabase
@@ -171,11 +205,18 @@ const MetasPremiacao = () => {
         acc.lucro += Number(r.meta_lucro) || 0;
         acc.volume += Number(r.meta_volume) || 0;
         acc.mix += Number(r.meta_mix) || 0;
+        const dep = (r.department || "OUTROS").toUpperCase();
+        const d = porDep[dep] ?? (porDep[dep] = { vendas: 0, lucro: 0, volume: 0, mix: 0 });
+        d.vendas += Number(r.meta_vendas) || 0;
+        d.lucro += Number(r.meta_lucro) || 0;
+        d.volume += Number(r.meta_volume) || 0;
+        d.mix += Number(r.meta_mix) || 0;
       }
       if (data.length < 1000) break;
       from += 1000;
     }
     setMetas(acc);
+    setMetasDep(porDep);
     setCarregandoMetas(false);
   };
 
