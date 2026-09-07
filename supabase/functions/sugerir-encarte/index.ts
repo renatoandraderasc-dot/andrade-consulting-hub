@@ -103,10 +103,9 @@ Deno.serve(async (req) => {
       service.from("store_vr_config").select("sistema, codigo_loja").eq("store_id", store_id).maybeSingle(),
     ]);
 
-    const sistema = (vrCfg.data?.sistema ?? "VR").toUpperCase();
-    if (sistema === "WEBSAC") {
-      return json({ erro: "A sugestao automatica esta disponivel somente para lojas VR/Oracle." }, 200);
-    }
+    // VR / Oracle / Director / WebSac: todos respondem pelo relatorio
+    // `encarte_base` atraves do vr-proxy.
+
 
     const slots = (slotsRes.data ?? []) as Row[];
     if (slots.length === 0) return json({ erro: "o modelo selecionado nao possui posicoes cadastradas" }, 400);
