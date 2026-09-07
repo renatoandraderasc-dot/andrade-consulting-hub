@@ -50,6 +50,7 @@ const PADRAO: Config = {
   foto_volume: null,
   foto_mix: null,
   mostrar_valores: true,
+  fotos_departamentos: {},
 };
 
 type FotoKey = "foto_cabecalho" | "foto_rodape" | "foto_faturamento" | "foto_arrecadacao" | "foto_volume" | "foto_mix";
