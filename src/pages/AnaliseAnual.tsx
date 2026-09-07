@@ -293,6 +293,7 @@ const AnaliseAnual = () => {
     // O relatorio hierarquico devolve uma linha por produto no periodo. Ele e
     // a fonte autoritativa do MIX: o Set garante um unico codigo por mes.
     const codigosPorDep = new Map<string, Set<string>>();
+    const codigosPorCategoria = new Map<string, Set<string>>();
     const codigosPorMes = new Map<string, Set<string>>();
     const partes: { janela: { inicio: string; fim: string }; relatorio: any }[] = [];
     const LOTE = 6;
@@ -314,13 +315,18 @@ const AnaliseAnual = () => {
         const ano = Number(janela.inicio.slice(0, 4));
         const mes = Number(janela.inicio.slice(5, 7));
         const dep = chaveTexto(pick(l, "nivel1", "departamento", "secao", "categoria") ?? "SEM DEPARTAMENTO");
+        const categoria = chaveTexto(pick(l, "nivel2", "grupo", "categoria") ?? dep);
         const chaveDep = `${ano}-${mes}-${dep}`;
+        const chaveCategoria = `${ano}-${mes}-${dep}-${categoria}`;
         const chaveMes = `${ano}-${mes}`;
         const setDep = codigosPorDep.get(chaveDep) ?? new Set<string>();
+        const setCategoria = codigosPorCategoria.get(chaveCategoria) ?? new Set<string>();
         const setMes = codigosPorMes.get(chaveMes) ?? new Set<string>();
         setDep.add(codigo);
+        setCategoria.add(codigo);
         setMes.add(codigo);
         codigosPorDep.set(chaveDep, setDep);
+        codigosPorCategoria.set(chaveCategoria, setCategoria);
         codigosPorMes.set(chaveMes, setMes);
       }
     }
@@ -328,8 +334,16 @@ const AnaliseAnual = () => {
     setRows((prev) => {
       const aplicadas = new Set<string>();
       return prev.map((r) => {
-        const nomes = [r.secao, r.departamento, r.categoria].map(chaveTexto);
-        const chaveEncontrada = nomes
+        const departamentosLinha = [r.secao, r.departamento].map(chaveTexto);
+        const categoriasLinha = [r.categoria, r.departamento].map(chaveTexto);
+        const chaveCategoria = departamentosLinha
+          .flatMap((dep) => categoriasLinha.map((categoria) => `${r.ano}-${r.mes}-${dep}-${categoria}`))
+          .find((chave) => codigosPorCategoria.has(chave));
+        if (chaveCategoria && !aplicadas.has(chaveCategoria)) {
+          aplicadas.add(chaveCategoria);
+          return { ...r, mix: codigosPorCategoria.get(chaveCategoria)?.size ?? 0 };
+        }
+        const chaveEncontrada = departamentosLinha
           .map((nome) => `${r.ano}-${r.mes}-${nome}`)
           .find((chave) => codigosPorDep.has(chave));
         if (chaveEncontrada && !aplicadas.has(chaveEncontrada)) {
@@ -720,7 +734,9 @@ const AnaliseAnual = () => {
           </div>
         </motion.div>
 
-        {loading && <CartProgressOverlay label="Carregando análise anual..." />}
+        {(loading || mixLoading) && (
+          <CartProgressOverlay label={loading ? "Carregando análise anual..." : "Contando produtos diferentes por mês..."} />
+        )}
 
         <Card className="mb-6">
           <CardContent className="p-4 flex flex-wrap items-end gap-4">
