@@ -185,6 +185,14 @@ const MetasPremiacao = () => {
                 ))}
               </SelectContent>
             </Select>
+            <Select value={dep} onValueChange={setDep}>
+              <SelectTrigger className="w-52"><SelectValue placeholder="Departamento" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={LOJA}>Loja (geral)</SelectItem>
+                {departamentosDisponiveis.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+              </SelectContent>
+            </Select>
+
             <Button variant="outline" size="sm" onClick={() => { atual.refresh(); carregarMetas(); }}>
               <RefreshCw className="h-4 w-4 mr-1" /> Atualizar
             </Button>
