@@ -13,6 +13,7 @@ import {
   Play, Loader2, Plus, AlertTriangle, CheckCircle2, XCircle, MapPin, RefreshCw, Globe, Power, Stethoscope, Trash2,
 } from "lucide-react";
 import {
+import { useSaasNumber } from "@/hooks/useSaasConfig";
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
@@ -85,6 +86,7 @@ const dataHora = (s: string | null) =>
   s ? new Date(s).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "—";
 
 const SitesCatalogoPanel = () => {
+  const pollSegundos = useSaasNumber("refresh_jobs_coleta_segundos", 5);
   const [sites, setSites] = useState<SiteConcorrente[]>([]);
   const [vinculos, setVinculos] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);

@@ -15,6 +15,7 @@ import { usePicDepartments } from "@/hooks/usePicDepartments";
 import { usePicDisplayMode } from "@/hooks/usePicDisplay";
 import ProdutosSemGiro from "@/components/pic/ProdutosSemGiro";
 import { CartProgressOverlay } from "@/components/CartProgress";
+import { useSaasNumber } from "@/hooks/useSaasConfig";
 
 
 
@@ -62,6 +63,7 @@ interface KpiData {
 const pctFmt = (v: number) => `${v.toFixed(2).replace(".", ",")}%`;
 
 const PIC = () => {
+  const refreshSegundos = useSaasNumber("refresh_pic_segundos", 60);
   const { user, isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [storeId, setStoreId] = useState("");

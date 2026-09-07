@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { CheckCircle2, AlertTriangle, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useSaasNumber } from "@/hooks/useSaasConfig";
 
 interface Props {
   storeId: string;
@@ -24,6 +25,7 @@ const formatDateTime = (iso: string) => {
 };
 
 const SyncStatusBadge = ({ storeId, onSyncChange }: Props) => {
+  const refreshSegundos = useSaasNumber("refresh_pic_segundos", 60);
   const [info, setInfo] = useState<SyncInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
