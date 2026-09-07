@@ -110,6 +110,7 @@ const navGroups: NavGroup[] = [
     icon: Plug,
     admin: true,
     items: [
+      { key: "admin_parametrizacoes", path: "/admin/parametrizacoes", label: "Parametrizações Gerais", icon: Settings2 },
       { key: "admin_conexoes", path: "/admin/conexoes", label: "Conexões", icon: Plug },
       { key: "admin_sites_concorrentes", path: "/admin/sites-concorrentes", label: "Catálogo de Sites", icon: Globe },
       { key: "vtex_collector", path: "/vtex-collector", label: "Coletor de Preços", icon: Database },
