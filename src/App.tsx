@@ -19,6 +19,7 @@ import MetasGerador from "./pages/MetasGerador";
 import MetasSugestao from "./pages/MetasSugestao";
 import MetasRealizado from "./pages/MetasRealizado";
 import MetasPremiacao from "./pages/MetasPremiacao";
+import MetasPremiacaoConfig from "./pages/MetasPremiacaoConfig";
 import Controladoria from "./pages/Controladoria";
 import AnaliseAnual from "./pages/AnaliseAnual";
 import Compras from "./pages/Compras";
@@ -71,6 +72,7 @@ const App = () => (
             <Route path="/admin/metas" element={g("admin_metas", <AdminMetas />)} />
             <Route path="/metas/sugestao" element={g("admin_metas", <MetasSugestao />)} />
             <Route path="/metas/premiacao" element={g("admin_metas", <MetasPremiacao />)} />
+            <Route path="/metas/premiacao/config" element={g("admin_metas", <MetasPremiacaoConfig />)} />
             <Route path="/metas/realizado" element={g("admin_metas", <MetasRealizado />)} />
             <Route path="/metas-gerador" element={g("metas_gerador", <MetasGerador />)} />
             <Route path="/controladoria" element={g("controladoria", <Controladoria />)} />

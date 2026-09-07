@@ -1,59 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Award, RefreshCw, Save, Settings2, CheckCircle2, XCircle, Gift, Image as ImageIcon, Eye, Percent } from "lucide-react";
+import { Award, RefreshCw, Settings2, CheckCircle2, XCircle, Gift } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import ClientLayout from "@/components/ClientLayout";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { CartProgressOverlay } from "@/components/CartProgress";
 import { useVrRealizado, LOJA } from "@/hooks/useVrRealizado";
 import { fmtBRL, fmtPct, MESES, diasNoMes } from "@/lib/metasSugestao";
-import { toast } from "@/hooks/use-toast";
+import {
+  carregarPremiacaoConfig, PREMIACAO_PADRAO, type PremiacaoConfig, type FotoKey,
+} from "@/pages/MetasPremiacaoConfig";
 import logo from "@/assets/andrade-logo.png";
 
 interface Store { id: string; name: string }
-
-interface Config {
-  valor_premiacao: number;
-  peso_faturamento: number;
-  peso_arrecadacao: number;
-  peso_volume: number;
-  peso_mix: number;
-  atingimento_minimo: number;
-  foto_cabecalho: string | null;
-  foto_rodape: string | null;
-  foto_faturamento: string | null;
-  foto_arrecadacao: string | null;
-  foto_volume: string | null;
-  foto_mix: string | null;
-  mostrar_valores: boolean;
-  fotos_departamentos: Record<string, string>;
-}
-
-const PADRAO: Config = {
-  valor_premiacao: 0,
-  peso_faturamento: 25,
-  peso_arrecadacao: 40,
-  peso_volume: 20,
-  peso_mix: 15,
-  atingimento_minimo: 99,
-  foto_cabecalho: null,
-  foto_rodape: null,
-  foto_faturamento: null,
-  foto_arrecadacao: null,
-  foto_volume: null,
-  foto_mix: null,
-  mostrar_valores: true,
-  fotos_departamentos: {},
-};
-
-type FotoKey = "foto_cabecalho" | "foto_rodape" | "foto_faturamento" | "foto_arrecadacao" | "foto_volume" | "foto_mix";
 
 type KpiKey = "faturamento" | "arrecadacao" | "volume" | "mix";
 
@@ -74,11 +37,7 @@ const MetasPremiacao = () => {
   const [ano, setAno] = useState(Number(hojeSP.slice(0, 4)));
   const [mes, setMes] = useState(Number(hojeSP.slice(5, 7)));
 
-  const [cfg, setCfg] = useState<Config>(PADRAO);
-  const [salvando, setSalvando] = useState(false);
-  const [enviando, setEnviando] = useState<string | null>(null);
-  const [mostrarParam, setMostrarParam] = useState(false);
-
+  const [cfg, setCfg] = useState<PremiacaoConfig>(PREMIACAO_PADRAO);
   const [metas, setMetas] = useState({ vendas: 0, lucro: 0, volume: 0, mix: 0 });
   const [metasDep, setMetasDep] = useState<Record<string, { vendas: number; lucro: number; volume: number; mix: number }>>({});
   const [carregandoMetas, setCarregandoMetas] = useState(false);
@@ -101,91 +60,11 @@ const MetasPremiacao = () => {
 
   const atual = useVrRealizado(storeId, inicio, fim);
 
-  // Parametrizacao da loja
   useEffect(() => {
     if (!storeId) return;
-    supabase.from("premiacao_config").select("*").eq("store_id", storeId).maybeSingle()
-      .then(({ data }) => {
-        setCfg(data ? {
-          valor_premiacao: Number(data.valor_premiacao) || 0,
-          peso_faturamento: Number(data.peso_faturamento) || 0,
-          peso_arrecadacao: Number(data.peso_arrecadacao) || 0,
-          peso_volume: Number(data.peso_volume) || 0,
-          peso_mix: Number(data.peso_mix) || 0,
-          atingimento_minimo: Number(data.atingimento_minimo) || 99,
-          foto_cabecalho: (data as any).foto_cabecalho ?? null,
-          foto_rodape: (data as any).foto_rodape ?? null,
-          foto_faturamento: (data as any).foto_faturamento ?? null,
-          foto_arrecadacao: (data as any).foto_arrecadacao ?? null,
-          foto_volume: (data as any).foto_volume ?? null,
-          foto_mix: (data as any).foto_mix ?? null,
-          mostrar_valores: (data as any).mostrar_valores ?? true,
-          fotos_departamentos: ((data as any).fotos_departamentos ?? {}) as Record<string, string>,
-        } : PADRAO);
-      });
+    carregarPremiacaoConfig(storeId).then(setCfg);
   }, [storeId]);
 
-  const gravarConfig = async (novo: Config, silencioso = false) => {
-    if (!storeId) return;
-    const { error } = await supabase.from("premiacao_config")
-      .upsert({ store_id: storeId, ...novo } as any, { onConflict: "store_id" });
-    if (error) {
-      toast({ title: "Não foi possível salvar", description: error.message, variant: "destructive" });
-      return;
-    }
-    if (!silencioso) toast({ title: "Parametrização salva" });
-  };
-
-  // Envia a foto e ja grava na parametrizacao (nao depende de clicar em Salvar)
-  const enviarFoto = async (campo: FotoKey, file: File, departamento?: string) => {
-    if (!storeId) return;
-    const chave = departamento ? (`dep:${departamento}` as FotoKey) : campo;
-    setEnviando(chave);
-    const ext = file.name.split(".").pop() || "jpg";
-    const slug = (departamento || campo).toLowerCase().replace(/[^a-z0-9]+/gi, "-");
-    const path = `premiacao/${storeId}/${slug}-${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from("imagens").upload(path, file, { upsert: true });
-    if (error) {
-      setEnviando(null);
-      toast({ title: "Não foi possível enviar a foto", description: error.message, variant: "destructive" });
-      return;
-    }
-    const { data } = await supabase.storage.from("imagens").createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
-    const url = data?.signedUrl ?? null;
-    let atualizado: Config = cfg;
-    setCfg((c) => {
-      atualizado = departamento
-        ? { ...c, fotos_departamentos: { ...c.fotos_departamentos, [departamento]: url || "" } }
-        : { ...c, [campo]: url };
-      return atualizado;
-    });
-    await gravarConfig(atualizado, true);
-    setEnviando(null);
-    toast({ title: "Foto salva" });
-  };
-
-  const removerFoto = async (campo: FotoKey, departamento?: string) => {
-    let atualizado: Config = cfg;
-    setCfg((c) => {
-      if (departamento) {
-        const fotos = { ...c.fotos_departamentos };
-        delete fotos[departamento];
-        atualizado = { ...c, fotos_departamentos: fotos };
-      } else {
-        atualizado = { ...c, [campo]: null };
-      }
-      return atualizado;
-    });
-    await gravarConfig(atualizado, true);
-  };
-
-  const salvarConfig = async () => {
-    setSalvando(true);
-    await gravarConfig(cfg);
-    setSalvando(false);
-  };
-
-  // Metas gravadas do mes (soma da loja e por departamento)
   const carregarMetas = async () => {
     if (!storeId) return;
     setCarregandoMetas(true);
@@ -248,7 +127,6 @@ const MetasPremiacao = () => {
     }));
   }, [metas, realizado, cfg]);
 
-  // Departamentos: metas gravadas + realizado ao vivo
   const departamentos = useMemo(() => {
     const min = cfg.atingimento_minimo || 99;
     const nomes = new Set<string>();
@@ -265,17 +143,13 @@ const MetasPremiacao = () => {
       }
       const atingimento = pct(real.vendas, meta.vendas);
       return {
-        dep,
-        meta,
-        real,
-        atingimento,
+        dep, meta, real, atingimento,
         atingiu: meta.vendas > 0 && atingimento >= min,
         foto: cfg.fotos_departamentos?.[dep] || null,
       };
     });
   }, [metasDep, atual.data, cfg]);
 
-  const pesoTotal = kpis.reduce((s, k) => s + (k.peso || 0), 0);
   const pctPago = kpis.reduce((s, k) => s + (k.pago ? k.peso || 0 : 0), 0);
   const valorPago = (cfg.valor_premiacao * pctPago) / 100;
   const todas = kpis.length > 0 && kpis.every((k) => k.pago);
@@ -285,14 +159,12 @@ const MetasPremiacao = () => {
     <ClientLayout>
       {carregando && <CartProgressOverlay label="Carregando demonstrativo..." />}
       <div className="p-4 md:p-6 space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
           <div className="flex items-center gap-3">
             <Award className="h-6 w-6 text-primary" />
             <div>
               <h1 className="text-2xl font-bold">Demonstrativo de Pagamento de Metas</h1>
-              <p className="text-sm text-muted-foreground">
-                Apuração por indicador, gatilhos e valor da premiação da loja
-              </p>
+              <p className="text-sm text-muted-foreground">Layout pronto para enviar ao time</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -321,141 +193,14 @@ const MetasPremiacao = () => {
             <Button variant="outline" size="sm" onClick={() => { atual.refresh(); carregarMetas(); }}>
               <RefreshCw className="h-4 w-4 mr-1" /> Atualizar
             </Button>
-            <Button variant="outline" size="sm" onClick={() => setCfg({ ...cfg, mostrar_valores: !cfg.mostrar_valores })}>
-              {cfg.mostrar_valores ? <Eye className="h-4 w-4 mr-1" /> : <Percent className="h-4 w-4 mr-1" />}
-              {cfg.mostrar_valores ? "Valores e %" : "Apenas %"}
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setMostrarParam((v) => !v)}>
+            <Button variant="outline" size="sm" onClick={() => navigate("/metas/premiacao/config")}>
               <Settings2 className="h-4 w-4 mr-1" /> Parametrização
             </Button>
           </div>
         </div>
 
-        {mostrarParam && (
-          <div className="rounded-xl border border-border bg-card p-4 space-y-4">
-            <h2 className="text-sm font-semibold">Parametrização — {storeName}</h2>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
-              {[
-                { k: "valor_premiacao" as const, label: "Valor da premiação (R$)" },
-                { k: "peso_faturamento" as const, label: "Faturamento (%)" },
-                { k: "peso_arrecadacao" as const, label: "Arrecadação (%)" },
-                { k: "peso_volume" as const, label: "Volume (%)" },
-                { k: "peso_mix" as const, label: "Mix (%)" },
-                { k: "atingimento_minimo" as const, label: "Atingimento mínimo (%)" },
-              ].map((f) => (
-                <div key={f.k} className="space-y-1">
-                  <Label className="text-xs">{f.label}</Label>
-                  <Input
-                    type="number"
-                    value={cfg[f.k]}
-                    onChange={(e) => setCfg({ ...cfg, [f.k]: Number(e.target.value) })}
-                  />
-                </div>
-              ))}
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
-              {([
-                { k: "foto_cabecalho", label: "Foto do cabeçalho" },
-                { k: "foto_rodape", label: "Foto do rodapé" },
-                { k: "foto_faturamento", label: "Foto Faturamento" },
-                { k: "foto_arrecadacao", label: "Foto Arrecadação" },
-                { k: "foto_volume", label: "Foto Volume" },
-                { k: "foto_mix", label: "Foto Mix" },
-              ] as { k: FotoKey; label: string }[]).map((f) => (
-                <div key={f.k} className="space-y-1">
-                  <Label className="text-xs">{f.label}</Label>
-                  <div className="flex h-20 items-center justify-center overflow-hidden rounded-lg border border-dashed border-border bg-muted/30">
-                    {cfg[f.k]
-                      ? <img src={cfg[f.k] as string} alt={f.label} className="h-full w-full object-cover" />
-                      : <ImageIcon className="h-5 w-5 text-muted-foreground" />}
-                  </div>
-                  <Input
-                    type="file"
-                    accept="image/*"
-                    className="text-xs"
-                    disabled={enviando === f.k}
-                    onChange={(e) => { const file = e.target.files?.[0]; if (file) enviarFoto(f.k, file); }}
-                  />
-                  {cfg[f.k] && (
-                    <button
-                      type="button"
-                      className="text-xs text-muted-foreground underline"
-                      onClick={() => removerFoto(f.k)}
-                    >
-                      Remover foto
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            <div className="space-y-2">
-              <h3 className="text-sm font-semibold">Fotos por departamento</h3>
-              {departamentos.length === 0 ? (
-                <p className="text-xs text-muted-foreground">
-                  Nenhum departamento encontrado para este mês.
-                </p>
-              ) : (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
-                  {departamentos.map((d) => (
-                    <div key={d.dep} className="space-y-1">
-                      <Label className="text-xs">{d.dep}</Label>
-                      <div className="flex h-20 items-center justify-center overflow-hidden rounded-lg border border-dashed border-border bg-muted/30">
-                        {d.foto
-                          ? <img src={d.foto} alt={d.dep} className="h-full w-full object-cover" />
-                          : <ImageIcon className="h-5 w-5 text-muted-foreground" />}
-                      </div>
-                      <Input
-                        type="file"
-                        accept="image/*"
-                        className="text-xs"
-                        disabled={enviando === `dep:${d.dep}`}
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) enviarFoto("foto_cabecalho", file, d.dep);
-                        }}
-                      />
-                      {d.foto && (
-                        <button
-                          type="button"
-                          className="text-xs text-muted-foreground underline"
-                          onClick={() => removerFoto("foto_cabecalho", d.dep)}
-                        >
-                          Remover foto
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-
-            <div className="flex items-center gap-2">
-              <Switch
-                id="mostrar-valores"
-                checked={cfg.mostrar_valores}
-                onCheckedChange={(v) => setCfg({ ...cfg, mostrar_valores: v })}
-              />
-              <Label htmlFor="mostrar-valores" className="text-xs">
-                {cfg.mostrar_valores ? "Mostrar valores e %" : "Mostrar apenas %"}
-              </Label>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Button size="sm" onClick={salvarConfig} disabled={salvando}>
-                <Save className="h-4 w-4 mr-1" /> Salvar
-              </Button>
-              <span className={`text-xs ${pesoTotal === 100 ? "text-muted-foreground" : "text-amber-500"}`}>
-                Soma das ponderações: {fmtPct(pesoTotal)}
-              </span>
-            </div>
-          </div>
-        )}
-
         {/* Demonstrativo — layout de cartaz */}
         <div className="mx-auto w-full max-w-3xl overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
-          {/* Cabecalho */}
           <div className="relative overflow-hidden">
             {cfg.foto_cabecalho ? (
               <img src={cfg.foto_cabecalho} alt="Cabeçalho" className="h-48 w-full object-cover" />
@@ -549,7 +294,6 @@ const MetasPremiacao = () => {
             </div>
           </div>
 
-          {/* Departamentos */}
           {departamentos.length > 0 && (
             <div className="px-5 pt-5">
               <p className="mb-3 text-center text-xs font-bold uppercase tracking-[0.25em] text-muted-foreground">
@@ -592,7 +336,6 @@ const MetasPremiacao = () => {
             </div>
           )}
 
-          {/* Rodape */}
           <div className="relative m-5 overflow-hidden rounded-2xl">
             {cfg.foto_rodape ? (
               <img src={cfg.foto_rodape} alt="Rodapé" className="h-40 w-full object-cover" />
@@ -618,53 +361,6 @@ const MetasPremiacao = () => {
               </p>
             </div>
           </div>
-        </div>
-
-        {/* Detalhamento */}
-        <div className="overflow-x-auto rounded-xl border border-border bg-card">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
-              <tr>
-                <th className="px-3 py-2 text-left">Indicador</th>
-                <th className="px-3 py-2 text-right">Meta</th>
-                <th className="px-3 py-2 text-right">Realizado</th>
-                <th className="px-3 py-2 text-right">Atingimento</th>
-                <th className="px-3 py-2 text-right">Peso</th>
-                <th className="px-3 py-2 text-right">Valor</th>
-                <th className="px-3 py-2 text-left">Situação</th>
-              </tr>
-            </thead>
-            <tbody>
-              {kpis.map((k) => {
-                const money = k.key === "faturamento" || k.key === "arrecadacao";
-                const f = (n: number) => (money ? fmtBRL(n) : n.toLocaleString("pt-BR"));
-                return (
-                  <tr key={k.key} className="border-t border-border">
-                    <td className="px-3 py-2">{k.label}{k.sub ? ` ${k.sub}` : ""}</td>
-                    <td className="px-3 py-2 text-right">{k.meta > 0 ? f(k.meta) : "—"}</td>
-                    <td className="px-3 py-2 text-right">{f(k.real)}</td>
-                    <td className={`px-3 py-2 text-right ${k.atingiu ? "text-emerald-500" : "text-red-500"}`}>
-                      {k.meta > 0 ? fmtPct(k.atingimento, 2) : "—"}
-                    </td>
-                    <td className="px-3 py-2 text-right">{fmtPct(k.peso)}</td>
-                    <td className="px-3 py-2 text-right">{fmtBRL(k.pago ? (cfg.valor_premiacao * (k.peso || 0)) / 100 : 0)}</td>
-                    <td className="px-3 py-2">
-                      {k.pago ? "Pago" : k.bloqueado ? "Bloqueado (sem gatilho)" : "Não pago"}
-                    </td>
-                  </tr>
-                );
-              })}
-              <tr className="border-t border-border bg-muted/30 font-semibold">
-                <td className="px-3 py-2">TOTAL</td>
-                <td className="px-3 py-2" />
-                <td className="px-3 py-2" />
-                <td className="px-3 py-2 text-right">{fmtPct(pctPago)}</td>
-                <td className="px-3 py-2 text-right">{fmtPct(pesoTotal)}</td>
-                <td className="px-3 py-2 text-right">{fmtBRL(valorPago)}</td>
-                <td className="px-3 py-2" />
-              </tr>
-            </tbody>
-          </table>
         </div>
       </div>
     </ClientLayout>
