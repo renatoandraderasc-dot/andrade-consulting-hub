@@ -41,6 +41,8 @@ const MetasPremiacao = () => {
   const [metas, setMetas] = useState({ vendas: 0, lucro: 0, volume: 0, mix: 0 });
   const [metasDep, setMetasDep] = useState<Record<string, { vendas: number; lucro: number; volume: number; mix: number }>>({});
   const [carregandoMetas, setCarregandoMetas] = useState(false);
+  const [dep, setDep] = useState<string>(LOJA);
+
 
   useEffect(() => {
     if (!authLoading && (!user || !isAdmin)) navigate("/login");
