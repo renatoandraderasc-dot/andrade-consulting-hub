@@ -380,7 +380,7 @@ const MetasPremiacao = () => {
                     <button
                       type="button"
                       className="text-xs text-muted-foreground underline"
-                      onClick={() => setCfg({ ...cfg, [f.k]: null })}
+                      onClick={() => removerFoto(f.k)}
                     >
                       Remover foto
                     </button>
@@ -388,6 +388,48 @@ const MetasPremiacao = () => {
                 </div>
               ))}
             </div>
+
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold">Fotos por departamento</h3>
+              {departamentos.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  Nenhum departamento encontrado para este mês.
+                </p>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+                  {departamentos.map((d) => (
+                    <div key={d.dep} className="space-y-1">
+                      <Label className="text-xs">{d.dep}</Label>
+                      <div className="flex h-20 items-center justify-center overflow-hidden rounded-lg border border-dashed border-border bg-muted/30">
+                        {d.foto
+                          ? <img src={d.foto} alt={d.dep} className="h-full w-full object-cover" />
+                          : <ImageIcon className="h-5 w-5 text-muted-foreground" />}
+                      </div>
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        className="text-xs"
+                        disabled={enviando === `dep:${d.dep}`}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) enviarFoto("foto_cabecalho", file, d.dep);
+                        }}
+                      />
+                      {d.foto && (
+                        <button
+                          type="button"
+                          className="text-xs text-muted-foreground underline"
+                          onClick={() => removerFoto("foto_cabecalho", d.dep)}
+                        >
+                          Remover foto
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
 
             <div className="flex items-center gap-2">
               <Switch
