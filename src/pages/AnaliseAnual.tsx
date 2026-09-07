@@ -298,7 +298,7 @@ const AnaliseAnual = () => {
     for (let i = 0; i < janelas.length; i += LOTE) {
       const lote = await Promise.all(
         janelas.slice(i, i + LOTE).map((j) =>
-          chamarRelatorio(sid, "vendas_hierarquia_periodo", j)
+          chamarRelatorio(sid, relatorio, j)
             .then((relatorio) => ({ janela: j, relatorio }))
             .catch(() => ({ janela: j, relatorio: null })),
         ),
