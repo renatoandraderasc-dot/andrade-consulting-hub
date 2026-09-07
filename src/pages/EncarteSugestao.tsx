@@ -117,7 +117,8 @@ const EncarteSugestao = () => {
     setAviso(null); setDiagnostico(null);
   };
 
-  const lojaVr = sistema !== "WEBSAC";
+  // A sugestao automatica funciona em VR, Oracle, Director e WebSac.
+  const lojaVr = !!sistema;
   const nomeEncarte = useMemo(
     () => calendarios.find((c) => c.id === calendarioId)?.nome ?? "",
     [calendarios, calendarioId],
