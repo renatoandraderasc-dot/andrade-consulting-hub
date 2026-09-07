@@ -3046,6 +3046,7 @@ export type Database = {
           meta_venda_total: number
         }[]
       }
+      get_sync_rede_cron_status: { Args: never; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
