@@ -277,6 +277,53 @@ const MetasPremiacao = () => {
                 </div>
               ))}
             </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+              {([
+                { k: "foto_cabecalho", label: "Foto do cabeçalho" },
+                { k: "foto_rodape", label: "Foto do rodapé" },
+                { k: "foto_faturamento", label: "Foto Faturamento" },
+                { k: "foto_arrecadacao", label: "Foto Arrecadação" },
+                { k: "foto_volume", label: "Foto Volume" },
+                { k: "foto_mix", label: "Foto Mix" },
+              ] as { k: FotoKey; label: string }[]).map((f) => (
+                <div key={f.k} className="space-y-1">
+                  <Label className="text-xs">{f.label}</Label>
+                  <div className="flex h-20 items-center justify-center overflow-hidden rounded-lg border border-dashed border-border bg-muted/30">
+                    {cfg[f.k]
+                      ? <img src={cfg[f.k] as string} alt={f.label} className="h-full w-full object-cover" />
+                      : <ImageIcon className="h-5 w-5 text-muted-foreground" />}
+                  </div>
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    className="text-xs"
+                    disabled={enviando === f.k}
+                    onChange={(e) => { const file = e.target.files?.[0]; if (file) enviarFoto(f.k, file); }}
+                  />
+                  {cfg[f.k] && (
+                    <button
+                      type="button"
+                      className="text-xs text-muted-foreground underline"
+                      onClick={() => setCfg({ ...cfg, [f.k]: null })}
+                    >
+                      Remover foto
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Switch
+                id="mostrar-valores"
+                checked={cfg.mostrar_valores}
+                onCheckedChange={(v) => setCfg({ ...cfg, mostrar_valores: v })}
+              />
+              <Label htmlFor="mostrar-valores" className="text-xs">
+                {cfg.mostrar_valores ? "Mostrar valores e %" : "Mostrar apenas %"}
+              </Label>
+            </div>
+
             <div className="flex items-center gap-3">
               <Button size="sm" onClick={salvarConfig} disabled={salvando}>
                 <Save className="h-4 w-4 mr-1" /> Salvar
