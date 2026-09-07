@@ -147,9 +147,9 @@ const SitesCatalogoPanel = () => {
   }, []);
 
   useEffect(() => {
-    const t = window.setInterval(() => setAgora(Date.now()), 5000);
+    const t = window.setInterval(() => setAgora(Date.now()), pollSegundos * 1000);
     return () => window.clearInterval(t);
-  }, []);
+  }, [pollSegundos]);
 
   useEffect(() => {
     if (!job || (job.status !== "pending" && job.status !== "crawling")) {
@@ -160,9 +160,9 @@ const SitesCatalogoPanel = () => {
       setAgora(Date.now());
       const { data } = await supabase.from("scrape_jobs").select("*").eq("id", job.id).maybeSingle();
       if (data) setJob(data as unknown as Job);
-    }, 5000);
+    }, pollSegundos * 1000);
     return () => { if (timer.current) window.clearInterval(timer.current); };
-  }, [job?.id, job?.status]);
+  }, [job?.id, job?.status, pollSegundos]);
 
   const detectarPlataforma = async () => {
     const host = novoHost.replace(/^https?:\/\//, "").replace(/\/.*$/, "").trim();

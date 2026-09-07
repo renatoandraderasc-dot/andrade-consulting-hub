@@ -54,12 +54,12 @@ const SyncStatusBadge = ({ storeId, onSyncChange }: Props) => {
         () => fetchInfo(),
       )
       .subscribe();
-    const interval = setInterval(fetchInfo, 60_000);
+    const interval = refreshSegundos > 0 ? setInterval(fetchInfo, refreshSegundos * 1000) : undefined;
     return () => {
       supabase.removeChannel(channel);
-      clearInterval(interval);
+      if (interval) clearInterval(interval);
     };
-  }, [storeId, onSyncChange]);
+  }, [storeId, onSyncChange, refreshSegundos]);
 
   if (loading || !info) return null;
 

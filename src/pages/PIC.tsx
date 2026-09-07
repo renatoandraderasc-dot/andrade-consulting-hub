@@ -127,14 +127,15 @@ const PIC = () => {
 
   useEffect(() => {
     if (!storeId) return;
-    const interval = setInterval(refresh, 60_000);
+    if (!refreshSegundos || refreshSegundos <= 0) return;
+    const interval = setInterval(refresh, refreshSegundos * 1000);
     const handleFocus = () => refresh();
     window.addEventListener("focus", handleFocus);
     return () => {
       clearInterval(interval);
       window.removeEventListener("focus", handleFocus);
     };
-  }, [storeId, refresh]);
+  }, [storeId, refresh, refreshSegundos]);
 
   const fetchStoreInfo = async () => {
     if (!user) return;
