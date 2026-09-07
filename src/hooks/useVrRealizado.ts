@@ -71,6 +71,29 @@ function inferirDepartamento(secao: string, categoria: string): string | null {
   return null;
 }
 
+// Chave canonica de departamento: usada tanto no realizado (nome que vem do
+// sistema da loja) quanto nas metas gravadas, para que os dois casem mesmo
+// com acentos, caixa ou variacoes de nome (Mercearia Doce/Salgada/Seca...).
+export function canonDept(s: string): string {
+  const t = norm(s);
+  if (!t) return "";
+  if (t === LOJA || t === "GERAL" || t === "TOTAL") return LOJA;
+  // Metas de subgrupo ("DEPTO / GRUPO") ficam separadas, sem agrupar no depto.
+  if (t.includes("/")) return t;
+  if (/^ACOUGUE|CARNE|AVES/.test(t)) return "ACOUGUE";
+  if (/^HORTI|FLV/.test(t)) return "HORTIFRUTI";
+  if (/^PADARIA|PANIFIC|CONFEITAR/.test(t)) return "PADARIA";
+  if (/^MERCEARIA/.test(t)) return "MERCEARIA";
+  if (/^BAZAR/.test(t)) return "BAZAR";
+  if (/^PERECIVE/.test(t)) return "PERECIVEIS";
+  if (/^BEBIDA/.test(t)) return "BEBIDAS";
+  if (/^LIMPEZA/.test(t)) return "LIMPEZA";
+  if (/^PERFUMARIA|HIGIENE/.test(t)) return "PERFUMARIA";
+  if (/^ELETRO/.test(t)) return "ELETRO";
+  if (/^FRIOS|LATICIN/.test(t)) return "FRIOS E LATICINIOS";
+  return t;
+}
+
 async function loadRaw(storeId: string, inicio: string, fim: string): Promise<RawResult> {
   const [{ data: mapas }, { data: proxy, error }, posv] = await Promise.all([
     supabase.from("vr_secao_departamento").select("secao_vr, department").eq("store_id", storeId),
@@ -178,7 +201,9 @@ function agregar(raw: RawResult, categoria?: string | null): VrRealizado {
 
   for (const l of raw.linhas) {
     if (categoria && l.categoria !== categoria) continue;
-    const dep = raw.mapa[norm(l.secao)] ?? inferirDepartamento(l.secao, l.categoria);
+    const dep = canonDept(
+      raw.mapa[norm(l.secao)] ?? inferirDepartamento(l.secao, l.categoria) ?? l.categoria ?? "",
+    );
     const mix = temPositivacao ? 0 : l.mix;
     add(LOJA, l.date, l.vendas, l.lucro, l.volume, mix);
     if (dep && dep !== LOJA) add(dep, l.date, l.vendas, l.lucro, l.volume, mix);
@@ -186,7 +211,9 @@ function agregar(raw: RawResult, categoria?: string | null): VrRealizado {
 
   for (const l of raw.mixLinhas) {
     if (categoria && l.categoria !== categoria) continue;
-    const dep = raw.mapa[norm(l.secao)] ?? inferirDepartamento(l.secao, l.categoria);
+    const dep = canonDept(
+      raw.mapa[norm(l.secao)] ?? inferirDepartamento(l.secao, l.categoria) ?? l.categoria ?? "",
+    );
     add(LOJA, l.date, 0, 0, 0, l.mix);
     if (dep && dep !== LOJA) add(dep, l.date, 0, 0, 0, l.mix);
   }

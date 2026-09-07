@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import ClientLayout from "@/components/ClientLayout";
 import SyncStatusBadge from "@/components/SyncStatusBadge";
 import VrOfflineNotice from "@/components/VrOfflineNotice";
-import { useVrRealizado, VrDia, LOJA } from "@/hooks/useVrRealizado";
+import { useVrRealizado, VrDia, LOJA, canonDept } from "@/hooks/useVrRealizado";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import HierarquiaVendasTable from "@/components/relatorios/HierarquiaVendasTable";
@@ -208,19 +208,19 @@ const PIC = () => {
     ]);
 
     const results: Record<string, any[]> = {};
-    for (const d of data || []) (results[d.department] ||= []).push(d);
+    for (const d of data || []) (results[canonDept(d.department)] ||= []).push(d);
     setMetasData(results);
     // Meta do mês inteiro (denominador do TOTAL), independente do filtro de dias
     const mes: Record<string, { vendas: number; lucro: number; volume: number; mix: number }> = {};
     for (const r of mesRows || []) {
-      const acc = (mes[r.department] ||= { vendas: 0, lucro: 0, volume: 0, mix: 0 });
+      const acc = (mes[canonDept(r.department)] ||= { vendas: 0, lucro: 0, volume: 0, mix: 0 });
       acc.vendas += Number(r.meta_vendas) || 0;
       acc.lucro += Number(r.meta_lucro) || 0;
       acc.volume += Number(r.meta_volume) || 0;
       acc.mix += Number(r.meta_mix) || 0;
     }
     setMetasMes(mes);
-    setMetaMix(Object.fromEntries((mixRows || []).map((m: any) => [m.department, Number(m.meta_mix) || 0])));
+    setMetaMix(Object.fromEntries((mixRows || []).map((m: any) => [canonDept(m.department), Number(m.meta_mix) || 0])));
     setLoading(false);
   };
 
@@ -230,8 +230,9 @@ const PIC = () => {
   const rawData = useMemo(() => {
     const out: Record<string, DayMetric[]> = {};
     for (const dept of DEPARTMENTS) {
-      const metas = metasData[dept] || [];
-      const real = new Map<string, VrDia>(((vr?.[dept]) || []).map((r) => [r.date, r] as [string, VrDia]));
+      const key = canonDept(dept);
+      const metas = metasData[key] || [];
+      const real = new Map<string, VrDia>(((vr?.[key]) || []).map((r) => [r.date, r] as [string, VrDia]));
       const dates = [...new Set<string>([...metas.map((m: any) => m.date), ...real.keys()])].sort();
       out[dept] = dates.map((date) => {
         const m: any = metas.find((x: any) => x.date === date) || {};
@@ -298,7 +299,7 @@ const PIC = () => {
 
       result[dept] = {};
 
-      const mesDept = metasMes[dept];
+      const mesDept = metasMes[canonDept(dept)];
 
       // realizado = soma dos dias já decorridos (data <= hoje em Brasília)
       // ACUMUL. = realizado / soma das metas dos dias <= hoje
@@ -356,7 +357,7 @@ const PIC = () => {
       // Mix: realizado ao vivo (positivação acumulada) x meta mensal de meta_mix.
       // A meta de mix é mensal: o acumulado até hoje é pro-rata dos dias decorridos.
       const metaMensalMix =
-        Number(metaMix[dept]) ||
+        Number(metaMix[canonDept(dept)]) ||
         Number(mesDept?.mix) ||
         rows.reduce((a, r) => a + (Number(r.meta_mix) || 0), 0);
       {
