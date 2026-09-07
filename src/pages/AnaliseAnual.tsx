@@ -25,7 +25,7 @@ const ANOS = [2022, 2023, 2024, 2025, 2026];
 type Turno = "manha" | "tarde" | "";
 
 type Row = {
-  ano: number; mes: number; faturamento: number; lucro: number; volume: number;
+  ano: number; mes: number; faturamento: number; lucro: number; volume: number; mix: number;
   departamento: string; secao: string; categoria: string; turno: Turno;
 };
 
@@ -44,6 +44,9 @@ const extrairTurno = (l: any): Turno => {
   return h < 13 ? "manha" : "tarde";
 };
 
+
+const extrairMix = (l: any) =>
+  num(pick(l, "mix", "itens", "qtd_itens", "quantidade_itens", "sku", "codigos", "positivacao"));
 
 const nfInt = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 });
 const fmtNum = (v: number | null) => (v == null || !isFinite(v) ? "" : nfInt.format(Math.round(v)));
@@ -108,6 +111,7 @@ const AnaliseAnual = () => {
             faturamento: num(pick(l, "receita_bruta", "faturamento", "total_vendido", "vendas")),
             lucro: lucroDaLinha(l, num(pick(l, "receita_bruta", "faturamento", "total_vendido", "vendas")), num(pick(l, "lucro_bruto", "lucro"))),
             volume: num(pick(l, "volume", "quantidade", "qtde", "qtd")),
+            mix: extrairMix(l),
 
             departamento: dep,
             secao: String(pick(l, "secao", "nivel1") ?? dep).toUpperCase(),
@@ -144,7 +148,7 @@ const AnaliseAnual = () => {
             const turno = extrairTurno(l);
             const k = `${ano}-${mes}-${departamento}-${categoria}-${turno}`;
             const cur = acc.get(k) ?? {
-              ano, mes, faturamento: 0, lucro: 0, volume: 0,
+              ano, mes, faturamento: 0, lucro: 0, volume: 0, mix: 0,
               departamento, secao, categoria, turno,
             };
             cur.faturamento += num(pick(l, "vendas", "total_vendido", "faturamento", "venda", "valor_venda", "valor", "total"));
@@ -166,7 +170,7 @@ const AnaliseAnual = () => {
           .from("analise_anual").select("ano, mes, faturamento, lucro, volume").eq("store_id", sid);
         const salvos: Row[] = ((data as any[]) || []).map(r => ({
           ano: r.ano, mes: r.mes,
-          faturamento: Number(r.faturamento), lucro: Number(r.lucro), volume: Number(r.volume),
+          faturamento: Number(r.faturamento), lucro: Number(r.lucro), volume: Number(r.volume), mix: 0,
           departamento: "TOTAL", secao: "TOTAL", categoria: "TOTAL", turno: "" as Turno,
         }));
         setRows(salvos);
@@ -239,7 +243,7 @@ const AnaliseAnual = () => {
           const turnoL = extrairTurno(l);
           const k = `${ano}-${mes}-${departamento}-${categoria}-${turnoL}`;
           const cur = acc.get(k) ?? {
-            ano, mes, faturamento: 0, lucro: 0, volume: 0,
+            ano, mes, faturamento: 0, lucro: 0, volume: 0, mix: 0,
             departamento, secao, categoria, turno: turnoL,
           };
           cur.faturamento += num(pick(l, "total_vendido", "faturamento", "venda"));
@@ -253,6 +257,58 @@ const AnaliseAnual = () => {
     setHoraAnos((prev) => Array.from(new Set([...prev, ...anos])));
     setHoraLoading(false);
   };
+
+  // ---- mix (itens distintos vendidos) ----
+  const [mixCarregado, setMixCarregado] = useState(false);
+
+  const carregarMix = async (sid: string) => {
+    if (mixCarregado) return;
+    try {
+      const hoje0 = new Date();
+      const anosBusca: number[] = [];
+      for (let a = ANOS[0]; a <= hoje0.getFullYear(); a++) anosBusca.push(a);
+      const acc = new Map<string, number>();
+      for (const ano of anosBusca) {
+        const r = await chamarRelatorio(sid, "vendas_produto_periodo", {
+          inicio: `${ano}-01-01`,
+          fim: ano === hoje0.getFullYear()
+            ? `${ano}-${String(hoje0.getMonth() + 1).padStart(2, "0")}-${String(hoje0.getDate()).padStart(2, "0")}`
+            : `${ano}-12-31`,
+        });
+        if (r.indisponivel || r.offline || r.erro || !r.dados.length) continue;
+        const vistos = new Map<string, Set<string>>();
+        for (const l of r.dados) {
+          const dia = String(pick(l, "dia", "data") ?? "");
+          const anoL = Number(dia.slice(0, 4));
+          const mesL = Number(dia.slice(5, 7));
+          if (!anoL || !mesL) continue;
+          const cod = String(pick(l, "codigo", "codigo_produto", "cod_produto", "ean") ?? "").trim();
+          if (!cod) continue;
+          const k = `${anoL}-${mesL}`;
+          const s = vistos.get(k) ?? new Set<string>();
+          s.add(cod);
+          vistos.set(k, s);
+        }
+        for (const [k, s] of vistos) acc.set(k, s.size);
+      }
+      if (!acc.size) return;
+      setRows((prev) =>
+        prev.map((r) => {
+          const k = `${r.ano}-${r.mes}`;
+          const m = acc.get(k);
+          return m ? { ...r, mix: m } : r;
+        }),
+      );
+    } catch {
+      // mix é opcional; falhas não bloqueiam a tela
+    } finally {
+      setMixCarregado(true);
+    }
+  };
+
+  useEffect(() => {
+    if (storeId && rows.length && !mixCarregado) carregarMix(storeId);
+  }, [storeId, rows.length, mixCarregado]);
 
 
   // ---- filtros ----
@@ -311,15 +367,15 @@ const AnaliseAnual = () => {
 
 
 
-  const val = (ano: number, mes: number, campo: "faturamento" | "lucro" | "volume") =>
+  const val = (ano: number, mes: number, campo: "faturamento" | "lucro" | "volume" | "mix") =>
     rowsFiltradas
       .filter(x => x.ano === ano && x.mes === mes)
       .reduce((s, x) => s + Number(x[campo] || 0), 0);
 
   const blocos = useMemo(() => {
-    const build = (campo: "faturamento" | "lucro" | "volume") =>
+    const build = (campo: "faturamento" | "lucro" | "volume" | "mix") =>
       anosSel.map(ano => ({ ano, meses: MESES.map((_, i) => val(ano, i + 1, campo)) }));
-    return { faturamento: build("faturamento"), lucro: build("lucro"), volume: build("volume") };
+    return { faturamento: build("faturamento"), lucro: build("lucro"), volume: build("volume"), mix: build("mix") };
   }, [rowsFiltradas, anosSel]);
 
   // Último mês com dado no ano mais recente selecionado (para acumulados comparáveis)
@@ -456,6 +512,7 @@ const AnaliseAnual = () => {
   const BLOCOS_EXPORT = () => ([
     { titulo: "FATURAMENTO", matriz: blocos.faturamento, tipo: "valor" as const },
     { titulo: "LUCRO", matriz: blocos.lucro, tipo: "valor" as const },
+    { titulo: "MIX", matriz: blocos.mix, tipo: "valor" as const },
     { titulo: "MARGEM", matriz: margemMatriz, tipo: "margem" as const },
     { titulo: "VOLUME", matriz: blocos.volume, tipo: "valor" as const },
   ]);
@@ -715,6 +772,7 @@ const AnaliseAnual = () => {
           <div className="space-y-6">
             <Card><CardContent className="p-0 overflow-x-auto">{renderBloco("FATURAMENTO", blocos.faturamento, "valor")}</CardContent></Card>
             <Card><CardContent className="p-0 overflow-x-auto">{renderBloco("LUCRO", blocos.lucro, "valor")}</CardContent></Card>
+            <Card><CardContent className="p-0 overflow-x-auto">{renderBloco("MIX", blocos.mix, "valor")}</CardContent></Card>
             <Card><CardContent className="p-0 overflow-x-auto">{renderBloco("MARGEM", margemMatriz, "margem")}</CardContent></Card>
             <Card><CardContent className="p-0 overflow-x-auto">{renderBloco("VOLUME", blocos.volume, "valor")}</CardContent></Card>
           </div>
