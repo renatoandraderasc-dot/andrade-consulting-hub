@@ -1665,6 +1665,53 @@ export type Database = {
           },
         ]
       }
+      premiacao_config: {
+        Row: {
+          atingimento_minimo: number
+          created_at: string
+          id: string
+          peso_arrecadacao: number
+          peso_faturamento: number
+          peso_mix: number
+          peso_volume: number
+          store_id: string
+          updated_at: string
+          valor_premiacao: number
+        }
+        Insert: {
+          atingimento_minimo?: number
+          created_at?: string
+          id?: string
+          peso_arrecadacao?: number
+          peso_faturamento?: number
+          peso_mix?: number
+          peso_volume?: number
+          store_id: string
+          updated_at?: string
+          valor_premiacao?: number
+        }
+        Update: {
+          atingimento_minimo?: number
+          created_at?: string
+          id?: string
+          peso_arrecadacao?: number
+          peso_faturamento?: number
+          peso_mix?: number
+          peso_volume?: number
+          store_id?: string
+          updated_at?: string
+          valor_premiacao?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "premiacao_config_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       produtos: {
         Row: {
           categoria: string | null
