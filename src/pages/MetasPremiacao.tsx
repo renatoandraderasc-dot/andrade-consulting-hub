@@ -249,11 +249,14 @@ const MetasPremiacao = () => {
             <Button variant="outline" size="sm" onClick={() => navigate("/metas/premiacao/config")}>
               <Settings2 className="h-4 w-4 mr-1" /> Parametrização
             </Button>
+            <Button size="sm" onClick={compartilhar} disabled={compartilhando}>
+              <Share2 className="h-4 w-4 mr-1" /> {compartilhando ? "Gerando..." : "Compartilhar"}
+            </Button>
           </div>
         </div>
 
         {/* Demonstrativo — layout de cartaz */}
-        <div className="mx-auto w-full max-w-3xl overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
+        <div ref={cartazRef} className="mx-auto w-full max-w-3xl overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
           <div className="relative overflow-hidden">
             {fotoTopo ? (
               <img src={fotoTopo} alt="Cabeçalho" className="h-48 w-full object-cover" />
