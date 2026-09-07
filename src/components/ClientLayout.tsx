@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  BarChart3, CheckSquare, Settings, Users, LogOut, Menu, X, ArrowLeft,
+  BarChart3, CheckSquare, Settings, Settings2, Users, LogOut, Menu, X, ArrowLeft,
   Target, ClipboardList, DollarSign, Database, RefreshCw, Trophy, Store, ShoppingCart, LayoutTemplate, TrendingUp, Package, KeyRound, Plug, ScanLine, Tags, ChevronDown, Globe, Network,
   Thermometer,
 } from "lucide-react";
@@ -110,6 +110,7 @@ const navGroups: NavGroup[] = [
     icon: Plug,
     admin: true,
     items: [
+      { key: "admin_parametrizacoes", path: "/admin/parametrizacoes", label: "Parametrizações Gerais", icon: Settings2 },
       { key: "admin_conexoes", path: "/admin/conexoes", label: "Conexões", icon: Plug },
       { key: "admin_sites_concorrentes", path: "/admin/sites-concorrentes", label: "Catálogo de Sites", icon: Globe },
       { key: "vtex_collector", path: "/vtex-collector", label: "Coletor de Preços", icon: Database },

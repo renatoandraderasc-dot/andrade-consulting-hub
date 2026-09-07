@@ -42,6 +42,7 @@ import AdminSite from "./pages/AdminSite";
 import AdminSitesConcorrentes from "./pages/AdminSitesConcorrentes";
 import AdminConexoes from "./pages/AdminConexoes";
 import AdminRede from "./pages/AdminRede";
+import AdminParametrizacoes from "./pages/AdminParametrizacoes";
 import NotFound from "./pages/NotFound";
 import ModuleGuard from "@/components/ModuleGuard";
 
@@ -90,6 +91,7 @@ const App = () => (
             <Route path="/admin/pic-departamentos" element={g("admin_pic_departamentos", <AdminPicDepartments />)} />
             <Route path="/admin/stores" element={g("admin_stores", <AdminStores />)} />
             <Route path="/admin/rede" element={g("admin_rede", <AdminRede />)} />
+            <Route path="/admin/parametrizacoes" element={g("admin_parametrizacoes", <AdminParametrizacoes />)} />
             <Route path="/admin/conexoes" element={g("admin_conexoes", <AdminConexoes />)} />
             <Route path="/admin/site" element={g("admin_site", <AdminSite />)} />
             <Route path="/admin/sites-concorrentes" element={g("admin_sites_concorrentes", <AdminSitesConcorrentes />)} />
