@@ -25,6 +25,13 @@ interface Config {
   peso_volume: number;
   peso_mix: number;
   atingimento_minimo: number;
+  foto_cabecalho: string | null;
+  foto_rodape: string | null;
+  foto_faturamento: string | null;
+  foto_arrecadacao: string | null;
+  foto_volume: string | null;
+  foto_mix: string | null;
+  mostrar_valores: boolean;
 }
 
 const PADRAO: Config = {
@@ -34,7 +41,16 @@ const PADRAO: Config = {
   peso_volume: 20,
   peso_mix: 15,
   atingimento_minimo: 99,
+  foto_cabecalho: null,
+  foto_rodape: null,
+  foto_faturamento: null,
+  foto_arrecadacao: null,
+  foto_volume: null,
+  foto_mix: null,
+  mostrar_valores: true,
 };
+
+type FotoKey = "foto_cabecalho" | "foto_rodape" | "foto_faturamento" | "foto_arrecadacao" | "foto_volume" | "foto_mix";
 
 type KpiKey = "faturamento" | "arrecadacao" | "volume" | "mix";
 
