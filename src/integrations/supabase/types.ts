@@ -1675,6 +1675,7 @@ export type Database = {
           foto_mix: string | null
           foto_rodape: string | null
           foto_volume: string | null
+          fotos_departamentos: Json
           id: string
           mostrar_valores: boolean
           peso_arrecadacao: number
@@ -1694,6 +1695,7 @@ export type Database = {
           foto_mix?: string | null
           foto_rodape?: string | null
           foto_volume?: string | null
+          fotos_departamentos?: Json
           id?: string
           mostrar_valores?: boolean
           peso_arrecadacao?: number
@@ -1713,6 +1715,7 @@ export type Database = {
           foto_mix?: string | null
           foto_rodape?: string | null
           foto_volume?: string | null
+          fotos_departamentos?: Json
           id?: string
           mostrar_valores?: boolean
           peso_arrecadacao?: number
