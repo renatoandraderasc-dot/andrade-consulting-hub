@@ -336,44 +336,88 @@ const MetasPremiacao = () => {
         )}
 
         {/* Demonstrativo — layout de cartaz */}
-        <div className="mx-auto w-full max-w-3xl overflow-hidden rounded-2xl border border-border bg-card shadow-lg">
-          <div className="flex items-center gap-4 bg-background p-5">
-            <img src={logo} alt="Andrade Assessoria Comercial" className="h-16 w-auto" />
-            <div className="ml-auto text-right">
-              <p className="text-xs uppercase tracking-widest text-muted-foreground">Competência</p>
-              <p className="text-lg font-bold">{MESES[mes - 1]}/{ano}</p>
-            </div>
-          </div>
-
-          <div className="bg-foreground px-5 py-4">
-            <div className="flex items-center justify-center gap-4 rounded-xl border-2 border-primary px-4 py-3">
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                <Award className="h-6 w-6" />
-              </span>
-              <span className="text-3xl font-extrabold uppercase tracking-wide text-background">
-                {storeName || "LOJA"}
-              </span>
+        <div className="mx-auto w-full max-w-3xl overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
+          {/* Cabecalho */}
+          <div className="relative overflow-hidden">
+            {cfg.foto_cabecalho ? (
+              <img src={cfg.foto_cabecalho} alt="Cabeçalho" className="h-48 w-full object-cover" />
+            ) : (
+              <div className="h-48 w-full bg-gradient-to-br from-primary/30 via-primary/10 to-transparent" />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-foreground via-foreground/70 to-foreground/20" />
+            <div className="absolute inset-0 flex flex-col justify-between p-5">
+              <div className="flex items-start justify-between gap-4">
+                <span className="rounded-xl bg-background/90 px-3 py-2 shadow">
+                  <img src={logo} alt="Andrade Assessoria Comercial" className="h-10 w-auto" />
+                </span>
+                <div className="rounded-xl bg-background/90 px-3 py-2 text-right shadow">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Competência</p>
+                  <p className="text-sm font-bold">{MESES[mes - 1]}/{ano}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg">
+                  <Award className="h-6 w-6" />
+                </span>
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-primary">
+                    Demonstrativo de premiação
+                  </p>
+                  <p className="text-2xl font-extrabold uppercase leading-tight tracking-wide text-background sm:text-3xl">
+                    {storeName || "LOJA"}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
           <div className="grid gap-4 p-5 sm:grid-cols-2">
-            {kpis.map((k) => (
-              <div key={k.key} className="rounded-xl border border-border bg-muted/30 p-4 text-center">
-                <p className="text-lg font-extrabold uppercase">{k.label}</p>
-                {k.sub && <p className="text-xs font-bold uppercase text-muted-foreground">{k.sub}</p>}
-                <div className="my-3 h-px bg-border" />
-                <p className={`text-4xl font-extrabold ${k.pago ? "text-emerald-600" : "text-red-600"}`}>
-                  {k.meta > 0 ? fmtPct(k.atingimento, 2) : "—"}
-                </p>
-                <p className={`mt-2 flex items-center justify-center gap-2 text-sm font-bold uppercase ${k.pago ? "text-emerald-600" : "text-red-600"}`}>
-                  {k.pago ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
-                  {k.pago ? "Atingido" : k.bloqueado ? "Sem gatilho" : "Não atingido"}
-                </p>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Peso {fmtPct(k.peso)} · {k.pago ? fmtBRL((cfg.valor_premiacao * (k.peso || 0)) / 100) : fmtBRL(0)}
-                </p>
-              </div>
-            ))}
+            {kpis.map((k) => {
+              const foto = cfg[`foto_${k.key}` as FotoKey];
+              const money = k.key === "faturamento" || k.key === "arrecadacao";
+              const f = (n: number) => (money ? fmtBRL(n) : Math.round(n).toLocaleString("pt-BR"));
+              return (
+                <div
+                  key={k.key}
+                  className={`overflow-hidden rounded-2xl border-2 bg-card text-center shadow-sm transition ${
+                    k.pago ? "border-emerald-600/60" : "border-border"
+                  }`}
+                >
+                  <div className="relative h-24 w-full">
+                    {foto ? (
+                      <img src={foto} alt={k.label} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="h-full w-full bg-gradient-to-br from-muted to-muted/40" />
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-foreground/85 to-foreground/20" />
+                    <div className="absolute inset-x-0 bottom-2">
+                      <p className="text-base font-extrabold uppercase text-background">{k.label}</p>
+                      {k.sub && <p className="text-[10px] font-bold uppercase text-background/70">{k.sub}</p>}
+                    </div>
+                  </div>
+                  <div className="p-4">
+                    <p className={`text-4xl font-extrabold ${k.pago ? "text-emerald-600" : "text-red-600"}`}>
+                      {k.meta > 0 ? fmtPct(k.atingimento, 2) : "—"}
+                    </p>
+                    {cfg.mostrar_valores && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {k.meta > 0 ? `${f(k.real)} de ${f(k.meta)}` : "Meta não cadastrada"}
+                      </p>
+                    )}
+                    <p className={`mt-2 flex items-center justify-center gap-2 text-sm font-bold uppercase ${k.pago ? "text-emerald-600" : "text-red-600"}`}>
+                      {k.pago ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                      {k.pago ? "Atingido" : k.bloqueado ? "Sem gatilho" : "Não atingido"}
+                    </p>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Peso {fmtPct(k.peso)}
+                      {cfg.mostrar_valores
+                        ? ` · ${fmtBRL(k.pago ? (cfg.valor_premiacao * (k.peso || 0)) / 100 : 0)}`
+                        : ""}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           <div className="px-5">
@@ -387,14 +431,30 @@ const MetasPremiacao = () => {
             </div>
           </div>
 
-          <div className="m-5 flex items-center justify-center gap-6 rounded-xl bg-foreground px-5 py-4">
-            <Gift className="h-9 w-9 text-background" />
-            <div className="text-center">
-              <p className="text-sm font-bold uppercase tracking-wide text-background">Valor premiação</p>
-              <p className="text-4xl font-extrabold text-primary">{fmtBRL(valorPago)}</p>
-              {valorPago < cfg.valor_premiacao && (
-                <p className="text-xs text-background/70">de {fmtBRL(cfg.valor_premiacao)}</p>
+          {/* Rodape */}
+          <div className="relative m-5 overflow-hidden rounded-2xl">
+            {cfg.foto_rodape ? (
+              <img src={cfg.foto_rodape} alt="Rodapé" className="h-40 w-full object-cover" />
+            ) : (
+              <div className="h-40 w-full bg-gradient-to-br from-primary/30 via-primary/10 to-transparent" />
+            )}
+            <div className="absolute inset-0 bg-foreground/80" />
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-5 text-center">
+              <Gift className="h-8 w-8 text-primary" />
+              <p className="text-xs font-bold uppercase tracking-[0.25em] text-background/80">Valor premiação</p>
+              {cfg.mostrar_valores ? (
+                <>
+                  <p className="text-4xl font-extrabold text-primary">{fmtBRL(valorPago)}</p>
+                  {valorPago < cfg.valor_premiacao && (
+                    <p className="text-xs text-background/70">de {fmtBRL(cfg.valor_premiacao)}</p>
+                  )}
+                </>
+              ) : (
+                <p className="text-4xl font-extrabold text-primary">{fmtPct(pctPago)}</p>
               )}
+              <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-background/60">
+                Andrade Assessoria Comercial
+              </p>
             </div>
           </div>
         </div>
