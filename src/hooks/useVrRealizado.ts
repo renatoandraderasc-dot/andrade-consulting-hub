@@ -78,6 +78,8 @@ export function canonDept(s: string): string {
   const t = norm(s);
   if (!t) return "";
   if (t === LOJA || t === "GERAL" || t === "TOTAL") return LOJA;
+  // Metas de subgrupo ("DEPTO / GRUPO") ficam separadas, sem agrupar no depto.
+  if (t.includes("/")) return t;
   if (/^ACOUGUE|CARNE|AVES/.test(t)) return "ACOUGUE";
   if (/^HORTI|FLV/.test(t)) return "HORTIFRUTI";
   if (/^PADARIA|PANIFIC|CONFEITAR/.test(t)) return "PADARIA";
