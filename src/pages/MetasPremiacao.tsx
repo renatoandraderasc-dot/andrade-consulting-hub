@@ -197,17 +197,14 @@ const MetasPremiacao = () => {
         {/* Demonstrativo — layout de cartaz */}
         <div className="mx-auto w-full max-w-3xl overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
           <div className="relative overflow-hidden">
-            {cfg.foto_cabecalho ? (
-              <img src={cfg.foto_cabecalho} alt="Cabeçalho" className="h-48 w-full object-cover" />
+            {fotoTopo ? (
+              <img src={fotoTopo} alt="Cabeçalho" className="h-48 w-full object-cover" />
             ) : (
               <div className="h-48 w-full bg-gradient-to-br from-primary/30 via-primary/10 to-transparent" />
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-foreground via-foreground/70 to-foreground/20" />
             <div className="absolute inset-0 flex flex-col justify-between p-5">
-              <div className="flex items-start justify-between gap-4">
-                <span className="rounded-xl bg-background/90 px-3 py-2 shadow">
-                  <img src={logo} alt="Andrade Assessoria Comercial" className="h-10 w-auto" />
-                </span>
+              <div className="flex items-start justify-end gap-4">
                 <div className="rounded-xl bg-background/90 px-3 py-2 text-right shadow">
                   <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Competência</p>
                   <p className="text-sm font-bold">{MESES[mes - 1]}/{ano}</p>
@@ -222,12 +219,13 @@ const MetasPremiacao = () => {
                     Demonstrativo de premiação
                   </p>
                   <p className="text-2xl font-extrabold uppercase leading-tight tracking-wide text-background sm:text-3xl">
-                    {storeName || "LOJA"}
+                    {titulo}
                   </p>
                 </div>
               </div>
             </div>
           </div>
+
 
           <div className="grid gap-4 p-5 sm:grid-cols-2">
             {kpis.map((k) => {
