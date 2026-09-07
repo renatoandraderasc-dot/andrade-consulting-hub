@@ -98,13 +98,58 @@ export function CartProgress({ value, label, detail, className, compact }: CartP
   );
 }
 
-/** Overlay de tela cheia para processos longos. */
+/** Tela cheia de carregamento: bloqueia a tela ate o processo terminar. */
 export function CartProgressOverlay({ value, label, detail }: CartProgressProps) {
+  const auto = useAutoProgress(value === undefined);
+  const pct = Math.max(0, Math.min(100, Math.round(value ?? auto)));
+
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-background/80 backdrop-blur-sm">
-      <div className="w-[min(420px,90vw)] rounded-xl border bg-card p-6 shadow-lg">
-        <CartProgress value={value} label={label} detail={detail} />
+    <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-8 bg-background">
+      <img src={logo} alt="Andrade Consultoria" className="h-20 w-auto object-contain opacity-95" />
+
+      <div className="relative" style={{ width: 180, height: 150 }}>
+        {[0, 1, 2, 3].map((i) => (
+          <img
+            key={i}
+            src={logo}
+            alt=""
+            aria-hidden
+            className="absolute left-1/2 h-8 w-8 -translate-x-1/2 rounded-full bg-card p-1 shadow"
+            style={{ animation: `cart-drop 1.5s ${i * 0.35}s cubic-bezier(.5,.05,.6,1) infinite` }}
+          />
+        ))}
+        <ShoppingCart
+          className="absolute bottom-0 left-1/2 h-24 w-24 -translate-x-1/2 text-primary"
+          style={{ animation: "cart-bump 1.5s ease-in-out infinite" }}
+        />
       </div>
+
+      <div className="w-[min(520px,86vw)] text-center">
+        <p className="text-lg font-semibold text-foreground">{label ?? "Atualizando dados..."}</p>
+        {detail && <p className="mt-1 text-sm text-muted-foreground">{detail}</p>}
+        <div className="mt-5 h-3 w-full overflow-hidden rounded-full bg-muted">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-primary to-accent transition-[width] duration-500 ease-out"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        <p className="mt-3 text-3xl font-bold tabular-nums text-primary">{pct}%</p>
+      </div>
+
+      <style>{`
+        @keyframes cart-drop {
+          0%   { transform: translate(-50%, -20px) scale(.7); opacity: 0; }
+          20%  { opacity: 1; }
+          70%  { transform: translate(-50%, 78px) scale(1); opacity: 1; }
+          85%  { transform: translate(-50%, 92px) scale(.5); opacity: 0; }
+          100% { transform: translate(-50%, 92px) scale(.5); opacity: 0; }
+        }
+        @keyframes cart-bump {
+          0%, 60%, 100% { transform: translate(-50%, 0); }
+          72% { transform: translate(-50%, 5px); }
+          84% { transform: translate(-50%, -2px); }
+        }
+      `}</style>
     </div>
   );
 }

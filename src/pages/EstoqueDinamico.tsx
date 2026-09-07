@@ -24,7 +24,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { CartProgress } from "@/components/CartProgress";
+import { CartProgressOverlay } from "@/components/CartProgress";
 
 interface Store { id: string; name: string }
 
@@ -485,8 +485,8 @@ const EstoqueDinamico = () => {
 
         <Card className="overflow-hidden">
           {loading ? (
-            <div className="p-4 space-y-3">
-              <CartProgress label="Consultando estoque dinâmico..." />
+            <div className="p-4 space-y-2">
+              <CartProgressOverlay label="Consultando estoque dinâmico..." />
               {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
             </div>
           ) : linhas === null ? (

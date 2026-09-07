@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CartProgress } from "@/components/CartProgress";
+import { CartProgressOverlay } from "@/components/CartProgress";
 
 interface Store { id: string; name: string }
 
@@ -297,11 +297,7 @@ const Catalogo = () => {
 
         </div>
 
-        {loading && (
-          <div className="mb-4 rounded-lg border border-border bg-card p-4">
-            <CartProgress label="Carregando catálogo de produtos..." />
-          </div>
-        )}
+        {loading && <CartProgressOverlay label="Carregando catálogo de produtos..." />}
 
         <div className="rounded-lg border border-border bg-card overflow-x-auto">
           <table className="w-full text-sm">

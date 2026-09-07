@@ -9,7 +9,7 @@ import { Loader2, Download, CheckCircle2, Package, Store, Building2, FileSpreads
 import { carregarBaseCatalogo, carregarProdutosAtivos12m, carregarCustoUltimaCompra, avisoRelatorio } from "@/lib/catalogoProdutos";
 import * as XLSX from "xlsx";
 import { salvarWorkbook } from "@/lib/exportBranding";
-import { CartProgress } from "@/components/CartProgress";
+import { CartProgressOverlay } from "@/components/CartProgress";
 
 export type Linha = Record<string, unknown>;
 
@@ -379,7 +379,7 @@ const BasesAutoPanel = ({
           <Button size="sm" onClick={carregarProdutos} disabled={loadingP} className="gap-2 w-full">
             {loadingP ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Carregar cadastro
           </Button>
-          {loadingP && <CartProgress compact label="Carregando cadastro da loja..." />}
+          {loadingP && <CartProgressOverlay label="Carregando cadastro da loja..." />}
           {produtosCount > 0 && (
             <Ok
               n={produtosCount}
@@ -423,8 +423,7 @@ const BasesAutoPanel = ({
             {loadingC ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Carregar pesquisa
           </Button>
           {loadingC && (
-            <CartProgress
-              compact
+            <CartProgressOverlay
               label="Carregando pesquisas de concorrentes..."
               value={progressoConc ? Number(progressoConc.replace("%", "")) : undefined}
             />
@@ -459,8 +458,7 @@ const BasesAutoPanel = ({
             {loadingI ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Carregar base interna
           </Button>
           {loadingI && (
-            <CartProgress
-              compact
+            <CartProgressOverlay
               label="Carregando base interna da rede..."
               value={progressoInterna ? Number(progressoInterna.replace("%", "")) : undefined}
             />
