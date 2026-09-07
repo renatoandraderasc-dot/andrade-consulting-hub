@@ -248,6 +248,33 @@ const MetasPremiacao = () => {
     }));
   }, [metas, realizado, cfg]);
 
+  // Departamentos: metas gravadas + realizado ao vivo
+  const departamentos = useMemo(() => {
+    const min = cfg.atingimento_minimo || 99;
+    const nomes = new Set<string>();
+    Object.keys(metasDep).forEach((d) => nomes.add(d));
+    Object.keys(atual.data ?? {}).forEach((d) => { if (d !== LOJA) nomes.add(d.toUpperCase()); });
+    return Array.from(nomes).sort().map((dep) => {
+      const meta = metasDep[dep] ?? { vendas: 0, lucro: 0, volume: 0, mix: 0 };
+      const real = { vendas: 0, lucro: 0, volume: 0, mix: 0 };
+      for (const k of Object.keys(atual.data ?? {})) {
+        if (k.toUpperCase() !== dep) continue;
+        for (const d of atual.data![k]) {
+          real.vendas += d.vendas; real.lucro += d.lucro; real.volume += d.volume; real.mix += d.mix;
+        }
+      }
+      const atingimento = pct(real.vendas, meta.vendas);
+      return {
+        dep,
+        meta,
+        real,
+        atingimento,
+        atingiu: meta.vendas > 0 && atingimento >= min,
+        foto: cfg.fotos_departamentos?.[dep] || null,
+      };
+    });
+  }, [metasDep, atual.data, cfg]);
+
   const pesoTotal = kpis.reduce((s, k) => s + (k.peso || 0), 0);
   const pctPago = kpis.reduce((s, k) => s + (k.pago ? k.peso || 0 : 0), 0);
   const valorPago = (cfg.valor_premiacao * pctPago) / 100;
