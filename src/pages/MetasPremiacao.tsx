@@ -7,6 +7,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import ClientLayout from "@/components/ClientLayout";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -46,6 +48,7 @@ const MetasPremiacao = () => {
   const [metasDep, setMetasDep] = useState<Record<string, { vendas: number; lucro: number; volume: number; mix: number }>>({});
   const [carregandoMetas, setCarregandoMetas] = useState(false);
   const [dep, setDep] = useState<string>(LOJA);
+  const [mostrarValores, setMostrarValores] = useState(cfg.mostrar_valores);
 
 
   useEffect(() => {
@@ -70,6 +73,10 @@ const MetasPremiacao = () => {
     if (!storeId) return;
     carregarPremiacaoConfig(storeId).then(setCfg);
   }, [storeId]);
+
+  useEffect(() => {
+    setMostrarValores(cfg.mostrar_valores);
+  }, [cfg.mostrar_valores]);
 
   const carregarMetas = async () => {
     if (!storeId) return;
@@ -243,6 +250,18 @@ const MetasPremiacao = () => {
               </SelectContent>
             </Select>
 
+            <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-1.5">
+              <span className="text-xs text-muted-foreground">Valores</span>
+              <Switch
+                id="mostrar-valores-dem"
+                checked={mostrarValores}
+                onCheckedChange={(v) => setMostrarValores(v)}
+              />
+              <Label htmlFor="mostrar-valores-dem" className="text-xs text-muted-foreground">
+                {mostrarValores ? "R$ + %" : "Apenas %"}
+              </Label>
+            </div>
+
             <Button variant="outline" size="sm" onClick={() => { atual.refresh(); carregarMetas(); }}>
               <RefreshCw className="h-4 w-4 mr-1" /> Atualizar
             </Button>
@@ -316,7 +335,7 @@ const MetasPremiacao = () => {
                     <p className={`text-4xl font-extrabold ${k.pago ? "text-emerald-600" : "text-red-600"}`}>
                       {k.meta > 0 ? fmtPct(k.atingimento, 2) : "—"}
                     </p>
-                    {cfg.mostrar_valores && (
+                    {mostrarValores && (
                       <p className="mt-1 text-xs text-muted-foreground">
                         {k.meta > 0 ? `${f(k.real)} de ${f(k.meta)}` : "Meta não cadastrada"}
                       </p>
@@ -327,7 +346,7 @@ const MetasPremiacao = () => {
                     </p>
                     <p className="mt-2 text-xs text-muted-foreground">
                       Peso {fmtPct(k.peso)}
-                      {cfg.mostrar_valores
+                      {mostrarValores
                         ? ` · ${fmtBRL(k.pago ? (cfg.valor_premiacao * (k.peso || 0)) / 100 : 0)}`
                         : ""}
                     </p>
@@ -361,7 +380,7 @@ const MetasPremiacao = () => {
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-5 text-center">
               <Gift className="h-8 w-8 text-primary" />
               <p className="text-xs font-bold uppercase tracking-[0.25em] text-background/80">Valor premiação</p>
-              {cfg.mostrar_valores ? (
+              {mostrarValores ? (
                 <>
                   <p className="text-4xl font-extrabold text-primary">{fmtBRL(valorPago)}</p>
                   {valorPago < cfg.valor_premiacao && (
