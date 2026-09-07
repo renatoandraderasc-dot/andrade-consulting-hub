@@ -71,6 +71,27 @@ function inferirDepartamento(secao: string, categoria: string): string | null {
   return null;
 }
 
+// Chave canonica de departamento: usada tanto no realizado (nome que vem do
+// sistema da loja) quanto nas metas gravadas, para que os dois casem mesmo
+// com acentos, caixa ou variacoes de nome (Mercearia Doce/Salgada/Seca...).
+export function canonDept(s: string): string {
+  const t = norm(s);
+  if (!t) return "";
+  if (t === LOJA || t === "GERAL" || t === "TOTAL") return LOJA;
+  if (/^ACOUGUE|CARNE|AVES/.test(t)) return "ACOUGUE";
+  if (/^HORTI|FLV/.test(t)) return "HORTIFRUTI";
+  if (/^PADARIA|PANIFIC|CONFEITAR/.test(t)) return "PADARIA";
+  if (/^MERCEARIA/.test(t)) return "MERCEARIA";
+  if (/^BAZAR/.test(t)) return "BAZAR";
+  if (/^PERECIVE/.test(t)) return "PERECIVEIS";
+  if (/^BEBIDA/.test(t)) return "BEBIDAS";
+  if (/^LIMPEZA/.test(t)) return "LIMPEZA";
+  if (/^PERFUMARIA|HIGIENE/.test(t)) return "PERFUMARIA";
+  if (/^ELETRO/.test(t)) return "ELETRO";
+  if (/^FRIOS|LATICIN/.test(t)) return "FRIOS E LATICINIOS";
+  return t;
+}
+
 async function loadRaw(storeId: string, inicio: string, fim: string): Promise<RawResult> {
   const [{ data: mapas }, { data: proxy, error }, posv] = await Promise.all([
     supabase.from("vr_secao_departamento").select("secao_vr, department").eq("store_id", storeId),
