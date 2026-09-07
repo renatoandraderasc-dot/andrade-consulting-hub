@@ -47,6 +47,7 @@ const MetasPremiacao = () => {
   const [metasDep, setMetasDep] = useState<Record<string, { vendas: number; lucro: number; volume: number; mix: number }>>({});
   const [carregandoMetas, setCarregandoMetas] = useState(false);
   const [dep, setDep] = useState<string>(LOJA);
+  const [mostrarValores, setMostrarValores] = useState(cfg.mostrar_valores);
 
 
   useEffect(() => {
