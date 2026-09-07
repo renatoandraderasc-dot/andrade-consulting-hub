@@ -380,15 +380,12 @@ const MetasPremiacao = () => {
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-5 text-center">
               <Gift className="h-8 w-8 text-primary" />
               <p className="text-xs font-bold uppercase tracking-[0.25em] text-background/80">Valor premiação</p>
-              {mostrarValores ? (
-                <>
-                  <p className="text-4xl font-extrabold text-primary">{fmtBRL(valorPago)}</p>
-                  {valorPago < cfg.valor_premiacao && (
-                    <p className="text-xs text-background/70">de {fmtBRL(cfg.valor_premiacao)}</p>
-                  )}
-                </>
-              ) : (
-                <p className="text-4xl font-extrabold text-primary">{fmtPct(pctPago)}</p>
+              <p className="text-4xl font-extrabold text-primary">{fmtBRL(valorPago)}</p>
+              {valorPago < cfg.valor_premiacao && (
+                <p className="text-xs text-background/70">de {fmtBRL(cfg.valor_premiacao)}</p>
+              )}
+              {!mostrarValores && (
+                <p className="text-sm font-semibold text-background/80">{fmtPct(pctPago)} liberado</p>
               )}
               <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-background/60">
                 Andrade Assessoria Comercial
