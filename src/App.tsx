@@ -19,6 +19,7 @@ import MetasGerador from "./pages/MetasGerador";
 import MetasSugestao from "./pages/MetasSugestao";
 import MetasRealizado from "./pages/MetasRealizado";
 import MetasPremiacao from "./pages/MetasPremiacao";
+import MetasPremiacaoConfig from "./pages/MetasPremiacaoConfig";
 import Controladoria from "./pages/Controladoria";
 import AnaliseAnual from "./pages/AnaliseAnual";
 import Compras from "./pages/Compras";
