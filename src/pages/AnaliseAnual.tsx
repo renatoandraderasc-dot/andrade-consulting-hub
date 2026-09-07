@@ -261,9 +261,62 @@ const AnaliseAnual = () => {
   // ---- mix (itens distintos vendidos) ----
   const [mixCarregado, setMixCarregado] = useState(false);
 
+  // Nascimento (WebSac) nao publica "vendas_produto_periodo": usamos a
+  // positivacao de mix, o mesmo relatorio do PIC.
+  const ehNascimento = /nasciment/i.test(storeName);
+
+  const carregarMixPositivacao = async (sid: string) => {
+    const hoje0 = new Date();
+    const anosBusca: number[] = [];
+    for (let a = ANOS[0]; a <= hoje0.getFullYear(); a++) anosBusca.push(a);
+    const porDep = new Map<string, number>();
+    const porMes = new Map<string, number>();
+    const partes = await Promise.all(
+      anosBusca.map((a) =>
+        chamarRelatorio(sid, "mix_positivacao_periodo", {
+          inicio: `${a}-01-01`,
+          fim:
+            a === hoje0.getFullYear()
+              ? `${a}-${String(hoje0.getMonth() + 1).padStart(2, "0")}-${String(hoje0.getDate()).padStart(2, "0")}`
+              : `${a}-12-31`,
+        }).catch(() => null),
+      ),
+    );
+    for (const p of partes) {
+      if (!p || p.indisponivel || p.offline || p.erro) continue;
+      for (const l of p.dados) {
+        const dia = String(pick(l, "dia", "data") ?? "");
+        const ano = Number(dia.slice(0, 4));
+        const mes = Number(dia.slice(5, 7));
+        if (!ano || !mes) continue;
+        const qtd = num(pick(l, "mix", "positivacao", "qtd_itens", "itens", "codigos", "quantidade"));
+        if (!qtd) continue;
+        const dep = String(pick(l, "categoria", "secao", "departamento", "nivel1") ?? "TOTAL").toUpperCase();
+        porDep.set(`${ano}-${mes}-${dep}`, (porDep.get(`${ano}-${mes}-${dep}`) ?? 0) + qtd);
+        porMes.set(`${ano}-${mes}`, (porMes.get(`${ano}-${mes}`) ?? 0) + qtd);
+      }
+    }
+    if (!porDep.size) return false;
+    setRows((prev) =>
+      prev.map((r) => {
+        const m =
+          porDep.get(`${r.ano}-${r.mes}-${r.departamento}`) ??
+          porDep.get(`${r.ano}-${r.mes}-${r.categoria}`) ??
+          porDep.get(`${r.ano}-${r.mes}-${r.secao}`) ??
+          (r.departamento === "TOTAL" ? porMes.get(`${r.ano}-${r.mes}`) : undefined);
+        return m ? { ...r, mix: m } : r;
+      }),
+    );
+    return true;
+  };
+
   const carregarMix = async (sid: string) => {
     if (mixCarregado) return;
     try {
+      if (ehNascimento) {
+        const ok = await carregarMixPositivacao(sid);
+        if (ok) return;
+      }
       const hoje0 = new Date();
       const anosBusca: number[] = [];
       for (let a = ANOS[0]; a <= hoje0.getFullYear(); a++) anosBusca.push(a);
