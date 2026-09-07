@@ -14,7 +14,7 @@ import { fmtBRL, fmtPct, MESES, diasNoMes } from "@/lib/metasSugestao";
 import {
   carregarPremiacaoConfig, PREMIACAO_PADRAO, type PremiacaoConfig, type FotoKey,
 } from "@/pages/MetasPremiacaoConfig";
-import logo from "@/assets/andrade-logo.png";
+
 
 interface Store { id: string; name: string }
 
