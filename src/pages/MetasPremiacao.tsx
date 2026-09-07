@@ -73,6 +73,10 @@ const MetasPremiacao = () => {
     carregarPremiacaoConfig(storeId).then(setCfg);
   }, [storeId]);
 
+  useEffect(() => {
+    setMostrarValores(cfg.mostrar_valores);
+  }, [cfg.mostrar_valores]);
+
   const carregarMetas = async () => {
     if (!storeId) return;
     setCarregandoMetas(true);
