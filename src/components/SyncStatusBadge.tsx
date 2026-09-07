@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { CheckCircle2, AlertTriangle, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useSaasNumber } from "@/hooks/useSaasConfig";
 
 interface Props {
   storeId: string;
@@ -24,6 +25,7 @@ const formatDateTime = (iso: string) => {
 };
 
 const SyncStatusBadge = ({ storeId, onSyncChange }: Props) => {
+  const refreshSegundos = useSaasNumber("refresh_pic_segundos", 60);
   const [info, setInfo] = useState<SyncInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -54,12 +56,12 @@ const SyncStatusBadge = ({ storeId, onSyncChange }: Props) => {
         () => fetchInfo(),
       )
       .subscribe();
-    const interval = setInterval(fetchInfo, 60_000);
+    const interval = refreshSegundos > 0 ? setInterval(fetchInfo, refreshSegundos * 1000) : undefined;
     return () => {
       supabase.removeChannel(channel);
-      clearInterval(interval);
+      if (interval) clearInterval(interval);
     };
-  }, [storeId, onSyncChange]);
+  }, [storeId, onSyncChange, refreshSegundos]);
 
   if (loading || !info) return null;
 

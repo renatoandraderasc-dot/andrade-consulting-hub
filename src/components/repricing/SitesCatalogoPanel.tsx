@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import {
   Play, Loader2, Plus, AlertTriangle, CheckCircle2, XCircle, MapPin, RefreshCw, Globe, Power, Stethoscope, Trash2,
 } from "lucide-react";
+import { useSaasNumber } from "@/hooks/useSaasConfig";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -85,6 +86,7 @@ const dataHora = (s: string | null) =>
   s ? new Date(s).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "—";
 
 const SitesCatalogoPanel = () => {
+  const pollSegundos = useSaasNumber("refresh_jobs_coleta_segundos", 5);
   const [sites, setSites] = useState<SiteConcorrente[]>([]);
   const [vinculos, setVinculos] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -147,9 +149,9 @@ const SitesCatalogoPanel = () => {
   }, []);
 
   useEffect(() => {
-    const t = window.setInterval(() => setAgora(Date.now()), 5000);
+    const t = window.setInterval(() => setAgora(Date.now()), pollSegundos * 1000);
     return () => window.clearInterval(t);
-  }, []);
+  }, [pollSegundos]);
 
   useEffect(() => {
     if (!job || (job.status !== "pending" && job.status !== "crawling")) {
@@ -160,9 +162,9 @@ const SitesCatalogoPanel = () => {
       setAgora(Date.now());
       const { data } = await supabase.from("scrape_jobs").select("*").eq("id", job.id).maybeSingle();
       if (data) setJob(data as unknown as Job);
-    }, 5000);
+    }, pollSegundos * 1000);
     return () => { if (timer.current) window.clearInterval(timer.current); };
-  }, [job?.id, job?.status]);
+  }, [job?.id, job?.status, pollSegundos]);
 
   const detectarPlataforma = async () => {
     const host = novoHost.replace(/^https?:\/\//, "").replace(/\/.*$/, "").trim();
