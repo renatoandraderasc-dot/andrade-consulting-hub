@@ -184,7 +184,7 @@ const MetasPremiacao = () => {
             <Select value={String(mes)} onValueChange={(v) => setMes(Number(v))}>
               <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {MESES.map((m, i) => <SelectItem key={m} value={String(i + 1)}>{m}</SelectItem>)}
+                {MESES.slice(1).map((m, i) => <SelectItem key={m} value={String(i + 1)}>{m}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={String(ano)} onValueChange={(v) => setAno(Number(v))}>
@@ -225,7 +225,7 @@ const MetasPremiacao = () => {
               <div className="flex items-start justify-end gap-4">
                 <div className="rounded-xl bg-background/90 px-3 py-2 text-right shadow">
                   <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Competência</p>
-                  <p className="text-sm font-bold">{MESES[mes - 1]}/{ano}</p>
+                  <p className="text-sm font-bold">{MESES[mes]}/{ano}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
