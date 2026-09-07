@@ -249,6 +249,18 @@ const MetasPremiacao = () => {
               </SelectContent>
             </Select>
 
+            <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-1.5">
+              <span className="text-xs text-muted-foreground">Valores</span>
+              <Switch
+                id="mostrar-valores-dem"
+                checked={mostrarValores}
+                onCheckedChange={(v) => setMostrarValores(v)}
+              />
+              <Label htmlFor="mostrar-valores-dem" className="text-xs text-muted-foreground">
+                {mostrarValores ? "R$ + %" : "Apenas %"}
+              </Label>
+            </div>
+
             <Button variant="outline" size="sm" onClick={() => { atual.refresh(); carregarMetas(); }}>
               <RefreshCw className="h-4 w-4 mr-1" /> Atualizar
             </Button>
