@@ -571,6 +571,12 @@ const AnaliseAnual = () => {
           </div>
         </motion.div>
 
+        {loading && (
+          <div className="mb-6 rounded-lg border border-border bg-card p-4">
+            <CartProgress label="Carregando análise anual..." />
+          </div>
+        )}
+
         <Card className="mb-6">
           <CardContent className="p-4 flex flex-wrap items-end gap-4">
             <div className="flex items-end gap-2">

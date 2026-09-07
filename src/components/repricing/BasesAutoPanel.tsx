@@ -379,6 +379,7 @@ const BasesAutoPanel = ({
           <Button size="sm" onClick={carregarProdutos} disabled={loadingP} className="gap-2 w-full">
             {loadingP ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Carregar cadastro
           </Button>
+          {loadingP && <CartProgress compact label="Carregando cadastro da loja..." />}
           {produtosCount > 0 && (
             <Ok
               n={produtosCount}
@@ -421,7 +422,13 @@ const BasesAutoPanel = ({
           <Button size="sm" onClick={carregarConcorrente} disabled={loadingC || !concorrentes.length} className="gap-2 w-full">
             {loadingC ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Carregar pesquisa
           </Button>
-          {loadingC && progressoConc && <p className="text-[11px] text-muted-foreground">Carregando pesquisas… {progressoConc}</p>}
+          {loadingC && (
+            <CartProgress
+              compact
+              label="Carregando pesquisas de concorrentes..."
+              value={progressoConc ? Number(progressoConc.replace("%", "")) : undefined}
+            />
+          )}
           {concorrenteCount > 0 && <Ok n={concorrenteCount} />}
           <BotaoExportar
             disabled={!rowsConc.length}
@@ -451,7 +458,13 @@ const BasesAutoPanel = ({
           <Button size="sm" variant="outline" onClick={carregarInterna} disabled={loadingI} className="gap-2 w-full">
             {loadingI ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Carregar base interna
           </Button>
-          {loadingI && progressoInterna && <p className="text-[11px] text-muted-foreground">Carregando base interna… {progressoInterna}</p>}
+          {loadingI && (
+            <CartProgress
+              compact
+              label="Carregando base interna da rede..."
+              value={progressoInterna ? Number(progressoInterna.replace("%", "")) : undefined}
+            />
+          )}
           {internaCount > 0 && <Ok n={internaCount} obs="preços das outras lojas da rede" />}
           <BotaoExportar
             disabled={!rowsInterna.length}

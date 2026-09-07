@@ -190,11 +190,10 @@ const VtexCollector = () => {
         {loading && (
           <Card>
             <CardContent className="p-4 space-y-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Varrendo o catálogo do concorrente por categorias e marcas...
-              </div>
-              <Progress value={33} className="h-2" />
+              <CartProgress
+                label="Coletando catálogo do concorrente..."
+                detail="Varrendo categorias e marcas do site"
+              />
             </CardContent>
           </Card>
         )}

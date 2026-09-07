@@ -297,6 +297,12 @@ const Catalogo = () => {
 
         </div>
 
+        {loading && (
+          <div className="mb-4 rounded-lg border border-border bg-card p-4">
+            <CartProgress label="Carregando catálogo de produtos..." />
+          </div>
+        )}
+
         <div className="rounded-lg border border-border bg-card overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-secondary/50 text-muted-foreground">

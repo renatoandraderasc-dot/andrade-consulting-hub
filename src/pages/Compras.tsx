@@ -666,6 +666,12 @@ const Compras = () => {
               </button>
             </div>
 
+            {loadingPainel && (
+              <div className="mb-4 rounded-lg border border-border bg-card p-4">
+                <CartProgress label="Atualizando compras realizadas..." />
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
               <KpiCard icon={<Target className="w-4 h-4" />} label="Meta de venda" value={fmtBRL(totais.meta_venda)} />
               <KpiCard icon={<ShoppingCart className="w-4 h-4" />} label="Meta de compra" value={fmtBRL(totais.meta_compra)} />
