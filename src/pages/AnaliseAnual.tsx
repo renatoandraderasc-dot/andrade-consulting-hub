@@ -270,11 +270,9 @@ const AnaliseAnual = () => {
   const [mixCarregado, setMixCarregado] = useState(false);
   const [mixLoading, setMixLoading] = useState(false);
 
-  // Nascimento (WebSac) nao publica "vendas_produto_periodo": usamos a
-  // positivacao de mix, o mesmo relatorio do PIC.
-  const ehNascimento = /nasciment/i.test(storeName);
-
-  const carregarMixPositivacao = async (sid: string) => {
+  // Nesta tela o MIX e calculado da mesma forma para qualquer sistema:
+  // uma consulta por mes e contagem de codigos distintos.
+  const carregarMixPositivacao = async (sid: string, relatorio: string) => {
     const hoje0 = new Date();
     const p2 = (n: number) => String(n).padStart(2, "0");
     // Uma consulta por MES: o relatorio de positivacao conta o produto apenas
@@ -300,7 +298,7 @@ const AnaliseAnual = () => {
     for (let i = 0; i < janelas.length; i += LOTE) {
       const lote = await Promise.all(
         janelas.slice(i, i + LOTE).map((j) =>
-          chamarRelatorio(sid, "vendas_hierarquia_periodo", j)
+          chamarRelatorio(sid, relatorio, j)
             .then((relatorio) => ({ janela: j, relatorio }))
             .catch(() => ({ janela: j, relatorio: null })),
         ),
@@ -365,8 +363,10 @@ const AnaliseAnual = () => {
     if (mixCarregado) return;
     setMixLoading(true);
     try {
-      if (ehNascimento) {
-        const ok = await carregarMixPositivacao(sid);
+      // Vale para todas as lojas, independente do sistema (VR, WebSac,
+      // Oracle, Director): tenta os relatorios por produto mes a mes.
+      for (const rel of ["vendas_hierarquia_periodo", "vendas_produto_periodo", "mix_positivacao_periodo"]) {
+        const ok = await carregarMixPositivacao(sid, rel);
         if (ok) return;
       }
       const hoje0 = new Date();
