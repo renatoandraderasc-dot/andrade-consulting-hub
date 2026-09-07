@@ -326,10 +326,11 @@ const PIC = () => {
             metaRestante += m;
           }
         }
-        // Projeção: realizado até o dia anterior + metas do dia atual ao fim do mês
+        // Projeção: realizado até o dia anterior + metas do dia atual ao fim do mês.
+        // Mês já encerrado: não há mais o que projetar → projeção = realizado.
         const metaHojeEmDiante =
           metaRestante + (rows.find((r) => r.day === cutoffDay) ? Number(rows.find((r) => r.day === cutoffDay)![metaKey]) || 0 : 0);
-        const projecao = realizadoOntem + metaHojeEmDiante;
+        const projecao = isCurrentMonth ? realizadoOntem + metaHojeEmDiante : realizado;
         const metaMensal = Number(metaMesTotal) > 0 ? Number(metaMesTotal) : metaPeriodo;
         const pctTotal = metaMensal > 0 ? (realizado / metaMensal) * 100 : 0;
         const pctAcumulado = metaAcumulada > 0 ? (realizado / metaAcumulada) * 100 : 0;
@@ -381,8 +382,8 @@ const PIC = () => {
           realizado,
           metaMensal: metaMensalMix,
           metaAcumulada: metaAcumMix,
-          projecao: metaMensalMix,
-          pctProjecao: metaMensalMix > 0 ? 100 : 0,
+          projecao: isCurrentMonth ? metaMensalMix : realizado,
+          pctProjecao: metaMensalMix > 0 ? (isCurrentMonth ? 100 : (realizado / metaMensalMix) * 100) : 0,
           hasMeta: metaMensalMix > 0,
           daily,
         };
@@ -391,7 +392,7 @@ const PIC = () => {
 
     }
     return result;
-  }, [rawData, cutoffDay, metaMix, metasMes, diasNoMesSel]);
+  }, [rawData, cutoffDay, metaMix, metasMes, diasNoMesSel, isCurrentMonth]);
 
 
   // AI Analysis
