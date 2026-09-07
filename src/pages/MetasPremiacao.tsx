@@ -380,7 +380,7 @@ const MetasPremiacao = () => {
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-5 text-center">
               <Gift className="h-8 w-8 text-primary" />
               <p className="text-xs font-bold uppercase tracking-[0.25em] text-background/80">Valor premiação</p>
-              {cfg.mostrar_valores ? (
+              {mostrarValores ? (
                 <>
                   <p className="text-4xl font-extrabold text-primary">{fmtBRL(valorPago)}</p>
                   {valorPago < cfg.valor_premiacao && (
