@@ -199,7 +199,9 @@ function agregar(raw: RawResult, categoria?: string | null): VrRealizado {
 
   for (const l of raw.linhas) {
     if (categoria && l.categoria !== categoria) continue;
-    const dep = raw.mapa[norm(l.secao)] ?? inferirDepartamento(l.secao, l.categoria);
+    const dep = canonDept(
+      raw.mapa[norm(l.secao)] ?? inferirDepartamento(l.secao, l.categoria) ?? l.categoria ?? "",
+    );
     const mix = temPositivacao ? 0 : l.mix;
     add(LOJA, l.date, l.vendas, l.lucro, l.volume, mix);
     if (dep && dep !== LOJA) add(dep, l.date, l.vendas, l.lucro, l.volume, mix);
