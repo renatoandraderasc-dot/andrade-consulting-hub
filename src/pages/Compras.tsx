@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import HierarquiaVendasTable from "@/components/relatorios/HierarquiaVendasTable";
 import { carregarBaseCatalogo } from "@/lib/catalogoProdutos";
+import { CartProgress } from "@/components/CartProgress";
 
 
 interface Store { id: string; name: string }
@@ -664,6 +665,12 @@ const Compras = () => {
                 <RefreshCw className={`w-4 h-4 ${loadingPainel ? "animate-spin" : ""}`} /> Atualizar realizado
               </button>
             </div>
+
+            {loadingPainel && (
+              <div className="mb-4 rounded-lg border border-border bg-card p-4">
+                <CartProgress label="Atualizando compras realizadas..." />
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
               <KpiCard icon={<Target className="w-4 h-4" />} label="Meta de venda" value={fmtBRL(totais.meta_venda)} />

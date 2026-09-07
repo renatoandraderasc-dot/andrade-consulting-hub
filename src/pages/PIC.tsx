@@ -14,6 +14,7 @@ import HierarquiaVendasTable from "@/components/relatorios/HierarquiaVendasTable
 import { usePicDepartments } from "@/hooks/usePicDepartments";
 import { usePicDisplayMode } from "@/hooks/usePicDisplay";
 import ProdutosSemGiro from "@/components/pic/ProdutosSemGiro";
+import { CartProgress } from "@/components/CartProgress";
 
 
 
@@ -481,6 +482,12 @@ const PIC = () => {
             )}
           </div>
         </motion.div>
+
+        {loadingVr && (
+          <div className="mb-4 rounded-lg border border-border bg-card p-4">
+            <CartProgress label="Atualizando indicadores da loja..." />
+          </div>
+        )}
 
         {offline ? (
           <VrOfflineNotice message={errorMsg} />

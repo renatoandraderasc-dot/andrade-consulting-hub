@@ -16,6 +16,7 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { salvarWorkbook, cabecalhoPdf, nomeArquivo } from "@/lib/exportBranding";
+import { CartProgress } from "@/components/CartProgress";
 
 
 const MESES = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
@@ -569,6 +570,12 @@ const AnaliseAnual = () => {
             </Button>
           </div>
         </motion.div>
+
+        {loading && (
+          <div className="mb-6 rounded-lg border border-border bg-card p-4">
+            <CartProgress label="Carregando análise anual..." />
+          </div>
+        )}
 
         <Card className="mb-6">
           <CardContent className="p-4 flex flex-wrap items-end gap-4">
