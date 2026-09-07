@@ -1669,7 +1669,14 @@ export type Database = {
         Row: {
           atingimento_minimo: number
           created_at: string
+          foto_arrecadacao: string | null
+          foto_cabecalho: string | null
+          foto_faturamento: string | null
+          foto_mix: string | null
+          foto_rodape: string | null
+          foto_volume: string | null
           id: string
+          mostrar_valores: boolean
           peso_arrecadacao: number
           peso_faturamento: number
           peso_mix: number
@@ -1681,7 +1688,14 @@ export type Database = {
         Insert: {
           atingimento_minimo?: number
           created_at?: string
+          foto_arrecadacao?: string | null
+          foto_cabecalho?: string | null
+          foto_faturamento?: string | null
+          foto_mix?: string | null
+          foto_rodape?: string | null
+          foto_volume?: string | null
           id?: string
+          mostrar_valores?: boolean
           peso_arrecadacao?: number
           peso_faturamento?: number
           peso_mix?: number
@@ -1693,7 +1707,14 @@ export type Database = {
         Update: {
           atingimento_minimo?: number
           created_at?: string
+          foto_arrecadacao?: string | null
+          foto_cabecalho?: string | null
+          foto_faturamento?: string | null
+          foto_mix?: string | null
+          foto_rodape?: string | null
+          foto_volume?: string | null
           id?: string
+          mostrar_valores?: boolean
           peso_arrecadacao?: number
           peso_faturamento?: number
           peso_mix?: number
