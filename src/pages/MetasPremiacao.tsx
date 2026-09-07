@@ -108,9 +108,33 @@ const MetasPremiacao = () => {
           peso_volume: Number(data.peso_volume) || 0,
           peso_mix: Number(data.peso_mix) || 0,
           atingimento_minimo: Number(data.atingimento_minimo) || 99,
+          foto_cabecalho: (data as any).foto_cabecalho ?? null,
+          foto_rodape: (data as any).foto_rodape ?? null,
+          foto_faturamento: (data as any).foto_faturamento ?? null,
+          foto_arrecadacao: (data as any).foto_arrecadacao ?? null,
+          foto_volume: (data as any).foto_volume ?? null,
+          foto_mix: (data as any).foto_mix ?? null,
+          mostrar_valores: (data as any).mostrar_valores ?? true,
         } : PADRAO);
       });
   }, [storeId]);
+
+  const enviarFoto = async (campo: FotoKey, file: File) => {
+    if (!storeId) return;
+    setEnviando(campo);
+    const ext = file.name.split(".").pop() || "jpg";
+    const path = `premiacao/${storeId}/${campo}-${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("imagens").upload(path, file, { upsert: true });
+    if (error) {
+      setEnviando(null);
+      toast({ title: "Não foi possível enviar a foto", description: error.message, variant: "destructive" });
+      return;
+    }
+    const { data } = await supabase.storage.from("imagens").createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
+    setCfg((c) => ({ ...c, [campo]: data?.signedUrl ?? null }));
+    setEnviando(null);
+    toast({ title: "Foto carregada", description: "Clique em Salvar para gravar." });
+  };
 
   const salvarConfig = async () => {
     if (!storeId) return;
