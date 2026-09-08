@@ -13,6 +13,10 @@ export interface Lancamento {
   status: string;
   origem?: string | null;
   origem_ref?: string | null;
+  tipo_entrada?: string | null;
+  id_tipo?: number | null;
+  classificacao_manual?: boolean | null;
+
 
   created_at: string;
   updated_at: string;

@@ -506,6 +506,41 @@ export type Database = {
         }
         Relationships: []
       }
+      controladoria_conta: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+          store_id: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome: string
+          store_id: string
+          tipo?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string
+          store_id?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "controladoria_conta_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       departments: {
         Row: {
           created_at: string
@@ -1352,12 +1387,14 @@ export type Database = {
       }
       lancamentos: {
         Row: {
+          classificacao_manual: boolean
           competencia_ano: number
           competencia_mes: number
           created_at: string
           data: string
           descricao: string | null
           id: string
+          id_tipo: number | null
           observacao: string | null
           origem: string
           origem_ref: string | null
@@ -1365,17 +1402,20 @@ export type Database = {
           store_id: string
           subtipo: string
           tipo: string
+          tipo_entrada: string | null
           updated_at: string
           user_id: string
           valor: number
         }
         Insert: {
+          classificacao_manual?: boolean
           competencia_ano: number
           competencia_mes: number
           created_at?: string
           data?: string
           descricao?: string | null
           id?: string
+          id_tipo?: number | null
           observacao?: string | null
           origem?: string
           origem_ref?: string | null
@@ -1383,17 +1423,20 @@ export type Database = {
           store_id: string
           subtipo: string
           tipo: string
+          tipo_entrada?: string | null
           updated_at?: string
           user_id: string
           valor?: number
         }
         Update: {
+          classificacao_manual?: boolean
           competencia_ano?: number
           competencia_mes?: number
           created_at?: string
           data?: string
           descricao?: string | null
           id?: string
+          id_tipo?: number | null
           observacao?: string | null
           origem?: string
           origem_ref?: string | null
@@ -1401,6 +1444,7 @@ export type Database = {
           store_id?: string
           subtipo?: string
           tipo?: string
+          tipo_entrada?: string | null
           updated_at?: string
           user_id?: string
           valor?: number
