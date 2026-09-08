@@ -300,17 +300,33 @@ const AnaliseAnual = () => {
     const codigosPorCategoria = new Map<string, Set<string>>();
     const codigosPorMes = new Map<string, Set<string>>();
     const partes: { janela: { inicio: string; fim: string }; relatorio: any }[] = [];
-    const LOTE = 6;
+    // Tuneis ngrok das lojas derrubam a conexao (tls handshake eof) quando
+    // recebem varias chamadas simultaneas. Fazemos lotes pequenos, com
+    // uma nova tentativa por janela e desistimos cedo se o relatorio nao existe.
+    const LOTE = 2;
+    const buscar = async (j: { inicio: string; fim: string }) => {
+      for (let tentativa = 0; tentativa < 2; tentativa++) {
+        try {
+          const r = await chamarRelatorio(sid, relatorio, j);
+          if (r && !r.erro) return { janela: j, relatorio: r };
+          if (r?.indisponivel) return { janela: j, relatorio: r };
+        } catch {
+          // tenta de novo
+        }
+        await new Promise((res) => setTimeout(res, 600 * (tentativa + 1)));
+      }
+      return { janela: j, relatorio: null };
+    };
+    let falhasSeguidas = 0;
     for (let i = 0; i < janelas.length; i += LOTE) {
-      const lote = await Promise.all(
-        janelas.slice(i, i + LOTE).map((j) =>
-          chamarRelatorio(sid, relatorio, j)
-            .then((relatorio) => ({ janela: j, relatorio }))
-            .catch(() => ({ janela: j, relatorio: null })),
-        ),
-      );
+      const lote = await Promise.all(janelas.slice(i, i + LOTE).map(buscar));
       partes.push(...lote);
+      const comDados = lote.some((l) => l.relatorio?.dados?.length);
+      falhasSeguidas = comDados ? 0 : falhasSeguidas + 1;
+      // relatorio inexistente ou conexao caida: nao insiste por dezenas de meses
+      if (falhasSeguidas >= 4 && !partes.some((p) => p.relatorio?.dados?.length)) break;
     }
+
     for (const { janela, relatorio: p } of partes) {
       if (!p || p.indisponivel || p.offline || p.erro) continue;
       for (const l of p.dados) {
