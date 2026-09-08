@@ -108,6 +108,7 @@ Deno.serve(async (req) => {
     const detalhe: Record<string, unknown>[] = [];
     const naoClassificados = new Map<number, { qtd: number; valor: number; exemplo: string }>();
     let gravadosTotal = 0;
+    let duplicadosIgnorados = 0;
 
     for (const b of blocos) {
       const base = {
