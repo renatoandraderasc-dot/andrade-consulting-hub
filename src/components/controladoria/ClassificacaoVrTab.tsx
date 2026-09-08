@@ -47,6 +47,7 @@ export const ClassificacaoVrTab = ({ storeId }: Props) => {
   const [pendentes, setPendentes] = useState<Pendente[]>([]);
   const [loading, setLoading] = useState(false);
   const [reimportando, setReimportando] = useState(false);
+  const [autoRodando, setAutoRodando] = useState(false);
   const [meses, setMeses] = useState("3");
 
   const [dialogOpen, setDialogOpen] = useState(false);
