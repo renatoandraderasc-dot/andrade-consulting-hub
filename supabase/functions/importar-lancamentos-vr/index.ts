@@ -108,6 +108,7 @@ Deno.serve(async (req) => {
     const detalhe: Record<string, unknown>[] = [];
     const naoClassificados = new Map<number, { qtd: number; valor: number; exemplo: string }>();
     let gravadosTotal = 0;
+    let duplicadosIgnorados = 0;
 
     for (const b of blocos) {
       const base = {
@@ -162,6 +163,9 @@ Deno.serve(async (req) => {
 
       const registros = [];
       const vistos = new Set<string>();
+      // Duplicados = mesmo valor + mesma data de pagamento + mesmo beneficiario
+      // + mesmo numero de documento. Só o primeiro é considerado.
+      const chavesDuplicidade = new Set<string>();
       for (const l of linhas) {
         const ref = String(l.ref ?? "");
         if (!ref || vistos.has(ref)) continue;
@@ -176,6 +180,18 @@ Deno.serve(async (req) => {
         const [ano, mes] = data.split("-").map(Number);
         const valor = parseFloat(String(l.valor_pago)) || 0;
         if (!data || !ano || !mes) continue;
+
+        const chaveDup = [
+          Math.round(valor * 100),
+          String(l.data_pagamento || l.vencimento || "").slice(0, 10),
+          String(l.fornecedor ?? "").trim().toUpperCase(),
+          String(l.documento ?? "").trim(),
+        ].join("|");
+        if (chavesDuplicidade.has(chaveDup)) {
+          duplicadosIgnorados++;
+          continue;
+        }
+        chavesDuplicidade.add(chaveDup);
 
         if (!cls) {
           const at = naoClassificados.get(Number(l.id_tipo ?? -1)) ??
@@ -272,7 +288,7 @@ Deno.serve(async (req) => {
       .map(([id_tipo, v]) => ({ id_tipo, lancamentos: v.qtd, valor: Math.round(v.valor * 100) / 100, exemplo: v.exemplo }))
       .sort((a, b) => b.valor - a.valor);
 
-    return json({ ok: true, inicio, fim, meses: blocos.length, gravados: gravadosTotal, detalhe, pendentes });
+    return json({ ok: true, inicio, fim, meses: blocos.length, gravados: gravadosTotal, duplicados_ignorados: duplicadosIgnorados, detalhe, pendentes });
   } catch (e) {
     return json({ erro: e instanceof Error ? e.message : String(e) }, 500);
   }
