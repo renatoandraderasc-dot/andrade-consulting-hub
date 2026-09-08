@@ -1099,6 +1099,15 @@ export function calcularDRE(
     }
   }
 
+  // Sobras: lancamentos cuja conta (subtipo) nao existe em nenhuma linha fixa.
+  const sobraPorTipo = new Map<string, number>();
+  for (const l of lancamentos) {
+    const conhecidos = allChildSubtipos.get(l.tipo);
+    if (!conhecidos) continue;
+    if (conhecidos.has(l.subtipo)) continue;
+    sobraPorTipo.set(l.tipo, (sobraPorTipo.get(l.tipo) || 0) + l.valor);
+  }
+
   // Step 1: calculate group totals
   for (const node of structure) {
     if (node.isGroup && node.tipo) {
@@ -1107,9 +1116,10 @@ export function calcularDRE(
 
       if (node.children) {
         for (const child of node.children) {
-          const childVal = child.subtipo
+          let childVal = child.subtipo
             ? groupLancs.filter(l => l.subtipo === child.subtipo).reduce((s, l) => s + l.valor, 0)
             : 0;
+          if (child.catchAll) childVal += sobraPorTipo.get(node.tipo) || 0;
           values.set(child.id, childVal);
           total += childVal;
         }
