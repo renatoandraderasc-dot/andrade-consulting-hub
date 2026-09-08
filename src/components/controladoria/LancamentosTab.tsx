@@ -127,12 +127,14 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
   }, [storeId]);
 
   const tipoEntradaDe = (l: Lancamento) => {
+    if (l.tipo_entrada && l.tipo_entrada.trim()) return l.tipo_entrada.trim();
     const nomeNovo = /tipo de entrada:\s*(.*?)\s*\(id\s+([\w-]+)\)/i.exec(l.observacao || "");
     if (nomeNovo) return nomeNovo[1] !== "NÃO CADASTRADO" ? nomeNovo[1] : (nomesTipo[nomeNovo[2]] || `VR ${nomeNovo[2]}`);
     const m = /tipo VR ([\w-]+)/i.exec(l.observacao || "");
     if (m) return nomesTipo[m[1]] || `VR ${m[1]}`;
     return l.origem === "VR" ? "VR sem tipo" : "Manual";
   };
+
 
   const tiposEntrada = useMemo(
     () => Array.from(new Set(lancamentos.map(tipoEntradaDe))).sort(),
@@ -153,6 +155,60 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
     }
     return result;
   }, [lancamentos, filterTipo, filterEntrada, filterBusca, nomesTipo]);
+
+  // Cliente com conexão VR: habilita filtro/totalizador por Tipo de entrada.
+  const [temVr, setTemVr] = useState(false);
+  useEffect(() => {
+    if (!storeId) { setTemVr(false); return; }
+    (async () => {
+      const { data } = await supabase
+        .from("store_vr_config")
+        .select("store_id")
+        .eq("store_id", storeId)
+        .maybeSingle();
+      setTemVr(!!data);
+    })();
+  }, [storeId]);
+
+  const totaisPorEntrada = useMemo(() => {
+    const map: Record<string, number> = {};
+    filtered.forEach(l => {
+      const k = tipoEntradaDe(l);
+      map[k] = (map[k] || 0) + Number(l.valor);
+    });
+    return Object.entries(map).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+  }, [filtered, nomesTipo]);
+
+  const [reclassificando, setReclassificando] = useState(false);
+  const reclassificarPorTipoEntrada = async () => {
+    if (!storeId) return;
+    setReclassificando(true);
+    const { data, error } = await supabase.functions.invoke("reclassificar-lancamentos", {
+      body: { store_id: storeId, por_tipo_entrada: true },
+    });
+    setReclassificando(false);
+    if (error || (data as any)?.erro) { toast.error("Não foi possível reclassificar"); return; }
+    toast.success(`${(data as any)?.atualizados ?? 0} lançamento(s) reclassificados pelo tipo de entrada`);
+    fetchLancamentos();
+  };
+
+  // Consulta ao vivo (nada é gravado)
+  const [consultando, setConsultando] = useState(false);
+  const [consulta, setConsulta] = useState<any[] | null>(null);
+  const atualizarConsulta = async () => {
+    if (!storeId) return;
+    setConsultando(true);
+    const ini = `${filterAno}-${String(filterMes).padStart(2, "0")}-01`;
+    const fimD = new Date(filterAno, filterMes, 0);
+    const fim = `${filterAno}-${String(filterMes).padStart(2, "0")}-${String(fimD.getDate()).padStart(2, "0")}`;
+    const { data, error } = await supabase.functions.invoke("consultar-lancamentos-vr", {
+      body: { store_id: storeId, inicio: ini, fim },
+    });
+    setConsultando(false);
+    if (error || (data as any)?.erro) { toast.error("Não foi possível consultar o sistema da loja"); return; }
+    setConsulta(((data as any)?.linhas as any[]) || []);
+    toast.success(`${(data as any)?.total ?? 0} pagamento(s) na consulta (nada foi gravado)`);
+  };
 
 
   const totaisPorTipo = useMemo(() => {
@@ -233,7 +289,9 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
     };
 
     if (editingId) {
-      const { error } = await supabase.from("lancamentos").update(payload as any).eq("id", editingId);
+      const { error } = await supabase.from("lancamentos")
+        .update({ ...payload, classificacao_manual: true } as any).eq("id", editingId);
+
       if (error) { toast.error("Erro ao atualizar"); return; }
       toast.success("Lançamento atualizado");
     } else {
@@ -325,12 +383,23 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
           <h2 className="text-lg sm:text-xl font-bold text-foreground">Lançamentos</h2>
           <p className="text-sm text-muted-foreground">Cadastre e gerencie os lançamentos financeiros (Admin)</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          {temVr && (
+            <>
+              <Button variant="outline" onClick={atualizarConsulta} disabled={consultando}>
+                {consultando ? "Consultando..." : "Atualizar (consulta)"}
+              </Button>
+              <Button variant="outline" onClick={reclassificarPorTipoEntrada} disabled={reclassificando}>
+                {reclassificando ? "Reclassificando..." : "Reclassificar pelo tipo de entrada"}
+              </Button>
+            </>
+          )}
           <ImportLancamentos storeId={storeId} userId={user?.id || ""} onImportComplete={fetchLancamentos} />
           <Button onClick={openNew} className="gap-2">
             <Plus className="h-4 w-4" /> Novo Lançamento
           </Button>
         </div>
+
       </div>
 
       {/* Filters */}
@@ -364,16 +433,19 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
               </SelectContent>
             </Select>
           </div>
-          <div>
-            <Label className="text-xs text-muted-foreground">Tipo de entrada</Label>
-            <Select value={filterEntrada} onValueChange={setFilterEntrada}>
-              <SelectTrigger className="w-[170px]"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Todos">Todos</SelectItem>
-                {tiposEntrada.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
+          {temVr && (
+            <div>
+              <Label className="text-xs text-muted-foreground">Tipo de entrada</Label>
+              <Select value={filterEntrada} onValueChange={setFilterEntrada}>
+                <SelectTrigger className="w-[170px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Todos">Todos</SelectItem>
+                  {tiposEntrada.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
 
           <div className="flex-1 min-w-[200px]">
             <Label className="text-xs text-muted-foreground">Buscar</Label>
@@ -420,6 +492,62 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
         </div>
       )}
 
+      {/* Totalizador por tipo de entrada (clientes VR) */}
+      {temVr && totaisPorEntrada.length > 0 && (
+        <Card className="bg-card border-border">
+          <CardContent className="p-4">
+            <p className="text-sm font-semibold text-foreground mb-3">Total do período por tipo de entrada</p>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {totaisPorEntrada.map(([nome, total]) => (
+                <div key={nome} className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2">
+                  <span className="text-xs text-muted-foreground truncate">{nome}</span>
+                  <span className="text-sm font-semibold text-foreground whitespace-nowrap">{fmtCurrency(total)}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Consulta ao vivo (não gravada) */}
+      {temVr && consulta && (
+        <Card className="bg-card border-border">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-semibold text-foreground">
+                Consulta do mês no sistema da loja — {consulta.length} pagamento(s) · nada foi gravado
+              </p>
+              <Button variant="outline" size="sm" onClick={() => setConsulta(null)}>Fechar</Button>
+            </div>
+            <div className="max-h-[320px] overflow-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Pagamento</TableHead>
+                    <TableHead>Tipo de entrada</TableHead>
+                    <TableHead>Fornecedor</TableHead>
+                    <TableHead>Documento</TableHead>
+                    <TableHead className="text-right">Valor</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {consulta.map((c, i) => (
+                    <TableRow key={i}>
+                      <TableCell>{c.pagamento || c.data}</TableCell>
+                      <TableCell>{c.tipo_entrada || "—"}</TableCell>
+                      <TableCell className="max-w-[240px] truncate">{c.fornecedor || "—"}</TableCell>
+                      <TableCell>{c.documento || "—"}</TableCell>
+                      <TableCell className="text-right">{fmtCurrency(Number(c.valor) || 0)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+
       {/* Table */}
       <Card className="bg-card border-border">
         <CardContent className="p-0">
@@ -432,7 +560,7 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
                     onCheckedChange={toggleSelectAll}
                   />
                 </TableHead>
-                <TableHead>Vencimento</TableHead>
+                <TableHead>Pagamento</TableHead>
                 <TableHead>Tipo de entrada</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Conta</TableHead>

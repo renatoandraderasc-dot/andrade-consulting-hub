@@ -108,6 +108,9 @@ Deno.serve(async (req) => {
     const detalhe: Record<string, unknown>[] = [];
     const naoClassificados = new Map<number, { qtd: number; valor: number; exemplo: string }>();
     let gravadosTotal = 0;
+    // Contas (subtipos) que precisam existir no cadastro do cliente.
+    const contasUsadas = new Map<string, string>();
+
     let duplicadosIgnorados = 0;
 
     for (const b of blocos) {
@@ -135,6 +138,19 @@ Deno.serve(async (req) => {
         detalhe.push({ periodo: b.ini, erro: r.erro });
         continue;
       }
+      // Le um campo aceitando variacao de caixa/acentos no nome.
+      const pick = (x: Record<string, unknown>, nomes: string[]) => {
+        const mapa = new Map<string, unknown>();
+        for (const k of Object.keys(x)) mapa.set(k.toLowerCase().trim(), x[k]);
+        for (const n of nomes) {
+          const v = mapa.get(n);
+          if (v !== undefined && v !== null && String(v).trim() !== "") return v;
+        }
+        return null;
+      };
+      const NOMES_TIPO = ["tipo", "tipo_entrada", "tipoentrada", "descricao_tipo", "nome_tipo", "tipo_de_entrada", "desc_tipo"];
+      const NOMES_ID_TIPO = ["id_tipo", "id_tipo_entrada", "tipo_entrada_id", "cod_tipo_entrada", "codigo_tipo"];
+
       const linhas = (viaContasAPagar
         ? (r.dados as Record<string, unknown>[]).map((x, i) => ({
             ref: `CAP-${x.documento ?? i}-${x.parcela ?? 0}-${String(x.vencimento ?? "").slice(0, 10)}`,
@@ -145,20 +161,21 @@ Deno.serve(async (req) => {
             documento: x.documento,
             observacao: x.observacao ?? (x.situacao ? `Situacao ${x.situacao}` : null),
             // Classificacao sempre pelo Tipo de Entrada informado pelo ERP.
-            id_tipo: x.id_tipo ?? x.id_tipo_entrada ?? x.tipo_entrada_id ?? x.cod_tipo_entrada ?? null,
-            nome_tipo_entrada: String(x.tipo_entrada ?? x.descricao_tipo ?? x.nome_tipo ?? "") || null,
+            id_tipo: pick(x, NOMES_ID_TIPO),
+            nome_tipo_entrada: pick(x, NOMES_TIPO) ? String(pick(x, NOMES_TIPO)).trim() : null,
           }))
         : (r.dados as Record<string, unknown>[]).map((x, i) => ({
             ...x,
-            id_tipo: x.id_tipo ?? x.id_tipo_entrada ?? x.tipo_entrada_id ?? x.cod_tipo_entrada ?? null,
-            nome_tipo_entrada: String(x.tipo_entrada ?? x.descricao_tipo ?? x.nome_tipo ?? "") || null,
+            id_tipo: pick(x, NOMES_ID_TIPO),
+            nome_tipo_entrada: pick(x, NOMES_TIPO) ? String(pick(x, NOMES_TIPO)).trim() : null,
             // varios conectores VR nao devolvem "ref" em pagamentos_periodo:
             // gera uma chave estavel para nao perder o lancamento nem duplicar.
             ref: x.ref ??
               `PG-${String(x.vencimento ?? x.data_pagamento ?? "").slice(0, 10)}-${x.documento ?? i}-${
                 String(x.fornecedor ?? "").slice(0, 20)
-              }-${x.valor_pago ?? x.valor ?? 0}-${x.id_tipo ?? ""}`,
+              }-${x.valor_pago ?? x.valor ?? 0}-${pick(x, NOMES_ID_TIPO) ?? ""}`,
           }))) as unknown as LinhaVr[];
+
 
 
       const registros = [];
@@ -207,7 +224,7 @@ Deno.serve(async (req) => {
         const idTipoTxt = l.id_tipo === null || l.id_tipo === undefined || l.id_tipo === ""
           ? (viaContasAPagar ? "CAP" : "SEM TIPO")
           : String(l.id_tipo);
-        const nomeTipo = cls?.descricao_vr || l.nome_tipo_entrada;
+        const nomeTipo = l.nome_tipo_entrada || cls?.descricao_vr || null;
         const obsBase = `Tipo de Entrada: ${nomeTipo || "NÃO CADASTRADO"} (ID ${idTipoTxt})`;
 
         // Sem de-para cadastrado: classifica automaticamente por palavras-chave
@@ -217,26 +234,56 @@ Deno.serve(async (req) => {
           somenteTipo: true,
         });
 
+        // A conta do lancamento e o proprio Tipo de entrada quando o ERP informa.
+        const conta = nomeTipo || cls?.subtipo || auto?.subtipo || "OUTROS";
+        const grupo = cls?.tipo ?? auto?.tipo ?? "Despesas";
+        if (nomeTipo) contasUsadas.set(nomeTipo, grupo);
+
         registros.push({
           store_id,
           user_id,
           data,
           competencia_mes: mes,
           competencia_ano: ano,
-          tipo: cls?.tipo ?? auto?.tipo ?? "Despesas",
-          subtipo: cls?.subtipo ?? auto?.subtipo ?? "OUTROS",
+          tipo: grupo,
+          subtipo: conta,
+          tipo_entrada: nomeTipo,
+          id_tipo: Number.isFinite(Number(l.id_tipo)) && l.id_tipo !== null ? Number(l.id_tipo) : null,
           descricao: partes.slice(0, 300) || "Pagamento VR",
           valor: Math.round(valor * 100) / 100,
-          observacao: cls ? obsBase : `CLASSIFICADO AUTOMATICAMENTE — ${obsBase}`,
+          observacao: obsBase,
 
           status: "ativo",
           origem: "VR",
           origem_ref: ref,
         });
 
+
+      }
+
+      // Respeita edicoes manuais: se o usuario ja trocou a conta do lancamento,
+      // a reimportacao mantem a classificacao dele.
+      const { data: manuais } = await supabase
+        .from("lancamentos")
+        .select("origem_ref, tipo, subtipo")
+        .eq("store_id", store_id)
+        .eq("origem", "VR")
+        .eq("classificacao_manual", true)
+        .gte("data", b.ini)
+        .lte("data", b.fim);
+      const mapaManual = new Map<string, { tipo: string; subtipo: string }>();
+      for (const m of manuais ?? []) mapaManual.set(String(m.origem_ref), { tipo: m.tipo, subtipo: m.subtipo });
+      for (const reg of registros) {
+        const man = mapaManual.get(String(reg.origem_ref));
+        if (man) {
+          reg.tipo = man.tipo;
+          reg.subtipo = man.subtipo;
+          (reg as Record<string, unknown>).classificacao_manual = true;
+        }
       }
 
       let gravados = 0;
+
       let falhouGravacao = false;
       for (let i = 0; i < registros.length; i += 500) {
         const lote = registros.slice(i, i + 500);
@@ -283,6 +330,16 @@ Deno.serve(async (req) => {
       gravadosTotal += gravados;
       detalhe.push({ periodo: b.ini, linhas_api: linhas.length, gravados });
     }
+
+    // Cria as contas que ainda nao existem no cadastro do cliente.
+    if (contasUsadas.size) {
+      const linhasConta = [...contasUsadas.entries()].map(([nome, tipo]) => ({ store_id, nome, tipo }));
+      for (let i = 0; i < linhasConta.length; i += 200) {
+        await supabase.from("controladoria_conta")
+          .upsert(linhasConta.slice(i, i + 200), { onConflict: "store_id,nome", ignoreDuplicates: true });
+      }
+    }
+
 
     const pendentes = [...naoClassificados.entries()]
       .map(([id_tipo, v]) => ({ id_tipo, lancamentos: v.qtd, valor: Math.round(v.valor * 100) / 100, exemplo: v.exemplo }))
