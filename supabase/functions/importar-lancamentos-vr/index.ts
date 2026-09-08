@@ -12,6 +12,7 @@
 // ============================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { consultarRelatorioLoja } from "../_shared/consultaLoja.ts";
+import { classificarAuto } from "../_shared/classificarAuto.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -193,17 +194,27 @@ Deno.serve(async (req) => {
         const nomeTipo = cls?.descricao_vr || l.nome_tipo_entrada;
         const obsBase = `Tipo de Entrada: ${nomeTipo || "NÃO CADASTRADO"} (ID ${idTipoTxt})`;
 
+        // Sem de-para cadastrado: classifica automaticamente por palavras-chave
+        // (o usuario pode corrigir depois na tela de classificacao).
+        const auto = cls ? null : classificarAuto({
+          nomeTipo,
+          fornecedor: l.fornecedor,
+          descricao: partes,
+          observacao: l.observacao,
+          temDocumento: !!l.documento,
+        });
+
         registros.push({
           store_id,
           user_id,
           data,
           competencia_mes: mes,
           competencia_ano: ano,
-          tipo: cls?.tipo ?? "Despesas",
-          subtipo: cls?.subtipo ?? "OUTROS",
+          tipo: cls?.tipo ?? auto?.tipo ?? "Despesas",
+          subtipo: cls?.subtipo ?? auto?.subtipo ?? "OUTROS",
           descricao: partes.slice(0, 300) || "Pagamento VR",
           valor: Math.round(valor * 100) / 100,
-          observacao: cls ? obsBase : `NÃO CLASSIFICADO — ${obsBase}`,
+          observacao: cls ? obsBase : `CLASSIFICADO AUTOMATICAMENTE — ${obsBase}`,
 
           status: "ativo",
           origem: "VR",

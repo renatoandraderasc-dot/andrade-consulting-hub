@@ -47,6 +47,7 @@ export const ClassificacaoVrTab = ({ storeId }: Props) => {
   const [pendentes, setPendentes] = useState<Pendente[]>([]);
   const [loading, setLoading] = useState(false);
   const [reimportando, setReimportando] = useState(false);
+  const [autoRodando, setAutoRodando] = useState(false);
   const [meses, setMeses] = useState("3");
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -159,6 +160,21 @@ export const ClassificacaoVrTab = ({ storeId }: Props) => {
       return;
     }
     toast.success(`${(data as any)?.gravados ?? 0} lançamento(s) reprocessados`);
+    load();
+  };
+
+  const classificarAuto = async () => {
+    if (!storeId) return;
+    setAutoRodando(true);
+    const { data, error } = await supabase.functions.invoke("reclassificar-lancamentos", {
+      body: { store_id: storeId },
+    });
+    setAutoRodando(false);
+    if (error || (data as any)?.erro) {
+      toast.error("Falha ao classificar automaticamente");
+      return;
+    }
+    toast.success(`${(data as any)?.atualizados ?? 0} lançamento(s) classificados automaticamente`);
     load();
   };
 
@@ -300,8 +316,13 @@ export const ClassificacaoVrTab = ({ storeId }: Props) => {
             {reimportando && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Reimportar período
           </Button>
+          <Button variant="secondary" onClick={classificarAuto} disabled={autoRodando}>
+            {autoRodando && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Classificar automaticamente
+          </Button>
           <span className="text-xs text-muted-foreground">
-            Reprocessa os pagamentos do VR aplicando as classificações atuais.
+            Reprocessa os pagamentos do VR aplicando as classificações atuais. A classificação
+            automática distribui o que estiver sem conta pela descrição do lançamento.
           </span>
         </CardContent>
       </Card>
