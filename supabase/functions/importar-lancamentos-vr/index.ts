@@ -46,6 +46,7 @@ interface LinhaVr {
   valor_pago: string;
   fornecedor: string | null;
   documento: number | null;
+  parcela?: number | string | null;
   id_tipo: number | null;
   observacao: string | null;
   origem: string;
@@ -108,8 +109,6 @@ Deno.serve(async (req) => {
     const detalhe: Record<string, unknown>[] = [];
     const naoClassificados = new Map<number, { qtd: number; valor: number; exemplo: string }>();
     let gravadosTotal = 0;
-    // Contas (subtipos) que precisam existir no cadastro do cliente.
-    const contasUsadas = new Map<string, string>();
 
     let duplicadosIgnorados = 0;
 
@@ -173,7 +172,7 @@ Deno.serve(async (req) => {
             ref: x.ref ??
               `PG-${String(x.vencimento ?? x.data_pagamento ?? "").slice(0, 10)}-${x.documento ?? i}-${
                 String(x.fornecedor ?? "").slice(0, 20)
-              }-${x.valor_pago ?? x.valor ?? 0}-${pick(x, NOMES_ID_TIPO) ?? ""}`,
+              }-${x.valor_pago ?? x.valor ?? 0}-${pick(x, NOMES_ID_TIPO) ?? ""}-${x.parcela ?? ""}`,
           }))) as unknown as LinhaVr[];
 
 
@@ -192,8 +191,8 @@ Deno.serve(async (req) => {
 
         const cls = classificar(l.id_tipo);
 
-        // A data do lancamento e sempre o VENCIMENTO do titulo
-        const data = String(l.vencimento || l.data_pagamento || "").slice(0, 10);
+        // A data do lancamento e sempre a DATA DE PAGAMENTO (regime de caixa).
+        const data = String(l.data_pagamento || l.vencimento || "").slice(0, 10);
         const [ano, mes] = data.split("-").map(Number);
         const valor = parseFloat(String(l.valor_pago)) || 0;
         if (!data || !ano || !mes) continue;
@@ -203,6 +202,7 @@ Deno.serve(async (req) => {
           String(l.data_pagamento || l.vencimento || "").slice(0, 10),
           String(l.fornecedor ?? "").trim().toUpperCase(),
           String(l.documento ?? "").trim(),
+          String(l.parcela ?? ""),
         ].join("|");
         if (chavesDuplicidade.has(chaveDup)) {
           duplicadosIgnorados++;
@@ -234,10 +234,9 @@ Deno.serve(async (req) => {
           somenteTipo: true,
         });
 
-        // A conta do lancamento e o proprio Tipo de entrada quando o ERP informa.
-        const conta = nomeTipo || cls?.subtipo || auto?.subtipo || "OUTROS";
+        // A conta do lancamento sai sempre do de-para ou do classificarAuto.
+        const conta = cls?.subtipo || auto?.subtipo || "OUTROS";
         const grupo = cls?.tipo ?? auto?.tipo ?? "Despesas";
-        if (nomeTipo) contasUsadas.set(nomeTipo, grupo);
 
         registros.push({
           store_id,
@@ -329,15 +328,6 @@ Deno.serve(async (req) => {
       }
       gravadosTotal += gravados;
       detalhe.push({ periodo: b.ini, linhas_api: linhas.length, gravados });
-    }
-
-    // Cria as contas que ainda nao existem no cadastro do cliente.
-    if (contasUsadas.size) {
-      const linhasConta = [...contasUsadas.entries()].map(([nome, tipo]) => ({ store_id, nome, tipo }));
-      for (let i = 0; i < linhasConta.length; i += 200) {
-        await supabase.from("controladoria_conta")
-          .upsert(linhasConta.slice(i, i + 200), { onConflict: "store_id,nome", ignoreDuplicates: true });
-      }
     }
 
 
