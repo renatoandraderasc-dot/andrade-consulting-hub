@@ -71,6 +71,8 @@ const AnaliseAnual = () => {
   const [erro, setErro] = useState("");
   const [anoIni, setAnoIni] = useState(ANOS[0]);
   const [anoFim, setAnoFim] = useState(ANOS[ANOS.length - 1]);
+  const [mesIni, setMesIni] = useState(1);
+  const [mesFim, setMesFim] = useState(12);
   const [deptos, setDeptos] = useState<string[]>([]);
   const [cats, setCats] = useState<string[]>([]);
   const [turno, setTurno] = useState<"todos" | Turno>("todos");
@@ -192,6 +194,10 @@ const AnaliseAnual = () => {
   useEffect(() => {
     if (storeId) carregar(storeId);
   }, [storeId]);
+
+  useEffect(() => {
+    if (mesFim < mesIni) setMesFim(mesIni);
+  }, [mesIni, mesFim]);
 
   // ---- dados por hora (sob demanda, mês a mês) ----
   const [horaRows, setHoraRows] = useState<Row[]>([]);
@@ -464,11 +470,12 @@ const AnaliseAnual = () => {
     () =>
       baseRows
         .filter(r => r.ano < anoAtual || (r.ano === anoAtual && r.mes < mesAtual))
+        .filter(r => r.mes >= mesIni && r.mes <= mesFim)
         .filter(r => (deptos.length === 0 ? true : deptos.includes(r.departamento)))
         .filter(r => (cats.length === 0 ? true : cats.includes(r.categoria)))
         .filter(r => (turno === "todos" ? true : r.turno === turno))
 ,
-    [baseRows, deptos, cats, turno, anoAtual, mesAtual],
+    [baseRows, deptos, cats, turno, anoAtual, mesAtual, mesIni, mesFim],
   );
 
 
@@ -641,7 +648,7 @@ const AnaliseAnual = () => {
 
   const filtrosTexto = [
     `Loja: ${storeName || "-"}`,
-    `Período: ${anoIni} a ${anoFim}`,
+    `Período: ${anoIni} (${MESES[mesIni - 1]}) a ${anoFim} (${MESES[mesFim - 1]})`,
     `Departamentos: ${deptos.length ? deptos.join(", ") : "todos"}`,
     `Categorias: ${cats.length ? cats.join(", ") : "todas"}`,
     `Horário: ${turno === "todos" ? "Dia inteiro" : turno === "manha" ? "Manhã" : "Tarde"}`,
@@ -715,7 +722,7 @@ const AnaliseAnual = () => {
                 Análise Anual <span className="text-gradient-gold">{storeName}</span>
               </h1>
               <p className="text-muted-foreground font-body text-xs">
-                Faturamento, lucro, margem e volume de {anoIni} a {anoFim} — dados da loja logada
+                Faturamento, lucro, margem e volume de {anoIni} ({MESES[mesIni - 1]}) a {anoFim} ({MESES[mesFim - 1]}) — dados da loja logada
               </p>
             </div>
             <Button variant="outline" size="sm" disabled={loading || !rows.length} onClick={exportarExcel}>
@@ -756,6 +763,27 @@ const AnaliseAnual = () => {
                   <SelectTrigger className="w-[110px] h-9"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {anosDisponiveis.map(a => <SelectItem key={a} value={String(a)}>{a}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex items-end gap-2">
+              <div>
+                <label className="text-[11px] text-muted-foreground block mb-1">Mês de</label>
+                <Select value={String(mesIni)} onValueChange={(v) => setMesIni(Number(v))}>
+                  <SelectTrigger className="w-[110px] h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {MESES.map((m, i) => <SelectItem key={m} value={String(i + 1)}>{m}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-[11px] text-muted-foreground block mb-1">até</label>
+                <Select value={String(mesFim)} onValueChange={(v) => setMesFim(Number(v))}>
+                  <SelectTrigger className="w-[110px] h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {MESES.map((m, i) => <SelectItem key={m} value={String(i + 1)}>{m}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
