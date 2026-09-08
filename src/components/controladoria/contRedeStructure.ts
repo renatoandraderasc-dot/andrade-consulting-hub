@@ -156,7 +156,7 @@ export const DRE_STRUCTURE_COMERCIAL: DRENode[] = [
       { id: "imp_icms", name: "ICMS", level: 1, isGroup: false, isResult: false, tipo: "Impostos", subtipo: "ICMS" },
       { id: "imp_pis", name: "PIS", level: 1, isGroup: false, isResult: false, tipo: "Impostos", subtipo: "PIS" },
       { id: "imp_cofins", name: "COFINS", level: 1, isGroup: false, isResult: false, tipo: "Impostos", subtipo: "COFINS" },
-      { id: "imp_outros", name: "OUTROS IMPOSTOS (S/ VENDA)", level: 1, isGroup: false, isResult: false, tipo: "Impostos", subtipo: "OUTROS IMPOSTOS (S/ VENDA)" },
+      { id: "imp_outros", name: "OUTROS IMPOSTOS (S/ VENDA)", level: 1, isGroup: false, isResult: false, tipo: "Impostos", subtipo: "OUTROS IMPOSTOS (S/ VENDA)", catchAll: true },
     ],
   },
 
@@ -170,7 +170,7 @@ export const DRE_STRUCTURE_COMERCIAL: DRENode[] = [
   {
     id: "cmv", name: "3 | CMV LOJA", level: 0, isGroup: true, isResult: false, tipo: "CMV",
     children: [
-      { id: "cmv_merc", name: "CUSTO DA MERCADORIA VENDIDA", level: 1, isGroup: false, isResult: false, tipo: "CMV", subtipo: "CUSTO DA MERCADORIA VENDIDA" },
+      { id: "cmv_merc", name: "CUSTO DA MERCADORIA VENDIDA", level: 1, isGroup: false, isResult: false, tipo: "CMV", subtipo: "CUSTO DA MERCADORIA VENDIDA", catchAll: true },
       { id: "cmv_acougue", name: "MATERIAL PARA INSUMO AÇOUGUE", level: 1, isGroup: false, isResult: false, tipo: "CMV", subtipo: "MATERIAL PARA INSUMO AÇOUGUE" },
       { id: "cmv_padaria", name: "MATERIAL PARA INSUMO PADARIA", level: 1, isGroup: false, isResult: false, tipo: "CMV", subtipo: "MATERIAL PARA INSUMO PADARIA" },
     ],
@@ -180,7 +180,7 @@ export const DRE_STRUCTURE_COMERCIAL: DRENode[] = [
   {
     id: "compra_mes", name: "COMPRA DO MÊS", level: 0, isGroup: true, isResult: false, tipo: "Compra do Mês",
     children: [
-      { id: "compra_fornec", name: "Pagamento Fornecedores", level: 1, isGroup: false, isResult: false, tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" },
+      { id: "compra_fornec", name: "Pagamento Fornecedores", level: 1, isGroup: false, isResult: false, tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS", catchAll: true },
     ],
   },
 
@@ -439,6 +439,7 @@ export const DRE_STRUCTURE_COMERCIAL: DRENode[] = [
       ch("dd_admin", "OUTRAS DESPESAS (ADMINISTRATIVA)", "OUTRAS DESPESAS (ADMINISTRATIVA)"),
       ch("dd_prolabore", "PRÓ-LABORE (1%)", "PRÓ-LABORE (1%)"),
       ch("dd_doacoes", "DESCONTOS / DOAÇÕES", "DESCONTOS / DOAÇÕES"),
+      { ...ch("dd_nao_class", "OUTRAS DESPESAS (NÃO CLASSIFICADAS)", "__NAO_CLASSIFICADO__"), catchAll: true },
     ],
   },
 
@@ -520,7 +521,7 @@ export const DRE_STRUCTURE_FINANCEIRO: DRENode[] = [
       { id: "imp_icms", name: "ICMS", level: 1, isGroup: false, isResult: false, tipo: "Impostos", subtipo: "ICMS" },
       { id: "imp_pis", name: "PIS", level: 1, isGroup: false, isResult: false, tipo: "Impostos", subtipo: "PIS" },
       { id: "imp_cofins", name: "COFINS", level: 1, isGroup: false, isResult: false, tipo: "Impostos", subtipo: "COFINS" },
-      { id: "imp_outros", name: "OUTROS IMPOSTOS (S/ VENDA)", level: 1, isGroup: false, isResult: false, tipo: "Impostos", subtipo: "OUTROS IMPOSTOS (S/ VENDA)" },
+      { id: "imp_outros", name: "OUTROS IMPOSTOS (S/ VENDA)", level: 1, isGroup: false, isResult: false, tipo: "Impostos", subtipo: "OUTROS IMPOSTOS (S/ VENDA)", catchAll: true },
     ],
   },
 
@@ -534,7 +535,7 @@ export const DRE_STRUCTURE_FINANCEIRO: DRENode[] = [
   {
     id: "cmv", name: "3 | PAGAMENTO DE FORNECEDORES", level: 0, isGroup: true, isResult: false, tipo: "Compra do Mês",
     children: [
-      { id: "pag_fornec_fin", name: "COMPRA DO MÊS", level: 1, isGroup: false, isResult: false, tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" },
+      { id: "pag_fornec_fin", name: "COMPRA DO MÊS", level: 1, isGroup: false, isResult: false, tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS", catchAll: true },
     ],
   },
 
@@ -542,7 +543,7 @@ export const DRE_STRUCTURE_FINANCEIRO: DRENode[] = [
   {
     id: "compra_mes", name: "COMPRA DO MÊS", level: 0, isGroup: true, isResult: false, tipo: "Compra do Mês",
     children: [
-      { id: "compra_fornec", name: "Pagamento Fornecedores", level: 1, isGroup: false, isResult: false, tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" },
+      { id: "compra_fornec", name: "Pagamento Fornecedores", level: 1, isGroup: false, isResult: false, tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS", catchAll: true },
     ],
   },
 
@@ -769,6 +770,7 @@ export const DRE_STRUCTURE_FINANCEIRO: DRENode[] = [
       ch("dd_admin", "OUTRAS DESPESAS (ADMINISTRATIVA)", "OUTRAS DESPESAS (ADMINISTRATIVA)"),
       ch("dd_prolabore", "PRÓ-LABORE (1%)", "PRÓ-LABORE (1%)"),
       ch("dd_doacoes", "DESCONTOS / DOAÇÕES", "DESCONTOS / DOAÇÕES"),
+      { ...ch("dd_nao_class", "OUTRAS DESPESAS (NÃO CLASSIFICADAS)", "__NAO_CLASSIFICADO__"), catchAll: true },
     ],
   },
   {
