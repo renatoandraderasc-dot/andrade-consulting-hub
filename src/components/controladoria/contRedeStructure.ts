@@ -129,6 +129,11 @@ export interface DRENode {
   subgroups?: DRENode[];
   /** Calculated as percentage of another node's value */
   calcPctOf?: { nodeId: string; pct: number };
+  /**
+   * Recebe tambem todos os lancamentos do mesmo tipo cuja conta (subtipo)
+   * nao existe em nenhuma linha fixa da DRE — evita que valores sumam.
+   */
+  catchAll?: boolean;
 }
 
 // Helper to make a child node
