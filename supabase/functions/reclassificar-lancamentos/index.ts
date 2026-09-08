@@ -3,7 +3,7 @@
 // Aplica a classificacao automatica deterministica nos lancamentos
 // que ficaram sem classificacao (subtipo OUTROS / "NAO CLASSIFICADO").
 //
-// Body: { store_id?: uuid, todas?: boolean, forcar?: boolean }
+// Body: { store_id?: uuid, todas?: boolean }
 // ============================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { classificarAuto } from "../_shared/classificarAuto.ts";
@@ -42,46 +42,47 @@ Deno.serve(async (req) => {
     let atualizados = 0;
     const pagina = 1000;
 
-    for (let offset = 0; ; offset += pagina) {
+    // Os registros saem do filtro (subtipo OUTROS) conforme sao classificados,
+    // por isso lemos sempre a primeira pagina ate zerar.
+    for (let volta = 0; volta < 200; volta++) {
       let q = supabase
         .from("lancamentos")
-        .select("id, descricao, observacao, tipo, subtipo")
-        .order("id")
-        .range(offset, offset + pagina - 1);
+        .select("id, descricao, observacao")
+        .eq("subtipo", "OUTROS")
+        .limit(pagina);
       if (storeId) q = q.eq("store_id", storeId);
-      if (!body.forcar) q = q.eq("subtipo", "OUTROS");
 
       const { data, error } = await q;
       if (error) return json({ erro: error.message }, 500);
       if (!data || data.length === 0) break;
       lidos += data.length;
 
-      const updates: { id: string; tipo: string; subtipo: string; observacao: string }[] = [];
+      // agrupa por classificacao para atualizar em lote
+      const grupos = new Map<string, { tipo: string; subtipo: string; ids: string[] }>();
       for (const l of data) {
-        const nomeTipo = nomeTipoDaObs(l.observacao);
         const cls = classificarAuto({
-          nomeTipo,
+          nomeTipo: nomeTipoDaObs(l.observacao),
           descricao: l.descricao,
           observacao: l.observacao,
           temDocumento: /·\s*Doc\s/i.test(l.descricao || ""),
         });
-        if (cls.tipo === l.tipo && cls.subtipo === l.subtipo) continue;
-        const obsLimpa = (l.observacao || "").replace(/^N[ÃA]O CLASSIFICADO — /i, "");
-        updates.push({
-          id: l.id,
-          tipo: cls.tipo,
-          subtipo: cls.subtipo,
-          observacao: `CLASSIFICADO AUTOMATICAMENTE — ${obsLimpa}`.slice(0, 500),
-        });
+        const chave = `${cls.tipo}||${cls.subtipo}`;
+        const g = grupos.get(chave) ?? { tipo: cls.tipo, subtipo: cls.subtipo, ids: [] };
+        g.ids.push(l.id);
+        grupos.set(chave, g);
         resumo.set(`${cls.tipo} / ${cls.subtipo}`, (resumo.get(`${cls.tipo} / ${cls.subtipo}`) ?? 0) + 1);
       }
 
-      for (const u of updates) {
-        const { error: e2 } = await supabase
-          .from("lancamentos")
-          .update({ tipo: u.tipo, subtipo: u.subtipo, observacao: u.observacao })
-          .eq("id", u.id);
-        if (!e2) atualizados++;
+      for (const g of grupos.values()) {
+        for (let i = 0; i < g.ids.length; i += 200) {
+          const lote = g.ids.slice(i, i + 200);
+          const { error: e2 } = await supabase
+            .from("lancamentos")
+            .update({ tipo: g.tipo, subtipo: g.subtipo })
+            .in("id", lote);
+          if (e2) return json({ erro: e2.message, atualizados }, 500);
+          atualizados += lote.length;
+        }
       }
 
       if (data.length < pagina) break;
