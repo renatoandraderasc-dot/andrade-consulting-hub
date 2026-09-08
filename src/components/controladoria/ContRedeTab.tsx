@@ -174,7 +174,9 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
     [...lancamentos]
       .sort((a, b) => (a.data < b.data ? -1 : a.data > b.data ? 1 : a.id.localeCompare(b.id)))
       .forEach(l => {
-        const chave = `${beneficiarioDe(l)}|${Number(l.valor).toFixed(2)}`;
+        const chave = l.origem_ref
+          ? `REF|${l.origem}|${l.origem_ref}`
+          : `${beneficiarioDe(l)}|${l.data}|${Number(l.valor).toFixed(2)}`;
         if (vistos.has(chave)) dups.add(l.id);
         else vistos.set(chave, l.id);
       });
