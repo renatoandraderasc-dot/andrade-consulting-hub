@@ -12,6 +12,7 @@
 // ============================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { consultarRelatorioLoja } from "../_shared/consultaLoja.ts";
+import { classificarAuto } from "../_shared/classificarAuto.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
