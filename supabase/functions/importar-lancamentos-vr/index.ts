@@ -198,10 +198,7 @@ Deno.serve(async (req) => {
         // (o usuario pode corrigir depois na tela de classificacao).
         const auto = cls ? null : classificarAuto({
           nomeTipo,
-          fornecedor: l.fornecedor,
-          descricao: partes,
-          observacao: l.observacao,
-          temDocumento: !!l.documento,
+          somenteTipo: true,
         });
 
         registros.push({

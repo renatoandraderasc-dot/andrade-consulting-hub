@@ -142,6 +142,8 @@ export interface EntradaAuto {
   observacao?: string | null;
   /** true quando a linha e um titulo de fornecedor (tem documento). */
   temDocumento?: boolean;
+  /** Clientes VR: classificar EXCLUSIVAMENTE pelo Tipo de Entrada. */
+  somenteTipo?: boolean;
 }
 
 /**
@@ -159,6 +161,11 @@ export function classificarAuto(e: EntradaAuto): ClassAuto {
     }
   }
 
+  // Clientes VR: nada alem do Tipo de Entrada pode definir a conta.
+  if (e.somenteTipo) {
+    return { tipo: "Despesas", subtipo: "OUTROS", regra: "sem-tipo" };
+  }
+
   // 2) pelo fornecedor / historico do titulo
   if (resto) {
     for (const [re, tipo, subtipo] of REGRAS) {
@@ -173,3 +180,4 @@ export function classificarAuto(e: EntradaAuto): ClassAuto {
 
   return { tipo: "Despesas", subtipo: "OUTRAS DESPESAS (ADMINISTRATIVA)", regra: "padrao" };
 }
+

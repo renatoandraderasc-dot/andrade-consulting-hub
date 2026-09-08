@@ -62,9 +62,7 @@ Deno.serve(async (req) => {
       for (const l of data) {
         const cls = classificarAuto({
           nomeTipo: nomeTipoDaObs(l.observacao),
-          descricao: l.descricao,
-          observacao: l.observacao,
-          temDocumento: /·\s*Doc\s/i.test(l.descricao || ""),
+          somenteTipo: true,
         });
         const chave = `${cls.tipo}||${cls.subtipo}`;
         const g = grupos.get(chave) ?? { tipo: cls.tipo, subtipo: cls.subtipo, ids: [] };
