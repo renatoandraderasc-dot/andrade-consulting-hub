@@ -162,6 +162,21 @@ export const ClassificacaoVrTab = ({ storeId }: Props) => {
     load();
   };
 
+  const classificarAuto = async () => {
+    if (!storeId) return;
+    setAutoRodando(true);
+    const { data, error } = await supabase.functions.invoke("reclassificar-lancamentos", {
+      body: { store_id: storeId },
+    });
+    setAutoRodando(false);
+    if (error || (data as any)?.erro) {
+      toast.error("Falha ao classificar automaticamente");
+      return;
+    }
+    toast.success(`${(data as any)?.atualizados ?? 0} lançamento(s) classificados automaticamente`);
+    load();
+  };
+
   if (!isAdmin) {
     return <p className="text-sm text-muted-foreground">Acesso restrito a administradores.</p>;
   }
