@@ -316,8 +316,13 @@ export const ClassificacaoVrTab = ({ storeId }: Props) => {
             {reimportando && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Reimportar período
           </Button>
+          <Button variant="secondary" onClick={classificarAuto} disabled={autoRodando}>
+            {autoRodando && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Classificar automaticamente
+          </Button>
           <span className="text-xs text-muted-foreground">
-            Reprocessa os pagamentos do VR aplicando as classificações atuais.
+            Reprocessa os pagamentos do VR aplicando as classificações atuais. A classificação
+            automática distribui o que estiver sem conta pela descrição do lançamento.
           </span>
         </CardContent>
       </Card>
