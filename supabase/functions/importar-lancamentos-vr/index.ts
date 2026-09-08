@@ -162,6 +162,9 @@ Deno.serve(async (req) => {
 
       const registros = [];
       const vistos = new Set<string>();
+      // Duplicados = mesmo valor + mesma data de pagamento + mesmo beneficiario
+      // + mesmo numero de documento. Só o primeiro é considerado.
+      const chavesDuplicidade = new Set<string>();
       for (const l of linhas) {
         const ref = String(l.ref ?? "");
         if (!ref || vistos.has(ref)) continue;
@@ -176,6 +179,18 @@ Deno.serve(async (req) => {
         const [ano, mes] = data.split("-").map(Number);
         const valor = parseFloat(String(l.valor_pago)) || 0;
         if (!data || !ano || !mes) continue;
+
+        const chaveDup = [
+          Math.round(valor * 100),
+          String(l.data_pagamento || l.vencimento || "").slice(0, 10),
+          String(l.fornecedor ?? "").trim().toUpperCase(),
+          String(l.documento ?? "").trim(),
+        ].join("|");
+        if (chavesDuplicidade.has(chaveDup)) {
+          duplicadosIgnorados++;
+          continue;
+        }
+        chavesDuplicidade.add(chaveDup);
 
         if (!cls) {
           const at = naoClassificados.get(Number(l.id_tipo ?? -1)) ??
