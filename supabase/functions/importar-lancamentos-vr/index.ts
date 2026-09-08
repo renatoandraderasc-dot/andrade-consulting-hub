@@ -288,7 +288,7 @@ Deno.serve(async (req) => {
       .map(([id_tipo, v]) => ({ id_tipo, lancamentos: v.qtd, valor: Math.round(v.valor * 100) / 100, exemplo: v.exemplo }))
       .sort((a, b) => b.valor - a.valor);
 
-    return json({ ok: true, inicio, fim, meses: blocos.length, gravados: gravadosTotal, detalhe, pendentes });
+    return json({ ok: true, inicio, fim, meses: blocos.length, gravados: gravadosTotal, duplicados_ignorados: duplicadosIgnorados, detalhe, pendentes });
   } catch (e) {
     return json({ erro: e instanceof Error ? e.message : String(e) }, 500);
   }
