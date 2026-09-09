@@ -43,7 +43,7 @@ Destaque o 5º dia útil (folha de pagamento) e dia 20 (impostos).`
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Analise a agenda financeira de ${summary.mes} ${summary.ano}:\n\n${JSON.stringify(summary, null, 2)}` },
+          { role: "user", content: userPrompt },
         ],
       }),
     });
@@ -58,7 +58,7 @@ Destaque o 5º dia útil (folha de pagamento) e dia 20 (impostos).`
     const data = await response.json();
     const insights = data.choices?.[0]?.message?.content || "Não foi possível gerar insights.";
 
-    return new Response(JSON.stringify({ insights }), {
+    return new Response(JSON.stringify({ insights, texto: insights }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
