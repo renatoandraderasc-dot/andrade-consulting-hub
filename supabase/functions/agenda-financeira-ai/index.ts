@@ -9,7 +9,15 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { summary } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const summary = body?.summary;
+    const prompt = typeof body?.prompt === "string" ? body.prompt : "";
+    if (!summary && !prompt) {
+      return new Response(JSON.stringify({ error: "informe summary ou prompt" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
