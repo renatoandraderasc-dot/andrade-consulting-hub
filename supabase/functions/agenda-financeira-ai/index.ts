@@ -21,11 +21,17 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const systemPrompt = `Você é um analista financeiro especializado em fluxo de caixa de varejo/supermercados.
+    const systemPrompt = summary
+      ? `Você é um analista financeiro especializado em fluxo de caixa de varejo/supermercados.
 Analise os dados da agenda financeira e forneça insights acionáveis em português brasileiro.
 Seja direto, use emojis para destacar pontos importantes.
 Estruture em: Resumo, Alertas, Concentração de Pagamentos, Cobertura de Recebimentos, Risco de Caixa, Sugestões de Ação.
-Destaque o 5º dia útil (folha de pagamento) e dia 20 (impostos).`;
+Destaque o 5º dia útil (folha de pagamento) e dia 20 (impostos).`
+      : `Você é um analista comercial de varejo/supermercados. Responda em português brasileiro, de forma objetiva e sem recalcular números fornecidos.`;
+
+    const userPrompt = summary
+      ? `Analise a agenda financeira de ${summary.mes ?? ""} ${summary.ano ?? ""}:\n\n${JSON.stringify(summary, null, 2)}`
+      : prompt;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
