@@ -24,8 +24,8 @@ interface ClientLayoutProps {
   storeName?: string;
 }
 
-type NavItem = { key: string; path: string; label: string; icon: any };
-type NavGroup = { id: string; label: string; icon: any; admin?: boolean; items: NavItem[] };
+type NavItem = { key: string; path: string; label: string; icon: any; globalAdmin?: boolean };
+type NavGroup = { id: string; label: string; icon: any; admin?: boolean; globalAdmin?: boolean; items: NavItem[] };
 
 const navGroups: NavGroup[] = [
   {
@@ -33,6 +33,7 @@ const navGroups: NavGroup[] = [
     label: "Rede",
     icon: Network,
     admin: true,
+    globalAdmin: true,
     items: [
       { key: "admin_rede", path: "/admin/rede", label: "Visão da Rede", icon: Network },
     ],
@@ -92,8 +93,8 @@ const navGroups: NavGroup[] = [
     icon: Settings,
     admin: true,
     items: [
-      { key: "admin_stores", path: "/admin/stores", label: "Lojas", icon: Store },
-      { key: "admin_users", path: "/admin/users", label: "Usuários", icon: Users },
+      { key: "admin_stores", path: "/admin/stores", label: "Lojas", icon: Store, globalAdmin: true },
+      { key: "admin_users", path: "/admin/users", label: "Usuários", icon: Users, globalAdmin: true },
       { key: "admin_metas", path: "/admin/metas", label: "Metas", icon: Target },
       { key: "admin_metas_sugestao", path: "/metas/sugestao", label: "Sugestão Analítica", icon: Target },
       { key: "admin_metas_realizado", path: "/metas/realizado", label: "Metas vs Realizado", icon: Target },
@@ -101,7 +102,7 @@ const navGroups: NavGroup[] = [
       { key: "admin_metas_premiacao", path: "/metas/premiacao/config", label: "Parametrização Pagamento", icon: Settings },
       { key: "admin_pic_departamentos", path: "/admin/pic-departamentos", label: "Parametrizações Pic", icon: Trophy },
       { key: "admin_questions", path: "/admin/questions", label: "Perguntas", icon: Settings },
-      { key: "admin_site", path: "/admin/site", label: "Página Inicial", icon: LayoutTemplate },
+      { key: "admin_site", path: "/admin/site", label: "Página Inicial", icon: LayoutTemplate, globalAdmin: true },
     ],
   },
   {
@@ -109,6 +110,7 @@ const navGroups: NavGroup[] = [
     label: "Integrações",
     icon: Plug,
     admin: true,
+    globalAdmin: true,
     items: [
       { key: "admin_parametrizacoes", path: "/admin/parametrizacoes", label: "Parametrizações Gerais", icon: Settings2 },
       { key: "admin_conexoes", path: "/admin/conexoes", label: "Conexões", icon: Plug },
@@ -120,7 +122,7 @@ const navGroups: NavGroup[] = [
 ];
 
 const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
-  const { user, isAdmin, signOut } = useAuth();
+  const { user, isAdmin, isGlobalAdmin, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -145,8 +147,8 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
   const isActive = (path: string) => location.pathname === path;
 
   const visibleGroups = navGroups
-    .filter((g) => (g.admin ? isAdmin : true))
-    .map((g) => ({ ...g, items: g.items.filter((i) => canSee(i.key)) }))
+    .filter((g) => (g.globalAdmin ? isGlobalAdmin : g.admin ? isAdmin : true))
+    .map((g) => ({ ...g, items: g.items.filter((i) => (i.globalAdmin && !isGlobalAdmin ? false : canSee(i.key))) }))
     .filter((g) => g.items.length > 0);
 
   return (

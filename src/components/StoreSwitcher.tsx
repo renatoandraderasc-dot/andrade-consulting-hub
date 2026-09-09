@@ -14,7 +14,7 @@ interface Store {
  * e recarrega para que todos os dados sejam refeitos para a loja ativa.
  */
 const StoreSwitcher = () => {
-  const { user, isAdmin } = useAuth();
+  const { user, isGlobalAdmin } = useAuth();
   const [stores, setStores] = useState<Store[]>([]);
   const [current, setCurrent] = useState<string>(
     () => sessionStorage.getItem("selectedStoreId") || ""
@@ -26,7 +26,7 @@ const StoreSwitcher = () => {
 
     const load = async () => {
       let list: Store[] = [];
-      if (isAdmin) {
+      if (isGlobalAdmin) {
         const { data } = await supabase.from("stores").select("id, name").order("name");
         list = data || [];
       } else {
@@ -59,7 +59,7 @@ const StoreSwitcher = () => {
     return () => {
       cancelled = true;
     };
-  }, [user, isAdmin]);
+  }, [user, isGlobalAdmin]);
 
   const change = (id: string) => {
     if (!id || id === current) return;
