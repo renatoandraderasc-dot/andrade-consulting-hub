@@ -71,8 +71,8 @@ Deno.serve(async (req) => {
         const uid = data.user!.id;
         // Garantir profile/role (trigger handle_new_user já cria)
         await admin.from("profiles").upsert({ user_id: uid, full_name }, { onConflict: "user_id" });
-        if (is_admin) {
-          await admin.from("user_roles").upsert({ user_id: uid, role: "admin" }, { onConflict: "user_id,role" });
+        if (papel === "admin" || papel === "supervisor") {
+          await admin.from("user_roles").upsert({ user_id: uid, role: papel }, { onConflict: "user_id,role" });
         }
         if (store_ids.length) {
           await admin.from("user_store_access").insert(
