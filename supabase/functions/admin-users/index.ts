@@ -112,6 +112,15 @@ Deno.serve(async (req) => {
         } as any);
         return Response.json({ ok: true }, { headers: corsHeaders });
       }
+      case "set_role": {
+        // role: "admin" | "supervisor" | "user"
+        const { user_id, role } = payload as { user_id: string; role: string };
+        await admin.from("user_roles").delete().eq("user_id", user_id).in("role", ["admin", "supervisor"]);
+        if (role === "admin" || role === "supervisor") {
+          await admin.from("user_roles").upsert({ user_id, role }, { onConflict: "user_id,role" });
+        }
+        return Response.json({ ok: true }, { headers: corsHeaders });
+      }
       case "set_admin": {
         const { user_id, is_admin } = payload;
         if (is_admin) {
