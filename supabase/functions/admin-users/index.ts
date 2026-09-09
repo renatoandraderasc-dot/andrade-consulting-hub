@@ -62,7 +62,8 @@ Deno.serve(async (req) => {
         );
       }
       case "create": {
-        const { email, password, full_name, store_ids = [], modules = [], is_admin = false } = payload;
+        const { email, password, full_name, store_ids = [], modules = [], is_admin = false, role } = payload;
+        const papel: string = role || (is_admin ? "admin" : "user");
         const { data, error } = await admin.auth.admin.createUser({
           email, password, email_confirm: true, user_metadata: { full_name },
         });
@@ -70,8 +71,8 @@ Deno.serve(async (req) => {
         const uid = data.user!.id;
         // Garantir profile/role (trigger handle_new_user já cria)
         await admin.from("profiles").upsert({ user_id: uid, full_name }, { onConflict: "user_id" });
-        if (is_admin) {
-          await admin.from("user_roles").upsert({ user_id: uid, role: "admin" }, { onConflict: "user_id,role" });
+        if (papel === "admin" || papel === "supervisor") {
+          await admin.from("user_roles").upsert({ user_id: uid, role: papel }, { onConflict: "user_id,role" });
         }
         if (store_ids.length) {
           await admin.from("user_store_access").insert(
@@ -109,6 +110,15 @@ Deno.serve(async (req) => {
         await admin.auth.admin.updateUserById(user_id, {
           ban_duration: blocked ? "876000h" : "none",
         } as any);
+        return Response.json({ ok: true }, { headers: corsHeaders });
+      }
+      case "set_role": {
+        // role: "admin" | "supervisor" | "user"
+        const { user_id, role } = payload as { user_id: string; role: string };
+        await admin.from("user_roles").delete().eq("user_id", user_id).in("role", ["admin", "supervisor"]);
+        if (role === "admin" || role === "supervisor") {
+          await admin.from("user_roles").upsert({ user_id, role }, { onConflict: "user_id,role" });
+        }
         return Response.json({ ok: true }, { headers: corsHeaders });
       }
       case "set_admin": {

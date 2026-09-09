@@ -84,7 +84,7 @@ const Section = ({ title, children }: any) => (
 );
 
 const AdminSite = () => {
-  const { user, isAdmin, loading: authLoading } = useAuth();
+  const { user, isGlobalAdmin: isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [content, setContent] = useState<SiteContent>(DEFAULT_CONTENT);
   const [loading, setLoading] = useState(true);

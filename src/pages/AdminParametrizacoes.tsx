@@ -40,7 +40,7 @@ const booleanValue = (v: string | null) =>
   v === "true" || v === "1" || v === "yes" || v === "sim";
 
 const AdminParametrizacoes = () => {
-  const { user, isAdmin, loading: authLoading } = useAuth();
+  const { user, isGlobalAdmin: isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 

@@ -605,7 +605,7 @@ const AdminRedeContent = () => {
 };
 
 const AdminRede = () => {
-  const { isAdmin, loading } = useAuth();
+  const { isGlobalAdmin: isAdmin, loading } = useAuth();
   if (loading) return <ClientLayout><div className="min-h-screen bg-background" /></ClientLayout>;
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
   return (
