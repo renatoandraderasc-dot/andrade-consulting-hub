@@ -62,7 +62,8 @@ Deno.serve(async (req) => {
         );
       }
       case "create": {
-        const { email, password, full_name, store_ids = [], modules = [], is_admin = false } = payload;
+        const { email, password, full_name, store_ids = [], modules = [], is_admin = false, role } = payload;
+        const papel: string = role || (is_admin ? "admin" : "user");
         const { data, error } = await admin.auth.admin.createUser({
           email, password, email_confirm: true, user_metadata: { full_name },
         });
