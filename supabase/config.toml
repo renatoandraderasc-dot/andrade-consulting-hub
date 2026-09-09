@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.vtex-catalog-collector]
 verify_jwt = false
+
+[functions.regex-solutions-diag]
+verify_jwt = false
