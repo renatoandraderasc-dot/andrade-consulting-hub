@@ -9,15 +9,29 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { summary } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const summary = body?.summary;
+    const prompt = typeof body?.prompt === "string" ? body.prompt : "";
+    if (!summary && !prompt) {
+      return new Response(JSON.stringify({ error: "informe summary ou prompt" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const systemPrompt = `Você é um analista financeiro especializado em fluxo de caixa de varejo/supermercados.
+    const systemPrompt = summary
+      ? `Você é um analista financeiro especializado em fluxo de caixa de varejo/supermercados.
 Analise os dados da agenda financeira e forneça insights acionáveis em português brasileiro.
 Seja direto, use emojis para destacar pontos importantes.
 Estruture em: Resumo, Alertas, Concentração de Pagamentos, Cobertura de Recebimentos, Risco de Caixa, Sugestões de Ação.
-Destaque o 5º dia útil (folha de pagamento) e dia 20 (impostos).`;
+Destaque o 5º dia útil (folha de pagamento) e dia 20 (impostos).`
+      : `Você é um analista comercial de varejo/supermercados. Responda em português brasileiro, de forma objetiva e sem recalcular números fornecidos.`;
+
+    const userPrompt = summary
+      ? `Analise a agenda financeira de ${summary.mes ?? ""} ${summary.ano ?? ""}:\n\n${JSON.stringify(summary, null, 2)}`
+      : prompt;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -29,7 +43,7 @@ Destaque o 5º dia útil (folha de pagamento) e dia 20 (impostos).`;
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Analise a agenda financeira de ${summary.mes} ${summary.ano}:\n\n${JSON.stringify(summary, null, 2)}` },
+          { role: "user", content: userPrompt },
         ],
       }),
     });
@@ -44,7 +58,7 @@ Destaque o 5º dia útil (folha de pagamento) e dia 20 (impostos).`;
     const data = await response.json();
     const insights = data.choices?.[0]?.message?.content || "Não foi possível gerar insights.";
 
-    return new Response(JSON.stringify({ insights }), {
+    return new Response(JSON.stringify({ insights, texto: insights }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

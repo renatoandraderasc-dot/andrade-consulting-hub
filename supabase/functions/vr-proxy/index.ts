@@ -58,9 +58,10 @@ Deno.serve(async (req) => {
     // sao falhas do app: devolvemos 200 com o campo `erro` para a UI so avisar.
     if (!r.ok) {
       const msg = r.erro ?? "falha ao consultar o sistema da loja";
-      const brando = r.semConexao ||
-        /404|relatorio nao encontrado|nao existe|nao cadastrado|parametro ausente|not supported|ORA-\d+|illegal variable|invalid identifier|Parametros obrigatorios/i.test(msg);
-      return json({ erro: msg, dados: [] }, brando ? 200 : 502);
+      console.error("vr-proxy falha", JSON.stringify({ store_id, relatorio, erro: msg }));
+      // Falhas do lado da loja (conector, tunel, timeout, rede) nao sao erros do
+      // app: respondemos 200 com `erro` para a UI mostrar um aviso amigavel.
+      return json({ erro: msg, dados: [] }, 200);
     }
 
     return json({ ok: true, relatorio, dados: r.dados });

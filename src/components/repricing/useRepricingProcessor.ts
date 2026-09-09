@@ -109,6 +109,7 @@ export function useRepricingProcessor(
     const sampleP = produtos[0];
     const colEanP = findCol(sampleP, EAN_COLS);
     const colDescP = findCol(sampleP, ["descricao", "descrição", "produto", "nome", "item"]);
+    const colCodP = findCol(sampleP, ["codigo_reduzido", "cod_reduzido", "codigo_interno", "codigo", "código"]);
     const colCustoP = findCol(sampleP, ["custo", "preco_custo", "vlr_custo"]);
     const colPrecoP = findCol(sampleP, ["preco", "preço", "preco_venda", "vlr_venda", "preco_atual"]);
     // Preferir nível 1 do mercadológico; nunca concatenar nível 1 + nível 2.
@@ -151,6 +152,9 @@ export function useRepricingProcessor(
       rows.push({
         id: `${i}-${ean}`,
         ean,
+        codigoReduzido: String(
+          p["codigo_reduzido"] ?? p["codigo"] ?? p[colCodP ?? ""] ?? "",
+        ).trim(),
         descricao: String(p[colDescP ?? ""] ?? "Sem descrição"),
         custo: toNum(p[colCustoP ?? ""]),
         precoAtual: toNum(p[colPrecoP ?? ""]),

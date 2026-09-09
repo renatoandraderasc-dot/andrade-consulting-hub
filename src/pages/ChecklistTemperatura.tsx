@@ -531,8 +531,9 @@ const ChecklistTemperatura = () => {
                   <div className="md:col-span-2 space-y-1">
                     <Label className="font-body text-xs">Turnos</Label>
                     <Input
-                      value={eq.turnos.join(", ")}
-                      onChange={(e) => updateEquipamento(eq.id, { turnos: e.target.value.split(",").map((t) => t.trim()).filter(Boolean) })}
+                      defaultValue={eq.turnos.join(", ")}
+                      key={`turnos-${eq.id}`}
+                      onBlur={(e) => updateEquipamento(eq.id, { turnos: e.target.value.split(",").map((t) => t.trim()).filter(Boolean) })}
                     />
                   </div>
                   <div className="md:col-span-1 flex items-center gap-3 justify-end">
