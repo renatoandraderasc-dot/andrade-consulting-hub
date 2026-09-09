@@ -123,6 +123,7 @@ const AdminUsers = () => {
           )}
           {filtered.map((u) => {
             const isAdminUser = u.roles.includes("admin");
+            const isSupervisorUser = u.roles.includes("supervisor");
             const blocked = u.profile?.blocked;
             return (
               <div key={u.id} className="grid grid-cols-12 gap-3 px-4 py-3 border-b border-border last:border-0 items-center hover:bg-accent/40 transition-colors">
@@ -134,6 +135,10 @@ const AdminUsers = () => {
                   {isAdminUser ? (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/15 text-primary text-xs font-body font-semibold">
                       <Shield className="w-3 h-3" /> Admin
+                    </span>
+                  ) : isSupervisorUser ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 text-xs font-body font-semibold">
+                      <Shield className="w-3 h-3" /> Supervisor
                     </span>
                   ) : (
                     <span className="text-xs font-body text-muted-foreground">Usuário</span>
@@ -193,7 +198,7 @@ const CreateUserDialog = ({ stores, onClose, onCreated, call }: any) => {
   const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
-  const [isAdminFlag, setIsAdminFlag] = useState(false);
+  const [papel, setPapel] = useState<"user" | "supervisor" | "admin">("user");
   const [storeIds, setStoreIds] = useState<string[]>([]);
   const [modules, setModules] = useState<string[]>(APP_MODULES.filter(m => !m.key.startsWith("admin_") && m.key !== "vtex_collector" && m.key !== "websac_sync").map(m => m.key));
   const [saving, setSaving] = useState(false);
@@ -202,7 +207,7 @@ const CreateUserDialog = ({ stores, onClose, onCreated, call }: any) => {
     if (!email || !password) { toast({ title: "Preencha email e senha", variant: "destructive" }); return; }
     setSaving(true);
     try {
-      await call("create", { email, password, full_name: fullName, is_admin: isAdminFlag, store_ids: storeIds, modules });
+      await call("create", { email, password, full_name: fullName, role: papel, is_admin: papel === "admin", store_ids: storeIds, modules });
       toast({ title: "Usuário criado!" });
       onCreated();
     } catch (e: any) { toast({ title: "Erro", description: e.message, variant: "destructive" }); }
@@ -227,10 +232,18 @@ const CreateUserDialog = ({ stores, onClose, onCreated, call }: any) => {
               </button>
             </div>
           </div>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <Checkbox checked={isAdminFlag} onCheckedChange={(v) => setIsAdminFlag(!!v)} />
-            <span className="font-body text-sm">Conceder papel de Administrador</span>
-          </label>
+          <div>
+            <Label className="flex items-center gap-1"><Shield className="w-3 h-3" /> Perfil de acesso</Label>
+            <select
+              value={papel}
+              onChange={(e) => setPapel(e.target.value as any)}
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm font-body"
+            >
+              <option value="user">Usuário — acesso pelos módulos liberados</option>
+              <option value="supervisor">Supervisor — poderes de admin somente nas lojas autorizadas</option>
+              <option value="admin">Administrador — acesso total à rede</option>
+            </select>
+          </div>
 
           <div>
             <p className="font-body text-sm font-semibold mb-2 flex items-center gap-2"><StoreIcon className="w-4 h-4" /> Lojas autorizadas</p>
@@ -283,7 +296,12 @@ const EditUserDialog = ({ user, stores, onClose, onSaved, call }: any) => {
   const [email, setEmail] = useState(user.email);
   const [newPassword, setNewPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
-  const [isAdminFlag, setIsAdminFlag] = useState(user.roles.includes("admin"));
+  const papelAtual: "user" | "supervisor" | "admin" = user.roles.includes("admin")
+    ? "admin"
+    : user.roles.includes("supervisor")
+    ? "supervisor"
+    : "user";
+  const [papel, setPapel] = useState<"user" | "supervisor" | "admin">(papelAtual);
   const [blocked, setBlocked] = useState(!!user.profile?.blocked);
   const [storeIds, setStoreIds] = useState<string[]>(user.stores.filter((s: any) => s.approved).map((s: any) => s.store_id));
   const [moduleKeys, setModuleKeys] = useState<string[]>(user.modules.filter((m: any) => m.allowed).map((m: any) => m.module));
@@ -297,7 +315,7 @@ const EditUserDialog = ({ user, stores, onClose, onSaved, call }: any) => {
         ops.push(call("update_user", { user_id: user.id, full_name: fullName, email: email !== user.email ? email : undefined }));
       }
       if (newPassword) ops.push(call("set_password", { user_id: user.id, password: newPassword }));
-      if (isAdminFlag !== user.roles.includes("admin")) ops.push(call("set_admin", { user_id: user.id, is_admin: isAdminFlag }));
+      if (papel !== papelAtual) ops.push(call("set_role", { user_id: user.id, role: papel }));
       if (blocked !== !!user.profile?.blocked) ops.push(call("set_blocked", { user_id: user.id, blocked }));
       ops.push(call("set_stores", { user_id: user.id, store_ids: storeIds }));
       ops.push(call("set_modules", { user_id: user.id, modules: APP_MODULES.map(m => ({ module: m.key, allowed: moduleKeys.includes(m.key) })) }));
@@ -345,10 +363,18 @@ const EditUserDialog = ({ user, stores, onClose, onSaved, call }: any) => {
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <label className="flex items-center gap-2 cursor-pointer p-3 rounded-lg border border-border">
-              <Checkbox checked={isAdminFlag} onCheckedChange={(v) => setIsAdminFlag(!!v)} />
-              <span className="font-body text-sm flex items-center gap-1"><Shield className="w-4 h-4" /> Administrador</span>
-            </label>
+            <div className="p-3 rounded-lg border border-border">
+              <Label className="flex items-center gap-1 mb-1"><Shield className="w-4 h-4" /> Perfil de acesso</Label>
+              <select
+                value={papel}
+                onChange={(e) => setPapel(e.target.value as any)}
+                className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm font-body"
+              >
+                <option value="user">Usuário</option>
+                <option value="supervisor">Supervisor (admin nas lojas autorizadas)</option>
+                <option value="admin">Administrador</option>
+              </select>
+            </div>
             <label className="flex items-center gap-2 cursor-pointer p-3 rounded-lg border border-border">
               <Checkbox checked={blocked} onCheckedChange={(v) => setBlocked(!!v)} />
               <span className="font-body text-sm flex items-center gap-1"><Ban className="w-4 h-4" /> Bloquear acesso</span>
