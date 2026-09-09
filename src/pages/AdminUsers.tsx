@@ -30,7 +30,7 @@ interface ManagedUser {
 interface Store { id: string; name: string; }
 
 const AdminUsers = () => {
-  const { user, isAdmin, loading: authLoading } = useAuth();
+  const { user, isGlobalAdmin: isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [users, setUsers] = useState<ManagedUser[]>([]);

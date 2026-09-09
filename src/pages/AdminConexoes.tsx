@@ -70,7 +70,7 @@ const pendencias = (r: Row): string[] => {
 };
 
 const AdminConexoes = () => {
-  const { user, isAdmin, loading: authLoading } = useAuth();
+  const { user, isGlobalAdmin: isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
