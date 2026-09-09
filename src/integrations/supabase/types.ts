@@ -3113,6 +3113,7 @@ export type Database = {
       importar_lancamentos_vr_auto: { Args: never; Returns: number }
       is_supervisor: { Args: { _user_id?: string }; Returns: boolean }
       minutos_para_cron: { Args: { minutos: number }; Returns: string }
+      pode_gerenciar_loja: { Args: { _store_id: string }; Returns: boolean }
       semear_taxas_padrao: {
         Args: {
           p_department: string
