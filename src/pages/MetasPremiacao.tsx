@@ -13,7 +13,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { CartProgressOverlay } from "@/components/CartProgress";
-import { useVrRealizado, LOJA } from "@/hooks/useVrRealizado";
+import { useVrRealizado, LOJA, canonDept } from "@/hooks/useVrRealizado";
 import { fmtBRL, fmtPct, MESES, diasNoMes } from "@/lib/metasSugestao";
 import {
   carregarPremiacaoConfig, PREMIACAO_PADRAO, type PremiacaoConfig, type FotoKey,
@@ -93,7 +93,7 @@ const MetasPremiacao = () => {
         .range(from, from + 999);
       if (error || !data?.length) break;
       for (const r of data) {
-        const dep = (r.department || "OUTROS").toUpperCase();
+        const dep = canonDept(r.department || "OUTROS") || "OUTROS";
         const d = porDep[dep] ?? (porDep[dep] = { vendas: 0, lucro: 0, volume: 0, mix: 0 });
         d.vendas += Number(r.meta_vendas) || 0;
         d.lucro += Number(r.meta_lucro) || 0;
@@ -125,7 +125,7 @@ const MetasPremiacao = () => {
   const realizadoDep = useMemo(() => {
     const out: Record<string, { vendas: number; lucro: number; volume: number; mix: number }> = {};
     for (const k of Object.keys(atual.data ?? {})) {
-      const key = k === LOJA ? LOJA : k.toUpperCase();
+      const key = k === LOJA ? LOJA : canonDept(k) || k.toUpperCase();
       const t = out[key] ?? (out[key] = { vendas: 0, lucro: 0, volume: 0, mix: 0 });
       for (const d of atual.data![k]) {
         t.vendas += d.vendas; t.lucro += d.lucro; t.volume += d.volume; t.mix += d.mix;

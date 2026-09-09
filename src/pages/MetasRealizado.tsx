@@ -13,7 +13,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { CartProgressOverlay } from "@/components/CartProgress";
-import { useVrRealizado, LOJA } from "@/hooks/useVrRealizado";
+import { useVrRealizado, LOJA, canonDept } from "@/hooks/useVrRealizado";
 import { fmtBRL, fmtNum, fmtPct, MESES, diasNoMes } from "@/lib/metasSugestao";
 import { salvarWorkbook } from "@/lib/exportBranding";
 
@@ -94,7 +94,7 @@ const MetasRealizado = () => {
         .range(from, from + 999);
       if (error || !data?.length) break;
       for (const r of data) {
-        const d = (r.department || "OUTROS").toUpperCase();
+        const d = canonDept(r.department || "OUTROS") || "OUTROS";
         const cur = (acc[d] ||= { vendas: 0, lucro: 0, volume: 0, mix: 0 });
         cur.vendas += Number(r.meta_vendas) || 0;
         cur.lucro += Number(r.meta_lucro) || 0;

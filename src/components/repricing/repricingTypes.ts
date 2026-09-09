@@ -22,6 +22,8 @@ export interface ConcorrenteCell {
 export interface RepricingRow {
   id: string;
   ean: string;
+  /** código interno/reduzido do cadastro da loja (para levar ao ERP) */
+  codigoReduzido: string;
   descricao: string;
   custo: number;
   precoAtual: number;

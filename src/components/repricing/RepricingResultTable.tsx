@@ -144,6 +144,7 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
     const data = filtered.map((r) => {
       const linha: Record<string, unknown> = {
         Produto: r.descricao,
+        "Cód. reduzido": r.codigoReduzido ?? "",
         EAN: r.ean,
         Mercadológico: r.mercadologico,
         Custo: r.custo,
