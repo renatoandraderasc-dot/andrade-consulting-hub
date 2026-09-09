@@ -3111,6 +3111,7 @@ export type Database = {
         }[]
       }
       importar_lancamentos_vr_auto: { Args: never; Returns: number }
+      is_supervisor: { Args: { _user_id?: string }; Returns: boolean }
       minutos_para_cron: { Args: { minutos: number }; Returns: string }
       semear_taxas_padrao: {
         Args: {
