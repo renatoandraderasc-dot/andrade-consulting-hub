@@ -5,7 +5,11 @@ import type { User, Session } from "@supabase/supabase-js";
 interface AuthContextType {
   user: User | null;
   session: Session | null;
+  /** true para Administrador e Supervisor (mesmos poderes; supervisor é limitado às suas lojas) */
   isAdmin: boolean;
+  /** somente Administrador global (configurações da rede: lojas, usuários, parâmetros, site) */
+  isGlobalAdmin: boolean;
+  isSupervisor: boolean;
   loading: boolean;
   signOut: () => Promise<void>;
 }
@@ -14,6 +18,8 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
   isAdmin: false,
+  isGlobalAdmin: false,
+  isSupervisor: false,
   loading: true,
   signOut: async () => {},
 });
@@ -21,16 +27,19 @@ const AuthContext = createContext<AuthContextType>({
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isGlobalAdmin, setIsGlobalAdmin] = useState(false);
+  const [isSupervisor, setIsSupervisor] = useState(false);
   const [loading, setLoading] = useState(true);
+  const isAdmin = isGlobalAdmin || isSupervisor;
 
   const checkAdmin = async (userId: string) => {
     const { data } = await supabase
       .from("user_roles")
       .select("role")
-      .eq("user_id", userId)
-      .eq("role", "admin");
-    setIsAdmin(!!data && data.length > 0);
+      .eq("user_id", userId);
+    const roles = (data || []).map((r) => r.role as string);
+    setIsGlobalAdmin(roles.includes("admin"));
+    setIsSupervisor(roles.includes("supervisor"));
   };
 
   useEffect(() => {
