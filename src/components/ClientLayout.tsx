@@ -88,6 +88,15 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
+    id: "jornada",
+    label: "Jornada",
+    icon: ClipboardList,
+    items: [
+      { key: "jornada", path: "/jornada", label: "Minha Jornada", icon: ClipboardList },
+      { key: "admin_jornada", path: "/admin/jornada", label: "Admin da Jornada", icon: Settings, admin: true },
+    ],
+  },
+  {
     id: "cadastros",
     label: "Cadastros",
     icon: Settings,
