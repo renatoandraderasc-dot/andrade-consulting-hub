@@ -24,7 +24,7 @@ interface ClientLayoutProps {
   storeName?: string;
 }
 
-type NavItem = { key: string; path: string; label: string; icon: any; globalAdmin?: boolean };
+type NavItem = { key: string; path: string; label: string; icon: any; globalAdmin?: boolean; admin?: boolean };
 type NavGroup = { id: string; label: string; icon: any; admin?: boolean; globalAdmin?: boolean; items: NavItem[] };
 
 const navGroups: NavGroup[] = [
@@ -88,6 +88,15 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
+    id: "jornada",
+    label: "Jornada",
+    icon: ClipboardList,
+    items: [
+      { key: "jornada", path: "/jornada", label: "Minha Jornada", icon: ClipboardList },
+      { key: "admin_jornada", path: "/admin/jornada", label: "Admin da Jornada", icon: Settings, admin: true },
+    ],
+  },
+  {
     id: "cadastros",
     label: "Cadastros",
     icon: Settings,
@@ -148,7 +157,11 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
 
   const visibleGroups = navGroups
     .filter((g) => (g.globalAdmin ? isGlobalAdmin : g.admin ? isAdmin : true))
-    .map((g) => ({ ...g, items: g.items.filter((i) => (i.globalAdmin && !isGlobalAdmin ? false : canSee(i.key))) }))
+    .map((g) => ({
+      ...g,
+      items: g.items.filter((i) =>
+        i.globalAdmin && !isGlobalAdmin ? false : i.admin && !isAdmin ? false : canSee(i.key)),
+    }))
     .filter((g) => g.items.length > 0);
 
   return (

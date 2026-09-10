@@ -43,6 +43,8 @@ import AdminSitesConcorrentes from "./pages/AdminSitesConcorrentes";
 import AdminConexoes from "./pages/AdminConexoes";
 import AdminRede from "./pages/AdminRede";
 import AdminParametrizacoes from "./pages/AdminParametrizacoes";
+import Jornada from "./pages/Jornada";
+import AdminJornada from "./pages/AdminJornada";
 import NotFound from "./pages/NotFound";
 import ModuleGuard from "@/components/ModuleGuard";
 
@@ -100,7 +102,10 @@ const App = () => (
             <Route path="/encarte-sugestao" element={g("encarte_sugestao", <EncarteSugestao />)} />
             <Route path="/encartes/editor" element={g("encarte_editor", <EncarteEditor />)} />
             <Route path="/encartes/editor/:id" element={g("encarte_editor", <EncarteEditor />)} />
+            <Route path="/jornada" element={g("jornada", <Jornada />)} />
+            <Route path="/admin/jornada" element={g("jornada", <AdminJornada />)} />
             <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
