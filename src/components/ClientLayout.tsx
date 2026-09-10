@@ -157,7 +157,11 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
 
   const visibleGroups = navGroups
     .filter((g) => (g.globalAdmin ? isGlobalAdmin : g.admin ? isAdmin : true))
-    .map((g) => ({ ...g, items: g.items.filter((i) => (i.globalAdmin && !isGlobalAdmin ? false : canSee(i.key))) }))
+    .map((g) => ({
+      ...g,
+      items: g.items.filter((i) =>
+        i.globalAdmin && !isGlobalAdmin ? false : i.admin && !isAdmin ? false : canSee(i.key)),
+    }))
     .filter((g) => g.items.length > 0);
 
   return (
