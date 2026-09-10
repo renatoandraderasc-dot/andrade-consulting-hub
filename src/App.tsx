@@ -43,6 +43,8 @@ import AdminSitesConcorrentes from "./pages/AdminSitesConcorrentes";
 import AdminConexoes from "./pages/AdminConexoes";
 import AdminRede from "./pages/AdminRede";
 import AdminParametrizacoes from "./pages/AdminParametrizacoes";
+import Jornada from "./pages/Jornada";
+import AdminJornada from "./pages/AdminJornada";
 import NotFound from "./pages/NotFound";
 import ModuleGuard from "@/components/ModuleGuard";
 
