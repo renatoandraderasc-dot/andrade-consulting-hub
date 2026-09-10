@@ -1385,6 +1385,216 @@ export type Database = {
         }
         Relationships: []
       }
+      jornada_checklist_itens: {
+        Row: {
+          created_at: string
+          execucao_id: string
+          feito: boolean
+          feito_em: string | null
+          feito_por: string | null
+          id: string
+          ordem: number
+          texto: string
+        }
+        Insert: {
+          created_at?: string
+          execucao_id: string
+          feito?: boolean
+          feito_em?: string | null
+          feito_por?: string | null
+          id?: string
+          ordem?: number
+          texto: string
+        }
+        Update: {
+          created_at?: string
+          execucao_id?: string
+          feito?: boolean
+          feito_em?: string | null
+          feito_por?: string | null
+          id?: string
+          ordem?: number
+          texto?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jornada_checklist_itens_execucao_id_fkey"
+            columns: ["execucao_id"]
+            isOneToOne: false
+            referencedRelation: "jornada_execucoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jornada_execucoes: {
+        Row: {
+          avulsa: boolean
+          concluida_em: string | null
+          created_at: string
+          id: string
+          iniciada_em: string | null
+          observacoes: string | null
+          periodo_ref: string
+          responsavel: string | null
+          status: Database["public"]["Enums"]["jornada_status"]
+          store_id: string
+          template_id: string
+          updated_at: string
+        }
+        Insert: {
+          avulsa?: boolean
+          concluida_em?: string | null
+          created_at?: string
+          id?: string
+          iniciada_em?: string | null
+          observacoes?: string | null
+          periodo_ref: string
+          responsavel?: string | null
+          status?: Database["public"]["Enums"]["jornada_status"]
+          store_id: string
+          template_id: string
+          updated_at?: string
+        }
+        Update: {
+          avulsa?: boolean
+          concluida_em?: string | null
+          created_at?: string
+          id?: string
+          iniciada_em?: string | null
+          observacoes?: string | null
+          periodo_ref?: string
+          responsavel?: string | null
+          status?: Database["public"]["Enums"]["jornada_status"]
+          store_id?: string
+          template_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jornada_execucoes_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jornada_execucoes_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "jornada_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jornada_perfil_usuario: {
+        Row: {
+          perfil_id: string
+          user_id: string
+        }
+        Insert: {
+          perfil_id: string
+          user_id: string
+        }
+        Update: {
+          perfil_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jornada_perfil_usuario_perfil_id_fkey"
+            columns: ["perfil_id"]
+            isOneToOne: false
+            referencedRelation: "jornada_perfis"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jornada_perfis: {
+        Row: {
+          ativo: boolean
+          chave: string
+          cor: string
+          created_at: string
+          descricao: string | null
+          icone: string
+          id: string
+          nome: string
+          ordem: number
+        }
+        Insert: {
+          ativo?: boolean
+          chave: string
+          cor?: string
+          created_at?: string
+          descricao?: string | null
+          icone?: string
+          id?: string
+          nome: string
+          ordem?: number
+        }
+        Update: {
+          ativo?: boolean
+          chave?: string
+          cor?: string
+          created_at?: string
+          descricao?: string | null
+          icone?: string
+          id?: string
+          nome?: string
+          ordem?: number
+        }
+        Relationships: []
+      }
+      jornada_templates: {
+        Row: {
+          ativo: boolean
+          cadencia: Database["public"]["Enums"]["jornada_cadencia"]
+          checklist_padrao: Json
+          created_at: string
+          descricao: string | null
+          id: string
+          ordem: number
+          perfil_id: string
+          rota_hub: string | null
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          cadencia: Database["public"]["Enums"]["jornada_cadencia"]
+          checklist_padrao?: Json
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          ordem?: number
+          perfil_id: string
+          rota_hub?: string | null
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          cadencia?: Database["public"]["Enums"]["jornada_cadencia"]
+          checklist_padrao?: Json
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          ordem?: number
+          perfil_id?: string
+          rota_hub?: string | null
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jornada_templates_perfil_id_fkey"
+            columns: ["perfil_id"]
+            isOneToOne: false
+            referencedRelation: "jornada_perfis"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lancamentos: {
         Row: {
           classificacao_manual: boolean
@@ -3112,6 +3322,7 @@ export type Database = {
       }
       importar_lancamentos_vr_auto: { Args: never; Returns: number }
       is_supervisor: { Args: { _user_id?: string }; Returns: boolean }
+      jornada_tem_acesso_loja: { Args: { p_store: string }; Returns: boolean }
       minutos_para_cron: { Args: { minutos: number }; Returns: string }
       pode_gerenciar_loja: { Args: { _store_id: string }; Returns: boolean }
       semear_taxas_padrao: {
@@ -3130,6 +3341,8 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user" | "supervisor"
+      jornada_cadencia: "diaria" | "semanal" | "mensal"
+      jornada_status: "a_fazer" | "em_andamento" | "concluida"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3258,6 +3471,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user", "supervisor"],
+      jornada_cadencia: ["diaria", "semanal", "mensal"],
+      jornada_status: ["a_fazer", "em_andamento", "concluida"],
     },
   },
 } as const
