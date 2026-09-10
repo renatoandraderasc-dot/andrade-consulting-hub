@@ -24,7 +24,7 @@ interface ClientLayoutProps {
   storeName?: string;
 }
 
-type NavItem = { key: string; path: string; label: string; icon: any; globalAdmin?: boolean };
+type NavItem = { key: string; path: string; label: string; icon: any; globalAdmin?: boolean; admin?: boolean };
 type NavGroup = { id: string; label: string; icon: any; admin?: boolean; globalAdmin?: boolean; items: NavItem[] };
 
 const navGroups: NavGroup[] = [
