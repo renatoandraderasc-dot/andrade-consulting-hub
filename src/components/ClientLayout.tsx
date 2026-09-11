@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   BarChart3, CheckSquare, Settings, Settings2, Users, LogOut, Menu, X, ArrowLeft,
   Target, ClipboardList, DollarSign, Database, RefreshCw, Trophy, Store, ShoppingCart, LayoutTemplate, TrendingUp, Package, KeyRound, Plug, ScanLine, Tags, ChevronDown, Globe, Network,
-  Thermometer,
+  Thermometer, LayoutDashboard,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -53,6 +53,7 @@ const navGroups: NavGroup[] = [
     label: "Financeiro",
     icon: ClipboardList,
     items: [
+      { key: "dashboard_financeiro", path: "/dashboard-financeiro", label: "Dashboard", icon: LayoutDashboard },
       { key: "controladoria", path: "/controladoria", label: "Controladoria", icon: ClipboardList },
     ],
   },
