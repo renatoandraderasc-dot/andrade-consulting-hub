@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
   ComposedChart,
   Area,
+  Bar,
   Line,
   XAxis,
   YAxis,
@@ -421,6 +422,16 @@ export default function VendasLojaSection({ storeId, startDate, endDate, categor
                       axisLine={{ stroke: "hsl(var(--border))" }}
                     />
                     <YAxis
+                      yAxisId="acum"
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={11}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={fmtShort}
+                    />
+                    <YAxis
+                      yAxisId="dia"
+                      orientation="right"
                       stroke="hsl(var(--muted-foreground))"
                       fontSize={11}
                       tickLine={false}
@@ -443,7 +454,22 @@ export default function VendasLojaSection({ storeId, startDate, endDate, categor
                       wrapperStyle={{ fontSize: 11, color: "hsl(var(--muted-foreground))" }}
                       iconType="plainline"
                     />
+                    <Bar
+                      yAxisId="dia"
+                      dataKey="Meta diária"
+                      fill="hsl(var(--muted-foreground))"
+                      fillOpacity={0.35}
+                      barSize={10}
+                    />
+                    <Bar
+                      yAxisId="dia"
+                      dataKey="Realizado"
+                      fill="hsl(var(--primary))"
+                      fillOpacity={0.85}
+                      barSize={10}
+                    />
                     <Area
+                      yAxisId="acum"
                       type="monotone"
                       dataKey="Realizado acumulado"
                       stroke="hsl(var(--primary))"
@@ -452,6 +478,7 @@ export default function VendasLojaSection({ storeId, startDate, endDate, categor
                       dot={false}
                     />
                     <Line
+                      yAxisId="acum"
                       type="monotone"
                       dataKey="Meta acumulada"
                       stroke="hsl(var(--muted-foreground))"
@@ -460,6 +487,7 @@ export default function VendasLojaSection({ storeId, startDate, endDate, categor
                       dot={false}
                     />
                     <Line
+                      yAxisId="dia"
                       type="monotone"
                       dataKey="Projeção"
                       stroke="hsl(var(--warning, 38 92% 50%))"
