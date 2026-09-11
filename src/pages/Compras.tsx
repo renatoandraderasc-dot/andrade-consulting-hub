@@ -19,6 +19,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import HierarquiaVendasTable from "@/components/relatorios/HierarquiaVendasTable";
 import { carregarBaseCatalogo } from "@/lib/catalogoProdutos";
 import { CartProgressOverlay } from "@/components/CartProgress";
+import { useAutoRefresh } from "@/hooks/useSaasConfig";
 
 
 interface Store { id: string; name: string }
@@ -287,6 +288,14 @@ const Compras = () => {
       setFornecedores([]);
     } finally { setFornLoading(false); }
   };
+
+  // Atualização automática parametrizável (Parametrizações Gerais)
+  useAutoRefresh("refresh_compras_segundos", () => {
+    if (!storeId) return;
+    fetchMetas();
+    fetchHistorico();
+    fetchRealizadoMesAtual();
+  });
 
   const salvarConfig = async () => {
     if (!isAdmin) return;

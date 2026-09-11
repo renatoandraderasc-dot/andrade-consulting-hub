@@ -18,6 +18,7 @@ import { Plus, Pencil, Trash2, Copy, Search, CheckSquare } from "lucide-react";
 import { ImportLancamentos } from "./ImportLancamentos";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useAutoRefresh } from "@/hooks/useSaasConfig";
 import { toast } from "sonner";
 import { TIPOS_LANCAMENTO_V2, SUBCONTAS_V2 } from "./contRedeStructure";
 import type { Lancamento } from "./lancamentosTypes";
@@ -84,6 +85,11 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
   useEffect(() => {
     if (storeId) fetchLancamentos();
   }, [storeId, filterMes, filterAno]);
+
+  // Atualização automática parametrizável (Parametrizações Gerais)
+  useAutoRefresh("refresh_controladoria_segundos", () => {
+    if (storeId) fetchLancamentos();
+  });
 
   const fetchLancamentos = async () => {
     setLoading(true);

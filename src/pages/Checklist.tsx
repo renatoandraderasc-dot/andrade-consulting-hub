@@ -5,6 +5,7 @@ import { CheckSquare, RotateCcw, Camera, Send, History, ClipboardList, User, Clo
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useAutoRefresh } from "@/hooks/useSaasConfig";
 import ClientLayout from "@/components/ClientLayout";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
@@ -103,6 +104,12 @@ const Checklist = () => {
     }
     setLoading(false);
   };
+
+  // Atualização automática parametrizável (Parametrizações Gerais)
+  useAutoRefresh("refresh_checklist_segundos", () => {
+    fetchData();
+    fetchHistory();
+  });
 
   const fetchHistory = async () => {
     if (!user) return;
