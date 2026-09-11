@@ -176,8 +176,11 @@ const Dashboard = () => {
   };
 
   // Metas (banco) + realizado ao vivo (VR)
+  // Regra D-1: o dia corrente é parcial e NÃO entra em nenhum acumulado.
   const dailyData: DailyRow[] = useMemo(() => {
     if (!vr) return [];
+    const hoje = new Date();
+    const hojeStr = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(hoje.getDate()).padStart(2, "0")}`;
     // Sem departamento selecionado (loja sem metas por departamento), usa o total da loja
     const key = selectedDept ? canonDept(selectedDept) : "";
     const serie = (key && (vr[key] || vr[selectedDept])) || vr["LOJA"] || [];
@@ -186,7 +189,7 @@ const Dashboard = () => {
 
     return dates.map((date) => {
       const d: any = metaRows.find((m: any) => m.date === date) || {};
-      const r = real.get(date);
+      const r = date < hojeStr ? real.get(date) : undefined;
       return {
         date: new Date(date + "T12:00:00").toLocaleDateString("pt-BR"),
         tipoDia: d.tipo_dia,

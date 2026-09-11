@@ -20,6 +20,7 @@ export interface DailyRow {
 const num = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 });
 const fmt = (v: number) => num.format(v || 0);
 const pct = (v: number) => `${(v || 0).toFixed(2)}%`;
+const pctAting = (real: number, meta: number) => (meta > 0 ? (real / meta) * 100 : 0);
 
 const StatusIcon = ({ ok }: { ok: boolean }) =>
   ok ? (
@@ -27,6 +28,20 @@ const StatusIcon = ({ ok }: { ok: boolean }) =>
   ) : (
     <XCircle className="w-3.5 h-3.5 text-danger inline" />
   );
+
+// Célula de % com hover mostrando os valores absolutos (Meta, Realizado e %)
+const PctCell = ({ real, meta, money }: { real: number; meta: number; money?: boolean }) => {
+  const p = pctAting(real, meta);
+  const f = money ? (v: number) => `R$ ${fmt(v)}` : fmt;
+  return (
+    <td
+      className="px-3 py-2 text-right"
+      title={`Meta ${f(meta)} · Realizado ${f(real)} · ${pct(p)}`}
+    >
+      {pct(p)}
+    </td>
+  );
+};
 
 const DailyMetricsTable = ({ data }: { data: DailyRow[] }) => {
   if (data.length === 0) {
@@ -41,24 +56,20 @@ const DailyMetricsTable = ({ data }: { data: DailyRow[] }) => {
     (acc, r) => ({
       metaVendas: acc.metaVendas + r.metaVendas,
       realizadoVendas: acc.realizadoVendas + r.realizadoVendas,
-      projecaoVendas: acc.projecaoVendas + r.projecaoVendas,
       metaLucro: acc.metaLucro + r.metaLucro,
       realizadoLucro: acc.realizadoLucro + r.realizadoLucro,
-      projecaoLucro: acc.projecaoLucro + r.projecaoLucro,
       metaVolume: acc.metaVolume + r.metaVolume,
       realizadoVolume: acc.realizadoVolume + r.realizadoVolume,
-      projecaoVolume: acc.projecaoVolume + r.projecaoVolume,
     }),
     {
-      metaVendas: 0, realizadoVendas: 0, projecaoVendas: 0,
-      metaLucro: 0, realizadoLucro: 0, projecaoLucro: 0,
-      metaVolume: 0, realizadoVolume: 0, projecaoVolume: 0,
+      metaVendas: 0, realizadoVendas: 0,
+      metaLucro: 0, realizadoLucro: 0,
+      metaVolume: 0, realizadoVolume: 0,
     },
   );
   // Margin totals derived consistently: total lucro / total vendas
   const metaMargemTotal = t.metaVendas > 0 ? (t.metaLucro / t.metaVendas) * 100 : 0;
   const realMargemTotal = t.realizadoVendas > 0 ? (t.realizadoLucro / t.realizadoVendas) * 100 : 0;
-  const projMargemTotal = t.projecaoVendas > 0 ? (t.projecaoLucro / t.projecaoVendas) * 100 : 0;
 
   return (
     <div className="rounded-lg bg-card border border-border overflow-hidden mb-6">
@@ -77,16 +88,16 @@ const DailyMetricsTable = ({ data }: { data: DailyRow[] }) => {
               <th className="px-3 py-2 text-left font-medium">Tipo</th>
               <th className="px-3 py-2 text-right font-medium border-l border-border">Meta</th>
               <th className="px-3 py-2 text-right font-medium">Realiz.</th>
-              <th className="px-3 py-2 text-right font-medium">Proj.</th>
+              <th className="px-3 py-2 text-right font-medium">%</th>
               <th className="px-3 py-2 text-right font-medium border-l border-border">Meta</th>
               <th className="px-3 py-2 text-right font-medium">Realiz.</th>
-              <th className="px-3 py-2 text-right font-medium">Proj.</th>
+              <th className="px-3 py-2 text-right font-medium">%</th>
               <th className="px-3 py-2 text-right font-medium border-l border-border">Meta</th>
               <th className="px-3 py-2 text-right font-medium">Realiz.</th>
-              <th className="px-3 py-2 text-right font-medium">Proj.</th>
+              <th className="px-3 py-2 text-right font-medium">%</th>
               <th className="px-3 py-2 text-right font-medium border-l border-border">Meta</th>
               <th className="px-3 py-2 text-right font-medium">Realiz.</th>
-              <th className="px-3 py-2 text-right font-medium">Proj.</th>
+              <th className="px-3 py-2 text-right font-medium">%</th>
             </tr>
           </thead>
           <tbody>
@@ -99,16 +110,16 @@ const DailyMetricsTable = ({ data }: { data: DailyRow[] }) => {
                   <td className="px-3 py-2 text-muted-foreground text-[11px] uppercase tracking-wider">{row.tipoDia}</td>
                   <td className="px-3 py-2 text-right border-l border-border/60">{fmt(row.metaVendas)}</td>
                   <td className="px-3 py-2 text-right"><StatusIcon ok={vendasOk} /> {fmt(row.realizadoVendas)}</td>
-                  <td className="px-3 py-2 text-right text-muted-foreground">{fmt(row.projecaoVendas)}</td>
+                  <PctCell real={row.realizadoVendas} meta={row.metaVendas} money />
                   <td className="px-3 py-2 text-right border-l border-border/60">{fmt(row.metaLucro)}</td>
                   <td className="px-3 py-2 text-right"><StatusIcon ok={lucroOk} /> {fmt(row.realizadoLucro)}</td>
-                  <td className="px-3 py-2 text-right text-muted-foreground">{fmt(row.projecaoLucro)}</td>
+                  <PctCell real={row.realizadoLucro} meta={row.metaLucro} money />
                   <td className="px-3 py-2 text-right border-l border-border/60">{pct(row.metaMargemPct)}</td>
                   <td className="px-3 py-2 text-right">{pct(row.realizadoMargemPct)}</td>
-                  <td className="px-3 py-2 text-right text-muted-foreground">{pct(row.projecaoMargemPct)}</td>
+                  <PctCell real={row.realizadoMargemPct} meta={row.metaMargemPct} />
                   <td className="px-3 py-2 text-right border-l border-border/60">{fmt(row.metaVolume)}</td>
                   <td className="px-3 py-2 text-right">{fmt(row.realizadoVolume)}</td>
-                  <td className="px-3 py-2 text-right text-muted-foreground">{fmt(row.projecaoVolume)}</td>
+                  <PctCell real={row.realizadoVolume} meta={row.metaVolume} />
                 </tr>
               );
             })}
@@ -119,16 +130,16 @@ const DailyMetricsTable = ({ data }: { data: DailyRow[] }) => {
               <td className="px-3 py-2.5" />
               <td className="px-3 py-2.5 text-right border-l border-border">{fmt(t.metaVendas)}</td>
               <td className="px-3 py-2.5 text-right">{fmt(t.realizadoVendas)}</td>
-              <td className="px-3 py-2.5 text-right text-muted-foreground">{fmt(t.projecaoVendas)}</td>
+              <td className="px-3 py-2.5 text-right">{pct(pctAting(t.realizadoVendas, t.metaVendas))}</td>
               <td className="px-3 py-2.5 text-right border-l border-border">{fmt(t.metaLucro)}</td>
               <td className="px-3 py-2.5 text-right">{fmt(t.realizadoLucro)}</td>
-              <td className="px-3 py-2.5 text-right text-muted-foreground">{fmt(t.projecaoLucro)}</td>
+              <td className="px-3 py-2.5 text-right">{pct(pctAting(t.realizadoLucro, t.metaLucro))}</td>
               <td className="px-3 py-2.5 text-right border-l border-border">{pct(metaMargemTotal)}</td>
               <td className="px-3 py-2.5 text-right">{pct(realMargemTotal)}</td>
-              <td className="px-3 py-2.5 text-right text-muted-foreground">{pct(projMargemTotal)}</td>
+              <td className="px-3 py-2.5 text-right">{pct(pctAting(realMargemTotal, metaMargemTotal))}</td>
               <td className="px-3 py-2.5 text-right border-l border-border">{fmt(t.metaVolume)}</td>
               <td className="px-3 py-2.5 text-right">{fmt(t.realizadoVolume)}</td>
-              <td className="px-3 py-2.5 text-right text-muted-foreground">{fmt(t.projecaoVolume)}</td>
+              <td className="px-3 py-2.5 text-right">{pct(pctAting(t.realizadoVolume, t.metaVolume))}</td>
             </tr>
           </tfoot>
         </table>
