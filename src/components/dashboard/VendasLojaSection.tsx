@@ -198,14 +198,16 @@ export default function VendasLojaSection({ storeId, startDate, endDate, categor
       accMeta += r.metaVendas;
       return {
         dia: String(r.day).padStart(2, "0"),
-        Meta: r.metaVendas,
+        "Meta diária": r.metaVendas,
         Realizado: r.realizadoVendas,
         // Fix: was accMeta + accReal (double-counted). Correct = cumulative meta only.
         "Meta acumulada": accMeta,
         "Realizado acumulado": accReal,
+        // Projeção (meta diária) apenas nos dias futuros
+        "Projeção": r.date > hojeStr ? r.metaVendas : null,
       };
     });
-  }, [opRows]);
+  }, [opRows, hojeStr]);
 
 
   const toneFromPct = (p: number): "success" | "warning" | "danger" =>
