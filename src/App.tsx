@@ -79,6 +79,7 @@ const App = () => (
             <Route path="/metas/premiacao/config" element={g("admin_metas", <MetasPremiacaoConfig />)} />
             <Route path="/metas/realizado" element={g("admin_metas", <MetasRealizado />)} />
             <Route path="/metas-gerador" element={g("metas_gerador", <MetasGerador />)} />
+            <Route path="/dashboard-financeiro" element={g("dashboard_financeiro", <DashboardFinanceiro />)} />
             <Route path="/controladoria" element={g("controladoria", <Controladoria />)} />
             <Route path="/analise-anual" element={g("analise_anual", <AnaliseAnual />)} />
 
