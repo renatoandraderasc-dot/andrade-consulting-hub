@@ -459,6 +459,15 @@ export default function VendasLojaSection({ storeId, startDate, endDate, categor
                       strokeDasharray="5 4"
                       dot={false}
                     />
+                    <Line
+                      type="monotone"
+                      dataKey="Projeção"
+                      stroke="hsl(var(--warning, 38 92% 50%))"
+                      strokeWidth={1.5}
+                      strokeDasharray="4 4"
+                      dot={{ r: 2 }}
+                      connectNulls={false}
+                    />
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
