@@ -189,7 +189,9 @@ const AdminParametrizacoes = () => {
               <h1 className="font-display text-2xl font-bold">Parametrizações Gerais</h1>
             </div>
             <p className="text-sm text-muted-foreground font-body">
-              Ajuste aqui todos os comportamentos parametrizáveis dos SaaS.
+              Ajuste aqui todos os comportamentos parametrizáveis dos SaaS. Nos itens de
+              “Atualização Automática” você define, em segundos, de quanto em quanto tempo cada tela
+              busca dados novos — use 0 para desligar a atualização automática daquela tela.
             </p>
           </div>
           <div className="flex items-center gap-2">
