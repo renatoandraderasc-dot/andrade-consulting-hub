@@ -14,6 +14,7 @@ import DashboardFilterBar, { Periodo, periodoFromPreset, TODA_LOJA } from "@/com
 import HierarquiaVendasTable from "@/components/relatorios/HierarquiaVendasTable";
 
 import VrOfflineNotice from "@/components/VrOfflineNotice";
+import { useAutoRefresh } from "@/hooks/useSaasConfig";
 import { useVrRealizado, canonDept } from "@/hooks/useVrRealizado";
 import MascotPersona from "@/components/poster/MascotPersona";
 import CouponDivider from "@/components/poster/CouponDivider";
