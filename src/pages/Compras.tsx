@@ -289,6 +289,14 @@ const Compras = () => {
     } finally { setFornLoading(false); }
   };
 
+  // Atualização automática parametrizável (Parametrizações Gerais)
+  useAutoRefresh("refresh_compras_segundos", () => {
+    if (!storeId) return;
+    fetchMetas();
+    fetchHistorico();
+    fetchRealizadoMesAtual();
+  });
+
   const salvarConfig = async () => {
     if (!isAdmin) return;
     setSavingCfg(true);

@@ -228,6 +228,11 @@ const EstoqueDinamico = () => {
     setLoading(false);
   };
 
+  // Atualização automática parametrizável (Parametrizações Gerais)
+  useAutoRefresh("refresh_estoque_segundos", () => {
+    if (linhas && !loading) buscar();
+  });
+
   const departamentos = useMemo(
     () => Array.from(new Set((linhas || []).map((l) => l.departamento).filter(Boolean))).sort(),
     [linhas],
