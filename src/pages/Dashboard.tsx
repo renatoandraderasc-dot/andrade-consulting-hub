@@ -341,6 +341,15 @@ const Dashboard = () => {
     };
   }, [dailyData, storeMetrics]);
 
+  // Atualização automática parametrizável (Parametrizações Gerais)
+  useAutoRefresh("refresh_dashboard_segundos", () => {
+    if (!storeId) return;
+    if (selectedDept) fetchDailyData();
+    fetchStoreMetrics();
+    fetchProductData();
+    fetchCategoryData();
+  });
+
   // Lojas Nascimento: exibir apenas o bloco "Vendas da Loja"
   const soLoja = false;
 

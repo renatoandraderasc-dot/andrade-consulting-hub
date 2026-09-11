@@ -25,6 +25,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { CartProgressOverlay } from "@/components/CartProgress";
+import { useAutoRefresh } from "@/hooks/useSaasConfig";
 
 interface Store { id: string; name: string }
 

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import ClientLayout from "@/components/ClientLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { useAutoRefresh } from "@/hooks/useSaasConfig";
 import { toast } from "sonner";
 import {
   ChevronLeft, ChevronRight, RefreshCw, ExternalLink, Plus, Trash2, CheckCheck, UserCheck,
@@ -137,6 +138,11 @@ const Jornada = () => {
     carregar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bootstrapped, tick]);
+
+  // Atualização automática parametrizável (Parametrizações Gerais)
+  useAutoRefresh("refresh_jornada_segundos", () => {
+    if (bootstrapped) carregar();
+  });
 
   /* ---------- avulsas geram periodo_ref ISO: aceitar tudo do dia atual ---------- */
   const tplPorId = useMemo(() => new Map(templates.map((t) => [t.id, t])), [templates]);
