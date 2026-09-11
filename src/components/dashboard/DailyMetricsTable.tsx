@@ -2,6 +2,7 @@ import { CheckCircle2, XCircle } from "lucide-react";
 
 export interface DailyRow {
   date: string;
+  iso?: string;
   tipoDia: string;
   metaVendas: number;
   realizadoVendas: number;
@@ -104,6 +105,8 @@ const DailyMetricsTable = ({ data }: { data: DailyRow[] }) => {
             {data.map((row, i) => {
               const vendasOk = row.realizadoVendas >= row.metaVendas && row.metaVendas > 0;
               const lucroOk = row.realizadoLucro >= row.metaLucro && row.metaLucro > 0;
+              const margemOk = row.realizadoMargemPct >= row.metaMargemPct && row.metaMargemPct > 0;
+              const volumeOk = row.realizadoVolume >= row.metaVolume && row.metaVolume > 0;
               return (
                 <tr key={i} className="border-b border-border/60 hover:bg-secondary/40 transition-colors">
                   <td className="px-3 py-2">{row.date}</td>
@@ -115,10 +118,10 @@ const DailyMetricsTable = ({ data }: { data: DailyRow[] }) => {
                   <td className="px-3 py-2 text-right"><StatusIcon ok={lucroOk} /> {fmt(row.realizadoLucro)}</td>
                   <PctCell real={row.realizadoLucro} meta={row.metaLucro} money />
                   <td className="px-3 py-2 text-right border-l border-border/60">{pct(row.metaMargemPct)}</td>
-                  <td className="px-3 py-2 text-right">{pct(row.realizadoMargemPct)}</td>
+                  <td className="px-3 py-2 text-right"><StatusIcon ok={margemOk} /> {pct(row.realizadoMargemPct)}</td>
                   <PctCell real={row.realizadoMargemPct} meta={row.metaMargemPct} />
                   <td className="px-3 py-2 text-right border-l border-border/60">{fmt(row.metaVolume)}</td>
-                  <td className="px-3 py-2 text-right">{fmt(row.realizadoVolume)}</td>
+                  <td className="px-3 py-2 text-right"><StatusIcon ok={volumeOk} /> {fmt(row.realizadoVolume)}</td>
                   <PctCell real={row.realizadoVolume} meta={row.metaVolume} />
                 </tr>
               );
