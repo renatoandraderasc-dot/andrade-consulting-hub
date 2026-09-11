@@ -192,6 +192,7 @@ const Dashboard = () => {
       const r = date < hojeStr ? real.get(date) : undefined;
       return {
         date: new Date(date + "T12:00:00").toLocaleDateString("pt-BR"),
+        iso: date,
         tipoDia: d.tipo_dia,
         metaVendas: Number(d.meta_vendas) || 0,
         realizadoVendas: r?.vendas || 0,
