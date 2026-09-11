@@ -21,6 +21,7 @@ import MetasRealizado from "./pages/MetasRealizado";
 import MetasPremiacao from "./pages/MetasPremiacao";
 import MetasPremiacaoConfig from "./pages/MetasPremiacaoConfig";
 import Controladoria from "./pages/Controladoria";
+import DashboardFinanceiro from "./pages/DashboardFinanceiro";
 import AnaliseAnual from "./pages/AnaliseAnual";
 import Compras from "./pages/Compras";
 import EstoqueDinamico from "./pages/EstoqueDinamico";
