@@ -16,6 +16,7 @@ import HierarquiaVendasTable from "@/components/relatorios/HierarquiaVendasTable
 import VrOfflineNotice from "@/components/VrOfflineNotice";
 import { useAutoRefresh } from "@/hooks/useSaasConfig";
 import { useVrRealizado, canonDept } from "@/hooks/useVrRealizado";
+import { chamarRelatorio, num, pick } from "@/lib/vrReport";
 import MascotPersona from "@/components/poster/MascotPersona";
 import CouponDivider from "@/components/poster/CouponDivider";
 
