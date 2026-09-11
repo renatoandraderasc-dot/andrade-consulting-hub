@@ -261,29 +261,50 @@ const Dashboard = () => {
     }
   };
 
+  // Vendas por seção: ao vivo no ERP (nada vem gravado do banco).
   const fetchCategoryData = async () => {
+    if (!storeId) return;
+    const mesRange = (ano: number, mes: number) => {
+      const ini = `${ano}-${String(mes).padStart(2, "0")}-01`;
+      const ultimo = new Date(ano, mes, 0).getDate();
+      return { inicio: ini, fim: `${ano}-${String(mes).padStart(2, "0")}-${String(ultimo).padStart(2, "0")}` };
+    };
+
     const prevMonth = selectedMonth === 1 ? 12 : selectedMonth - 1;
     const prevMonthYear = selectedMonth === 1 ? selectedYear - 1 : selectedYear;
 
-    const [{ data: current }, { data: prevMo }, { data: prevYr }] = await Promise.all([
-      supabase.from("store_department_metrics").select("*").eq("store_id", storeId).eq("month", selectedMonth).eq("year", selectedYear),
-      supabase.from("store_department_metrics").select("*").eq("store_id", storeId).eq("month", prevMonth).eq("year", prevMonthYear),
-      supabase.from("store_department_metrics").select("*").eq("store_id", storeId).eq("month", selectedMonth).eq("year", selectedYear - 1),
-    ]);
+    const somaPorSecao = async (ano: number, mes: number) => {
+      const { inicio, fim } = mesRange(ano, mes);
+      const r = await chamarRelatorio(storeId, "vendas_secao_periodo", { inicio, fim });
+      const acc = new Map<string, number>();
+      for (const l of r.dados || []) {
+        const dep = canonDept(String(pick(l, "departamento", "secao", "department") ?? "")) || "SEM DEPARTAMENTO";
+        acc.set(dep, (acc.get(dep) || 0) + num(pick(l, "venda", "vendas", "total_vendido", "faturamento")));
+      }
+      return acc;
+    };
 
-    if (current && current.length > 0) {
-      const prevMoMap = new Map((prevMo || []).map((d) => [d.department, d]));
-      const prevYrMap = new Map((prevYr || []).map((d) => [d.department, d]));
+    try {
+      const [atual, mesAnt, anoAnt] = await Promise.all([
+        somaPorSecao(selectedYear, selectedMonth),
+        somaPorSecao(prevMonthYear, prevMonth),
+        somaPorSecao(selectedYear - 1, selectedMonth),
+      ]);
+
+      if (atual.size === 0) {
+        setCategoryData([]);
+        return;
+      }
 
       setCategoryData(
-        current.map((d) => ({
-          category: d.department,
-          atual: Number(d.faturamento) || 0,
-          mesAnterior: Number(prevMoMap.get(d.department)?.faturamento) || 0,
-          anoAnterior: Number(prevYrMap.get(d.department)?.faturamento) || 0,
-        }))
+        [...atual.entries()].map(([category, valor]) => ({
+          category,
+          atual: valor,
+          mesAnterior: mesAnt.get(category) || 0,
+          anoAnterior: anoAnt.get(category) || 0,
+        })),
       );
-    } else {
+    } catch {
       setCategoryData([]);
     }
   };
