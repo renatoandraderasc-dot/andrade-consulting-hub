@@ -83,6 +83,12 @@ export default function VendasLojaSection({ storeId, startDate, endDate, categor
   const loading = loadingMetas || loadingVr;
 
   // Junta metas (banco) com realizado (ao vivo)
+  // Regra D-1: o dia corrente é parcial e NÃO entra no realizado.
+  const hojeStr = useMemo(() => {
+    const h = new Date();
+    return `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, "0")}-${String(h.getDate()).padStart(2, "0")}`;
+  }, []);
+
   const rows: DailyLoja[] = useMemo(() => {
     if (!vr) return [];
     const real = new Map((vr[LOJA] || []).map((r) => [r.date, r]));
@@ -91,7 +97,7 @@ export default function VendasLojaSection({ storeId, startDate, endDate, categor
       .sort()
       .map((date) => {
         const m: any = metas.find((x: any) => x.date === date) || {};
-        const r = real.get(date);
+        const r = date < hojeStr ? real.get(date) : undefined;
         return {
           date,
           day: Number(date.slice(8, 10)),
@@ -103,7 +109,7 @@ export default function VendasLojaSection({ storeId, startDate, endDate, categor
           realizadoMargemPct: r?.margemPct || 0,
         };
       });
-  }, [metas, vr]);
+  }, [metas, vr, hojeStr]);
 
   // Dias sem operação (meta e realizado zerados) são ignorados em médias,
   // projeções e nos gráficos de evolução.
