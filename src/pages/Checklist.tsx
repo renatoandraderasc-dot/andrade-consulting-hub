@@ -104,6 +104,12 @@ const Checklist = () => {
     setLoading(false);
   };
 
+  // Atualização automática parametrizável (Parametrizações Gerais)
+  useAutoRefresh("refresh_checklist_segundos", () => {
+    fetchData();
+    fetchHistory();
+  });
+
   const fetchHistory = async () => {
     if (!user) return;
     setLoadingHistory(true);
