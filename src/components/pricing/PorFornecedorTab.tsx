@@ -19,6 +19,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
 import { eanUtilizavel } from "./pricingTypes";
+import AplicarPrecosDialog, { type ItemAplicar } from "./AplicarPrecosDialog";
+import { carregarMargens, indexarMargens, resolverMargem, precoMeta as calcPrecoMeta, type MargemPadrao } from "@/lib/margensPadrao";
 
 const brl = (v: number | null | undefined) =>
   v == null || !isFinite(Number(v)) ? "—" : Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -35,6 +37,9 @@ interface Fornecedor { id: string; nome: string; cnpj: string }
 interface ConcCol { id: string; nome: string }
 
 interface Linha {
+  idProduto: number;
+  idFornecedor: string;
+  idDepartamento: string;
   codigo: string;
   ean: string;
   descricao: string;
@@ -88,6 +93,10 @@ const PorFornecedorTab = ({ storeId }: Props) => {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [aplicados, setAplicados] = useState<Record<string, number>>({});
   const [confirmar, setConfirmar] = useState<{ linha: Linha; preco: number } | null>(null);
+  const [margens, setMargens] = useState<MargemPadrao[]>([]);
+  const [marcados, setMarcados] = useState<string[]>([]);
+  const [propagar, setPropagar] = useState(true);
+  const [aplicarAberto, setAplicarAberto] = useState(false);
 
   useEffect(() => {
     if (!storeId) return;
@@ -154,6 +163,9 @@ const PorFornecedorTab = ({ storeId }: Props) => {
 
 
       const base: Linha[] = (r.dados || []).map((l) => ({
+        idProduto: Math.trunc(num(col(l, "id_produto", "idproduto", "codigo", "cod", "codigo_produto", "cod_produto"))),
+        idFornecedor: String(col(l, "id_fornecedor", "idfornecedor", "fornecedor_id", "cod_fornecedor") ?? "").replace(/\D/g, ""),
+        idDepartamento: String(col(l, "id_departamento", "mercadologico1", "cod_departamento", "id_secao") ?? "").replace(/\D/g, ""),
         codigo: String(col(l, "codigo", "cod", "codigo_produto", "cod_produto") ?? "").replace(/^0+/, ""),
         ean: eanUtilizavel(col(l, ...ALIAS_EAN)),
         descricao: txt(col(l, "descricao", "descricao_completa", "produto", "nome"), "—"),
@@ -215,10 +227,24 @@ const PorFornecedorTab = ({ storeId }: Props) => {
       setConcCols(cols);
       setLinhas(base);
       setAplicados({});
+      setMarcados([]);
+      setMargens(await carregarMargens(storeId));
       if (base.length === 0) setAviso("Nenhuma entrada de nota encontrada para os fornecedores e período informados.");
     } finally {
       setLoading(false);
     }
+  };
+
+  const mapaMargens = useMemo(() => indexarMargens(margens), [margens]);
+  const regraDe = (l: Linha) =>
+    resolverMargem(mapaMargens, { produto: l.codigo, fornecedor: l.idFornecedor, departamento: l.idDepartamento });
+  const precoMetaDe = (l: Linha) => {
+    const r = regraDe(l);
+    return r ? calcPrecoMeta(l.custoUnit, Number(r.margem_pct)) : null;
+  };
+  const deltaMeta = (l: Linha) => {
+    const pm = precoMetaDe(l);
+    return pm == null || l.precoAtual <= 0 ? null : ((pm - l.precoAtual) / l.precoAtual) * 100;
   };
 
   const precoBase = (l: Linha) => (sobreOferta ? l.precoOferta ?? l.precoAtual : l.precoAtual);
@@ -240,6 +266,27 @@ const PorFornecedorTab = ({ storeId }: Props) => {
     if (!isFinite(alvo) || l.custoUnit <= 0) return null;
     return Math.round(l.custoUnit * (1 + alvo / 100) * 100) / 100;
   };
+
+  const itensAplicar: ItemAplicar[] = useMemo(
+    () =>
+      linhas
+        .filter((l) => marcados.includes(l.codigo || l.ean))
+        .map((l) => ({ l, pm: precoMetaDe(l) }))
+        .filter((x): x is { l: Linha; pm: number } => x.pm != null)
+        .map(({ l, pm }) => ({
+          idProduto: l.idProduto,
+          descricao: l.descricao,
+          ean: l.ean,
+          fornecedor: l.fornecedor,
+          precoAtual: l.precoAtual,
+          precoMeta: pm,
+          margemMeta: regraDe(l)?.margem_pct ?? null,
+          custo: l.custoUnit,
+        })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [linhas, marcados, mapaMargens],
+  );
+
 
   const deptos = useMemo(() => [...new Set(linhas.map((l) => l.secao))].sort(), [linhas]);
 
@@ -470,16 +517,26 @@ const PorFornecedorTab = ({ storeId }: Props) => {
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/40">
+                  <TableHead className="w-[36px]" />
                   <TableHead colSpan={5} className="text-center">Identificação</TableHead>
                   <TableHead colSpan={5} className="text-center bg-sky-50 dark:bg-sky-950/30 border-l border-border">Última entrada</TableHead>
                   <TableHead colSpan={5} className="text-center border-l border-border">Situação atual</TableHead>
-                  <TableHead colSpan={3} className="text-center border-l border-border">Margem</TableHead>
+                  <TableHead colSpan={6} className="text-center border-l border-border">Margem</TableHead>
                   {concCols.length > 0 && (
                     <TableHead colSpan={concCols.length} className="text-center border-l border-border">Concorrentes</TableHead>
                   )}
                   <TableHead colSpan={2} className="text-center border-l border-border">Ação</TableHead>
                 </TableRow>
                 <TableRow className="bg-muted/20">
+                  <TableHead className="w-[36px]">
+                    <Checkbox
+                      checked={marcados.length > 0 && marcados.length >= Math.min(filtradas.length, 400)}
+                      onCheckedChange={(v) =>
+                        setMarcados(v ? filtradas.slice(0, 400).map((l) => l.codigo || l.ean) : [])
+                      }
+                      aria-label="Selecionar todos"
+                    />
+                  </TableHead>
                   <Th k="codigo">Cod</Th>
                   <Th k="ean">EAN</Th>
                   <Th k="descricao">Descrição</Th>
@@ -506,6 +563,10 @@ const PorFornecedorTab = ({ storeId }: Props) => {
                   </Th>
                   <Th k="markdown" className="text-right text-[11px] bg-green-50 dark:bg-green-950/30">Markdown %</Th>
                   <Th k="margemRs" className="text-right text-[11px]">Margem R$</Th>
+                  <TableHead className="text-right text-[11px]">Margem meta %</TableHead>
+                  <TableHead className="text-right text-[11px]">Preço meta</TableHead>
+                  <TableHead className="text-right text-[11px]">Δ vs atual</TableHead>
+
                   {concCols.map((c) => (
                     <TableHead key={c.id} className="text-right text-[11px] border-l border-border whitespace-nowrap">{c.nome}</TableHead>
                   ))}
@@ -518,9 +579,22 @@ const PorFornecedorTab = ({ storeId }: Props) => {
                   const chave = l.codigo || l.ean;
                   const sug = sugestao(l);
                   const mk = markup(l), md = markdown(l);
+                  const regra = regraDe(l);
+                  const pMeta = precoMetaDe(l);
+                  const dMeta = deltaMeta(l);
                   return (
                     <TableRow key={`${l.codigo}-${l.ean}-${l.fornecedor}`}>
+                      <TableCell>
+                        <Checkbox
+                          checked={marcados.includes(chave)}
+                          onCheckedChange={(v) =>
+                            setMarcados((p) => (v ? [...new Set([...p, chave])] : p.filter((x) => x !== chave)))
+                          }
+                          aria-label="Selecionar produto"
+                        />
+                      </TableCell>
                       <TableCell className="font-mono text-xs">{l.codigo}</TableCell>
+
                       <TableCell className="font-mono text-[11px] text-muted-foreground">{l.ean || "—"}</TableCell>
                       <TableCell className="text-sm max-w-[260px] truncate" title={l.descricao}>{l.descricao}</TableCell>
                       <TableCell className="text-xs">{l.secao}</TableCell>
@@ -547,6 +621,22 @@ const PorFornecedorTab = ({ storeId }: Props) => {
                       <TableCell className="text-right text-sm tabular-nums border-l border-border bg-blue-50/60 dark:bg-blue-950/20">{pct(mk)}</TableCell>
                       <TableCell className="text-right text-sm tabular-nums bg-green-50/60 dark:bg-green-950/20">{pct(md)}</TableCell>
                       <TableCell className="text-right text-sm tabular-nums">{brl(margemRs(l))}</TableCell>
+                      <TableCell className="text-right text-sm tabular-nums">
+                        {regra ? (
+                          <span className="inline-flex items-center gap-1 justify-end">
+                            {Number(regra.margem_pct).toFixed(2)}%
+                            <Badge variant="outline" className="text-[9px] capitalize">{regra.tipo}</Badge>
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground/60">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right text-sm font-semibold tabular-nums">{pMeta == null ? "—" : brl(pMeta)}</TableCell>
+                      <TableCell className={`text-right text-sm tabular-nums ${
+                        dMeta == null || Math.abs(dMeta) <= 0.5 ? "text-muted-foreground"
+                          : dMeta > 0 ? "text-green-600" : "text-destructive"}`}>
+                        {dMeta == null ? "—" : `${dMeta > 0 ? "+" : ""}${dMeta.toFixed(1)}%`}
+                      </TableCell>
                       {concCols.map((c) => {
                         const p = l.concorrentes[c.id] ?? null;
                         const cor = p == null ? "" : p < precoBase(l) ? "text-destructive" : "text-green-600";
@@ -573,8 +663,33 @@ const PorFornecedorTab = ({ storeId }: Props) => {
           {filtradas.length > 400 && (
             <p className="text-xs text-muted-foreground">Mostrando os 400 primeiros. Use os filtros ou exporte para ver tudo.</p>
           )}
+
+          {marcados.length > 0 && (
+            <div className="sticky bottom-2 z-10 flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card shadow-lg p-3">
+              <span className="text-sm font-medium">{marcados.length} produto(s) selecionado(s)</span>
+              <label className="flex items-center gap-2 text-xs">
+                <Switch checked={propagar} onCheckedChange={setPropagar} aria-label="Propagar para a família" />
+                Propagar para a família
+              </label>
+              <Button variant="ghost" size="sm" onClick={() => setMarcados([])}>Limpar seleção</Button>
+              <Button className="ml-auto" disabled={itensAplicar.length === 0} onClick={() => setAplicarAberto(true)}>
+                Aplicar preços meta
+              </Button>
+            </div>
+          )}
         </>
       )}
+
+      <AplicarPrecosDialog
+        open={aplicarAberto}
+        onOpenChange={setAplicarAberto}
+        storeId={storeId}
+        codigoLoja={codigoLoja}
+        itens={itensAplicar}
+        propagarInicial={propagar}
+        onAplicado={() => { setMarcados([]); carregar(); }}
+      />
+
 
       <AlertDialog open={!!confirmar} onOpenChange={(o) => !o && setConfirmar(null)}>
         <AlertDialogContent>

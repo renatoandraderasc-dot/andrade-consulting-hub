@@ -1,11 +1,16 @@
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ChevronDown, ChevronUp, AlertTriangle, ImageOff, Download } from "lucide-react";
 import * as XLSX from "xlsx";
+import { supabase } from "@/integrations/supabase/client";
 import { salvarWorkbook } from "@/lib/exportBranding";
+import { carregarMargens, indexarMargens, resolverMargem, precoMeta as calcPrecoMeta, type MargemPadrao } from "@/lib/margensPadrao";
+import AplicarPrecosDialog, { type ItemAplicar } from "./AplicarPrecosDialog";
 import type { ConcorrenteInfo, PricingRow } from "./pricingTypes";
 
 const PAGE_SIZE = 50;
@@ -26,14 +31,53 @@ interface Props {
   rows: PricingRow[];
   concorrentes: ConcorrenteInfo[];
   semEanTotal: number;
+  storeId?: string;
 }
 
 type SortKey = string;
 
-const PricingTable = ({ rows, concorrentes, semEanTotal }: Props) => {
+const PricingTable = ({ rows, concorrentes, semEanTotal, storeId = "" }: Props) => {
   const [sortKey, setSortKey] = useState<SortKey>("vlrVendas");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(0);
+  const [marcados, setMarcados] = useState<string[]>([]);
+  const [propagar, setPropagar] = useState(true);
+  const [aplicarAberto, setAplicarAberto] = useState(false);
+  const [margens, setMargens] = useState<MargemPadrao[]>([]);
+  const [codigoLoja, setCodigoLoja] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!storeId) return;
+    setMarcados([]);
+    carregarMargens(storeId).then(setMargens);
+    supabase.from("store_vr_config").select("codigo_loja").eq("store_id", storeId).maybeSingle()
+      .then(({ data }) => setCodigoLoja(data?.codigo_loja ?? null));
+  }, [storeId]);
+
+  const mapaMargens = useMemo(() => indexarMargens(margens), [margens]);
+  const precoMetaDe = (r: PricingRow) => {
+    const regra = resolverMargem(mapaMargens, { produto: r.codigo });
+    return regra ? calcPrecoMeta(r.custo, Number(regra.margem_pct)) : null;
+  };
+
+  const itensAplicar: ItemAplicar[] = useMemo(
+    () =>
+      rows
+        .filter((r) => marcados.includes(r.codigo || r.ean))
+        .map((r) => ({ r, pm: precoMetaDe(r) }))
+        .filter((x): x is { r: PricingRow; pm: number } => x.pm != null)
+        .map(({ r, pm }) => ({
+          idProduto: parseInt(String(r.codigo).replace(/\D/g, ""), 10) || 0,
+          descricao: r.descricao,
+          ean: r.ean,
+          precoAtual: r.meuPreco,
+          precoMeta: pm,
+          margemMeta: resolverMargem(mapaMargens, { produto: r.codigo })?.margem_pct ?? null,
+          custo: r.custo,
+        })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [rows, marcados, mapaMargens],
+  );
 
   const valorDe = (r: PricingRow, key: string): number | string => {
     if (key.includes(":")) {
@@ -133,6 +177,15 @@ const PricingTable = ({ rows, concorrentes, semEanTotal }: Props) => {
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40">
+              {storeId && (
+                <TableHead className="w-[36px]">
+                  <Checkbox
+                    checked={marcados.length > 0 && paged.every((r) => marcados.includes(r.codigo || r.ean))}
+                    onCheckedChange={(v) => setMarcados(v ? paged.map((r) => r.codigo || r.ean) : [])}
+                    aria-label="Selecionar página"
+                  />
+                </TableHead>
+              )}
               <TableHead className="w-[52px]">Imagem</TableHead>
               <Th k="codigo">Cód</Th>
               <Th k="descricao">Produto</Th>
@@ -160,7 +213,7 @@ const PricingTable = ({ rows, concorrentes, semEanTotal }: Props) => {
               })}
             </TableRow>
             <TableRow className="bg-muted/20">
-              <TableHead colSpan={9} />
+              <TableHead colSpan={storeId ? 10 : 9} />
               {concorrentes.map((c) => (
                 <Fragment key={c.id}>
                   <Th k={`${c.id}:preco`} className="text-right border-l border-border text-[11px]">Preço</Th>
@@ -175,6 +228,19 @@ const PricingTable = ({ rows, concorrentes, semEanTotal }: Props) => {
           <TableBody>
             {paged.map((r) => (
               <TableRow key={`${r.codigo}-${r.ean}`}>
+                {storeId && (
+                  <TableCell>
+                    <Checkbox
+                      checked={marcados.includes(r.codigo || r.ean)}
+                      onCheckedChange={(v) =>
+                        setMarcados((p) =>
+                          v ? [...new Set([...p, r.codigo || r.ean])] : p.filter((x) => x !== (r.codigo || r.ean)),
+                        )
+                      }
+                      aria-label="Selecionar produto"
+                    />
+                  </TableCell>
+                )}
                 <TableCell>
                   {r.imagem ? (
                     <img src={r.imagem} alt={r.descricao} loading="lazy" className="w-9 h-9 object-contain rounded bg-muted" />
@@ -251,6 +317,32 @@ const PricingTable = ({ rows, concorrentes, semEanTotal }: Props) => {
           </TableBody>
         </Table>
       </div>
+
+      {storeId && marcados.length > 0 && (
+        <div className="sticky bottom-2 z-10 flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card shadow-lg p-3">
+          <span className="text-sm font-medium">{marcados.length} produto(s) selecionado(s)</span>
+          <span className="text-xs text-muted-foreground">{itensAplicar.length} com margem padrão cadastrada</span>
+          <label className="flex items-center gap-2 text-xs">
+            <Switch checked={propagar} onCheckedChange={setPropagar} aria-label="Propagar para a família" />
+            Propagar para a família
+          </label>
+          <Button variant="ghost" size="sm" onClick={() => setMarcados([])}>Limpar seleção</Button>
+          <Button className="ml-auto" disabled={itensAplicar.length === 0} onClick={() => setAplicarAberto(true)}>
+            Aplicar preços meta
+          </Button>
+        </div>
+      )}
+
+      <AplicarPrecosDialog
+        open={aplicarAberto}
+        onOpenChange={setAplicarAberto}
+        storeId={storeId}
+        codigoLoja={codigoLoja}
+        itens={itensAplicar}
+        propagarInicial={propagar}
+        onAplicado={() => setMarcados([])}
+      />
+
 
       <div className="flex items-center justify-between text-sm text-muted-foreground">
         <span>{semEanTotal.toLocaleString("pt-BR")} produtos do concorrente sem EAN utilizável</span>

@@ -15,6 +15,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PricingTable from "@/components/pricing/PricingTable";
 import PorFornecedorTab from "@/components/pricing/PorFornecedorTab";
+import MargensPadraoTab from "@/components/pricing/MargensPadraoTab";
+import HistoricoPrecosTab from "@/components/pricing/HistoricoPrecosTab";
 import { eanUtilizavel, type ConcorrenteInfo, type PricingRow } from "@/components/pricing/pricingTypes";
 
 interface Store { id: string; name: string }
@@ -323,9 +325,17 @@ const Pricing = () => {
           <TabsList>
             <TabsTrigger value="comparativo">Comparativo</TabsTrigger>
             <TabsTrigger value="fornecedor">Por Fornecedor</TabsTrigger>
+            <TabsTrigger value="margens">Margens Padrão</TabsTrigger>
+            <TabsTrigger value="historico">Histórico</TabsTrigger>
           </TabsList>
           <TabsContent value="fornecedor" className="mt-4">
             <PorFornecedorTab storeId={storeId} />
+          </TabsContent>
+          <TabsContent value="margens" className="mt-4">
+            <MargensPadraoTab storeId={storeId} />
+          </TabsContent>
+          <TabsContent value="historico" className="mt-4">
+            <HistoricoPrecosTab storeId={storeId} />
           </TabsContent>
         </Tabs>
 
@@ -477,7 +487,7 @@ const Pricing = () => {
               <Card label="Margem no Preço do Concorrente" value={pctFmt(kpis.margemConc)} hint="filtrado" />
             </div>
 
-            <PricingTable rows={filtradas} concorrentes={concUsados} semEanTotal={semEanTotal} />
+            <PricingTable rows={filtradas} concorrentes={concUsados} semEanTotal={semEanTotal} storeId={storeId} />
           </>
         )}
         </>

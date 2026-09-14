@@ -1,18 +1,24 @@
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ArrowUp, ArrowDown, Minus, Search, Download, ChevronUp, ChevronDown } from "lucide-react";
 import * as XLSX from "xlsx";
+import { supabase } from "@/integrations/supabase/client";
 import { salvarWorkbook } from "@/lib/exportBranding";
+import { carregarMargens, indexarMargens, resolverMargem, precoMeta as calcPrecoMeta, type MargemPadrao } from "@/lib/margensPadrao";
+import AplicarPrecosDialog, { type ItemAplicar } from "@/components/pricing/AplicarPrecosDialog";
 import type { RepricingRow, RepricingAvaliada, ConcorrenteMeta } from "./repricingTypes";
 
 interface Props {
   rows: RepricingRow[];
   concorrentesMeta: ConcorrenteMeta[];
+  storeId?: string;
 }
 
 const fmt = (v: number | null | undefined) =>
@@ -33,7 +39,7 @@ const statusConfig = {
 
 type SortKey = "descricao" | "precoAtual" | "diferenca" | "status";
 
-const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
+const RepricingResultTable = ({ rows, concorrentesMeta, storeId = "" }: Props) => {
   const [search, setSearch] = useState("");
   const [mercFilter, setMercFilter] = useState("todos");
   const [statusFilter, setStatusFilter] = useState("todos");
@@ -42,6 +48,21 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(0);
   const perPage = 15;
+  const [marcados, setMarcados] = useState<string[]>([]);
+  const [propagar, setPropagar] = useState(true);
+  const [aplicarAberto, setAplicarAberto] = useState(false);
+  const [margens, setMargens] = useState<MargemPadrao[]>([]);
+  const [codigoLoja, setCodigoLoja] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!storeId) return;
+    setMarcados([]);
+    carregarMargens(storeId).then(setMargens);
+    supabase.from("store_vr_config").select("codigo_loja").eq("store_id", storeId).maybeSingle()
+      .then(({ data }) => setCodigoLoja(data?.codigo_loja ?? null));
+  }, [storeId]);
+
+  const mapaMargens = useMemo(() => indexarMargens(margens), [margens]);
 
   const refNome =
     baseRef === "geral"
@@ -172,7 +193,30 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
     salvarWorkbook(wb, "Repricing");
   };
 
-  const colCount = 5 + 4 + concorrentesMeta.length * 3 + 1;
+  const colCount = 5 + 4 + concorrentesMeta.length * 3 + 1 + (storeId ? 1 : 0);
+
+  const itensAplicar: ItemAplicar[] = useMemo(
+    () =>
+      filtered
+        .filter((r) => marcados.includes(r.id))
+        .map((r) => {
+          const regra = resolverMargem(mapaMargens, { produto: r.codigoReduzido });
+          const meta = regra ? calcPrecoMeta(r.custo, Number(regra.margem_pct)) : r.novoPreco;
+          return { r, regra, meta };
+        })
+        .filter((x) => x.meta != null && x.meta > 0)
+        .map(({ r, regra, meta }) => ({
+          idProduto: parseInt(String(r.codigoReduzido).replace(/\D/g, ""), 10) || 0,
+          descricao: r.descricao,
+          ean: r.ean,
+          precoAtual: r.precoAtual,
+          precoMeta: Number(meta),
+          margemMeta: regra ? Number(regra.margem_pct) : null,
+          custo: r.custo,
+        })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [filtered, marcados, mapaMargens],
+  );
 
   return (
     <TooltipProvider delayDuration={150}>
@@ -239,7 +283,7 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/40 hover:bg-muted/40">
-                <TableHead colSpan={5} className="text-[11px] uppercase tracking-wide">Loja</TableHead>
+                <TableHead colSpan={storeId ? 6 : 5} className="text-[11px] uppercase tracking-wide">Loja</TableHead>
                 <TableHead colSpan={4} className="text-center text-[11px] uppercase tracking-wide border-l border-border">
                   Base interna da rede
                 </TableHead>
@@ -254,6 +298,15 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
                 <TableHead className="border-l border-border" />
               </TableRow>
               <TableRow className="bg-muted/20">
+                {storeId && (
+                  <TableHead className="w-[36px]">
+                    <Checkbox
+                      checked={marcados.length > 0 && paged.every((r) => marcados.includes(r.id))}
+                      onCheckedChange={(v) => setMarcados(v ? paged.map((r) => r.id) : [])}
+                      aria-label="Selecionar página"
+                    />
+                  </TableHead>
+                )}
                 <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("descricao")}>Produto <SortIcon col="descricao" /></TableHead>
                 <TableHead className="w-[110px]">Código de barras</TableHead>
                 <TableHead className="text-right w-[85px]">Custo</TableHead>
@@ -281,6 +334,17 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
                 const Icon = sc.icon;
                 return (
                   <TableRow key={r.id}>
+                    {storeId && (
+                      <TableCell>
+                        <Checkbox
+                          checked={marcados.includes(r.id)}
+                          onCheckedChange={(v) =>
+                            setMarcados((p) => (v ? [...new Set([...p, r.id])] : p.filter((x) => x !== r.id)))
+                          }
+                          aria-label="Selecionar produto"
+                        />
+                      </TableCell>
+                    )}
                     <TableCell className="font-medium text-sm">{r.descricao}</TableCell>
                     <TableCell className="font-mono text-xs text-muted-foreground">{r.ean}</TableCell>
                     <TableCell className="text-right text-sm tabular-nums">{fmt(r.custo)}</TableCell>
@@ -348,6 +412,32 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
             </TableBody>
           </Table>
         </div>
+
+        {storeId && marcados.length > 0 && (
+          <div className="sticky bottom-2 z-10 flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card shadow-lg p-3">
+            <span className="text-sm font-medium">{marcados.length} produto(s) selecionado(s)</span>
+            <span className="text-xs text-muted-foreground">{itensAplicar.length} com preço calculado</span>
+            <label className="flex items-center gap-2 text-xs">
+              <Switch checked={propagar} onCheckedChange={setPropagar} aria-label="Propagar para a família" />
+              Propagar para a família
+            </label>
+            <Button variant="ghost" size="sm" onClick={() => setMarcados([])}>Limpar seleção</Button>
+            <Button className="ml-auto" disabled={itensAplicar.length === 0} onClick={() => setAplicarAberto(true)}>
+              Aplicar preços
+            </Button>
+          </div>
+        )}
+
+        <AplicarPrecosDialog
+          open={aplicarAberto}
+          onOpenChange={setAplicarAberto}
+          storeId={storeId}
+          codigoLoja={codigoLoja}
+          itens={itensAplicar}
+          propagarInicial={propagar}
+          onAplicado={() => setMarcados([])}
+        />
+
 
         {totalPages > 1 && (
           <div className="flex items-center justify-between text-sm text-muted-foreground">
