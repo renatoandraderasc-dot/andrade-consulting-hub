@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
-import { Loader2, Plus, Pencil, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Loader2, Plus, Pencil, Trash2, Download, Upload, FileDown } from "lucide-react";
+import * as XLSX from "xlsx";
+import ImportarMargensDialog, { montarPreview, type LinhaImport } from "./ImportarMargensDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { chamarRelatorio, pick as col, txt } from "@/lib/vrReport";
 import { carregarMargens, type MargemPadrao, type TipoMargem } from "@/lib/margensPadrao";
@@ -48,6 +50,85 @@ const MargensPadraoTab = ({ storeId }: Props) => {
   const [salvando, setSalvando] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [excluir, setExcluir] = useState<MargemPadrao | null>(null);
+
+  const arquivoRef = useRef<HTMLInputElement>(null);
+  const [importando, setImportando] = useState(false);
+  const [previewLinhas, setPreviewLinhas] = useState<LinhaImport[]>([]);
+  const [previewAberto, setPreviewAberto] = useState(false);
+
+  const baixarModelo = () => {
+    const ws = XLSX.utils.aoa_to_sheet([["Cod", "Preço Novo"], [19871, 59.99]]);
+    ws["!cols"] = [{ wch: 12 }, { wch: 14 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Modelo");
+    XLSX.writeFile(wb, "modelo-margens-padrao.xlsx");
+  };
+
+  const exportarCadastro = async () => {
+    const { data: loja } = await supabase.from("stores").select("name").eq("id", storeId).maybeSingle();
+    const nomeLoja = (loja?.name || "loja").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const hoje = new Date().toISOString().slice(0, 10);
+    const ws = XLSX.utils.json_to_sheet(
+      margens.map((m) => ({
+        Tipo: rotulo[m.tipo],
+        "Cod/Ref": m.referencia_id,
+        Nome: m.referencia_nome || "",
+        "Margem %": Number(m.margem_pct),
+        Min: m.margem_min == null ? "" : Number(m.margem_min),
+        Max: m.margem_max == null ? "" : Number(m.margem_max),
+        Observação: m.observacao || "",
+        "Editado em": dataHora(m.updated_at),
+      })),
+    );
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Margens");
+    XLSX.writeFile(wb, `margens-padrao-${nomeLoja}-${hoje}.xlsx`);
+  };
+
+  const numeroBR = (v: unknown): number => {
+    if (typeof v === "number") return v;
+    const s = String(v ?? "").trim().replace(/[^\d.,-]/g, "");
+    if (!s) return NaN;
+    const br = s.includes(",") ? s.replace(/\./g, "").replace(",", ".") : s;
+    return Number(br);
+  };
+
+  const importarArquivo = async (file: File) => {
+    setImportando(true);
+    try {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: "array" });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const linhas = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" });
+      const norm = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+
+      const entradas: { cod: number; precoNovo: number }[] = [];
+      for (const l of linhas) {
+        let cod = NaN, preco = NaN;
+        for (const [k, v] of Object.entries(l)) {
+          const n = norm(k);
+          if (n.startsWith("cod")) cod = parseInt(String(v).replace(/\D/g, ""), 10);
+          else if (n.includes("preco")) preco = numeroBR(v);
+        }
+        if (!isNaN(cod) && cod > 0 && isFinite(preco) && preco > 0) entradas.push({ cod, precoNovo: preco });
+      }
+      if (!entradas.length) {
+        toast({ title: "Nada para importar", description: "O arquivo precisa das colunas Cod e Preço Novo.", variant: "destructive" });
+        return;
+      }
+
+      const { data: cfg } = await supabase
+        .from("store_vr_config").select("codigo_loja").eq("store_id", storeId).maybeSingle();
+      const preview = await montarPreview(storeId, String(cfg?.codigo_loja ?? ""), entradas);
+      setPreviewLinhas(preview);
+      setPreviewAberto(true);
+    } catch (e) {
+      toast({ title: "Não foi possível ler o arquivo", description: e instanceof Error ? e.message : "", variant: "destructive" });
+    } finally {
+      setImportando(false);
+      if (arquivoRef.current) arquivoRef.current.value = "";
+    }
+  };
 
   const recarregar = async () => {
     setCarregando(true);
@@ -154,6 +235,34 @@ const MargensPadraoTab = ({ storeId }: Props) => {
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap justify-end gap-2">
+        <input
+          ref={arquivoRef}
+          type="file"
+          accept=".xlsx,.xls,.csv"
+          className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) importarArquivo(f); }}
+        />
+        <Button variant="outline" size="sm" onClick={baixarModelo}>
+          <FileDown className="w-4 h-4 mr-1" /> Baixar modelo
+        </Button>
+        <Button variant="outline" size="sm" onClick={exportarCadastro} disabled={margens.length === 0}>
+          <Download className="w-4 h-4 mr-1" /> Exportar cadastro
+        </Button>
+        <Button size="sm" onClick={() => arquivoRef.current?.click()} disabled={importando || !storeId}>
+          {importando ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Upload className="w-4 h-4 mr-1" />}
+          Importar Excel
+        </Button>
+      </div>
+
+      <ImportarMargensDialog
+        open={previewAberto}
+        onOpenChange={setPreviewAberto}
+        storeId={storeId}
+        linhas={previewLinhas}
+        onImportado={recarregar}
+      />
+
       <div className="bg-card border border-border rounded-lg p-3 space-y-3">
         <div className="flex flex-wrap items-end gap-2">
           <div className="space-y-1">
