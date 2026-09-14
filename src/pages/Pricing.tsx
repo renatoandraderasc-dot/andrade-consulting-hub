@@ -487,7 +487,7 @@ const Pricing = () => {
               <Card label="Margem no Preço do Concorrente" value={pctFmt(kpis.margemConc)} hint="filtrado" />
             </div>
 
-            <PricingTable rows={filtradas} concorrentes={concUsados} semEanTotal={semEanTotal} />
+            <PricingTable rows={filtradas} concorrentes={concUsados} semEanTotal={semEanTotal} storeId={storeId} />
           </>
         )}
         </>
