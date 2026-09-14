@@ -298,6 +298,15 @@ const RepricingResultTable = ({ rows, concorrentesMeta, storeId = "" }: Props) =
                 <TableHead className="border-l border-border" />
               </TableRow>
               <TableRow className="bg-muted/20">
+                {storeId && (
+                  <TableHead className="w-[36px]">
+                    <Checkbox
+                      checked={marcados.length > 0 && paged.every((r) => marcados.includes(r.id))}
+                      onCheckedChange={(v) => setMarcados(v ? paged.map((r) => r.id) : [])}
+                      aria-label="Selecionar página"
+                    />
+                  </TableHead>
+                )}
                 <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("descricao")}>Produto <SortIcon col="descricao" /></TableHead>
                 <TableHead className="w-[110px]">Código de barras</TableHead>
                 <TableHead className="text-right w-[85px]">Custo</TableHead>
