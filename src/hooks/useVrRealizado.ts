@@ -43,6 +43,13 @@ interface RawResult {
   // Positivacao: produtos distintos vendidos pela 1a vez no dia (mix continuo)
   mixLinhas: VrLinha[];
   mapa: Record<string, string>;
+  /**
+   * Totais oficiais do periodo (kpis_periodo). Alguns conectores montam o
+   * relatorio por secao com join no cadastro mercadologico e perdem as vendas
+   * de itens sem secao cadastrada. Usamos esses totais para reconciliar o
+   * faturamento da loja com o numero oficial do ERP.
+   */
+  totais?: { vendas: number; lucro: number; volume: number } | null;
 }
 
 interface CacheEntry {
@@ -95,7 +102,7 @@ export function canonDept(s: string): string {
 }
 
 async function loadRaw(storeId: string, inicio: string, fim: string): Promise<RawResult> {
-  const [{ data: mapas }, { data: proxy, error }, posv] = await Promise.all([
+  const [{ data: mapas }, { data: proxy, error }, posv, kpi] = await Promise.all([
     supabase.from("vr_secao_departamento").select("secao_vr, department").eq("store_id", storeId),
     supabase.functions.invoke("vr-proxy", {
       body: { store_id: storeId, relatorio: "vendas_secao_periodo", params: { inicio, fim } },
@@ -107,7 +114,13 @@ async function loadRaw(storeId: string, inicio: string, fim: string): Promise<Ra
         body: { store_id: storeId, relatorio: "mix_positivacao_periodo", params: { inicio, fim } },
       })
       .catch(() => ({ data: null, error: null })),
-  ]);
+    // Totais oficiais do periodo, usados para reconciliar o faturamento da loja.
+    supabase.functions
+      .invoke("vr-proxy", {
+        body: { store_id: storeId, relatorio: "kpis_periodo", params: { inicio, fim } },
+      })
+      .catch(() => ({ data: null, error: null })),
+  ] as const);
 
   const mapa: Record<string, string> = {};
   for (const m of mapas ?? []) mapa[norm(m.secao_vr)] = m.department;
@@ -180,7 +193,19 @@ async function loadRaw(storeId: string, inicio: string, fim: string): Promise<Ra
   }
 
 
-  return { linhas, mixLinhas, mapa };
+  // Totais oficiais do ERP no periodo (quando o conector publica kpis_periodo)
+  const kpiLinha: any = Array.isArray((kpi as any)?.data?.dados)
+    ? (kpi as any).data.dados[0]
+    : null;
+  const totais = kpiLinha
+    ? {
+        vendas: numOf(pick(kpiLinha, "faturamento", "total_vendido", "vendas")),
+        lucro: numOf(pick(kpiLinha, "lucro")),
+        volume: numOf(pick(kpiLinha, "volume")),
+      }
+    : null;
+
+  return { linhas, mixLinhas, mapa, totais };
 }
 
 function agregar(raw: RawResult, categoria?: string | null): VrRealizado {
@@ -219,6 +244,30 @@ function agregar(raw: RawResult, categoria?: string | null): VrRealizado {
   }
 
 
+
+  // ---- Reconciliacao com o faturamento oficial do ERP ----
+  // O relatorio por secao de alguns conectores (Oracle) perde as vendas de
+  // itens sem secao cadastrada, ficando abaixo do faturamento do dia. Quando o
+  // total oficial (kpis_periodo) e maior, a diferenca entra na LOJA rateada
+  // pelo peso de cada dia — o total do periodo passa a bater com o ERP.
+  if (!categoria && raw.totais && raw.totais.vendas > 0) {
+    const dias = [...acc.entries()].filter(([k]) => k.startsWith(`${LOJA}|`));
+    const somaVendas = dias.reduce((s, [, v]) => s + v.vendas, 0);
+    const difVendas = raw.totais.vendas - somaVendas;
+    // tolera centavos de arredondamento; so completa o que falta
+    if (somaVendas > 0 && difVendas > 0.01) {
+      const somaLucro = dias.reduce((s, [, v]) => s + v.lucro, 0);
+      const somaVolume = dias.reduce((s, [, v]) => s + v.volume, 0);
+      const difLucro = Math.max(raw.totais.lucro - somaLucro, 0);
+      const difVolume = Math.max(raw.totais.volume - somaVolume, 0);
+      for (const [, v] of dias) {
+        const peso = v.vendas / somaVendas;
+        v.vendas += difVendas * peso;
+        v.lucro += difLucro * peso;
+        v.volume += difVolume * peso;
+      }
+    }
+  }
 
   const out: VrRealizado = {};
   for (const [k, v] of acc) {
