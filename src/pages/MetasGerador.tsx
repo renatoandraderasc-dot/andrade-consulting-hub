@@ -585,6 +585,7 @@ const MetasGerador = () => {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border">
+                    <th className="text-center py-2 pr-2 font-body text-muted-foreground w-10" title="Dias desmarcados não recebem meta; o total do mês é redistribuído nos demais">Ativo</th>
                     <th className="text-left py-2 pr-4 font-body text-muted-foreground">Data</th>
                     <th className="text-left py-2 px-2 font-body text-muted-foreground">Tipo</th>
                     <th className="text-right py-2 px-2 font-body text-muted-foreground">Meta Vendas</th>
@@ -600,17 +601,34 @@ const MetasGerador = () => {
                 </thead>
                 <tbody>
                   {metasRows.length === 0 && (
-                    <tr><td colSpan={7} className="py-6 text-center text-muted-foreground font-body">Nenhuma meta gerada ainda.</td></tr>
+                    <tr><td colSpan={8} className="py-6 text-center text-muted-foreground font-body">Nenhuma meta gerada ainda.</td></tr>
                   )}
                   {metasRows.map((r, idx) => {
                     const isDirty = dirtyDates.has(r.date);
                     const semOp = isSemOperacao(r);
+                    const ativo = diaAtivo(r);
                     const inputCls = `w-32 bg-background border rounded-lg px-2 py-1.5 text-right font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 ${isDirty ? "border-amber-500" : "border-border"}`;
                     return (
                       <tr key={r.date} className={`border-b border-border/50 ${semOp ? "opacity-50" : ""}`}>
+                        <td className="py-2 pr-2 text-center">
+                          <input
+                            type="checkbox"
+                            checked={ativo}
+                            disabled={loading}
+                            onChange={(e) => handleToggleDia(r.date, e.target.checked)}
+                            className="h-4 w-4 accent-primary cursor-pointer"
+                            title={ativo ? "Desabilitar este dia" : "Habilitar este dia"}
+                          />
+                        </td>
                         <td className="py-2 pr-4 font-body">{fmtDate(r.date)}</td>
                         <td className="py-2 px-2 font-body">
                           {r.tipo_dia}
+                          {!ativo && (
+                            <span className="ml-2 text-[10px] uppercase tracking-wide text-destructive border border-destructive/40 rounded px-1 py-0.5">
+                              desabilitado
+                            </span>
+                          )}
+
                           {semOp && (
                             <span className="ml-2 text-[10px] uppercase tracking-wide text-muted-foreground border border-border rounded px-1 py-0.5">
                               sem operação
