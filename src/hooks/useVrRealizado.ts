@@ -102,7 +102,7 @@ export function canonDept(s: string): string {
 }
 
 async function loadRaw(storeId: string, inicio: string, fim: string): Promise<RawResult> {
-  const [{ data: mapas }, { data: proxy, error }, posv] = await Promise.all([
+  const [{ data: mapas }, { data: proxy, error }, posv, kpi] = await Promise.all([
     supabase.from("vr_secao_departamento").select("secao_vr, department").eq("store_id", storeId),
     supabase.functions.invoke("vr-proxy", {
       body: { store_id: storeId, relatorio: "vendas_secao_periodo", params: { inicio, fim } },
