@@ -93,6 +93,10 @@ const PorFornecedorTab = ({ storeId }: Props) => {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [aplicados, setAplicados] = useState<Record<string, number>>({});
   const [confirmar, setConfirmar] = useState<{ linha: Linha; preco: number } | null>(null);
+  const [margens, setMargens] = useState<MargemPadrao[]>([]);
+  const [marcados, setMarcados] = useState<string[]>([]);
+  const [propagar, setPropagar] = useState(true);
+  const [aplicarAberto, setAplicarAberto] = useState(false);
 
   useEffect(() => {
     if (!storeId) return;
