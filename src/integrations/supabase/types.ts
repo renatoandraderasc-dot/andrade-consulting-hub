@@ -1385,6 +1385,68 @@ export type Database = {
         }
         Relationships: []
       }
+      historico_aplicacao_preco: {
+        Row: {
+          applied_at: string
+          applied_by: string | null
+          custo_referencia: number | null
+          descricao: string | null
+          ean: string | null
+          fornecedor: string | null
+          id: string
+          id_produto: number
+          id_usuario_vr: number | null
+          margem_meta: number | null
+          preco_anterior: number | null
+          preco_aplicado: number
+          propagou_familia: boolean
+          qtd_produtos_afetados: number | null
+          store_id: string
+        }
+        Insert: {
+          applied_at?: string
+          applied_by?: string | null
+          custo_referencia?: number | null
+          descricao?: string | null
+          ean?: string | null
+          fornecedor?: string | null
+          id?: string
+          id_produto: number
+          id_usuario_vr?: number | null
+          margem_meta?: number | null
+          preco_anterior?: number | null
+          preco_aplicado: number
+          propagou_familia?: boolean
+          qtd_produtos_afetados?: number | null
+          store_id: string
+        }
+        Update: {
+          applied_at?: string
+          applied_by?: string | null
+          custo_referencia?: number | null
+          descricao?: string | null
+          ean?: string | null
+          fornecedor?: string | null
+          id?: string
+          id_produto?: number
+          id_usuario_vr?: number | null
+          margem_meta?: number | null
+          preco_anterior?: number | null
+          preco_aplicado?: number
+          propagou_familia?: boolean
+          qtd_produtos_afetados?: number | null
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "historico_aplicacao_preco_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jornada_checklist_itens: {
         Row: {
           created_at: string
@@ -1662,6 +1724,59 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "lancamentos_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      margens_padrao: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          margem_max: number | null
+          margem_min: number | null
+          margem_pct: number
+          observacao: string | null
+          referencia_id: number
+          referencia_nome: string | null
+          store_id: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          margem_max?: number | null
+          margem_min?: number | null
+          margem_pct: number
+          observacao?: string | null
+          referencia_id: number
+          referencia_nome?: string | null
+          store_id: string
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          margem_max?: number | null
+          margem_min?: number | null
+          margem_pct?: number
+          observacao?: string | null
+          referencia_id?: number
+          referencia_nome?: string | null
+          store_id?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "margens_padrao_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
@@ -2575,6 +2690,7 @@ export type Database = {
           created_at: string
           enabled: boolean
           health_error: string | null
+          id_usuario_vr: number | null
           last_check_at: string | null
           last_error: string | null
           last_sync_at: string | null
@@ -2590,6 +2706,7 @@ export type Database = {
           created_at?: string
           enabled?: boolean
           health_error?: string | null
+          id_usuario_vr?: number | null
           last_check_at?: string | null
           last_error?: string | null
           last_sync_at?: string | null
@@ -2605,6 +2722,7 @@ export type Database = {
           created_at?: string
           enabled?: boolean
           health_error?: string | null
+          id_usuario_vr?: number | null
           last_check_at?: string | null
           last_error?: string | null
           last_sync_at?: string | null
