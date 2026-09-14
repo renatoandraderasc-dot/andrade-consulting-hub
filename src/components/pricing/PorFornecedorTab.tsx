@@ -19,6 +19,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "@/hooks/use-toast";
 import { eanUtilizavel } from "./pricingTypes";
+import AplicarPrecosDialog, { type ItemAplicar } from "./AplicarPrecosDialog";
+import { carregarMargens, indexarMargens, resolverMargem, precoMeta as calcPrecoMeta, type MargemPadrao } from "@/lib/margensPadrao";
 
 const brl = (v: number | null | undefined) =>
   v == null || !isFinite(Number(v)) ? "—" : Number(v).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
