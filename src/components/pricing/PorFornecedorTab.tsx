@@ -579,9 +579,22 @@ const PorFornecedorTab = ({ storeId }: Props) => {
                   const chave = l.codigo || l.ean;
                   const sug = sugestao(l);
                   const mk = markup(l), md = markdown(l);
+                  const regra = regraDe(l);
+                  const pMeta = precoMetaDe(l);
+                  const dMeta = deltaMeta(l);
                   return (
                     <TableRow key={`${l.codigo}-${l.ean}-${l.fornecedor}`}>
+                      <TableCell>
+                        <Checkbox
+                          checked={marcados.includes(chave)}
+                          onCheckedChange={(v) =>
+                            setMarcados((p) => (v ? [...new Set([...p, chave])] : p.filter((x) => x !== chave)))
+                          }
+                          aria-label="Selecionar produto"
+                        />
+                      </TableCell>
                       <TableCell className="font-mono text-xs">{l.codigo}</TableCell>
+
                       <TableCell className="font-mono text-[11px] text-muted-foreground">{l.ean || "—"}</TableCell>
                       <TableCell className="text-sm max-w-[260px] truncate" title={l.descricao}>{l.descricao}</TableCell>
                       <TableCell className="text-xs">{l.secao}</TableCell>
