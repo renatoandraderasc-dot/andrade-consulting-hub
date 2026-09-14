@@ -691,7 +691,7 @@ const MetasGerador = () => {
                       <td className="py-3 pl-2 text-right font-body">{fmtNum(totals.mix, 0)}</td>
                     </tr>
                     <tr className="text-muted-foreground">
-                      <td className="py-2 pr-4 font-body text-xs" colSpan={2}>
+                      <td className="py-2 pr-4 font-body text-xs" colSpan={3}>
                         Média diária ({totals.dias} dias com operação
                         {totals.diasIgnorados > 0 ? ` · ${totals.diasIgnorados} ignorado(s)` : ""})
                       </td>
