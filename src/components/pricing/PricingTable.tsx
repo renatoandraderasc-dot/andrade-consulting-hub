@@ -228,6 +228,19 @@ const PricingTable = ({ rows, concorrentes, semEanTotal, storeId = "" }: Props) 
           <TableBody>
             {paged.map((r) => (
               <TableRow key={`${r.codigo}-${r.ean}`}>
+                {storeId && (
+                  <TableCell>
+                    <Checkbox
+                      checked={marcados.includes(r.codigo || r.ean)}
+                      onCheckedChange={(v) =>
+                        setMarcados((p) =>
+                          v ? [...new Set([...p, r.codigo || r.ean])] : p.filter((x) => x !== (r.codigo || r.ean)),
+                        )
+                      }
+                      aria-label="Selecionar produto"
+                    />
+                  </TableCell>
+                )}
                 <TableCell>
                   {r.imagem ? (
                     <img src={r.imagem} alt={r.descricao} loading="lazy" className="w-9 h-9 object-contain rounded bg-muted" />
