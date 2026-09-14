@@ -27,8 +27,8 @@ export async function montarPreview(
 ): Promise<LinhaImport[]> {
   const mapa = new Map<number, { descricao: string; ean: string; custo: number | null }>();
   const codigos = entradas.map((e) => e.cod);
-  for (let i = 0; i < codigos.length; i += 500) {
-    const lote = codigos.slice(i, i + 500);
+  for (let i = 0; i < codigos.length; i += 120) {
+    const lote = codigos.slice(i, i + 120);
     const r = await chamarRelatorio(storeId, "custos_por_produto", {
       codigos: lote.join(","),
       loja: codigoLoja,

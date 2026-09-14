@@ -158,8 +158,8 @@ const MargensPadraoTab = ({ storeId }: Props) => {
 
       const mapa = new Map<number, { descricao: string; ean: string; custo: number | null; precoAtual: number }>();
       const cods = regrasProduto.map((m) => m.referencia_id);
-      for (let i = 0; i < cods.length; i += 500) {
-        const lote = cods.slice(i, i + 500);
+      for (let i = 0; i < cods.length; i += 120) {
+        const lote = cods.slice(i, i + 120);
         const r = await chamarRelatorio(storeId, "custos_por_produto", { codigos: lote.join(","), loja: lj });
         for (const l of r.dados || []) {
           const cod = parseInt(String(col(l, "cod", "codigo", "id_produto", "codigo_produto") ?? "").replace(/\D/g, ""), 10);

@@ -67,16 +67,20 @@ const AplicarPrecosDialog = ({
     setErro(null);
     try {
       const payload = validos.map((i) => ({ id_produto: i.idProduto, precovenda: i.precoMeta }));
-      const r = await chamarRelatorio(storeId, "aplicar_precos", {
-        itens: JSON.stringify(payload),
-        loja: codigoLoja ?? "",
-        id_usuario: idUsuario.trim(),
-        propagar_familia: propagar ? "true" : "false",
-      });
-      const msg = avisoRelatorio(r);
-      if (msg) { setErro(msg); return; }
-
-      const afetados = (r.dados || []).length || validos.length;
+      // Envia em lotes pequenos: listas grandes estouram o limite da ponte da loja.
+      let afetados = 0;
+      for (let i = 0; i < payload.length; i += 80) {
+        const lote = payload.slice(i, i + 80);
+        const r = await chamarRelatorio(storeId, "aplicar_precos", {
+          itens: JSON.stringify(lote),
+          loja: codigoLoja ?? "",
+          id_usuario: idUsuario.trim(),
+          propagar_familia: propagar ? "true" : "false",
+        });
+        const msg = avisoRelatorio(r);
+        if (msg) { setErro(msg); return; }
+        afetados += (r.dados || []).length || lote.length;
+      }
       const { data: auth } = await supabase.auth.getUser();
       await supabase.from("historico_aplicacao_preco").insert(
         validos.map((i) => ({
