@@ -573,6 +573,25 @@ const MargensPadraoTab = ({ storeId }: Props) => {
         </Table>
       </div>
 
+      <AlertDialog open={apagarTudo} onOpenChange={setApagarTudo}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Apagar todas as margens padrão?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Todas as <strong>{margens.length} regra(s)</strong> desta loja (produtos, fornecedores e departamentos)
+              serão removidas. Essa ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={apagando}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmarApagarTudo} disabled={apagando}>
+              {apagando ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
+              Apagar tudo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <AlertDialog open={!!excluir} onOpenChange={(o) => !o && setExcluir(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
