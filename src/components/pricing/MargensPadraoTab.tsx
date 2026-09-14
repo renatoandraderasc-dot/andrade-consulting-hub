@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
-import { Loader2, Plus, Pencil, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Loader2, Plus, Pencil, Trash2, Download, Upload, FileDown } from "lucide-react";
+import * as XLSX from "xlsx";
+import ImportarMargensDialog, { montarPreview, type LinhaImport } from "./ImportarMargensDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { chamarRelatorio, pick as col, txt } from "@/lib/vrReport";
 import { carregarMargens, type MargemPadrao, type TipoMargem } from "@/lib/margensPadrao";
