@@ -15,6 +15,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PricingTable from "@/components/pricing/PricingTable";
 import PorFornecedorTab from "@/components/pricing/PorFornecedorTab";
+import MargensPadraoTab from "@/components/pricing/MargensPadraoTab";
+import HistoricoPrecosTab from "@/components/pricing/HistoricoPrecosTab";
 import { eanUtilizavel, type ConcorrenteInfo, type PricingRow } from "@/components/pricing/pricingTypes";
 
 interface Store { id: string; name: string }
