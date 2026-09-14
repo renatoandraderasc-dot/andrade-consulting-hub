@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, Plus, Pencil, Trash2, Download, Upload, FileDown, Zap } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Download, Upload, FileDown, Zap, CheckSquare, Square, Eraser } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import * as XLSX from "xlsx";
 import ImportarMargensDialog, { montarPreview, type LinhaImport } from "./ImportarMargensDialog";
 import AplicarPrecosDialog, { type ItemAplicar } from "./AplicarPrecosDialog";
@@ -51,6 +52,9 @@ const MargensPadraoTab = ({ storeId }: Props) => {
   const [salvando, setSalvando] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [excluir, setExcluir] = useState<MargemPadrao | null>(null);
+  const [selecionadas, setSelecionadas] = useState<Set<string>>(new Set());
+  const [apagarTudo, setApagarTudo] = useState(false);
+  const [apagando, setApagando] = useState(false);
 
   const arquivoRef = useRef<HTMLInputElement>(null);
   const [importando, setImportando] = useState(false);
