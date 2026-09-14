@@ -316,6 +316,18 @@ const Pricing = () => {
           </p>
         </div>
 
+        <Tabs value={aba} onValueChange={setAba}>
+          <TabsList>
+            <TabsTrigger value="comparativo">Comparativo</TabsTrigger>
+            <TabsTrigger value="fornecedor">Por Fornecedor</TabsTrigger>
+          </TabsList>
+          <TabsContent value="fornecedor" className="mt-4">
+            <PorFornecedorTab storeId={storeId} />
+          </TabsContent>
+        </Tabs>
+
+        {aba === "comparativo" && (
+        <>
         {/* Filtros */}
         <div className="flex flex-wrap items-end gap-2 bg-card border border-border rounded-lg p-3">
           <div className="space-y-1">
