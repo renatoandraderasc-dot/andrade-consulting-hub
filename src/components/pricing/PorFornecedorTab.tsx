@@ -227,10 +227,24 @@ const PorFornecedorTab = ({ storeId }: Props) => {
       setConcCols(cols);
       setLinhas(base);
       setAplicados({});
+      setMarcados([]);
+      setMargens(await carregarMargens(storeId));
       if (base.length === 0) setAviso("Nenhuma entrada de nota encontrada para os fornecedores e período informados.");
     } finally {
       setLoading(false);
     }
+  };
+
+  const mapaMargens = useMemo(() => indexarMargens(margens), [margens]);
+  const regraDe = (l: Linha) =>
+    resolverMargem(mapaMargens, { produto: l.codigo, fornecedor: l.idFornecedor, departamento: l.idDepartamento });
+  const precoMetaDe = (l: Linha) => {
+    const r = regraDe(l);
+    return r ? calcPrecoMeta(l.custoUnit, Number(r.margem_pct)) : null;
+  };
+  const deltaMeta = (l: Linha) => {
+    const pm = precoMetaDe(l);
+    return pm == null || l.precoAtual <= 0 ? null : ((pm - l.precoAtual) / l.precoAtual) * 100;
   };
 
   const precoBase = (l: Linha) => (sobreOferta ? l.precoOferta ?? l.precoAtual : l.precoAtual);
@@ -252,6 +266,27 @@ const PorFornecedorTab = ({ storeId }: Props) => {
     if (!isFinite(alvo) || l.custoUnit <= 0) return null;
     return Math.round(l.custoUnit * (1 + alvo / 100) * 100) / 100;
   };
+
+  const itensAplicar: ItemAplicar[] = useMemo(
+    () =>
+      linhas
+        .filter((l) => marcados.includes(l.codigo || l.ean))
+        .map((l) => ({ l, pm: precoMetaDe(l) }))
+        .filter((x): x is { l: Linha; pm: number } => x.pm != null)
+        .map(({ l, pm }) => ({
+          idProduto: l.idProduto,
+          descricao: l.descricao,
+          ean: l.ean,
+          fornecedor: l.fornecedor,
+          precoAtual: l.precoAtual,
+          precoMeta: pm,
+          margemMeta: regraDe(l)?.margem_pct ?? null,
+          custo: l.custoUnit,
+        })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [linhas, marcados, mapaMargens],
+  );
+
 
   const deptos = useMemo(() => [...new Set(linhas.map((l) => l.secao))].sort(), [linhas]);
 
