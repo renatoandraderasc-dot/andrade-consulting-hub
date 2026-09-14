@@ -37,6 +37,9 @@ interface Fornecedor { id: string; nome: string; cnpj: string }
 interface ConcCol { id: string; nome: string }
 
 interface Linha {
+  idProduto: number;
+  idFornecedor: string;
+  idDepartamento: string;
   codigo: string;
   ean: string;
   descricao: string;
