@@ -147,8 +147,11 @@ const PorFornecedorTab = ({ storeId }: Props) => {
       const r = await chamarRelatorio(storeId, "pricing_por_fornecedor", {
         inicio, fim, loja: codigoLoja ?? "", fornecedores: sel.join(","),
       });
-      const msg = avisoRelatorio(r);
+      const msg = r.indisponivel
+        ? "O relatório de preços por fornecedor ainda não foi publicado no sistema desta loja."
+        : avisoRelatorio(r);
       if (msg) { setAviso(msg); setLinhas([]); setConcCols([]); return; }
+
 
       const base: Linha[] = (r.dados || []).map((l) => ({
         codigo: String(col(l, "codigo", "cod", "codigo_produto", "cod_produto") ?? "").replace(/^0+/, ""),
