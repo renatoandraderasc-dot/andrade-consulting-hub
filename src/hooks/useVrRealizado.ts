@@ -245,6 +245,30 @@ function agregar(raw: RawResult, categoria?: string | null): VrRealizado {
 
 
 
+  // ---- Reconciliacao com o faturamento oficial do ERP ----
+  // O relatorio por secao de alguns conectores (Oracle) perde as vendas de
+  // itens sem secao cadastrada, ficando abaixo do faturamento do dia. Quando o
+  // total oficial (kpis_periodo) e maior, a diferenca entra na LOJA rateada
+  // pelo peso de cada dia — o total do periodo passa a bater com o ERP.
+  if (!categoria && raw.totais && raw.totais.vendas > 0) {
+    const dias = [...acc.entries()].filter(([k]) => k.startsWith(`${LOJA}|`));
+    const somaVendas = dias.reduce((s, [, v]) => s + v.vendas, 0);
+    const difVendas = raw.totais.vendas - somaVendas;
+    // tolera centavos de arredondamento; so completa o que falta
+    if (somaVendas > 0 && difVendas > 0.01) {
+      const somaLucro = dias.reduce((s, [, v]) => s + v.lucro, 0);
+      const somaVolume = dias.reduce((s, [, v]) => s + v.volume, 0);
+      const difLucro = Math.max(raw.totais.lucro - somaLucro, 0);
+      const difVolume = Math.max(raw.totais.volume - somaVolume, 0);
+      for (const [, v] of dias) {
+        const peso = v.vendas / somaVendas;
+        v.vendas += difVendas * peso;
+        v.lucro += difLucro * peso;
+        v.volume += difVolume * peso;
+      }
+    }
+  }
+
   const out: VrRealizado = {};
   for (const [k, v] of acc) {
     const dep = k.split("|")[0];
