@@ -323,9 +323,17 @@ const Pricing = () => {
           <TabsList>
             <TabsTrigger value="comparativo">Comparativo</TabsTrigger>
             <TabsTrigger value="fornecedor">Por Fornecedor</TabsTrigger>
+            <TabsTrigger value="margens">Margens Padrão</TabsTrigger>
+            <TabsTrigger value="historico">Histórico</TabsTrigger>
           </TabsList>
           <TabsContent value="fornecedor" className="mt-4">
             <PorFornecedorTab storeId={storeId} />
+          </TabsContent>
+          <TabsContent value="margens" className="mt-4">
+            <MargensPadraoTab storeId={storeId} />
+          </TabsContent>
+          <TabsContent value="historico" className="mt-4">
+            <HistoricoPrecosTab storeId={storeId} />
           </TabsContent>
         </Tabs>
 
