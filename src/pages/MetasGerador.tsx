@@ -683,7 +683,7 @@ const MetasGerador = () => {
                 {metasRows.length > 0 && (
                   <tfoot>
                     <tr className="border-t-2 border-border font-semibold">
-                      <td className="py-3 pr-4 font-body" colSpan={2}>Totais</td>
+                      <td className="py-3 pr-4 font-body" colSpan={3}>Totais</td>
                       <td className="py-3 px-2 text-right font-body">{fmtBRL(totals.vendas)}</td>
                       <td></td>
                       <td className="py-3 px-2 text-right font-body">{fmtBRL(totals.lucro)}</td>
