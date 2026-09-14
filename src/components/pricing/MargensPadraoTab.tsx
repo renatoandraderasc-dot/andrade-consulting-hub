@@ -416,7 +416,7 @@ const MargensPadraoTab = ({ storeId }: Props) => {
           </div>
           <Button onClick={salvar} disabled={salvando}>
             {salvando ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Plus className="w-4 h-4 mr-1" />}
-            {editandoId ? "Salvar" : "Adicionar"}
+            {editandoId ? "Salvar alterações" : "Cadastrar nova margem"}
           </Button>
           {editandoId && <Button variant="ghost" onClick={limpar}>Cancelar</Button>}
         </div>
