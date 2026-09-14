@@ -215,7 +215,7 @@ const MargensPadraoTab = ({ storeId }: Props) => {
   useEffect(() => {
     if (!storeId) { setMargens([]); return; }
     recarregar();
-    setOpcoes([]); setRefId(""); setRefNome("");
+    setOpcoes([]); setRefId(""); setRefNome(""); setSelecionadas(new Set());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storeId]);
 
@@ -487,7 +487,29 @@ const MargensPadraoTab = ({ storeId }: Props) => {
             {t === "todos" ? "Todos" : rotulo[t]}
           </Badge>
         ))}
-        <span className="text-xs text-muted-foreground ml-auto">{lista.length} regra(s)</span>
+        <div className="ml-auto flex items-center gap-2">
+          {selecionadasLista.length > 0 && (
+            <Button size="sm" variant="destructive" onClick={apagarSelecionadas} disabled={apagando}>
+              {apagando ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Trash2 className="w-4 h-4 mr-1" />}
+              Apagar selecionadas ({selecionadasLista.length})
+            </Button>
+          )}
+          <Button
+            size="sm" variant="outline" onClick={toggleTodas} disabled={lista.length === 0}
+            title="Selecionar ou limpar toda a lista"
+          >
+            {todasSelecionadas ? <CheckSquare className="w-4 h-4 mr-1" /> : <Square className="w-4 h-4 mr-1" />}
+            Selecionar tudo
+          </Button>
+          <Button
+            size="sm" variant="outline"
+            className="text-destructive border-destructive/40 hover:bg-destructive/10"
+            onClick={() => setApagarTudo(true)} disabled={margens.length === 0 || apagando}
+          >
+            <Eraser className="w-4 h-4 mr-1" /> Apagar tudo
+          </Button>
+          <span className="text-xs text-muted-foreground">{lista.length} regra(s)</span>
+        </div>
       </div>
 
       <div className="border border-border rounded-lg overflow-auto">
