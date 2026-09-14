@@ -326,6 +326,10 @@ const MargensPadraoTab = ({ storeId }: Props) => {
           {importando ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Upload className="w-4 h-4 mr-1" />}
           Importar Excel
         </Button>
+        <Button size="sm" onClick={aplicarEmLote} disabled={montandoLote || !storeId || regrasProduto.length === 0}>
+          {montandoLote ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Zap className="w-4 h-4 mr-1" />}
+          Aplicar em lote ({regrasProduto.length})
+        </Button>
       </div>
 
       <ImportarMargensDialog
