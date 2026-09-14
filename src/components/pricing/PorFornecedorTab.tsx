@@ -663,8 +663,33 @@ const PorFornecedorTab = ({ storeId }: Props) => {
           {filtradas.length > 400 && (
             <p className="text-xs text-muted-foreground">Mostrando os 400 primeiros. Use os filtros ou exporte para ver tudo.</p>
           )}
+
+          {marcados.length > 0 && (
+            <div className="sticky bottom-2 z-10 flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card shadow-lg p-3">
+              <span className="text-sm font-medium">{marcados.length} produto(s) selecionado(s)</span>
+              <label className="flex items-center gap-2 text-xs">
+                <Switch checked={propagar} onCheckedChange={setPropagar} aria-label="Propagar para a família" />
+                Propagar para a família
+              </label>
+              <Button variant="ghost" size="sm" onClick={() => setMarcados([])}>Limpar seleção</Button>
+              <Button className="ml-auto" disabled={itensAplicar.length === 0} onClick={() => setAplicarAberto(true)}>
+                Aplicar preços meta
+              </Button>
+            </div>
+          )}
         </>
       )}
+
+      <AplicarPrecosDialog
+        open={aplicarAberto}
+        onOpenChange={setAplicarAberto}
+        storeId={storeId}
+        codigoLoja={codigoLoja}
+        itens={itensAplicar}
+        propagarInicial={propagar}
+        onAplicado={() => { setMarcados([]); carregar(); }}
+      />
+
 
       <AlertDialog open={!!confirmar} onOpenChange={(o) => !o && setConfirmar(null)}>
         <AlertDialogContent>
