@@ -196,6 +196,14 @@ export async function consultarRelatorioLoja(opts: {
           signal: AbortSignal.timeout(timeoutMs),
         });
       }
+      // Ponte sem suporte a POST (Express responde 404/405 em HTML):
+      // tenta o mesmo relatorio via GET.
+      if (usarPost && (resp.status === 404 || resp.status === 405 || resp.status === 501)) {
+        resp = await fetch(url, {
+          headers: { "ngrok-skip-browser-warning": "true" },
+          signal: AbortSignal.timeout(timeoutMs),
+        });
+      }
       if (resp.status === 431 || resp.status === 414) {
         return { ok: false, dados: [], erro: "consulta grande demais para a ponte da loja (reduza o lote)" };
       }

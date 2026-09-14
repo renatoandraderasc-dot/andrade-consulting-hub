@@ -69,8 +69,10 @@ const AplicarPrecosDialog = ({
       const payload = validos.map((i) => ({ id_produto: i.idProduto, precovenda: i.precoMeta }));
       // Envia em lotes pequenos: listas grandes estouram o limite da ponte da loja.
       let afetados = 0;
-      for (let i = 0; i < payload.length; i += 80) {
-        const lote = payload.slice(i, i + 80);
+      // 25 itens por chamada mantem a URL curta o bastante para pontes que
+      // so aceitam GET (algumas lojas nao expoem POST em /relatorios).
+      for (let i = 0; i < payload.length; i += 25) {
+        const lote = payload.slice(i, i + 25);
         const r = await chamarRelatorio(storeId, "aplicar_precos", {
           itens: JSON.stringify(lote),
           loja: codigoLoja ?? "",
