@@ -1,18 +1,24 @@
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ArrowUp, ArrowDown, Minus, Search, Download, ChevronUp, ChevronDown } from "lucide-react";
 import * as XLSX from "xlsx";
+import { supabase } from "@/integrations/supabase/client";
 import { salvarWorkbook } from "@/lib/exportBranding";
+import { carregarMargens, indexarMargens, resolverMargem, precoMeta as calcPrecoMeta, type MargemPadrao } from "@/lib/margensPadrao";
+import AplicarPrecosDialog, { type ItemAplicar } from "@/components/pricing/AplicarPrecosDialog";
 import type { RepricingRow, RepricingAvaliada, ConcorrenteMeta } from "./repricingTypes";
 
 interface Props {
   rows: RepricingRow[];
   concorrentesMeta: ConcorrenteMeta[];
+  storeId?: string;
 }
 
 const fmt = (v: number | null | undefined) =>
