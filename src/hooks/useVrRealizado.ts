@@ -193,7 +193,19 @@ async function loadRaw(storeId: string, inicio: string, fim: string): Promise<Ra
   }
 
 
-  return { linhas, mixLinhas, mapa };
+  // Totais oficiais do ERP no periodo (quando o conector publica kpis_periodo)
+  const kpiLinha: any = Array.isArray((kpi as any)?.data?.dados)
+    ? (kpi as any).data.dados[0]
+    : null;
+  const totais = kpiLinha
+    ? {
+        vendas: numOf(pick(kpiLinha, "faturamento", "total_vendido", "vendas")),
+        lucro: numOf(pick(kpiLinha, "lucro")),
+        volume: numOf(pick(kpiLinha, "volume")),
+      }
+    : null;
+
+  return { linhas, mixLinhas, mapa, totais };
 }
 
 function agregar(raw: RawResult, categoria?: string | null): VrRealizado {
