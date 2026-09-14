@@ -213,7 +213,7 @@ const PricingTable = ({ rows, concorrentes, semEanTotal, storeId = "" }: Props) 
               })}
             </TableRow>
             <TableRow className="bg-muted/20">
-              <TableHead colSpan={9} />
+              <TableHead colSpan={storeId ? 10 : 9} />
               {concorrentes.map((c) => (
                 <Fragment key={c.id}>
                   <Th k={`${c.id}:preco`} className="text-right border-l border-border text-[11px]">Preço</Th>
