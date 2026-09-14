@@ -193,7 +193,30 @@ const RepricingResultTable = ({ rows, concorrentesMeta, storeId = "" }: Props) =
     salvarWorkbook(wb, "Repricing");
   };
 
-  const colCount = 5 + 4 + concorrentesMeta.length * 3 + 1;
+  const colCount = 5 + 4 + concorrentesMeta.length * 3 + 1 + (storeId ? 1 : 0);
+
+  const itensAplicar: ItemAplicar[] = useMemo(
+    () =>
+      filtered
+        .filter((r) => marcados.includes(r.id))
+        .map((r) => {
+          const regra = resolverMargem(mapaMargens, { produto: r.codigoReduzido });
+          const meta = regra ? calcPrecoMeta(r.custo, Number(regra.margem_pct)) : r.novoPreco;
+          return { r, regra, meta };
+        })
+        .filter((x) => x.meta != null && x.meta > 0)
+        .map(({ r, regra, meta }) => ({
+          idProduto: parseInt(String(r.codigoReduzido).replace(/\D/g, ""), 10) || 0,
+          descricao: r.descricao,
+          ean: r.ean,
+          precoAtual: r.precoAtual,
+          precoMeta: Number(meta),
+          margemMeta: regra ? Number(regra.margem_pct) : null,
+          custo: r.custo,
+        })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [filtered, marcados, mapaMargens],
+  );
 
   return (
     <TooltipProvider delayDuration={150}>
