@@ -177,6 +177,15 @@ const PricingTable = ({ rows, concorrentes, semEanTotal, storeId = "" }: Props) 
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40">
+              {storeId && (
+                <TableHead className="w-[36px]">
+                  <Checkbox
+                    checked={marcados.length > 0 && paged.every((r) => marcados.includes(r.codigo || r.ean))}
+                    onCheckedChange={(v) => setMarcados(v ? paged.map((r) => r.codigo || r.ean) : [])}
+                    aria-label="Selecionar página"
+                  />
+                </TableHead>
+              )}
               <TableHead className="w-[52px]">Imagem</TableHead>
               <Th k="codigo">Cód</Th>
               <Th k="descricao">Produto</Th>
