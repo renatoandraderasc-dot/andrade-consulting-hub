@@ -210,6 +210,12 @@ const MetasGerador = () => {
         meta_lucro: ((Number(r.meta_vendas) || 0) * (Number(r.meta_margem_pct) || 0)) / 100,
         meta_volume: Number(r.meta_volume) || 0,
         meta_mix: Number(r.meta_mix) || 0,
+        // a edição manual vira a nova base de rateio do mês
+        meta_base_vendas: Number(r.meta_vendas) || 0,
+        meta_base_margem_pct: Number(r.meta_margem_pct) || 0,
+        meta_base_volume: Number(r.meta_volume) || 0,
+        meta_base_mix: Number(r.meta_mix) || 0,
+
       }));
       const { error } = await supabase
         .from("store_daily_metrics")
