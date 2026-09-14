@@ -334,6 +334,17 @@ const RepricingResultTable = ({ rows, concorrentesMeta, storeId = "" }: Props) =
                 const Icon = sc.icon;
                 return (
                   <TableRow key={r.id}>
+                    {storeId && (
+                      <TableCell>
+                        <Checkbox
+                          checked={marcados.includes(r.id)}
+                          onCheckedChange={(v) =>
+                            setMarcados((p) => (v ? [...new Set([...p, r.id])] : p.filter((x) => x !== r.id)))
+                          }
+                          aria-label="Selecionar produto"
+                        />
+                      </TableCell>
+                    )}
                     <TableCell className="font-medium text-sm">{r.descricao}</TableCell>
                     <TableCell className="font-mono text-xs text-muted-foreground">{r.ean}</TableCell>
                     <TableCell className="text-right text-sm tabular-nums">{fmt(r.custo)}</TableCell>
