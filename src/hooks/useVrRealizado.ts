@@ -43,6 +43,13 @@ interface RawResult {
   // Positivacao: produtos distintos vendidos pela 1a vez no dia (mix continuo)
   mixLinhas: VrLinha[];
   mapa: Record<string, string>;
+  /**
+   * Totais oficiais do periodo (kpis_periodo). Alguns conectores montam o
+   * relatorio por secao com join no cadastro mercadologico e perdem as vendas
+   * de itens sem secao cadastrada. Usamos esses totais para reconciliar o
+   * faturamento da loja com o numero oficial do ERP.
+   */
+  totais?: { vendas: number; lucro: number; volume: number } | null;
 }
 
 interface CacheEntry {
