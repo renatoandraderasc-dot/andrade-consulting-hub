@@ -44,7 +44,7 @@ interface RawResult {
   mixLinhas: VrLinha[];
   mapa: Record<string, string>;
   /**
-   * Totais oficiais do periodo (kpis_periodo). Alguns conectores montam o
+   * Totais oficiais do periodo (ranking_produtos/kpis_periodo). Alguns conectores montam o
    * relatorio por secao com join no cadastro mercadologico e perdem as vendas
    * de itens sem secao cadastrada. Usamos esses totais para reconciliar o
    * faturamento da loja com o numero oficial do ERP.
@@ -102,7 +102,7 @@ export function canonDept(s: string): string {
 }
 
 async function loadRaw(storeId: string, inicio: string, fim: string): Promise<RawResult> {
-  const [{ data: mapas }, { data: proxy, error }, posv, kpi] = await Promise.all([
+  const [{ data: mapas }, { data: proxy, error }, posv, kpi, ranking] = await Promise.all([
     supabase.from("vr_secao_departamento").select("secao_vr, department").eq("store_id", storeId),
     supabase.functions.invoke("vr-proxy", {
       body: { store_id: storeId, relatorio: "vendas_secao_periodo", params: { inicio, fim } },
@@ -118,6 +118,13 @@ async function loadRaw(storeId: string, inicio: string, fim: string): Promise<Ra
     supabase.functions
       .invoke("vr-proxy", {
         body: { store_id: storeId, relatorio: "kpis_periodo", params: { inicio, fim } },
+      })
+      .catch(() => ({ data: null, error: null })),
+    // O ranking por produto representa a venda real no Maninho. Diferente do
+    // relatório por seção, ele também inclui itens sem seção mercadológica.
+    supabase.functions
+      .invoke("vr-proxy", {
+        body: { store_id: storeId, relatorio: "ranking_produtos", params: { inicio, fim, limite: 200000 } },
       })
       .catch(() => ({ data: null, error: null })),
   ] as const);
@@ -193,17 +200,38 @@ async function loadRaw(storeId: string, inicio: string, fim: string): Promise<Ra
   }
 
 
-  // Totais oficiais do ERP no periodo (quando o conector publica kpis_periodo)
+  // Total por produto: fonte mais completa no Maninho, pois inclui produtos
+  // ainda sem seção mercadológica. É a mesma origem da venda por mercadológico.
+  const rankingBrutas: any[] = Array.isArray((ranking as any)?.data?.dados)
+    ? (ranking as any).data.dados
+    : [];
+  const rankingVendas = rankingBrutas.reduce(
+    (s, l) => s + numOf(pick(l, "total_vendido", "venda", "vendas", "valor_venda")),
+    0,
+  );
+  const rankingLucro = rankingBrutas.reduce((s, l) => {
+    const vendas = numOf(pick(l, "total_vendido", "venda", "vendas", "valor_venda"));
+    return s + lucroDaLinha(l, vendas, numOf(pick(l, "lucro")) || (vendas * numOf(pick(l, "margem_pct"))) / 100);
+  }, 0);
+  const rankingVolume = rankingBrutas.reduce(
+    (s, l) => s + numOf(pick(l, "quantidade", "volume", "qtde", "qtd")),
+    0,
+  );
+
+  // Totais do ERP (fallback quando a loja não publica ranking por produto).
   const kpiLinha: any = Array.isArray((kpi as any)?.data?.dados)
     ? (kpi as any).data.dados[0]
     : null;
-  const totais = kpiLinha
+  const totaisKpi = kpiLinha
     ? {
         vendas: numOf(pick(kpiLinha, "faturamento", "total_vendido", "vendas")),
         lucro: numOf(pick(kpiLinha, "lucro")),
         volume: numOf(pick(kpiLinha, "volume")),
       }
     : null;
+  const totais = rankingVendas > 0
+    ? { vendas: rankingVendas, lucro: rankingLucro, volume: rankingVolume }
+    : totaisKpi;
 
   return { linhas, mixLinhas, mapa, totais };
 }
