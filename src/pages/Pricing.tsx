@@ -12,7 +12,9 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PricingTable from "@/components/pricing/PricingTable";
+import PorFornecedorTab from "@/components/pricing/PorFornecedorTab";
 import { eanUtilizavel, type ConcorrenteInfo, type PricingRow } from "@/components/pricing/pricingTypes";
 
 interface Store { id: string; name: string }
