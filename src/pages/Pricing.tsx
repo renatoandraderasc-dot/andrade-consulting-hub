@@ -38,6 +38,7 @@ const Pricing = () => {
   const [status, setStatus] = useState("todos");
   const [busca, setBusca] = useState("");
   const [dias, setDias] = useState("90");
+  const [aba, setAba] = useState("comparativo");
 
   const [loading, setLoading] = useState(false);
   const [estado, setEstado] = useState<Estado>("inicial");
