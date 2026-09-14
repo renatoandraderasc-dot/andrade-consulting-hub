@@ -12,7 +12,9 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PricingTable from "@/components/pricing/PricingTable";
+import PorFornecedorTab from "@/components/pricing/PorFornecedorTab";
 import { eanUtilizavel, type ConcorrenteInfo, type PricingRow } from "@/components/pricing/pricingTypes";
 
 interface Store { id: string; name: string }
@@ -36,6 +38,7 @@ const Pricing = () => {
   const [status, setStatus] = useState("todos");
   const [busca, setBusca] = useState("");
   const [dias, setDias] = useState("90");
+  const [aba, setAba] = useState("comparativo");
 
   const [loading, setLoading] = useState(false);
   const [estado, setEstado] = useState<Estado>("inicial");
@@ -316,6 +319,18 @@ const Pricing = () => {
           </p>
         </div>
 
+        <Tabs value={aba} onValueChange={setAba}>
+          <TabsList>
+            <TabsTrigger value="comparativo">Comparativo</TabsTrigger>
+            <TabsTrigger value="fornecedor">Por Fornecedor</TabsTrigger>
+          </TabsList>
+          <TabsContent value="fornecedor" className="mt-4">
+            <PorFornecedorTab storeId={storeId} />
+          </TabsContent>
+        </Tabs>
+
+        {aba === "comparativo" && (
+        <>
         {/* Filtros */}
         <div className="flex flex-wrap items-end gap-2 bg-card border border-border rounded-lg p-3">
           <div className="space-y-1">
@@ -464,6 +479,8 @@ const Pricing = () => {
 
             <PricingTable rows={filtradas} concorrentes={concUsados} semEanTotal={semEanTotal} />
           </>
+        )}
+        </>
         )}
       </div>
     </ClientLayout>
