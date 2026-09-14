@@ -26,14 +26,53 @@ interface Props {
   rows: PricingRow[];
   concorrentes: ConcorrenteInfo[];
   semEanTotal: number;
+  storeId?: string;
 }
 
 type SortKey = string;
 
-const PricingTable = ({ rows, concorrentes, semEanTotal }: Props) => {
+const PricingTable = ({ rows, concorrentes, semEanTotal, storeId = "" }: Props) => {
   const [sortKey, setSortKey] = useState<SortKey>("vlrVendas");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(0);
+  const [marcados, setMarcados] = useState<string[]>([]);
+  const [propagar, setPropagar] = useState(true);
+  const [aplicarAberto, setAplicarAberto] = useState(false);
+  const [margens, setMargens] = useState<MargemPadrao[]>([]);
+  const [codigoLoja, setCodigoLoja] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!storeId) return;
+    setMarcados([]);
+    carregarMargens(storeId).then(setMargens);
+    supabase.from("store_vr_config").select("codigo_loja").eq("store_id", storeId).maybeSingle()
+      .then(({ data }) => setCodigoLoja(data?.codigo_loja ?? null));
+  }, [storeId]);
+
+  const mapaMargens = useMemo(() => indexarMargens(margens), [margens]);
+  const precoMetaDe = (r: PricingRow) => {
+    const regra = resolverMargem(mapaMargens, { produto: r.codigo });
+    return regra ? calcPrecoMeta(r.custo, Number(regra.margem_pct)) : null;
+  };
+
+  const itensAplicar: ItemAplicar[] = useMemo(
+    () =>
+      rows
+        .filter((r) => marcados.includes(r.codigo || r.ean))
+        .map((r) => ({ r, pm: precoMetaDe(r) }))
+        .filter((x): x is { r: PricingRow; pm: number } => x.pm != null)
+        .map(({ r, pm }) => ({
+          idProduto: parseInt(String(r.codigo).replace(/\D/g, ""), 10) || 0,
+          descricao: r.descricao,
+          ean: r.ean,
+          precoAtual: r.meuPreco,
+          precoMeta: pm,
+          margemMeta: resolverMargem(mapaMargens, { produto: r.codigo })?.margem_pct ?? null,
+          custo: r.custo,
+        })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [rows, marcados, mapaMargens],
+  );
 
   const valorDe = (r: PricingRow, key: string): number | string => {
     if (key.includes(":")) {
