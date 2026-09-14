@@ -305,6 +305,56 @@ const MargensPadraoTab = ({ storeId }: Props) => {
     [margens, filtro],
   );
 
+  const idsLista = useMemo(() => new Set(lista.map((m) => m.id)), [lista]);
+  const selecionadasLista = useMemo(
+    () => [...selecionadas].filter((id) => idsLista.has(id)),
+    [selecionadas, idsLista],
+  );
+  const todasSelecionadas = lista.length > 0 && selecionadasLista.length === lista.length;
+
+  const toggleTodas = () => {
+    setSelecionadas(todasSelecionadas ? new Set() : new Set(lista.map((m) => m.id)));
+  };
+  const toggleUma = (id: string, on: boolean) => {
+    setSelecionadas((prev) => {
+      const s = new Set(prev);
+      if (on) s.add(id); else s.delete(id);
+      return s;
+    });
+  };
+
+  const apagarSelecionadas = async () => {
+    if (selecionadasLista.length === 0) return;
+    setApagando(true);
+    try {
+      const { error } = await supabase.from("margens_padrao").delete().in("id", selecionadasLista);
+      if (error) throw error;
+      toast({ title: `${selecionadasLista.length} regra(s) apagada(s)` });
+      setSelecionadas(new Set());
+      await recarregar();
+    } catch (e) {
+      toast({ title: "Não foi possível apagar", description: e instanceof Error ? e.message : "", variant: "destructive" });
+    } finally {
+      setApagando(false);
+    }
+  };
+
+  const confirmarApagarTudo = async () => {
+    setApagando(true);
+    try {
+      const { error } = await supabase.from("margens_padrao").delete().eq("store_id", storeId);
+      if (error) throw error;
+      toast({ title: "Todas as regras foram apagadas" });
+      setApagarTudo(false);
+      setSelecionadas(new Set());
+      await recarregar();
+    } catch (e) {
+      toast({ title: "Não foi possível apagar", description: e instanceof Error ? e.message : "", variant: "destructive" });
+    } finally {
+      setApagando(false);
+    }
+  };
+
   const opcoesFiltradas = opcoes.filter((o) => {
     const q = busca.trim().toLowerCase();
     return !q || o.nome.toLowerCase().includes(q) || o.id.includes(q);
