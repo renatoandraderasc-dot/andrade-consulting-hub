@@ -39,7 +39,7 @@ const statusConfig = {
 
 type SortKey = "descricao" | "precoAtual" | "diferenca" | "status";
 
-const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
+const RepricingResultTable = ({ rows, concorrentesMeta, storeId = "" }: Props) => {
   const [search, setSearch] = useState("");
   const [mercFilter, setMercFilter] = useState("todos");
   const [statusFilter, setStatusFilter] = useState("todos");
@@ -48,6 +48,21 @@ const RepricingResultTable = ({ rows, concorrentesMeta }: Props) => {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(0);
   const perPage = 15;
+  const [marcados, setMarcados] = useState<string[]>([]);
+  const [propagar, setPropagar] = useState(true);
+  const [aplicarAberto, setAplicarAberto] = useState(false);
+  const [margens, setMargens] = useState<MargemPadrao[]>([]);
+  const [codigoLoja, setCodigoLoja] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!storeId) return;
+    setMarcados([]);
+    carregarMargens(storeId).then(setMargens);
+    supabase.from("store_vr_config").select("codigo_loja").eq("store_id", storeId).maybeSingle()
+      .then(({ data }) => setCodigoLoja(data?.codigo_loja ?? null));
+  }, [storeId]);
+
+  const mapaMargens = useMemo(() => indexarMargens(margens), [margens]);
 
   const refNome =
     baseRef === "geral"
