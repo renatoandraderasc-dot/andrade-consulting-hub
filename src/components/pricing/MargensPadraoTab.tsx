@@ -235,6 +235,34 @@ const MargensPadraoTab = ({ storeId }: Props) => {
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap justify-end gap-2">
+        <input
+          ref={arquivoRef}
+          type="file"
+          accept=".xlsx,.xls,.csv"
+          className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) importarArquivo(f); }}
+        />
+        <Button variant="outline" size="sm" onClick={baixarModelo}>
+          <FileDown className="w-4 h-4 mr-1" /> Baixar modelo
+        </Button>
+        <Button variant="outline" size="sm" onClick={exportarCadastro} disabled={margens.length === 0}>
+          <Download className="w-4 h-4 mr-1" /> Exportar cadastro
+        </Button>
+        <Button size="sm" onClick={() => arquivoRef.current?.click()} disabled={importando || !storeId}>
+          {importando ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Upload className="w-4 h-4 mr-1" />}
+          Importar Excel
+        </Button>
+      </div>
+
+      <ImportarMargensDialog
+        open={previewAberto}
+        onOpenChange={setPreviewAberto}
+        storeId={storeId}
+        linhas={previewLinhas}
+        onImportado={recarregar}
+      />
+
       <div className="bg-card border border-border rounded-lg p-3 space-y-3">
         <div className="flex flex-wrap items-end gap-2">
           <div className="space-y-1">
