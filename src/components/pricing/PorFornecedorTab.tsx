@@ -97,19 +97,46 @@ const PorFornecedorTab = ({ storeId }: Props) => {
     (async () => {
       setCarregandoForn(true);
       try {
-        const r = await chamarRelatorio(storeId, "fornecedores", {});
-        setFornecedores(
-          (r.dados || []).map((l) => ({
-            id: String(col(l, "id", "id_fornecedor", "codigo", "codigo_fornecedor", "cod_fornecedor") ?? ""),
+        const mapear = (dados: any[]) =>
+          dados.map((l) => ({
+            id: String(
+              col(l, "id", "id_fornecedor", "codigo", "codigo_fornecedor", "cod_fornecedor", "fornecedor_id") ??
+                txt(col(l, "razao_social", "fornecedor", "nome_fornecedor", "nome")),
+            ),
             nome: txt(col(l, "razao_social", "nome", "fornecedor", "nome_fornecedor"), "(sem nome)"),
             cnpj: txt(col(l, "cnpj", "cnpj_cpf", "documento")),
-          })).filter((f) => f.id),
-        );
-        if (r.indisponivel || r.offline || r.erro) setAviso(avisoRelatorio(r));
+          })).filter((f) => f.id);
+
+        let r = await chamarRelatorio(storeId, "fornecedores", {});
+        let lista = mapear(r.dados || []);
+
+        // Nem toda ponte publica o relatorio "fornecedores": caimos para a lista
+        // de quem teve nota nos ultimos 12 meses (compras_por_fornecedor).
+        if (lista.length === 0) {
+          const hoje = new Date();
+          const de = new Date(hoje.getFullYear() - 1, hoje.getMonth(), hoje.getDate());
+          const iso = (d: Date) => d.toISOString().slice(0, 10);
+          const alt = await chamarRelatorio(storeId, "compras_por_fornecedor", {
+            inicio: iso(de), fim: iso(hoje), ...(codigoLoja ? { loja: codigoLoja } : {}),
+          });
+          const vistos = new Set<string>();
+          lista = mapear(alt.dados || []).filter((f) => {
+            const k = f.id.toLowerCase();
+            if (vistos.has(k)) return false;
+            vistos.add(k);
+            return true;
+          });
+          if (lista.length > 0) r = alt;
+        }
+
+        lista.sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+        setFornecedores(lista);
+        if (lista.length === 0) setAviso(avisoRelatorio(r) ?? "Nenhum fornecedor com nota nos últimos 12 meses.");
       } finally {
         setCarregandoForn(false);
       }
     })();
+
   }, [storeId]);
 
   const carregar = async () => {
@@ -120,8 +147,11 @@ const PorFornecedorTab = ({ storeId }: Props) => {
       const r = await chamarRelatorio(storeId, "pricing_por_fornecedor", {
         inicio, fim, loja: codigoLoja ?? "", fornecedores: sel.join(","),
       });
-      const msg = avisoRelatorio(r);
+      const msg = r.indisponivel
+        ? "O relatório de preços por fornecedor ainda não foi publicado no sistema desta loja."
+        : avisoRelatorio(r);
       if (msg) { setAviso(msg); setLinhas([]); setConcCols([]); return; }
+
 
       const base: Linha[] = (r.dados || []).map((l) => ({
         codigo: String(col(l, "codigo", "cod", "codigo_produto", "cod_produto") ?? "").replace(/^0+/, ""),
