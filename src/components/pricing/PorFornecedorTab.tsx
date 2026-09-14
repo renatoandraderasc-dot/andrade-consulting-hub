@@ -159,6 +159,9 @@ const PorFornecedorTab = ({ storeId }: Props) => {
 
 
       const base: Linha[] = (r.dados || []).map((l) => ({
+        idProduto: Math.trunc(num(col(l, "id_produto", "idproduto", "codigo", "cod", "codigo_produto", "cod_produto"))),
+        idFornecedor: String(col(l, "id_fornecedor", "idfornecedor", "fornecedor_id", "cod_fornecedor") ?? "").replace(/\D/g, ""),
+        idDepartamento: String(col(l, "id_departamento", "mercadologico1", "cod_departamento", "id_secao") ?? "").replace(/\D/g, ""),
         codigo: String(col(l, "codigo", "cod", "codigo_produto", "cod_produto") ?? "").replace(/^0+/, ""),
         ean: eanUtilizavel(col(l, ...ALIAS_EAN)),
         descricao: txt(col(l, "descricao", "descricao_completa", "produto", "nome"), "—"),
