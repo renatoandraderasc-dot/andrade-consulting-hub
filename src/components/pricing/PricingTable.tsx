@@ -1,11 +1,16 @@
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ChevronDown, ChevronUp, AlertTriangle, ImageOff, Download } from "lucide-react";
 import * as XLSX from "xlsx";
+import { supabase } from "@/integrations/supabase/client";
 import { salvarWorkbook } from "@/lib/exportBranding";
+import { carregarMargens, indexarMargens, resolverMargem, precoMeta as calcPrecoMeta, type MargemPadrao } from "@/lib/margensPadrao";
+import AplicarPrecosDialog, { type ItemAplicar } from "./AplicarPrecosDialog";
 import type { ConcorrenteInfo, PricingRow } from "./pricingTypes";
 
 const PAGE_SIZE = 50;
