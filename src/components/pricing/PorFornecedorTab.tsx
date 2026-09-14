@@ -517,16 +517,26 @@ const PorFornecedorTab = ({ storeId }: Props) => {
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/40">
+                  <TableHead className="w-[36px]" />
                   <TableHead colSpan={5} className="text-center">Identificação</TableHead>
                   <TableHead colSpan={5} className="text-center bg-sky-50 dark:bg-sky-950/30 border-l border-border">Última entrada</TableHead>
                   <TableHead colSpan={5} className="text-center border-l border-border">Situação atual</TableHead>
-                  <TableHead colSpan={3} className="text-center border-l border-border">Margem</TableHead>
+                  <TableHead colSpan={6} className="text-center border-l border-border">Margem</TableHead>
                   {concCols.length > 0 && (
                     <TableHead colSpan={concCols.length} className="text-center border-l border-border">Concorrentes</TableHead>
                   )}
                   <TableHead colSpan={2} className="text-center border-l border-border">Ação</TableHead>
                 </TableRow>
                 <TableRow className="bg-muted/20">
+                  <TableHead className="w-[36px]">
+                    <Checkbox
+                      checked={marcados.length > 0 && marcados.length >= Math.min(filtradas.length, 400)}
+                      onCheckedChange={(v) =>
+                        setMarcados(v ? filtradas.slice(0, 400).map((l) => l.codigo || l.ean) : [])
+                      }
+                      aria-label="Selecionar todos"
+                    />
+                  </TableHead>
                   <Th k="codigo">Cod</Th>
                   <Th k="ean">EAN</Th>
                   <Th k="descricao">Descrição</Th>
@@ -553,6 +563,10 @@ const PorFornecedorTab = ({ storeId }: Props) => {
                   </Th>
                   <Th k="markdown" className="text-right text-[11px] bg-green-50 dark:bg-green-950/30">Markdown %</Th>
                   <Th k="margemRs" className="text-right text-[11px]">Margem R$</Th>
+                  <TableHead className="text-right text-[11px]">Margem meta %</TableHead>
+                  <TableHead className="text-right text-[11px]">Preço meta</TableHead>
+                  <TableHead className="text-right text-[11px]">Δ vs atual</TableHead>
+
                   {concCols.map((c) => (
                     <TableHead key={c.id} className="text-right text-[11px] border-l border-border whitespace-nowrap">{c.nome}</TableHead>
                   ))}
