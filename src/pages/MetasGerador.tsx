@@ -118,7 +118,7 @@ const MetasGerador = () => {
     const { inicio, fim } = monthRange(year, month);
     const { data } = await supabase
       .from("store_daily_metrics")
-      .select("date, tipo_dia, meta_vendas, meta_margem_pct, meta_lucro, meta_volume, meta_mix, realizado_vendas")
+      .select("date, tipo_dia, dia_ativo, meta_vendas, meta_margem_pct, meta_lucro, meta_volume, meta_mix, realizado_vendas")
       .eq("store_id", storeId)
       .eq("department", department)
       .gte("date", inicio)
@@ -128,9 +128,39 @@ const MetasGerador = () => {
     setDirtyDates(new Set());
   };
 
-  // Dia sem operação: meta e realizado zerados — ignorado em médias e projeções
+  // Liga/desliga um dia: a meta dele zera e o total do mês é redistribuído nos demais
+  const handleToggleDia = async (date: string, ativo: boolean) => {
+    if (dirtyDates.size > 0 && !confirmDiscardIfDirty()) return;
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from("store_daily_metrics")
+        .update({ dia_ativo: ativo })
+        .eq("store_id", storeId)
+        .eq("department", department)
+        .eq("date", date);
+      if (error) throw error;
+      const { error: errRpc } = await (supabase.rpc as any)("redistribuir_metas", {
+        p_store_id: storeId, p_department: department, p_ano: year, p_mes: month,
+      });
+      if (errRpc) throw errRpc;
+      toast({
+        title: ativo ? "Dia habilitado" : "Dia desabilitado",
+        description: "Meta do mês redistribuída entre os dias ativos.",
+      });
+      await fetchMetas();
+    } catch (err: any) {
+      toast({ title: "Erro ao atualizar o dia", description: err.message, variant: "destructive" });
+    } finally { setLoading(false); }
+  };
+
+  const diaAtivo = (r: any) => r.dia_ativo !== false;
+
+  // Dia sem operação: desabilitado ou meta e realizado zerados
   const isSemOperacao = (r: any) =>
-    (Number(r.meta_vendas) || 0) === 0 && (Number(r.realizado_vendas) || 0) === 0;
+    !diaAtivo(r) ||
+    ((Number(r.meta_vendas) || 0) === 0 && (Number(r.realizado_vendas) || 0) === 0);
+
 
 
   // Aviso ao sair da página com alterações não salvas
