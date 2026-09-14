@@ -477,6 +477,8 @@ const Pricing = () => {
             <PricingTable rows={filtradas} concorrentes={concUsados} semEanTotal={semEanTotal} />
           </>
         )}
+        </>
+        )}
       </div>
     </ClientLayout>
   );
