@@ -516,6 +516,13 @@ const MargensPadraoTab = ({ storeId }: Props) => {
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40">
+              <TableHead className="w-[36px]">
+                <Checkbox
+                  checked={todasSelecionadas}
+                  onCheckedChange={toggleTodas}
+                  aria-label="Selecionar todas"
+                />
+              </TableHead>
               <TableHead>Tipo</TableHead>
               <TableHead>Referência</TableHead>
               <TableHead className="text-right">Margem %</TableHead>
@@ -528,13 +535,20 @@ const MargensPadraoTab = ({ storeId }: Props) => {
           </TableHeader>
           <TableBody>
             {carregando && (
-              <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">Carregando...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={9} className="text-center py-6 text-muted-foreground">Carregando...</TableCell></TableRow>
             )}
             {!carregando && lista.length === 0 && (
-              <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">Nenhuma regra cadastrada.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={9} className="text-center py-6 text-muted-foreground">Nenhuma regra cadastrada.</TableCell></TableRow>
             )}
             {lista.map((m) => (
-              <TableRow key={m.id}>
+              <TableRow key={m.id} data-state={selecionadas.has(m.id) ? "selected" : undefined}>
+                <TableCell>
+                  <Checkbox
+                    checked={selecionadas.has(m.id)}
+                    onCheckedChange={(v) => toggleUma(m.id, !!v)}
+                    aria-label={`Selecionar ${m.referencia_nome || m.referencia_id}`}
+                  />
+                </TableCell>
                 <TableCell><Badge variant="secondary" className={`text-[10px] ${corTipo[m.tipo]}`}>{rotulo[m.tipo]}</Badge></TableCell>
                 <TableCell className="text-sm">
                   <span className="font-mono text-[11px] text-muted-foreground mr-1">{m.referencia_id}</span>
