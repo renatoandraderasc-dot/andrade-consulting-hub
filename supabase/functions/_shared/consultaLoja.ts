@@ -168,12 +168,37 @@ export async function consultarRelatorioLoja(opts: {
   };
 
   async function chamar(nome: string): Promise<ResultadoConsulta> {
-    const url = `${cfg!.api_url.replace(/\/+$/, "")}/relatorios/${nome}?${qs.toString()}`;
+    const raiz = `${cfg!.api_url.replace(/\/+$/, "")}/relatorios/${nome}`;
+    const url = `${raiz}?${qs.toString()}`;
+    // URLs muito longas (listas de codigos/itens) estouram o limite da ponte
+    // (431/414). Nesses casos enviamos os parametros no corpo via POST.
+    const usarPost = url.length > 1800;
+    const corpo: Record<string, string> = {};
+    for (const [k, v] of qs.entries()) corpo[k] = v;
     try {
-      const resp = await fetch(url, {
-        headers: { "ngrok-skip-browser-warning": "true" },
-        signal: AbortSignal.timeout(timeoutMs),
-      });
+      let resp = usarPost
+        ? await fetch(raiz, {
+            method: "POST",
+            headers: { "ngrok-skip-browser-warning": "true", "Content-Type": "application/json" },
+            body: JSON.stringify(corpo),
+            signal: AbortSignal.timeout(timeoutMs),
+          })
+        : await fetch(url, {
+            headers: { "ngrok-skip-browser-warning": "true" },
+            signal: AbortSignal.timeout(timeoutMs),
+          });
+      // Ponte reclamou do tamanho da URL: tenta novamente via POST.
+      if (!usarPost && (resp.status === 431 || resp.status === 414)) {
+        resp = await fetch(raiz, {
+          method: "POST",
+          headers: { "ngrok-skip-browser-warning": "true", "Content-Type": "application/json" },
+          body: JSON.stringify(corpo),
+          signal: AbortSignal.timeout(timeoutMs),
+        });
+      }
+      if (resp.status === 431 || resp.status === 414) {
+        return { ok: false, dados: [], erro: "consulta grande demais para a ponte da loja (reduza o lote)" };
+      }
       const texto = await resp.text();
       const pareceHtml = /^\s*<(!doctype|html)/i.test(texto) || /ngrok/i.test(texto.slice(0, 500));
       if (!resp.ok) {
