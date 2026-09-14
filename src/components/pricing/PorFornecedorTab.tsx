@@ -562,7 +562,6 @@ const PorFornecedorTab = ({ storeId }: Props) => {
               Confirmar
             </AlertDialogAction>
           </AlertDialogFooter>
-        </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>
