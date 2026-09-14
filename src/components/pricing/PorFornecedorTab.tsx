@@ -621,6 +621,22 @@ const PorFornecedorTab = ({ storeId }: Props) => {
                       <TableCell className="text-right text-sm tabular-nums border-l border-border bg-blue-50/60 dark:bg-blue-950/20">{pct(mk)}</TableCell>
                       <TableCell className="text-right text-sm tabular-nums bg-green-50/60 dark:bg-green-950/20">{pct(md)}</TableCell>
                       <TableCell className="text-right text-sm tabular-nums">{brl(margemRs(l))}</TableCell>
+                      <TableCell className="text-right text-sm tabular-nums">
+                        {regra ? (
+                          <span className="inline-flex items-center gap-1 justify-end">
+                            {Number(regra.margem_pct).toFixed(2)}%
+                            <Badge variant="outline" className="text-[9px] capitalize">{regra.tipo}</Badge>
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground/60">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right text-sm font-semibold tabular-nums">{pMeta == null ? "—" : brl(pMeta)}</TableCell>
+                      <TableCell className={`text-right text-sm tabular-nums ${
+                        dMeta == null || Math.abs(dMeta) <= 0.5 ? "text-muted-foreground"
+                          : dMeta > 0 ? "text-green-600" : "text-destructive"}`}>
+                        {dMeta == null ? "—" : `${dMeta > 0 ? "+" : ""}${dMeta.toFixed(1)}%`}
+                      </TableCell>
                       {concCols.map((c) => {
                         const p = l.concorrentes[c.id] ?? null;
                         const cor = p == null ? "" : p < precoBase(l) ? "text-destructive" : "text-green-600";
