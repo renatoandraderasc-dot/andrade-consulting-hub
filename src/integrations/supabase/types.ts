@@ -2469,7 +2469,12 @@ export type Database = {
           created_at: string
           date: string
           department: string
+          dia_ativo: boolean
           id: string
+          meta_base_margem_pct: number | null
+          meta_base_mix: number | null
+          meta_base_vendas: number | null
+          meta_base_volume: number | null
           meta_lucro: number | null
           meta_margem_pct: number | null
           meta_mix: number | null
@@ -2492,7 +2497,12 @@ export type Database = {
           created_at?: string
           date: string
           department: string
+          dia_ativo?: boolean
           id?: string
+          meta_base_margem_pct?: number | null
+          meta_base_mix?: number | null
+          meta_base_vendas?: number | null
+          meta_base_volume?: number | null
           meta_lucro?: number | null
           meta_margem_pct?: number | null
           meta_mix?: number | null
@@ -2515,7 +2525,12 @@ export type Database = {
           created_at?: string
           date?: string
           department?: string
+          dia_ativo?: boolean
           id?: string
+          meta_base_margem_pct?: number | null
+          meta_base_mix?: number | null
+          meta_base_vendas?: number | null
+          meta_base_volume?: number | null
           meta_lucro?: number | null
           meta_margem_pct?: number | null
           meta_mix?: number | null
@@ -3443,6 +3458,18 @@ export type Database = {
       jornada_tem_acesso_loja: { Args: { p_store: string }; Returns: boolean }
       minutos_para_cron: { Args: { minutos: number }; Returns: string }
       pode_gerenciar_loja: { Args: { _store_id: string }; Returns: boolean }
+      redistribuir_metas: {
+        Args: {
+          p_ano: number
+          p_department: string
+          p_mes: number
+          p_store_id: string
+        }
+        Returns: {
+          dias_ativos: number
+          total_meta: number
+        }[]
+      }
       semear_taxas_padrao: {
         Args: {
           p_department: string

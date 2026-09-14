@@ -118,7 +118,7 @@ const MetasGerador = () => {
     const { inicio, fim } = monthRange(year, month);
     const { data } = await supabase
       .from("store_daily_metrics")
-      .select("date, tipo_dia, meta_vendas, meta_margem_pct, meta_lucro, meta_volume, meta_mix, realizado_vendas")
+      .select("date, tipo_dia, dia_ativo, meta_vendas, meta_margem_pct, meta_lucro, meta_volume, meta_mix, realizado_vendas")
       .eq("store_id", storeId)
       .eq("department", department)
       .gte("date", inicio)
@@ -128,9 +128,39 @@ const MetasGerador = () => {
     setDirtyDates(new Set());
   };
 
-  // Dia sem operação: meta e realizado zerados — ignorado em médias e projeções
+  // Liga/desliga um dia: a meta dele zera e o total do mês é redistribuído nos demais
+  const handleToggleDia = async (date: string, ativo: boolean) => {
+    if (dirtyDates.size > 0 && !confirmDiscardIfDirty()) return;
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from("store_daily_metrics")
+        .update({ dia_ativo: ativo })
+        .eq("store_id", storeId)
+        .eq("department", department)
+        .eq("date", date);
+      if (error) throw error;
+      const { error: errRpc } = await (supabase.rpc as any)("redistribuir_metas", {
+        p_store_id: storeId, p_department: department, p_ano: year, p_mes: month,
+      });
+      if (errRpc) throw errRpc;
+      toast({
+        title: ativo ? "Dia habilitado" : "Dia desabilitado",
+        description: "Meta do mês redistribuída entre os dias ativos.",
+      });
+      await fetchMetas();
+    } catch (err: any) {
+      toast({ title: "Erro ao atualizar o dia", description: err.message, variant: "destructive" });
+    } finally { setLoading(false); }
+  };
+
+  const diaAtivo = (r: any) => r.dia_ativo !== false;
+
+  // Dia sem operação: desabilitado ou meta e realizado zerados
   const isSemOperacao = (r: any) =>
-    (Number(r.meta_vendas) || 0) === 0 && (Number(r.realizado_vendas) || 0) === 0;
+    !diaAtivo(r) ||
+    ((Number(r.meta_vendas) || 0) === 0 && (Number(r.realizado_vendas) || 0) === 0);
+
 
 
   // Aviso ao sair da página com alterações não salvas
@@ -180,6 +210,12 @@ const MetasGerador = () => {
         meta_lucro: ((Number(r.meta_vendas) || 0) * (Number(r.meta_margem_pct) || 0)) / 100,
         meta_volume: Number(r.meta_volume) || 0,
         meta_mix: Number(r.meta_mix) || 0,
+        // a edição manual vira a nova base de rateio do mês
+        meta_base_vendas: Number(r.meta_vendas) || 0,
+        meta_base_margem_pct: Number(r.meta_margem_pct) || 0,
+        meta_base_volume: Number(r.meta_volume) || 0,
+        meta_base_mix: Number(r.meta_mix) || 0,
+
       }));
       const { error } = await supabase
         .from("store_daily_metrics")
@@ -549,6 +585,7 @@ const MetasGerador = () => {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border">
+                    <th className="text-center py-2 pr-2 font-body text-muted-foreground w-10" title="Dias desmarcados não recebem meta; o total do mês é redistribuído nos demais">Ativo</th>
                     <th className="text-left py-2 pr-4 font-body text-muted-foreground">Data</th>
                     <th className="text-left py-2 px-2 font-body text-muted-foreground">Tipo</th>
                     <th className="text-right py-2 px-2 font-body text-muted-foreground">Meta Vendas</th>
@@ -564,17 +601,34 @@ const MetasGerador = () => {
                 </thead>
                 <tbody>
                   {metasRows.length === 0 && (
-                    <tr><td colSpan={7} className="py-6 text-center text-muted-foreground font-body">Nenhuma meta gerada ainda.</td></tr>
+                    <tr><td colSpan={8} className="py-6 text-center text-muted-foreground font-body">Nenhuma meta gerada ainda.</td></tr>
                   )}
                   {metasRows.map((r, idx) => {
                     const isDirty = dirtyDates.has(r.date);
                     const semOp = isSemOperacao(r);
+                    const ativo = diaAtivo(r);
                     const inputCls = `w-32 bg-background border rounded-lg px-2 py-1.5 text-right font-body text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 ${isDirty ? "border-amber-500" : "border-border"}`;
                     return (
                       <tr key={r.date} className={`border-b border-border/50 ${semOp ? "opacity-50" : ""}`}>
+                        <td className="py-2 pr-2 text-center">
+                          <input
+                            type="checkbox"
+                            checked={ativo}
+                            disabled={loading}
+                            onChange={(e) => handleToggleDia(r.date, e.target.checked)}
+                            className="h-4 w-4 accent-primary cursor-pointer"
+                            title={ativo ? "Desabilitar este dia" : "Habilitar este dia"}
+                          />
+                        </td>
                         <td className="py-2 pr-4 font-body">{fmtDate(r.date)}</td>
                         <td className="py-2 px-2 font-body">
                           {r.tipo_dia}
+                          {!ativo && (
+                            <span className="ml-2 text-[10px] uppercase tracking-wide text-destructive border border-destructive/40 rounded px-1 py-0.5">
+                              desabilitado
+                            </span>
+                          )}
+
                           {semOp && (
                             <span className="ml-2 text-[10px] uppercase tracking-wide text-muted-foreground border border-border rounded px-1 py-0.5">
                               sem operação
@@ -629,7 +683,7 @@ const MetasGerador = () => {
                 {metasRows.length > 0 && (
                   <tfoot>
                     <tr className="border-t-2 border-border font-semibold">
-                      <td className="py-3 pr-4 font-body" colSpan={2}>Totais</td>
+                      <td className="py-3 pr-4 font-body" colSpan={3}>Totais</td>
                       <td className="py-3 px-2 text-right font-body">{fmtBRL(totals.vendas)}</td>
                       <td></td>
                       <td className="py-3 px-2 text-right font-body">{fmtBRL(totals.lucro)}</td>
@@ -637,7 +691,7 @@ const MetasGerador = () => {
                       <td className="py-3 pl-2 text-right font-body">{fmtNum(totals.mix, 0)}</td>
                     </tr>
                     <tr className="text-muted-foreground">
-                      <td className="py-2 pr-4 font-body text-xs" colSpan={2}>
+                      <td className="py-2 pr-4 font-body text-xs" colSpan={3}>
                         Média diária ({totals.dias} dias com operação
                         {totals.diasIgnorados > 0 ? ` · ${totals.diasIgnorados} ignorado(s)` : ""})
                       </td>

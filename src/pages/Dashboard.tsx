@@ -83,11 +83,22 @@ const Dashboard = () => {
     }
   }, [storeId]);
 
+  // O filtro de categoria manda também nas metas: escolhe o departamento equivalente
+  useEffect(() => {
+    if (categoria === TODA_LOJA) { setSelectedDept("LOJA"); return; }
+    const alvo = canonDept(categoria);
+    const achado =
+      departments.find((d) => canonDept(d) === alvo) ||
+      departments.find((d) => d.toUpperCase() === categoria.toUpperCase());
+    setSelectedDept(achado || alvo || "LOJA");
+  }, [categoria, departments]);
+
   useEffect(() => {
     if (storeId && selectedDept) {
       fetchDailyData();
     }
-  }, [storeId, selectedDept, selectedMonth, selectedYear]);
+  }, [storeId, selectedDept, periodStart, periodEnd]);
+
 
   useEffect(() => {
     if (storeId) {
