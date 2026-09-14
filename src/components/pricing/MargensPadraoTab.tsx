@@ -340,7 +340,17 @@ const MargensPadraoTab = ({ storeId }: Props) => {
         onImportado={recarregar}
       />
 
+      <AplicarPrecosDialog
+        open={aplicarAberto}
+        onOpenChange={setAplicarAberto}
+        storeId={storeId}
+        codigoLoja={codigoLoja}
+        itens={itensLote}
+        onAplicado={() => setItensLote([])}
+      />
+
       <div className="bg-card border border-border rounded-lg p-3 space-y-3">
+        <p className="text-sm font-semibold">Cadastrar nova margem padrão</p>
         <div className="flex flex-wrap items-end gap-2">
           <div className="space-y-1">
             <label className="text-[11px] text-muted-foreground uppercase">Tipo</label>
