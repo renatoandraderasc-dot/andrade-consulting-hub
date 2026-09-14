@@ -57,6 +57,11 @@ const MargensPadraoTab = ({ storeId }: Props) => {
   const [previewLinhas, setPreviewLinhas] = useState<LinhaImport[]>([]);
   const [previewAberto, setPreviewAberto] = useState(false);
 
+  const [montandoLote, setMontandoLote] = useState(false);
+  const [itensLote, setItensLote] = useState<ItemAplicar[]>([]);
+  const [aplicarAberto, setAplicarAberto] = useState(false);
+  const [codigoLoja, setCodigoLoja] = useState<string | null>(null);
+
   const baixarModelo = () => {
     const ws = XLSX.utils.aoa_to_sheet([["Cod", "Preço Novo"], [19871, 59.99]]);
     ws["!cols"] = [{ wch: 12 }, { wch: 14 }];
