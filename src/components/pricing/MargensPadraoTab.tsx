@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, Plus, Pencil, Trash2, Download, Upload, FileDown, Zap } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Download, Upload, FileDown, Zap, CheckSquare, Square, Eraser } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import * as XLSX from "xlsx";
 import ImportarMargensDialog, { montarPreview, type LinhaImport } from "./ImportarMargensDialog";
 import AplicarPrecosDialog, { type ItemAplicar } from "./AplicarPrecosDialog";
@@ -51,6 +52,9 @@ const MargensPadraoTab = ({ storeId }: Props) => {
   const [salvando, setSalvando] = useState(false);
   const [editandoId, setEditandoId] = useState<string | null>(null);
   const [excluir, setExcluir] = useState<MargemPadrao | null>(null);
+  const [selecionadas, setSelecionadas] = useState<Set<string>>(new Set());
+  const [apagarTudo, setApagarTudo] = useState(false);
+  const [apagando, setApagando] = useState(false);
 
   const arquivoRef = useRef<HTMLInputElement>(null);
   const [importando, setImportando] = useState(false);
@@ -211,7 +215,7 @@ const MargensPadraoTab = ({ storeId }: Props) => {
   useEffect(() => {
     if (!storeId) { setMargens([]); return; }
     recarregar();
-    setOpcoes([]); setRefId(""); setRefNome("");
+    setOpcoes([]); setRefId(""); setRefNome(""); setSelecionadas(new Set());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storeId]);
 
@@ -300,6 +304,56 @@ const MargensPadraoTab = ({ storeId }: Props) => {
     () => (filtro === "todos" ? margens : margens.filter((m) => m.tipo === filtro)),
     [margens, filtro],
   );
+
+  const idsLista = useMemo(() => new Set(lista.map((m) => m.id)), [lista]);
+  const selecionadasLista = useMemo(
+    () => [...selecionadas].filter((id) => idsLista.has(id)),
+    [selecionadas, idsLista],
+  );
+  const todasSelecionadas = lista.length > 0 && selecionadasLista.length === lista.length;
+
+  const toggleTodas = () => {
+    setSelecionadas(todasSelecionadas ? new Set() : new Set(lista.map((m) => m.id)));
+  };
+  const toggleUma = (id: string, on: boolean) => {
+    setSelecionadas((prev) => {
+      const s = new Set(prev);
+      if (on) s.add(id); else s.delete(id);
+      return s;
+    });
+  };
+
+  const apagarSelecionadas = async () => {
+    if (selecionadasLista.length === 0) return;
+    setApagando(true);
+    try {
+      const { error } = await supabase.from("margens_padrao").delete().in("id", selecionadasLista);
+      if (error) throw error;
+      toast({ title: `${selecionadasLista.length} regra(s) apagada(s)` });
+      setSelecionadas(new Set());
+      await recarregar();
+    } catch (e) {
+      toast({ title: "Não foi possível apagar", description: e instanceof Error ? e.message : "", variant: "destructive" });
+    } finally {
+      setApagando(false);
+    }
+  };
+
+  const confirmarApagarTudo = async () => {
+    setApagando(true);
+    try {
+      const { error } = await supabase.from("margens_padrao").delete().eq("store_id", storeId);
+      if (error) throw error;
+      toast({ title: "Todas as regras foram apagadas" });
+      setApagarTudo(false);
+      setSelecionadas(new Set());
+      await recarregar();
+    } catch (e) {
+      toast({ title: "Não foi possível apagar", description: e instanceof Error ? e.message : "", variant: "destructive" });
+    } finally {
+      setApagando(false);
+    }
+  };
 
   const opcoesFiltradas = opcoes.filter((o) => {
     const q = busca.trim().toLowerCase();
@@ -433,13 +487,42 @@ const MargensPadraoTab = ({ storeId }: Props) => {
             {t === "todos" ? "Todos" : rotulo[t]}
           </Badge>
         ))}
-        <span className="text-xs text-muted-foreground ml-auto">{lista.length} regra(s)</span>
+        <div className="ml-auto flex items-center gap-2">
+          {selecionadasLista.length > 0 && (
+            <Button size="sm" variant="destructive" onClick={apagarSelecionadas} disabled={apagando}>
+              {apagando ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Trash2 className="w-4 h-4 mr-1" />}
+              Apagar selecionadas ({selecionadasLista.length})
+            </Button>
+          )}
+          <Button
+            size="sm" variant="outline" onClick={toggleTodas} disabled={lista.length === 0}
+            title="Selecionar ou limpar toda a lista"
+          >
+            {todasSelecionadas ? <CheckSquare className="w-4 h-4 mr-1" /> : <Square className="w-4 h-4 mr-1" />}
+            Selecionar tudo
+          </Button>
+          <Button
+            size="sm" variant="outline"
+            className="text-destructive border-destructive/40 hover:bg-destructive/10"
+            onClick={() => setApagarTudo(true)} disabled={margens.length === 0 || apagando}
+          >
+            <Eraser className="w-4 h-4 mr-1" /> Apagar tudo
+          </Button>
+          <span className="text-xs text-muted-foreground">{lista.length} regra(s)</span>
+        </div>
       </div>
 
       <div className="border border-border rounded-lg overflow-auto">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40">
+              <TableHead className="w-[36px]">
+                <Checkbox
+                  checked={todasSelecionadas}
+                  onCheckedChange={toggleTodas}
+                  aria-label="Selecionar todas"
+                />
+              </TableHead>
               <TableHead>Tipo</TableHead>
               <TableHead>Referência</TableHead>
               <TableHead className="text-right">Margem %</TableHead>
@@ -452,13 +535,20 @@ const MargensPadraoTab = ({ storeId }: Props) => {
           </TableHeader>
           <TableBody>
             {carregando && (
-              <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">Carregando...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={9} className="text-center py-6 text-muted-foreground">Carregando...</TableCell></TableRow>
             )}
             {!carregando && lista.length === 0 && (
-              <TableRow><TableCell colSpan={8} className="text-center py-6 text-muted-foreground">Nenhuma regra cadastrada.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={9} className="text-center py-6 text-muted-foreground">Nenhuma regra cadastrada.</TableCell></TableRow>
             )}
             {lista.map((m) => (
-              <TableRow key={m.id}>
+              <TableRow key={m.id} data-state={selecionadas.has(m.id) ? "selected" : undefined}>
+                <TableCell>
+                  <Checkbox
+                    checked={selecionadas.has(m.id)}
+                    onCheckedChange={(v) => toggleUma(m.id, !!v)}
+                    aria-label={`Selecionar ${m.referencia_nome || m.referencia_id}`}
+                  />
+                </TableCell>
                 <TableCell><Badge variant="secondary" className={`text-[10px] ${corTipo[m.tipo]}`}>{rotulo[m.tipo]}</Badge></TableCell>
                 <TableCell className="text-sm">
                   <span className="font-mono text-[11px] text-muted-foreground mr-1">{m.referencia_id}</span>
@@ -482,6 +572,25 @@ const MargensPadraoTab = ({ storeId }: Props) => {
           </TableBody>
         </Table>
       </div>
+
+      <AlertDialog open={apagarTudo} onOpenChange={setApagarTudo}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Apagar todas as margens padrão?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Todas as <strong>{margens.length} regra(s)</strong> desta loja (produtos, fornecedores e departamentos)
+              serão removidas. Essa ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={apagando}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmarApagarTudo} disabled={apagando}>
+              {apagando ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
+              Apagar tudo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={!!excluir} onOpenChange={(o) => !o && setExcluir(null)}>
         <AlertDialogContent>
