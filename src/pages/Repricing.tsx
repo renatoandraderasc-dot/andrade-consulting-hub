@@ -118,7 +118,7 @@ const Repricing = () => {
 
         {/* Results */}
         {allLoaded && rows.length > 0 && (
-          <RepricingResultTable rows={rows} concorrentesMeta={concorrentesMeta} />
+          <RepricingResultTable rows={rows} concorrentesMeta={concorrentesMeta} storeId={storeId} />
         )}
 
         {allLoaded && rows.length === 0 && (
