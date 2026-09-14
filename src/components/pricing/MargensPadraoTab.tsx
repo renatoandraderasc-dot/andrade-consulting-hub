@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, Plus, Pencil, Trash2, Download, Upload, FileDown } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Download, Upload, FileDown, Zap } from "lucide-react";
 import * as XLSX from "xlsx";
 import ImportarMargensDialog, { montarPreview, type LinhaImport } from "./ImportarMargensDialog";
+import AplicarPrecosDialog, { type ItemAplicar } from "./AplicarPrecosDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { chamarRelatorio, pick as col, txt } from "@/lib/vrReport";
 import { carregarMargens, type MargemPadrao, type TipoMargem } from "@/lib/margensPadrao";
@@ -55,6 +56,11 @@ const MargensPadraoTab = ({ storeId }: Props) => {
   const [importando, setImportando] = useState(false);
   const [previewLinhas, setPreviewLinhas] = useState<LinhaImport[]>([]);
   const [previewAberto, setPreviewAberto] = useState(false);
+
+  const [montandoLote, setMontandoLote] = useState(false);
+  const [itensLote, setItensLote] = useState<ItemAplicar[]>([]);
+  const [aplicarAberto, setAplicarAberto] = useState(false);
+  const [codigoLoja, setCodigoLoja] = useState<string | null>(null);
 
   const baixarModelo = () => {
     const ws = XLSX.utils.aoa_to_sheet([["Cod", "Preço Novo"], [19871, 59.99]]);
@@ -133,6 +139,73 @@ const MargensPadraoTab = ({ storeId }: Props) => {
   const recarregar = async () => {
     setCarregando(true);
     try { setMargens(await carregarMargens(storeId)); } finally { setCarregando(false); }
+  };
+
+  const regrasProduto = useMemo(() => margens.filter((m) => m.tipo === "produto"), [margens]);
+
+  const aplicarEmLote = async () => {
+    if (!storeId) return;
+    if (regrasProduto.length === 0) {
+      toast({ title: "Nenhuma regra de produto", description: "O envio em lote usa as regras do tipo Produto cadastradas nesta aba." });
+      return;
+    }
+    setMontandoLote(true);
+    try {
+      const { data: cfg } = await supabase
+        .from("store_vr_config").select("codigo_loja").eq("store_id", storeId).maybeSingle();
+      const lj = String(cfg?.codigo_loja ?? "");
+      setCodigoLoja(lj || null);
+
+      const mapa = new Map<number, { descricao: string; ean: string; custo: number | null; precoAtual: number }>();
+      const cods = regrasProduto.map((m) => m.referencia_id);
+      for (let i = 0; i < cods.length; i += 500) {
+        const lote = cods.slice(i, i + 500);
+        const r = await chamarRelatorio(storeId, "custos_por_produto", { codigos: lote.join(","), loja: lj });
+        for (const l of r.dados || []) {
+          const cod = parseInt(String(col(l, "cod", "codigo", "id_produto", "codigo_produto") ?? "").replace(/\D/g, ""), 10);
+          if (isNaN(cod)) continue;
+          const custoRaw = Number(col(l, "custo_atual", "custo", "custo_reposicao"));
+          const precoRaw = Number(col(l, "preco_atual", "preco", "preco_venda", "precovenda"));
+          mapa.set(cod, {
+            descricao: txt(col(l, "descricao", "descricao_completa", "produto"), ""),
+            ean: String(col(l, "ean", "codigo_barras", "ean13") ?? ""),
+            custo: isFinite(custoRaw) && custoRaw > 0 ? custoRaw : null,
+            precoAtual: isFinite(precoRaw) && precoRaw > 0 ? precoRaw : 0,
+          });
+        }
+      }
+
+      const itens: ItemAplicar[] = [];
+      let semCusto = 0;
+      for (const m of regrasProduto) {
+        const info = mapa.get(m.referencia_id);
+        if (!info || info.custo == null) { semCusto++; continue; }
+        const margem = Number(m.margem_pct);
+        const precoMeta = info.custo / (1 - margem / 100);
+        itens.push({
+          idProduto: m.referencia_id,
+          descricao: info.descricao || m.referencia_nome || "",
+          ean: info.ean,
+          precoAtual: info.precoAtual,
+          precoMeta: Math.round(precoMeta * 100) / 100,
+          margemMeta: margem,
+          custo: info.custo,
+        });
+      }
+      if (itens.length === 0) {
+        toast({ title: "Nada a aplicar", description: "Nenhum produto das regras foi encontrado no sistema da loja.", variant: "destructive" });
+        return;
+      }
+      if (semCusto > 0) {
+        toast({ title: `${semCusto} produto(s) sem custo`, description: "Ficaram fora do envio por não terem custo na loja." });
+      }
+      setItensLote(itens);
+      setAplicarAberto(true);
+    } catch (e) {
+      toast({ title: "Não foi possível montar o lote", description: e instanceof Error ? e.message : "", variant: "destructive" });
+    } finally {
+      setMontandoLote(false);
+    }
   };
 
   useEffect(() => {
@@ -253,6 +326,10 @@ const MargensPadraoTab = ({ storeId }: Props) => {
           {importando ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Upload className="w-4 h-4 mr-1" />}
           Importar Excel
         </Button>
+        <Button size="sm" onClick={aplicarEmLote} disabled={montandoLote || !storeId || regrasProduto.length === 0}>
+          {montandoLote ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Zap className="w-4 h-4 mr-1" />}
+          Aplicar em lote ({regrasProduto.length})
+        </Button>
       </div>
 
       <ImportarMargensDialog
@@ -263,7 +340,17 @@ const MargensPadraoTab = ({ storeId }: Props) => {
         onImportado={recarregar}
       />
 
+      <AplicarPrecosDialog
+        open={aplicarAberto}
+        onOpenChange={setAplicarAberto}
+        storeId={storeId}
+        codigoLoja={codigoLoja}
+        itens={itensLote}
+        onAplicado={() => setItensLote([])}
+      />
+
       <div className="bg-card border border-border rounded-lg p-3 space-y-3">
+        <p className="text-sm font-semibold">Cadastrar nova margem padrão</p>
         <div className="flex flex-wrap items-end gap-2">
           <div className="space-y-1">
             <label className="text-[11px] text-muted-foreground uppercase">Tipo</label>
@@ -329,7 +416,7 @@ const MargensPadraoTab = ({ storeId }: Props) => {
           </div>
           <Button onClick={salvar} disabled={salvando}>
             {salvando ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Plus className="w-4 h-4 mr-1" />}
-            {editandoId ? "Salvar" : "Adicionar"}
+            {editandoId ? "Salvar alterações" : "Cadastrar nova margem"}
           </Button>
           {editandoId && <Button variant="ghost" onClick={limpar}>Cancelar</Button>}
         </div>
