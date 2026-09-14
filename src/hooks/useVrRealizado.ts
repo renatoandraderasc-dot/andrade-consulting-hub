@@ -114,7 +114,13 @@ async function loadRaw(storeId: string, inicio: string, fim: string): Promise<Ra
         body: { store_id: storeId, relatorio: "mix_positivacao_periodo", params: { inicio, fim } },
       })
       .catch(() => ({ data: null, error: null })),
-  ]);
+    // Totais oficiais do periodo, usados para reconciliar o faturamento da loja.
+    supabase.functions
+      .invoke("vr-proxy", {
+        body: { store_id: storeId, relatorio: "kpis_periodo", params: { inicio, fim } },
+      })
+      .catch(() => ({ data: null, error: null })),
+  ] as const);
 
   const mapa: Record<string, string> = {};
   for (const m of mapas ?? []) mapa[norm(m.secao_vr)] = m.department;
