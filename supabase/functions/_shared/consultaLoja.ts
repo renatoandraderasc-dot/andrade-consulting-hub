@@ -103,47 +103,58 @@ export async function consultarRelatorioLoja(opts: {
     }
     if (!q.has("loja") && cfg.codigo_loja != null) q.set("loja", String(cfg.codigo_loja));
     q.set("chave", cfg.api_key);
-    // Nomes equivalentes na ponte DIRECTOR
-    const ALIAS_DIRECTOR: Record<string, string> = {
-      vendas_secao_periodo: "vendas_departamento_dia",
-      vendas_departamento_periodo: "vendas_departamento_dia",
-      vendas_hierarquia_periodo: "vendas_produto_periodo",
+    // Nomes equivalentes na ponte DIRECTOR (algumas pontes publicam nomes diferentes)
+    const ALIAS_DIRECTOR: Record<string, string[]> = {
+      vendas_secao_periodo: ["vendas_departamento_dia", "vendas_secao_dia"],
+      vendas_departamento_periodo: ["vendas_departamento_dia", "vendas_secao_dia"],
+      vendas_departamento_dia: ["vendas_departamento_dia", "vendas_secao_dia"],
+      vendas_hierarquia_periodo: ["vendas_produto_periodo"],
     };
-    const nome = ALIAS_DIRECTOR[relatorio] ?? relatorio;
-    const url = `${cfg.api_url.replace(/\/+$/, "")}/relatorio/${nome}?${q.toString()}`;
-    try {
-      const resp = await fetch(url, {
-        headers: {
-          "ngrok-skip-browser-warning": "true",
-          "User-Agent": "AndradeHub/1.0",
-          Accept: "application/json",
-        },
-        signal: AbortSignal.timeout(timeoutMs),
-      });
-      const texto = await resp.text();
-      const pareceHtml = /^\s*<(!doctype|html)/i.test(texto) || /ngrok/i.test(texto.slice(0, 500));
-      if (!resp.ok) {
-        if (pareceHtml) {
-          return { ok: false, dados: [], semConexao: true, erro: `sem conexao DIRECTOR (servidor respondeu ${resp.status})` };
-        }
-        return { ok: false, dados: [], erro: `API DIRECTOR ${resp.status}: ${texto.slice(0, 300)}` };
-      }
+    const candidatos = ALIAS_DIRECTOR[relatorio] ?? [relatorio];
+    const base = cfg.api_url.replace(/\/+$/, "");
+    let ultimoErro = "";
+    for (const nome of candidatos) {
+      const url = `${base}/relatorio/${nome}?${q.toString()}`;
       try {
-        const dados = JSON.parse(texto);
-        if (dados && !Array.isArray(dados) && dados.erro) {
-          return { ok: false, dados: [], erro: String(dados.erro) };
+        const resp = await fetch(url, {
+          headers: {
+            "ngrok-skip-browser-warning": "true",
+            "User-Agent": "AndradeHub/1.0",
+            Accept: "application/json",
+          },
+          signal: AbortSignal.timeout(timeoutMs),
+        });
+        const texto = await resp.text();
+        const pareceHtml = /^\s*<(!doctype|html)/i.test(texto) || /ngrok/i.test(texto.slice(0, 500));
+        if (!resp.ok) {
+          if (pareceHtml) {
+            return { ok: false, dados: [], semConexao: true, erro: `sem conexao DIRECTOR (servidor respondeu ${resp.status})` };
+          }
+          ultimoErro = `API DIRECTOR ${resp.status}: ${texto.slice(0, 300)}`;
+          if (/relatorio nao encontrado/i.test(texto) || resp.status === 404) continue;
+          return { ok: false, dados: [], erro: ultimoErro };
         }
-        return { ok: true, dados: Array.isArray(dados) ? dados : (dados?.dados ?? []) };
-      } catch {
-        return {
-          ok: false, dados: [], semConexao: pareceHtml,
-          erro: pareceHtml ? "sem conexao DIRECTOR (resposta invalida do tunel)" : "resposta DIRECTOR nao e JSON",
-        };
+        try {
+          const dados = JSON.parse(texto);
+          if (dados && !Array.isArray(dados) && dados.erro) {
+            ultimoErro = String(dados.erro);
+            if (/relatorio nao encontrado/i.test(ultimoErro)) continue;
+            return { ok: false, dados: [], erro: ultimoErro };
+          }
+          return { ok: true, dados: Array.isArray(dados) ? dados : (dados?.dados ?? []) };
+        } catch {
+          return {
+            ok: false, dados: [], semConexao: pareceHtml,
+            erro: pareceHtml ? "sem conexao DIRECTOR (resposta invalida do tunel)" : "resposta DIRECTOR nao e JSON",
+          };
+        }
+      } catch (e) {
+        ultimoErro = e instanceof Error ? e.message : String(e);
       }
-    } catch (e) {
-      return { ok: false, dados: [], erro: e instanceof Error ? e.message : String(e) };
     }
+    return { ok: false, dados: [], erro: ultimoErro || "relatorio nao encontrado na ponte DIRECTOR" };
   }
+
 
   // ---------- VR / ORACLE (mesmo contrato HTTP) ----------
   const qs = new URLSearchParams();
