@@ -316,15 +316,15 @@ const AnaliseAnual = () => {
 
 
 
-  const val = (ano: number, mes: number, campo: "faturamento" | "lucro" | "volume" | "mix") =>
+  const val = (ano: number, mes: number, campo: "faturamento" | "lucro" | "volume") =>
     rowsFiltradas
       .filter(x => x.ano === ano && x.mes === mes)
       .reduce((s, x) => s + Number(x[campo] || 0), 0);
 
   const blocos = useMemo(() => {
-    const build = (campo: "faturamento" | "lucro" | "volume" | "mix") =>
+    const build = (campo: "faturamento" | "lucro" | "volume") =>
       anosSel.map(ano => ({ ano, meses: MESES.map((_, i) => val(ano, i + 1, campo)) }));
-    return { faturamento: build("faturamento"), lucro: build("lucro"), volume: build("volume"), mix: build("mix") };
+    return { faturamento: build("faturamento"), lucro: build("lucro"), volume: build("volume") };
   }, [rowsFiltradas, anosSel]);
 
   // Último mês com dado no ano mais recente selecionado (para acumulados comparáveis)
@@ -461,7 +461,6 @@ const AnaliseAnual = () => {
   const BLOCOS_EXPORT = () => ([
     { titulo: "FATURAMENTO", matriz: blocos.faturamento, tipo: "valor" as const },
     { titulo: "LUCRO", matriz: blocos.lucro, tipo: "valor" as const },
-    { titulo: "MIX", matriz: blocos.mix, tipo: "valor" as const },
     { titulo: "MARGEM", matriz: margemMatriz, tipo: "margem" as const },
     { titulo: "VOLUME", matriz: blocos.volume, tipo: "valor" as const },
   ]);
