@@ -25,7 +25,7 @@ const ANOS = [2022, 2023, 2024, 2025, 2026];
 type Turno = "manha" | "tarde" | "";
 
 type Row = {
-  ano: number; mes: number; faturamento: number; lucro: number; volume: number; mix: number;
+  ano: number; mes: number; faturamento: number; lucro: number; volume: number;
   departamento: string; secao: string; categoria: string; turno: Turno;
 };
 
@@ -43,10 +43,6 @@ const extrairTurno = (l: any): Turno => {
   if (h == null || !isFinite(h) || h > 23) return "";
   return h < 13 ? "manha" : "tarde";
 };
-
-
-const extrairMix = (l: any) =>
-  num(pick(l, "mix", "itens", "qtd_itens", "quantidade_itens", "sku", "codigos", "positivacao"));
 
 const chaveTexto = (v: unknown) =>
   String(v ?? "")
@@ -121,7 +117,6 @@ const AnaliseAnual = () => {
             faturamento: num(pick(l, "receita_bruta", "faturamento", "total_vendido", "vendas")),
             lucro: lucroDaLinha(l, num(pick(l, "receita_bruta", "faturamento", "total_vendido", "vendas")), num(pick(l, "lucro_bruto", "lucro"))),
             volume: num(pick(l, "volume", "quantidade", "qtde", "qtd")),
-            mix: extrairMix(l),
 
             departamento: dep,
             secao: String(pick(l, "secao", "nivel1") ?? dep).toUpperCase(),
@@ -158,7 +153,7 @@ const AnaliseAnual = () => {
             const turno = extrairTurno(l);
             const k = `${ano}-${mes}-${departamento}-${categoria}-${turno}`;
             const cur = acc.get(k) ?? {
-              ano, mes, faturamento: 0, lucro: 0, volume: 0, mix: 0,
+              ano, mes, faturamento: 0, lucro: 0, volume: 0,
               departamento, secao, categoria, turno,
             };
             cur.faturamento += num(pick(l, "vendas", "total_vendido", "faturamento", "venda", "valor_venda", "valor", "total"));
@@ -180,7 +175,7 @@ const AnaliseAnual = () => {
           .from("analise_anual").select("ano, mes, faturamento, lucro, volume").eq("store_id", sid);
         const salvos: Row[] = ((data as any[]) || []).map(r => ({
           ano: r.ano, mes: r.mes,
-          faturamento: Number(r.faturamento), lucro: Number(r.lucro), volume: Number(r.volume), mix: 0,
+          faturamento: Number(r.faturamento), lucro: Number(r.lucro), volume: Number(r.volume),
           departamento: "TOTAL", secao: "TOTAL", categoria: "TOTAL", turno: "" as Turno,
         }));
         setRows(salvos);
