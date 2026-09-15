@@ -274,7 +274,12 @@ const Compras = () => {
     try {
       const r = await chamarRelatorio(storeId, "compras_vendas_periodo", { inicio: cvInicio, fim: cvFim });
       setCvAviso(avisoRelatorio(r));
-      setCvLinhas(r.dados);
+      let linhas = r.dados;
+      if (comprasAgrupadas(linhas)) {
+        const detalhe = await detalharComprasVendas(storeId, cvInicio, cvFim);
+        if (detalhe) linhas = detalhe as any[];
+      }
+      setCvLinhas(linhas);
     } catch (err: any) {
       setCvAviso(err.message);
       setCvLinhas([]);
