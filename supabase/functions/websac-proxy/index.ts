@@ -143,12 +143,26 @@ Deno.serve(async (req) => {
 
     // o console devolve o erro do Postgres em texto, sem tabela
     if (!/<t[rd]/i.test(html)) {
-      return json({ erro: decodeEnt(html.replace(/<[^>]*>/g, "")).slice(0, 500) }, 500);
+      const detalhe = decodeEnt(html.replace(/<[^>]*>/g, "")).slice(0, 500);
+      console.error("websac-proxy: resposta sem tabela", { relatorio, detalhe });
+      return json({ erro: detalhe, origem: "websac" }, 502);
     }
 
     const linhas = tabelaParaJson(html);
     return json(linhas);
   } catch (e) {
-    return json({ erro: e instanceof Error ? e.message : String(e) }, 500);
+    const msg = e instanceof Error ? e.message : String(e);
+    const nome = e instanceof Error ? e.name : "";
+    console.error("websac-proxy: falha", { nome, msg });
+    // parametro faltando na chamada = erro de quem pediu o relatorio
+    if (/^parametro ausente:/i.test(msg)) return json({ erro: msg, origem: "parametros" }, 400);
+    // timeout ou queda de rede ao falar com o WebSac = indisponibilidade externa
+    if (nome === "TimeoutError" || /timed? ?out|aborted/i.test(msg)) {
+      return json({ erro: "o WebSac nao respondeu a tempo. Tente novamente.", origem: "websac" }, 504);
+    }
+    if (nome === "TypeError" && /fetch|network/i.test(msg)) {
+      return json({ erro: `nao foi possivel falar com o WebSac: ${msg}`, origem: "websac" }, 502);
+    }
+    return json({ erro: msg }, 500);
   }
 });
