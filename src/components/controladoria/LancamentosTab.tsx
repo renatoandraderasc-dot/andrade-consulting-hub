@@ -87,13 +87,17 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
   }, [storeId, filterMes, filterAno]);
 
   // Atualização automática parametrizável (Parametrizações Gerais)
+  // Atualizacao silenciosa: nao pisca o loading nem limpa a selecao em massa.
   useAutoRefresh("refresh_controladoria_segundos", () => {
-    if (storeId) fetchLancamentos();
+    if (storeId) fetchLancamentos({ silencioso: true });
   });
 
-  const fetchLancamentos = async () => {
-    setLoading(true);
-    setSelectedIds(new Set());
+  const fetchLancamentos = async (opts?: { silencioso?: boolean }) => {
+    const silencioso = opts?.silencioso === true;
+    if (!silencioso) {
+      setLoading(true);
+      setSelectedIds(new Set());
+    }
     const { data, error } = await supabase
       .from("lancamentos")
       .select("*")
@@ -107,7 +111,7 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
     } else {
       setLancamentos((data as any[]) || []);
     }
-    setLoading(false);
+    if (!silencioso) setLoading(false);
   };
 
   // "Tipo de entrada": nome cadastrado no de-para (vr_lancamento_map.descricao_vr).
