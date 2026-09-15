@@ -743,7 +743,6 @@ const AnaliseAnual = () => {
           <div className="space-y-6">
             <Card><CardContent className="p-0 overflow-x-auto">{renderBloco("FATURAMENTO", blocos.faturamento, "valor")}</CardContent></Card>
             <Card><CardContent className="p-0 overflow-x-auto">{renderBloco("LUCRO", blocos.lucro, "valor")}</CardContent></Card>
-            <Card><CardContent className="p-0 overflow-x-auto">{renderBloco("MIX", blocos.mix, "valor")}</CardContent></Card>
             <Card><CardContent className="p-0 overflow-x-auto">{renderBloco("MARGEM", margemMatriz, "margem")}</CardContent></Card>
             <Card><CardContent className="p-0 overflow-x-auto">{renderBloco("VOLUME", blocos.volume, "valor")}</CardContent></Card>
           </div>
