@@ -103,7 +103,7 @@ const MetasGerador = () => {
   }, [storeId, department, year, month]);
 
   const fetchStores = async () => {
-    const { data } = await supabase.from("stores").select("id, name").order("name");
+    const data = await carregarLojasPermitidas(user?.id, isGlobalAdmin);
     if (data) {
       setStores(data);
       if (data.length && !storeId) {

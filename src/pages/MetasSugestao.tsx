@@ -65,7 +65,7 @@ const MetasSugestao = () => {
         setStoreId(p.id); setStoreName(p.name);
       });
     }
-  }, [user, isAdmin, authLoading]);
+  }, [user, isAdmin, isGlobalAdmin, authLoading]);
 
   // default: todos os departamentos (exceto o total da loja)
   useEffect(() => {

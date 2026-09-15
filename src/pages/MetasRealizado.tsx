@@ -69,7 +69,7 @@ const MetasRealizado = () => {
         setStoreId(p.id); setStoreName(p.name);
       });
     }
-  }, [user, isAdmin, authLoading]);
+  }, [user, isAdmin, isGlobalAdmin, authLoading]);
 
   const inicio = iso(ano, mes, 1);
   const fim = iso(ano, mes, diasNoMes(ano, mes));
