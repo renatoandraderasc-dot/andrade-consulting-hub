@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Target, Wand2, Download, Sprout, RotateCcw, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { carregarLojasPermitidas } from "@/lib/lojasPermitidas";
 import ClientLayout from "@/components/ClientLayout";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -49,7 +50,7 @@ const baseMonth = (year: number, month: number, base: "ano_anterior" | "mes_ante
 };
 
 const MetasGerador = () => {
-  const { user, isAdmin, loading: authLoading } = useAuth();
+  const { user, isAdmin, isGlobalAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
