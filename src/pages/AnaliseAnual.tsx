@@ -25,7 +25,7 @@ const ANOS = [2022, 2023, 2024, 2025, 2026];
 type Turno = "manha" | "tarde" | "";
 
 type Row = {
-  ano: number; mes: number; faturamento: number; lucro: number; volume: number; mix: number;
+  ano: number; mes: number; faturamento: number; lucro: number; volume: number;
   departamento: string; secao: string; categoria: string; turno: Turno;
 };
 
@@ -43,18 +43,6 @@ const extrairTurno = (l: any): Turno => {
   if (h == null || !isFinite(h) || h > 23) return "";
   return h < 13 ? "manha" : "tarde";
 };
-
-
-const extrairMix = (l: any) =>
-  num(pick(l, "mix", "itens", "qtd_itens", "quantidade_itens", "sku", "codigos", "positivacao"));
-
-const chaveTexto = (v: unknown) =>
-  String(v ?? "")
-    .toUpperCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
 
 const nfInt = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 });
 const fmtNum = (v: number | null) => (v == null || !isFinite(v) ? "" : nfInt.format(Math.round(v)));
@@ -121,7 +109,6 @@ const AnaliseAnual = () => {
             faturamento: num(pick(l, "receita_bruta", "faturamento", "total_vendido", "vendas")),
             lucro: lucroDaLinha(l, num(pick(l, "receita_bruta", "faturamento", "total_vendido", "vendas")), num(pick(l, "lucro_bruto", "lucro"))),
             volume: num(pick(l, "volume", "quantidade", "qtde", "qtd")),
-            mix: extrairMix(l),
 
             departamento: dep,
             secao: String(pick(l, "secao", "nivel1") ?? dep).toUpperCase(),
@@ -158,7 +145,7 @@ const AnaliseAnual = () => {
             const turno = extrairTurno(l);
             const k = `${ano}-${mes}-${departamento}-${categoria}-${turno}`;
             const cur = acc.get(k) ?? {
-              ano, mes, faturamento: 0, lucro: 0, volume: 0, mix: 0,
+              ano, mes, faturamento: 0, lucro: 0, volume: 0,
               departamento, secao, categoria, turno,
             };
             cur.faturamento += num(pick(l, "vendas", "total_vendido", "faturamento", "venda", "valor_venda", "valor", "total"));
@@ -180,7 +167,7 @@ const AnaliseAnual = () => {
           .from("analise_anual").select("ano, mes, faturamento, lucro, volume").eq("store_id", sid);
         const salvos: Row[] = ((data as any[]) || []).map(r => ({
           ano: r.ano, mes: r.mes,
-          faturamento: Number(r.faturamento), lucro: Number(r.lucro), volume: Number(r.volume), mix: 0,
+          faturamento: Number(r.faturamento), lucro: Number(r.lucro), volume: Number(r.volume),
           departamento: "TOTAL", secao: "TOTAL", categoria: "TOTAL", turno: "" as Turno,
         }));
         setRows(salvos);
@@ -257,7 +244,7 @@ const AnaliseAnual = () => {
           const turnoL = extrairTurno(l);
           const k = `${ano}-${mes}-${departamento}-${categoria}-${turnoL}`;
           const cur = acc.get(k) ?? {
-            ano, mes, faturamento: 0, lucro: 0, volume: 0, mix: 0,
+            ano, mes, faturamento: 0, lucro: 0, volume: 0,
             departamento, secao, categoria, turno: turnoL,
           };
           cur.faturamento += num(pick(l, "total_vendido", "faturamento", "venda"));
@@ -271,173 +258,6 @@ const AnaliseAnual = () => {
     setHoraAnos((prev) => Array.from(new Set([...prev, ...anos])));
     setHoraLoading(false);
   };
-
-  // ---- mix (itens distintos vendidos) ----
-  const [mixCarregado, setMixCarregado] = useState(false);
-  const [mixLoading, setMixLoading] = useState(false);
-
-  // Nesta tela o MIX e calculado da mesma forma para qualquer sistema:
-  // uma consulta por mes e contagem de codigos distintos.
-  const carregarMixPositivacao = async (sid: string, relatorio: string) => {
-    const hoje0 = new Date();
-    const p2 = (n: number) => String(n).padStart(2, "0");
-    // Uma consulta por MES: o relatorio de positivacao conta o produto apenas
-    // na primeira venda do periodo, entao janelas anuais jogam tudo em janeiro.
-    const janelas: { inicio: string; fim: string }[] = [];
-    for (let a = ANOS[0]; a <= hoje0.getFullYear(); a++) {
-      for (let m = 1; m <= 12; m++) {
-        if (a === hoje0.getFullYear() && m > hoje0.getMonth() + 1) break;
-        const ultimo =
-          a === hoje0.getFullYear() && m === hoje0.getMonth() + 1
-            ? hoje0.getDate()
-            : new Date(a, m, 0).getDate();
-        janelas.push({ inicio: `${a}-${p2(m)}-01`, fim: `${a}-${p2(m)}-${p2(ultimo)}` });
-      }
-    }
-    // O relatorio hierarquico devolve uma linha por produto no periodo. Ele e
-    // a fonte autoritativa do MIX: o Set garante um unico codigo por mes.
-    const codigosPorDep = new Map<string, Set<string>>();
-    const codigosPorCategoria = new Map<string, Set<string>>();
-    const codigosPorMes = new Map<string, Set<string>>();
-    const partes: { janela: { inicio: string; fim: string }; relatorio: any }[] = [];
-    // Tuneis ngrok das lojas derrubam a conexao (tls handshake eof) quando
-    // recebem varias chamadas simultaneas. Fazemos lotes pequenos, com
-    // uma nova tentativa por janela e desistimos cedo se o relatorio nao existe.
-    const LOTE = 2;
-    const buscar = async (j: { inicio: string; fim: string }) => {
-      for (let tentativa = 0; tentativa < 2; tentativa++) {
-        try {
-          const r = await chamarRelatorio(sid, relatorio, j);
-          if (r && !r.erro) return { janela: j, relatorio: r };
-          if (r?.indisponivel) return { janela: j, relatorio: r };
-        } catch {
-          // tenta de novo
-        }
-        await new Promise((res) => setTimeout(res, 600 * (tentativa + 1)));
-      }
-      return { janela: j, relatorio: null };
-    };
-    let falhasSeguidas = 0;
-    for (let i = 0; i < janelas.length; i += LOTE) {
-      const lote = await Promise.all(janelas.slice(i, i + LOTE).map(buscar));
-      partes.push(...lote);
-      const comDados = lote.some((l) => l.relatorio?.dados?.length);
-      falhasSeguidas = comDados ? 0 : falhasSeguidas + 1;
-      // relatorio inexistente ou conexao caida: nao insiste por dezenas de meses
-      if (falhasSeguidas >= 4 && !partes.some((p) => p.relatorio?.dados?.length)) break;
-    }
-
-    for (const { janela, relatorio: p } of partes) {
-      if (!p || p.indisponivel || p.offline || p.erro) continue;
-      for (const l of p.dados) {
-        const codigo = String(pick(l, "codigo", "codigo_produto", "cod_produto", "ean", "codigo_barras") ?? "").trim();
-        if (!codigo) continue;
-        const ano = Number(janela.inicio.slice(0, 4));
-        const mes = Number(janela.inicio.slice(5, 7));
-        const dep = chaveTexto(pick(l, "nivel1", "departamento", "secao", "categoria") ?? "SEM DEPARTAMENTO");
-        const categoria = chaveTexto(pick(l, "nivel2", "grupo", "categoria") ?? dep);
-        const chaveDep = `${ano}-${mes}-${dep}`;
-        const chaveCategoria = `${ano}-${mes}-${dep}-${categoria}`;
-        const chaveMes = `${ano}-${mes}`;
-        const setDep = codigosPorDep.get(chaveDep) ?? new Set<string>();
-        const setCategoria = codigosPorCategoria.get(chaveCategoria) ?? new Set<string>();
-        const setMes = codigosPorMes.get(chaveMes) ?? new Set<string>();
-        setDep.add(codigo);
-        setCategoria.add(codigo);
-        setMes.add(codigo);
-        codigosPorDep.set(chaveDep, setDep);
-        codigosPorCategoria.set(chaveCategoria, setCategoria);
-        codigosPorMes.set(chaveMes, setMes);
-      }
-    }
-    if (!codigosPorDep.size) return false;
-    setRows((prev) => {
-      const aplicadas = new Set<string>();
-      return prev.map((r) => {
-        const departamentosLinha = [r.secao, r.departamento].map(chaveTexto);
-        const categoriasLinha = [r.categoria, r.departamento].map(chaveTexto);
-        const chaveCategoria = departamentosLinha
-          .flatMap((dep) => categoriasLinha.map((categoria) => `${r.ano}-${r.mes}-${dep}-${categoria}`))
-          .find((chave) => codigosPorCategoria.has(chave));
-        if (chaveCategoria && !aplicadas.has(chaveCategoria)) {
-          aplicadas.add(chaveCategoria);
-          return { ...r, mix: codigosPorCategoria.get(chaveCategoria)?.size ?? 0 };
-        }
-        const chaveEncontrada = departamentosLinha
-          .map((nome) => `${r.ano}-${r.mes}-${nome}`)
-          .find((chave) => codigosPorDep.has(chave));
-        if (chaveEncontrada && !aplicadas.has(chaveEncontrada)) {
-          aplicadas.add(chaveEncontrada);
-          return { ...r, mix: codigosPorDep.get(chaveEncontrada)?.size ?? 0 };
-        }
-        const chaveMes = `${r.ano}-${r.mes}`;
-        if (chaveTexto(r.departamento) === "TOTAL" && !aplicadas.has(chaveMes)) {
-          aplicadas.add(chaveMes);
-          return { ...r, mix: codigosPorMes.get(chaveMes)?.size ?? 0 };
-        }
-        return { ...r, mix: 0 };
-      });
-    });
-    return true;
-  };
-
-  const carregarMix = async (sid: string) => {
-    if (mixCarregado) return;
-    setMixLoading(true);
-    try {
-      // Vale para todas as lojas, independente do sistema (VR, WebSac,
-      // Oracle, Director): tenta os relatorios por produto mes a mes.
-      for (const rel of ["vendas_hierarquia_periodo", "vendas_produto_periodo", "mix_positivacao_periodo"]) {
-        const ok = await carregarMixPositivacao(sid, rel);
-        if (ok) return;
-      }
-      const hoje0 = new Date();
-      const anosBusca: number[] = [];
-      for (let a = ANOS[0]; a <= hoje0.getFullYear(); a++) anosBusca.push(a);
-      const acc = new Map<string, number>();
-      for (const ano of anosBusca) {
-        const r = await chamarRelatorio(sid, "vendas_produto_periodo", {
-          inicio: `${ano}-01-01`,
-          fim: ano === hoje0.getFullYear()
-            ? `${ano}-${String(hoje0.getMonth() + 1).padStart(2, "0")}-${String(hoje0.getDate()).padStart(2, "0")}`
-            : `${ano}-12-31`,
-        });
-        if (r.indisponivel || r.offline || r.erro || !r.dados.length) continue;
-        const vistos = new Map<string, Set<string>>();
-        for (const l of r.dados) {
-          const dia = String(pick(l, "dia", "data") ?? "");
-          const anoL = Number(dia.slice(0, 4));
-          const mesL = Number(dia.slice(5, 7));
-          if (!anoL || !mesL) continue;
-          const cod = String(pick(l, "codigo", "codigo_produto", "cod_produto", "ean") ?? "").trim();
-          if (!cod) continue;
-          const k = `${anoL}-${mesL}`;
-          const s = vistos.get(k) ?? new Set<string>();
-          s.add(cod);
-          vistos.set(k, s);
-        }
-        for (const [k, s] of vistos) acc.set(k, s.size);
-      }
-      if (!acc.size) return;
-      setRows((prev) =>
-        prev.map((r) => {
-          const k = `${r.ano}-${r.mes}`;
-          const m = acc.get(k);
-          return m ? { ...r, mix: m } : r;
-        }),
-      );
-    } catch {
-      // mix é opcional; falhas não bloqueiam a tela
-    } finally {
-      setMixCarregado(true);
-      setMixLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (storeId && rows.length && !mixCarregado) carregarMix(storeId);
-  }, [storeId, rows.length, mixCarregado]);
-
 
   // ---- filtros ----
   const departamentos = useMemo(
@@ -496,15 +316,15 @@ const AnaliseAnual = () => {
 
 
 
-  const val = (ano: number, mes: number, campo: "faturamento" | "lucro" | "volume" | "mix") =>
+  const val = (ano: number, mes: number, campo: "faturamento" | "lucro" | "volume") =>
     rowsFiltradas
       .filter(x => x.ano === ano && x.mes === mes)
       .reduce((s, x) => s + Number(x[campo] || 0), 0);
 
   const blocos = useMemo(() => {
-    const build = (campo: "faturamento" | "lucro" | "volume" | "mix") =>
+    const build = (campo: "faturamento" | "lucro" | "volume") =>
       anosSel.map(ano => ({ ano, meses: MESES.map((_, i) => val(ano, i + 1, campo)) }));
-    return { faturamento: build("faturamento"), lucro: build("lucro"), volume: build("volume"), mix: build("mix") };
+    return { faturamento: build("faturamento"), lucro: build("lucro"), volume: build("volume") };
   }, [rowsFiltradas, anosSel]);
 
   // Último mês com dado no ano mais recente selecionado (para acumulados comparáveis)
@@ -641,7 +461,6 @@ const AnaliseAnual = () => {
   const BLOCOS_EXPORT = () => ([
     { titulo: "FATURAMENTO", matriz: blocos.faturamento, tipo: "valor" as const },
     { titulo: "LUCRO", matriz: blocos.lucro, tipo: "valor" as const },
-    { titulo: "MIX", matriz: blocos.mix, tipo: "valor" as const },
     { titulo: "MARGEM", matriz: margemMatriz, tipo: "margem" as const },
     { titulo: "VOLUME", matriz: blocos.volume, tipo: "valor" as const },
   ]);
@@ -757,8 +576,8 @@ const AnaliseAnual = () => {
           </div>
         </motion.div>
 
-        {(loading || mixLoading) && (
-          <CartProgressOverlay label={loading ? "Carregando análise anual..." : "Contando produtos diferentes por mês..."} />
+        {loading && (
+          <CartProgressOverlay label="Carregando análise anual..." />
         )}
 
         <Card className="mb-6">
@@ -924,7 +743,6 @@ const AnaliseAnual = () => {
           <div className="space-y-6">
             <Card><CardContent className="p-0 overflow-x-auto">{renderBloco("FATURAMENTO", blocos.faturamento, "valor")}</CardContent></Card>
             <Card><CardContent className="p-0 overflow-x-auto">{renderBloco("LUCRO", blocos.lucro, "valor")}</CardContent></Card>
-            <Card><CardContent className="p-0 overflow-x-auto">{renderBloco("MIX", blocos.mix, "valor")}</CardContent></Card>
             <Card><CardContent className="p-0 overflow-x-auto">{renderBloco("MARGEM", margemMatriz, "margem")}</CardContent></Card>
             <Card><CardContent className="p-0 overflow-x-auto">{renderBloco("VOLUME", blocos.volume, "valor")}</CardContent></Card>
           </div>
