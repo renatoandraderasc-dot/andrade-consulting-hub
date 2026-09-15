@@ -576,8 +576,8 @@ const AnaliseAnual = () => {
           </div>
         </motion.div>
 
-        {(loading || mixLoading) && (
-          <CartProgressOverlay label={loading ? "Carregando análise anual..." : "Contando produtos diferentes por mês..."} />
+        {loading && (
+          <CartProgressOverlay label="Carregando análise anual..." />
         )}
 
         <Card className="mb-6">
