@@ -48,7 +48,7 @@ const DashboardFinanceiro = () => {
   const [ano, setAno] = useState(hoje.getFullYear());
   const [loading, setLoading] = useState(false);
   const [tick, setTick] = useState(0);
-  const carregado = useRef(false);
+  const carregado = useRef("");
 
   const [lanc, setLanc] = useState<LancRow[]>([]);
   const [lancAnt, setLancAnt] = useState<LancRow[]>([]);
