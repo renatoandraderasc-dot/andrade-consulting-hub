@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { chamarRelatorio, avisoRelatorio, pick as col, num } from "@/lib/vrReport";
+import { comprasAgrupadas, detalharComprasVendas } from "@/lib/comprasDetalhe";
 import { useNavigate } from "react-router-dom";
 import {
   ShoppingCart, TrendingUp, TrendingDown, Wallet, Target, Download, Wand2, Save, RefreshCw, Info,
@@ -233,7 +234,12 @@ const Compras = () => {
       const r = await chamarRelatorio(storeId, "compras_vendas_periodo", { inicio, fim });
       const aviso = avisoRelatorio(r);
       setCvAviso(aviso);
-      const linhas = r.dados;
+      // Pontes que devolvem tudo em "OUTROS": remonta a abertura completa.
+      let linhas = r.dados;
+      if (comprasAgrupadas(linhas)) {
+        const detalhe = await detalharComprasVendas(storeId, inicio, fim);
+        if (detalhe) linhas = detalhe as any[];
+      }
       // agrupa por departamento via vr_secao_departamento
       const { data: mapas } = await supabase.from("vr_secao_departamento")
         .select("secao_vr, department").eq("store_id", storeId);
@@ -268,7 +274,12 @@ const Compras = () => {
     try {
       const r = await chamarRelatorio(storeId, "compras_vendas_periodo", { inicio: cvInicio, fim: cvFim });
       setCvAviso(avisoRelatorio(r));
-      setCvLinhas(r.dados);
+      let linhas = r.dados;
+      if (comprasAgrupadas(linhas)) {
+        const detalhe = await detalharComprasVendas(storeId, cvInicio, cvFim);
+        if (detalhe) linhas = detalhe as any[];
+      }
+      setCvLinhas(linhas);
     } catch (err: any) {
       setCvAviso(err.message);
       setCvLinhas([]);

@@ -91,7 +91,7 @@ async function carregar(storeId: string, inicio: string, fim: string): Promise<L
     const r = await chamar(storeId, c.nome, c.params).catch(() => [] as any[]);
     // so aceita se realmente vier abertura por produto
     const temProduto = r.some(
-      (l: any) => !!pick(l, "codigo", "codigo_produto", "cod_produto", "ean") ||
+      (l: any) => !!pick(l, "codigo", "codigo_produto", "cod_produto", "cod", "ean") ||
         !!pick(l, "produto", "descricao", "descricao_produto"),
     );
     if (r.length > 0 && temProduto) {
@@ -130,19 +130,24 @@ async function carregar(storeId: string, inicio: string, fim: string): Promise<L
 
   const cat = new Map<string, { n1: string; n2: string; n3: string; descricao: string; ean: string }>();
   for (const p of catalogo) {
-    cat.set(chaveCod(pick(p, "codigo", "cod_produto", "id_produto")), {
-      n1: txt(pick(p, "secao"), "SEM DEPARTAMENTO").toUpperCase(),
-      n2: txt(pick(p, "grupo"), "SEM GRUPO").toUpperCase(),
-      n3: txt(pick(p, "subgrupo"), "SEM SUBGRUPO").toUpperCase(),
+    // Pontes diferentes nomeiam o codigo do produto de formas distintas
+    // (codigo / cod / id_produto). Sem chave valida a linha e ignorada,
+    // senao todos os produtos casariam com a mesma entrada vazia.
+    const chave = chaveCod(pick(p, "codigo", "cod_produto", "id_produto", "cod"));
+    if (!chave) continue;
+    cat.set(chave, {
+      n1: txt(pick(p, "secao", "n1", "nivel1", "departamento"), "SEM DEPARTAMENTO").toUpperCase(),
+      n2: txt(pick(p, "grupo", "n2", "nivel2", "categoria"), "SEM GRUPO").toUpperCase(),
+      n3: txt(pick(p, "subgrupo", "n3", "nivel3", "subcategoria"), "SEM SUBGRUPO").toUpperCase(),
       descricao: txt(pick(p, "descricao", "produto"), "SEM DESCRIÇÃO").toUpperCase(),
       ean: String(pick(p, ...ALIAS_EAN) ?? ""),
     });
   }
 
   return ranking.map((l) => {
-    const codigo = String(pick(l, "codigo", "codigo_produto", "cod_produto", "ean") ?? "");
+    const codigo = String(pick(l, "codigo", "codigo_produto", "cod_produto", "cod", "ean") ?? "");
     const c = cat.get(chaveCod(codigo));
-    const vendas = num(pick(l, "total_vendido", "venda", "vendas", "valor_venda"));
+    const vendas = num(pick(l, "total_vendido", "venda", "vendas", "valor_venda", "valor", "total"));
     const desc = txt(pick(l, "produto", "descricao", "descricao_produto"), "");
     return {
       n1: (c?.n1 ?? txt(pick(l, "nivel1", "secao", "departamento"), "SEM DEPARTAMENTO")).toUpperCase(),
