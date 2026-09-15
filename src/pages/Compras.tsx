@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { chamarRelatorio, avisoRelatorio, pick as col, num } from "@/lib/vrReport";
+import { comprasAgrupadas, detalharComprasVendas } from "@/lib/comprasDetalhe";
 import { useNavigate } from "react-router-dom";
 import {
   ShoppingCart, TrendingUp, TrendingDown, Wallet, Target, Download, Wand2, Save, RefreshCw, Info,
