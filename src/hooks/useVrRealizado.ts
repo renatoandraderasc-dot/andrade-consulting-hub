@@ -172,7 +172,9 @@ async function loadRaw(storeId: string, inicio: string, fim: string): Promise<Ra
     linhas.push({
       date,
       secao: String(pick(l, "secao", "departamento") ?? ""),
-      categoria: String(pick(l, "categoria", "secao") ?? "").trim(),
+      // Pontes que so publicam "departamento" (padrao DIRECTOR) tambem
+      // precisam alimentar o filtro de categoria do Dashboard.
+      categoria: String(pick(l, "categoria", "secao", "departamento") ?? "").trim(),
       grupo: String(pick(l, "grupo") ?? ""),
       vendas: numOf(pick(l, "total_vendido", "venda", "vendas")),
       // Margem = (Venda - Custo com imposto) / Venda.
