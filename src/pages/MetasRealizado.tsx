@@ -7,6 +7,7 @@ import {
 import { Target, Download, RefreshCw, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { carregarLojasPermitidas } from "@/lib/lojasPermitidas";
 import ClientLayout from "@/components/ClientLayout";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,7 +43,7 @@ const iso = (a: number, m: number, d: number) =>
   `${a}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
 const MetasRealizado = () => {
-  const { user, isAdmin, loading: authLoading } = useAuth();
+  const { user, isAdmin, isGlobalAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   const [stores, setStores] = useState<Store[]>([]);
@@ -60,7 +61,7 @@ const MetasRealizado = () => {
   useEffect(() => {
     if (!authLoading && (!user || !isAdmin)) navigate("/login");
     if (user && isAdmin) {
-      supabase.from("stores").select("id, name").order("name").then(({ data }) => {
+      carregarLojasPermitidas(user.id, isGlobalAdmin).then((data) => {
         if (!data?.length) return;
         setStores(data);
         const sid = sessionStorage.getItem("selectedStoreId");
@@ -68,7 +69,7 @@ const MetasRealizado = () => {
         setStoreId(p.id); setStoreName(p.name);
       });
     }
-  }, [user, isAdmin, authLoading]);
+  }, [user, isAdmin, isGlobalAdmin, authLoading]);
 
   const inicio = iso(ano, mes, 1);
   const fim = iso(ano, mes, diasNoMes(ano, mes));

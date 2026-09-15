@@ -5,6 +5,7 @@ import { Award, RefreshCw, Settings2, CheckCircle2, XCircle, Gift, Share2 } from
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { carregarLojasPermitidas } from "@/lib/lojasPermitidas";
 import ClientLayout from "@/components/ClientLayout";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -30,7 +31,7 @@ const iso = (a: number, m: number, d: number) =>
 const pct = (a: number, b: number) => (b > 0 ? (a / b) * 100 : 0);
 
 const MetasPremiacao = () => {
-  const { user, isAdmin, loading: authLoading } = useAuth();
+  const { user, isAdmin, isGlobalAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -54,7 +55,7 @@ const MetasPremiacao = () => {
   useEffect(() => {
     if (!authLoading && (!user || !isAdmin)) navigate("/login");
     if (user && isAdmin) {
-      supabase.from("stores").select("id, name").order("name").then(({ data }) => {
+      carregarLojasPermitidas(user.id, isGlobalAdmin).then((data) => {
         if (!data?.length) return;
         setStores(data);
         const sid = sessionStorage.getItem("selectedStoreId");
@@ -62,7 +63,7 @@ const MetasPremiacao = () => {
         setStoreId(p.id); setStoreName(p.name);
       });
     }
-  }, [user, isAdmin, authLoading]);
+  }, [user, isAdmin, isGlobalAdmin, authLoading]);
 
   const inicio = iso(ano, mes, 1);
   const fim = iso(ano, mes, diasNoMes(ano, mes));

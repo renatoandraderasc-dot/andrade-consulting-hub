@@ -270,10 +270,23 @@ Deno.serve(async (req) => {
         .eq("classificacao_manual", true)
         .gte("data", b.ini)
         .lte("data", b.fim);
+      // A chave gerada para pagamentos ja mudou de formato (ganhou o sufixo da
+      // parcela). Alem da chave exata, comparamos uma chave "base" sem o ultimo
+      // segmento, para reconhecer as linhas gravadas no formato anterior.
+      const chaveBase = (ref: string) => {
+        const partes = ref.split("-");
+        return partes.length > 2 ? partes.slice(0, -1).join("-") : ref;
+      };
       const mapaManual = new Map<string, { tipo: string; subtipo: string }>();
-      for (const m of manuais ?? []) mapaManual.set(String(m.origem_ref), { tipo: m.tipo, subtipo: m.subtipo });
+      for (const m of manuais ?? []) {
+        const ref = String(m.origem_ref ?? "");
+        const val = { tipo: m.tipo, subtipo: m.subtipo };
+        mapaManual.set(ref, val);
+        if (!mapaManual.has(chaveBase(ref))) mapaManual.set(chaveBase(ref), val);
+      }
       for (const reg of registros) {
-        const man = mapaManual.get(String(reg.origem_ref));
+        const refReg = String(reg.origem_ref);
+        const man = mapaManual.get(refReg) ?? mapaManual.get(chaveBase(refReg));
         if (man) {
           reg.tipo = man.tipo;
           reg.subtipo = man.subtipo;
@@ -301,7 +314,12 @@ Deno.serve(async (req) => {
       // remove esses pagamentos antigos. Após uma leitura e gravação completas,
       // reconciliamos somente os registros VR desta loja e deste bloco mensal.
       if (!falhouGravacao) {
-        const refsAtuais = new Set(registros.map((r) => String(r.origem_ref)));
+        const refsAtuais = new Set<string>();
+        for (const r of registros) {
+          const ref = String(r.origem_ref);
+          refsAtuais.add(ref);
+          refsAtuais.add(chaveBase(ref));
+        }
         const { data: existentes, error: erroLeitura } = await supabase
           .from("lancamentos")
           .select("id, origem_ref")
@@ -314,7 +332,10 @@ Deno.serve(async (req) => {
           detalhe.push({ periodo: b.ini, erro: `falha ao reconciliar loja: ${erroLeitura.message}`, gravados });
         } else {
           const obsoletos = (existentes ?? [])
-            .filter((item) => !refsAtuais.has(String(item.origem_ref ?? "")))
+            .filter((item) => {
+            const ref = String(item.origem_ref ?? "");
+            return !refsAtuais.has(ref) && !refsAtuais.has(chaveBase(ref));
+          })
             .map((item) => item.id);
 
           for (let i = 0; i < obsoletos.length; i += 100) {

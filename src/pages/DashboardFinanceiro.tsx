@@ -48,7 +48,7 @@ const DashboardFinanceiro = () => {
   const [ano, setAno] = useState(hoje.getFullYear());
   const [loading, setLoading] = useState(false);
   const [tick, setTick] = useState(0);
-  const carregado = useRef(false);
+  const carregado = useRef("");
 
   const [lanc, setLanc] = useState<LancRow[]>([]);
   const [lancAnt, setLancAnt] = useState<LancRow[]>([]);
@@ -145,13 +145,16 @@ const DashboardFinanceiro = () => {
     }
   }, [storeId, mes, ano, somaLanc]);
 
-  // Regra do Hub: 1 fetch na primeira carga; depois só pelo botão Atualizar.
+  // Regra do Hub: sem refetch automatico. Recarrega na primeira carga, no botao
+  // Atualizar e quando o usuario troca o mes/ano (acao explicita do usuario).
   useEffect(() => {
     if (!storeId) return;
-    if (carregado.current && tick === 0) return;
-    carregado.current = true;
+    const chave = `${storeId}-${mes}-${ano}`;
+    if (carregado.current === chave && tick === 0) return;
+    carregado.current = chave;
     carregar();
-  }, [storeId, tick]);
+  }, [storeId, mes, ano, tick]);
+
 
   const soma = (rows: LancRow[], tipos: string[]) =>
     rows.filter((r) => tipos.includes(r.tipo)).reduce((s, r) => s + Math.abs(r.valor), 0);

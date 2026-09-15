@@ -69,6 +69,10 @@ const AplicarPrecosDialog = ({
       const payload = validos.map((i) => ({ id_produto: i.idProduto, precovenda: i.precoMeta }));
       // Envia em lotes pequenos: listas grandes estouram o limite da ponte da loja.
       let afetados = 0;
+      // Itens ja confirmados pela ponte: precisam ir para o historico mesmo que
+      // um lote seguinte falhe (a alteracao anterior ja e definitiva no ERP).
+      let enviados = 0;
+      let falha: string | null = null;
       // 25 itens por chamada mantem a URL curta o bastante para pontes que
       // so aceitam GET (algumas lojas nao expoem POST em /relatorios).
       for (let i = 0; i < payload.length; i += 25) {
@@ -80,12 +84,14 @@ const AplicarPrecosDialog = ({
           propagar_familia: propagar ? "true" : "false",
         });
         const msg = avisoRelatorio(r);
-        if (msg) { setErro(msg); return; }
+        if (msg) { falha = msg; break; }
         afetados += (r.dados || []).length || lote.length;
+        enviados += lote.length;
       }
+      const aplicados = validos.slice(0, enviados);
       const { data: auth } = await supabase.auth.getUser();
-      await supabase.from("historico_aplicacao_preco").insert(
-        validos.map((i) => ({
+      if (aplicados.length) await supabase.from("historico_aplicacao_preco").insert(
+        aplicados.map((i) => ({
           store_id: storeId,
           id_produto: i.idProduto,
           descricao: i.descricao,
@@ -101,6 +107,16 @@ const AplicarPrecosDialog = ({
           applied_by: auth.user?.id ?? null,
         })),
       );
+
+      if (falha) {
+        setErro(
+          aplicados.length
+            ? `${aplicados.length} de ${validos.length} preço(s) já foram aplicados e registrados no Histórico antes da falha. Os demais não foram enviados. Erro: ${falha}`
+            : falha,
+        );
+        if (aplicados.length) onAplicado?.();
+        return;
+      }
 
       toast({
         title: "Preços enviados",

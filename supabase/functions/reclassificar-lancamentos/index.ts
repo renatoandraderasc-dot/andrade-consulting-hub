@@ -106,14 +106,17 @@ Deno.serve(async (req) => {
     const pagina = 1000;
 
 
-    // Os registros saem do filtro (subtipo OUTROS) conforme sao classificados,
-    // por isso lemos sempre a primeira pagina ate zerar.
-    for (let volta = 0; volta < 200; volta++) {
+    // Paginamos por offset: quando a classificacao devolve o proprio "OUTROS"
+    // a linha continua no filtro, entao reler sempre a primeira pagina entraria
+    // em laco infinito. Somente lancamentos VR sao reclassificados.
+    for (let off = 0; off < 200000; off += pagina) {
       let q = supabase
         .from("lancamentos")
-        .select("id, descricao, observacao")
+        .select("id, tipo, subtipo, descricao, observacao")
+        .eq("origem", "VR")
+        .eq("classificacao_manual", false)
         .eq("subtipo", "OUTROS")
-        .limit(pagina);
+        .range(off, off + pagina - 1);
       if (storeId) q = q.eq("store_id", storeId);
 
       const { data, error } = await q;
@@ -128,6 +131,8 @@ Deno.serve(async (req) => {
           nomeTipo: nomeTipoDaObs(l.observacao),
           somenteTipo: true,
         });
+        // nada a fazer quando a classificacao repete o que ja esta gravado
+        if (l.tipo === cls.tipo && l.subtipo === cls.subtipo) continue;
         const chave = `${cls.tipo}||${cls.subtipo}`;
         const g = grupos.get(chave) ?? { tipo: cls.tipo, subtipo: cls.subtipo, ids: [] };
         g.ids.push(l.id);

@@ -6,6 +6,7 @@ import {
 import { Sparkles, ChevronLeft, ChevronRight, Lock, LockOpen, RefreshCw, Save, AlertTriangle, Wand2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { carregarLojasPermitidas } from "@/lib/lojasPermitidas";
 import ClientLayout from "@/components/ClientLayout";
 import { useToast } from "@/hooks/use-toast";
 import { useSugestaoMetas, LOJA } from "@/hooks/useSugestaoMetas";
@@ -25,7 +26,7 @@ const parseNum = (raw: string) => parseFloat(String(raw).replace(/\./g, "").repl
 const dataBR = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 
 const MetasSugestao = () => {
-  const { user, isAdmin, loading: authLoading } = useAuth();
+  const { user, isAdmin, isGlobalAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -56,7 +57,7 @@ const MetasSugestao = () => {
   useEffect(() => {
     if (!authLoading && (!user || !isAdmin)) navigate("/login");
     if (user && isAdmin) {
-      supabase.from("stores").select("id, name").order("name").then(({ data }) => {
+      carregarLojasPermitidas(user.id, isGlobalAdmin).then((data) => {
         if (!data?.length) return;
         setStores(data);
         const sid = sessionStorage.getItem("selectedStoreId");
@@ -64,7 +65,7 @@ const MetasSugestao = () => {
         setStoreId(p.id); setStoreName(p.name);
       });
     }
-  }, [user, isAdmin, authLoading]);
+  }, [user, isAdmin, isGlobalAdmin, authLoading]);
 
   // default: todos os departamentos (exceto o total da loja)
   useEffect(() => {
