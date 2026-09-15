@@ -44,14 +44,6 @@ const extrairTurno = (l: any): Turno => {
   return h < 13 ? "manha" : "tarde";
 };
 
-const chaveTexto = (v: unknown) =>
-  String(v ?? "")
-    .toUpperCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-
 const nfInt = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 });
 const fmtNum = (v: number | null) => (v == null || !isFinite(v) ? "" : nfInt.format(Math.round(v)));
 const fmtPct = (v: number | null) =>
