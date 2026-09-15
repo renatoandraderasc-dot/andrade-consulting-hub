@@ -91,7 +91,7 @@ async function carregar(storeId: string, inicio: string, fim: string): Promise<L
     const r = await chamar(storeId, c.nome, c.params).catch(() => [] as any[]);
     // so aceita se realmente vier abertura por produto
     const temProduto = r.some(
-      (l: any) => !!pick(l, "codigo", "codigo_produto", "cod_produto", "ean") ||
+      (l: any) => !!pick(l, "codigo", "codigo_produto", "cod_produto", "cod", "ean") ||
         !!pick(l, "produto", "descricao", "descricao_produto"),
     );
     if (r.length > 0 && temProduto) {

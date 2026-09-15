@@ -233,7 +233,12 @@ const Compras = () => {
       const r = await chamarRelatorio(storeId, "compras_vendas_periodo", { inicio, fim });
       const aviso = avisoRelatorio(r);
       setCvAviso(aviso);
-      const linhas = r.dados;
+      // Pontes que devolvem tudo em "OUTROS": remonta a abertura completa.
+      let linhas = r.dados;
+      if (comprasAgrupadas(linhas)) {
+        const detalhe = await detalharComprasVendas(storeId, inicio, fim);
+        if (detalhe) linhas = detalhe as any[];
+      }
       // agrupa por departamento via vr_secao_departamento
       const { data: mapas } = await supabase.from("vr_secao_departamento")
         .select("secao_vr, department").eq("store_id", storeId);
