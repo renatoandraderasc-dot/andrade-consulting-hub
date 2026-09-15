@@ -48,9 +48,22 @@ const AdminUsers = () => {
 
   const call = async (action: string, payload: any = {}) => {
     const { data, error } = await supabase.functions.invoke("admin-users", { body: { action, payload } });
-    if (error || data?.error) throw new Error(data?.error || error?.message);
+    if (error) {
+      // supabase-js nao expoe o corpo em respostas nao-2xx; ler manualmente
+      let detalhe = "";
+      try {
+        const ctx: any = (error as any).context;
+        if (ctx && typeof ctx.json === "function") {
+          const body = await ctx.clone().json();
+          detalhe = body?.error || "";
+        }
+      } catch { /* ignore */ }
+      throw new Error(detalhe || data?.error || error.message);
+    }
+    if (data?.error) throw new Error(data.error);
     return data;
   };
+
 
   const refresh = async () => {
     setLoading(true);

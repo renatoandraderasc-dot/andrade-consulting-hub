@@ -63,29 +63,37 @@ Deno.serve(async (req) => {
       }
       case "create": {
         const { email, password, full_name, store_ids = [], modules = [], is_admin = false, role } = payload;
+        if (!email || !password) throw new Error("Informe e-mail e senha.");
         const papel: string = role || (is_admin ? "admin" : "user");
         const { data, error } = await admin.auth.admin.createUser({
           email, password, email_confirm: true, user_metadata: { full_name },
         });
-        if (error) throw error;
+        if (error) throw new Error(`Criar usuário: ${error.message}`);
         const uid = data.user!.id;
         // Garantir profile/role (trigger handle_new_user já cria)
-        await admin.from("profiles").upsert({ user_id: uid, full_name }, { onConflict: "user_id" });
+        const { error: eProf } = await admin.from("profiles").upsert({ user_id: uid, full_name }, { onConflict: "user_id" });
+        if (eProf) throw new Error(`Perfil: ${eProf.message}`);
         if (papel === "admin" || papel === "supervisor") {
-          await admin.from("user_roles").upsert({ user_id: uid, role: papel }, { onConflict: "user_id,role" });
+          const { error: eRole } = await admin.from("user_roles").upsert({ user_id: uid, role: papel }, { onConflict: "user_id,role" });
+          if (eRole) throw new Error(`Papel: ${eRole.message}`);
         }
         if (store_ids.length) {
-          await admin.from("user_store_access").insert(
-            store_ids.map((sid: string) => ({ user_id: uid, store_id: sid, approved: true }))
+          const { error: eStore } = await admin.from("user_store_access").upsert(
+            store_ids.map((sid: string) => ({ user_id: uid, store_id: sid, approved: true })),
+            { onConflict: "user_id,store_id" }
           );
+          if (eStore) throw new Error(`Lojas: ${eStore.message}`);
         }
         if (modules.length) {
-          await admin.from("user_module_access").insert(
-            modules.map((m: string) => ({ user_id: uid, module: m, allowed: true }))
+          const { error: eMod } = await admin.from("user_module_access").upsert(
+            modules.map((m: string) => ({ user_id: uid, module: m, allowed: true })),
+            { onConflict: "user_id,module" }
           );
+          if (eMod) throw new Error(`Módulos: ${eMod.message}`);
         }
         return Response.json({ user: data.user }, { headers: corsHeaders });
       }
+
       case "set_password": {
         const { user_id, password } = payload;
         const { error } = await admin.auth.admin.updateUserById(user_id, { password });
