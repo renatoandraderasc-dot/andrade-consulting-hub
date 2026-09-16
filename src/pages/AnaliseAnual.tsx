@@ -748,7 +748,13 @@ const AnaliseAnual = () => {
               <label className="text-[11px] text-muted-foreground block mb-1">
                 Categorias {cats.length ? `(${cats.length})` : "(todas)"}
               </label>
-              <Popover>
+              <Popover
+                onOpenChange={(aberto) => {
+                  if (!aberto || !storeId || catLoading) return;
+                  const faltando = anosSel.filter(a => a <= anoAtual && !catAnos.includes(a));
+                  if (faltando.length) carregarCategorias(storeId, faltando);
+                }}
+              >
                 <PopoverTrigger asChild>
                   <Button variant="outline" size="sm" className="h-9 w-full justify-between font-normal">
                     <span className="truncate">
