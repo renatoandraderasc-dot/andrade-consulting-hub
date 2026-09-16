@@ -1,12 +1,16 @@
 // ============================================================
 // vr-proxy
-// Consulta ao vivo relatorios da API do VR (compras_vendas_periodo,
-// compras_por_fornecedor, etc). Usa a config armazenada em
-// store_vr_config. Requer usuario autenticado com acesso a loja.
-// Body: { store_id, relatorio, params: Record<string,string> }
+// Consulta relatorios da ponte da loja (VR/ORACLE/WEBSAC/DIRECTOR).
+// Body: { store_id, relatorio, params: Record<string,string>, forcar?: boolean }
+//
+// Lojas com store_vr_config.modo_sync = 'diario_d1' NAO sao consultadas
+// ao vivo: a resposta vem do relatorio_cache (D-1), alimentado pelo job
+// sync-diario-d1 as 08:00. `forcar: true` (botao Atualizar) consulta a
+// ponte e renova o cache daquele relatorio/periodo.
 // ============================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { consultarRelatorioLoja } from "../_shared/consultaLoja.ts";
+import { consultarComCache, type ConfigLojaCache } from "../_shared/cacheRelatorio.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -33,7 +37,7 @@ Deno.serve(async (req) => {
     if (claimsError || !claimsData?.claims) return json({ erro: "nao autorizado" }, 401);
     const userId = claimsData.claims.sub;
 
-    const { store_id, relatorio, params } = await req.json();
+    const { store_id, relatorio, params, forcar } = await req.json();
     if (!store_id || !relatorio) return json({ erro: "informe store_id e relatorio" }, 400);
 
     const service = createClient(supabaseUrl, serviceKey);
@@ -46,25 +50,45 @@ Deno.serve(async (req) => {
     const isAdmin = (roleRows?.length ?? 0) > 0;
     if (!isAdmin && (accessRows?.length ?? 0) === 0) return json({ erro: "sem acesso a esta loja" }, 403);
 
-    const r = await consultarRelatorioLoja({
-      supabaseUrl, serviceKey, storeId: store_id, relatorio, params,
-    });
+    // config da loja (com modo_sync)
+    const { data: cfgRow } = await service
+      .from("store_vr_config")
+      .select("api_url, api_key, sistema, codigo_loja, modo_sync")
+      .eq("store_id", store_id)
+      .maybeSingle();
+    const cfg = (cfgRow as ConfigLojaCache | null) ?? null;
 
-    // Loja sem conexao cadastrada: responde 200 vazio para nao quebrar as telas
-    if (r.semConfig) {
+    if (!cfg) {
       return json({ ok: true, relatorio, dados: [], aviso: "loja sem conexao VR cadastrada" });
     }
-    // Relatorio inexistente no conector da loja ou erro de bind do Oracle nao
-    // sao falhas do app: devolvemos 200 com o campo `erro` para a UI so avisar.
+
+    // ---------- modo diario D-1: cache primeiro ----------
+    if ((cfg.modo_sync ?? "ao_vivo") === "diario_d1") {
+      const r = await consultarComCache({
+        supabaseUrl, serviceKey, storeId: store_id, relatorio, params, cfg,
+        forcar: forcar === true, origem: forcar === true ? "manual" : "proxy",
+      });
+      if (!r.ok) {
+        console.error("vr-proxy falha (diario_d1)", JSON.stringify({ store_id, relatorio, erro: r.erro }));
+        return json({ erro: r.erro ?? "falha ao consultar o sistema da loja", dados: [] }, 200);
+      }
+      return json({
+        ok: true, relatorio, dados: r.dados,
+        origem: r.origem, cache_em: r.cache_em, modo: "diario_d1",
+        aviso: r.recortado_d1 ? "dados ate ontem (D-1)" : undefined,
+      });
+    }
+
+    // ---------- modo ao vivo (comportamento original) ----------
+    const r = await consultarRelatorioLoja({
+      supabaseUrl, serviceKey, storeId: store_id, relatorio, params, cfg,
+    });
     if (!r.ok) {
       const msg = r.erro ?? "falha ao consultar o sistema da loja";
       console.error("vr-proxy falha", JSON.stringify({ store_id, relatorio, erro: msg }));
-      // Falhas do lado da loja (conector, tunel, timeout, rede) nao sao erros do
-      // app: respondemos 200 com `erro` para a UI mostrar um aviso amigavel.
       return json({ erro: msg, dados: [] }, 200);
     }
-
-    return json({ ok: true, relatorio, dados: r.dados });
+    return json({ ok: true, relatorio, dados: r.dados, modo: "ao_vivo" });
   } catch (e) {
     return json({ erro: e instanceof Error ? e.message : String(e) }, 500);
   }
