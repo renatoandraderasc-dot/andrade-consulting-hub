@@ -2227,6 +2227,53 @@ export type Database = {
           },
         ]
       }
+      relatorio_cache: {
+        Row: {
+          atualizado_em: string
+          dados: Json
+          fim: string | null
+          id: number
+          linhas: number
+          origem: string
+          params: Json
+          params_chave: string
+          relatorio: string
+          store_id: string
+        }
+        Insert: {
+          atualizado_em?: string
+          dados?: Json
+          fim?: string | null
+          id?: number
+          linhas?: number
+          origem?: string
+          params?: Json
+          params_chave: string
+          relatorio: string
+          store_id: string
+        }
+        Update: {
+          atualizado_em?: string
+          dados?: Json
+          fim?: string | null
+          id?: number
+          linhas?: number
+          origem?: string
+          params?: Json
+          params_chave?: string
+          relatorio?: string
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relatorio_cache_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       saas_config: {
         Row: {
           categoria: string
@@ -2710,6 +2757,7 @@ export type Database = {
           last_error: string | null
           last_sync_at: string | null
           latency_ms: number | null
+          modo_sync: string
           online: boolean | null
           sistema: string
           store_id: string
@@ -2726,6 +2774,7 @@ export type Database = {
           last_error?: string | null
           last_sync_at?: string | null
           latency_ms?: number | null
+          modo_sync?: string
           online?: boolean | null
           sistema?: string
           store_id: string
@@ -2742,6 +2791,7 @@ export type Database = {
           last_error?: string | null
           last_sync_at?: string | null
           latency_ms?: number | null
+          modo_sync?: string
           online?: boolean | null
           sistema?: string
           store_id?: string
@@ -3481,6 +3531,7 @@ export type Database = {
         Returns: number
       }
       store_sistema: { Args: { _store_id: string }; Returns: string }
+      sync_diario_d1_auto: { Args: never; Returns: undefined }
       sync_rede_mensal_auto: { Args: never; Returns: number }
       tem_acesso_loja: { Args: { _store_id: string }; Returns: boolean }
     }
