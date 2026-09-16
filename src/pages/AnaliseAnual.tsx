@@ -771,7 +771,10 @@ const AnaliseAnual = () => {
                     >
                       Todas as categorias
                     </button>
-                    {categorias.length === 0 && (
+                    {catLoading && (
+                      <p className="text-xs text-muted-foreground px-2 py-1.5">Carregando categorias...</p>
+                    )}
+                    {!catLoading && categorias.length === 0 && (
                       <p className="text-xs text-muted-foreground px-2 py-1.5">Nenhuma categoria disponível</p>
                     )}
                     {categorias.map(c => (
