@@ -38,3 +38,6 @@ verify_jwt = false
 
 [functions.regex-solutions-diag]
 verify_jwt = false
+
+[functions.sync-diario-d1]
+verify_jwt = false
