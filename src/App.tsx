@@ -49,7 +49,19 @@ import AdminJornada from "./pages/AdminJornada";
 import NotFound from "./pages/NotFound";
 import ModuleGuard from "@/components/ModuleGuard";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: Infinity,          // nunca considera "velho" sozinho
+      gcTime: 30 * 60 * 1000,       // mantem em memoria 30 min
+      refetchOnWindowFocus: false,  // trocar de aba nao refaz consulta
+      refetchOnReconnect: false,    // voltar a rede nao refaz consulta
+      refetchOnMount: false,        // remontar a tela nao refaz consulta
+      refetchInterval: false,       // nada de polling
+      retry: 0,                     // ponte fora do ar = 1 tentativa, nao 4
+    },
+  },
+});
 
 const g = (module: string, el: React.ReactNode) => (
   <ModuleGuard module={module}>{el}</ModuleGuard>
