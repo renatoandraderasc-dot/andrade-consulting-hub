@@ -380,7 +380,7 @@ const AnaliseAnual = () => {
     if (faltando.length) carregarHoras(storeId, faltando);
   }, [turno, storeId, horaOk, anosSel, horaAnos, horaLoading]);
 
-  const baseRows = turno === "todos" ? rows : horaRows;
+  const baseRows = turno === "todos" ? baseCat : horaRows;
 
   const rowsFiltradas = useMemo(
     () =>
