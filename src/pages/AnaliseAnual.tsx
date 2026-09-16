@@ -259,22 +259,102 @@ const AnaliseAnual = () => {
     setHoraLoading(false);
   };
 
+  // ---- mercadologico nivel 2 (grupo), sob demanda ----
+  // O relatorio de secao devolve categoria = secao (nivel 1). O nivel 2 real
+  // vem do cadastro de produtos (coluna grupo) cruzado com o ranking de
+  // produtos vendidos, carregado apenas quando o usuario abre o filtro.
+  const [catRows, setCatRows] = useState<Row[]>([]);
+  const [catAnos, setCatAnos] = useState<number[]>([]);
+  const [catLoading, setCatLoading] = useState(false);
+
+  const carregarCategorias = async (sid: string, anos: number[]) => {
+    setCatLoading(true);
+    try {
+      const cad = await chamarRelatorio(sid, "produtos", {});
+      const mapa = new Map<string, { n1: string; n2: string }>();
+      const chave = (v: unknown) => String(v ?? "").trim().replace(/^0+/, "");
+      for (const p of cad.dados) {
+        const k = chave(pick(p, "codigo", "cod_produto", "id_produto", "cod"));
+        if (!k) continue;
+        mapa.set(k, {
+          n1: String(pick(p, "secao", "nivel1", "departamento") ?? "SEM DEPARTAMENTO").toUpperCase(),
+          n2: String(pick(p, "grupo", "nivel2", "categoria") ?? "SEM GRUPO").toUpperCase(),
+        });
+      }
+      if (!mapa.size) return;
+
+      const hoje0 = new Date();
+      const tarefas: { ano: number; mes: number }[] = [];
+      for (const a of anos) {
+        const ultMes = a === hoje0.getFullYear() ? hoje0.getMonth() + 1 : 12;
+        for (let m = 1; m <= ultMes; m++) tarefas.push({ ano: a, mes: m });
+      }
+
+      const acc = new Map<string, Row>();
+      for (const r of catRows) acc.set(`${r.ano}-${r.mes}-${r.departamento}-${r.categoria}`, { ...r });
+
+      const lote = 3;
+      for (let i = 0; i < tarefas.length; i += lote) {
+        const partes = await Promise.all(
+          tarefas.slice(i, i + lote).map((t) => {
+            const ini = `${t.ano}-${String(t.mes).padStart(2, "0")}-01`;
+            const ultDia = new Date(t.ano, t.mes, 0).getDate();
+            const f = `${t.ano}-${String(t.mes).padStart(2, "0")}-${ultDia}`;
+            return chamarRelatorio(sid, "ranking_produtos", { inicio: ini, fim: f, limite: 200000 })
+              .then((r) => ({ t, r }))
+              .catch(() => null);
+          }),
+        );
+        for (const parte of partes) {
+          if (!parte || parte.r.indisponivel || parte.r.offline || parte.r.erro) continue;
+          for (const l of parte.r.dados) {
+            const c = mapa.get(chave(pick(l, "codigo", "cod", "id_produto", "codigo_produto", "cod_produto")));
+            const departamento = (c?.n1 ?? "SEM DEPARTAMENTO").toUpperCase();
+            const categoria = (c?.n2 ?? "SEM GRUPO").toUpperCase();
+            const k = `${parte.t.ano}-${parte.t.mes}-${departamento}-${categoria}`;
+            const cur = acc.get(k) ?? {
+              ano: parte.t.ano, mes: parte.t.mes, faturamento: 0, lucro: 0, volume: 0,
+              departamento, secao: departamento, categoria, turno: "" as Turno,
+            };
+            const vendas = num(pick(l, "vendas", "total_vendido", "venda", "valor_venda", "valor", "total"));
+            cur.faturamento += vendas;
+            cur.lucro += lucroDaLinha(l, vendas, num(pick(l, "lucro", "lucro_bruto")));
+            cur.volume += num(pick(l, "volume", "quantidade", "qtde", "qtd"));
+            acc.set(k, cur);
+          }
+        }
+      }
+      setCatRows(Array.from(acc.values()));
+      setCatAnos((prev) => Array.from(new Set([...prev, ...anos])));
+    } finally {
+      setCatLoading(false);
+    }
+  };
+
   // ---- filtros ----
+  const baseCat = useMemo(
+    () =>
+      catRows.length
+        ? [...catRows, ...rows.filter(r => !catAnos.includes(r.ano))]
+        : rows,
+    [catRows, catAnos, rows],
+  );
+
   const departamentos = useMemo(
-    () => Array.from(new Set(rows.map(r => r.departamento).filter(Boolean))).sort(),
-    [rows],
+    () => Array.from(new Set(baseCat.map(r => r.departamento).filter(Boolean))).sort(),
+    [baseCat],
   );
   const categorias = useMemo(
     () =>
       Array.from(
         new Set(
-          rows
+          baseCat
             .filter(r => (deptos.length === 0 ? true : deptos.includes(r.departamento)))
             .map(r => r.categoria)
             .filter(Boolean),
         ),
       ).sort(),
-    [rows, deptos],
+    [baseCat, deptos],
   );
   const anosDisponiveis = useMemo(() => {
     const a = Array.from(new Set(rows.map(r => r.ano))).sort((x, y) => x - y);
