@@ -22,6 +22,13 @@
       "when": 1789648945850,
       "tag": "0002_store_group_members_agregadora",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789650152849,
+      "tag": "0003_user_department_access",
+      "breakpoints": true
     }
   ]
 }
