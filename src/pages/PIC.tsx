@@ -16,7 +16,7 @@ import { usePicDisplayMode } from "@/hooks/usePicDisplay";
 import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
 import ProdutosSemGiro from "@/components/pic/ProdutosSemGiro";
 import { CartProgressOverlay } from "@/components/CartProgress";
-import { useSaasNumber } from "@/hooks/useSaasConfig";
+
 
 
 
