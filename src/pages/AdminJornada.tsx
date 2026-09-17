@@ -46,13 +46,17 @@ const AdminJornada = () => {
   const [tplEdit, setTplEdit] = useState<Template | null>(null);
   const [drag, setDrag] = useState<number | null>(null);
   const [renovando, setRenovando] = useState(false);
+  const [lojas, setLojas] = useState<{ id: string; name: string }[]>([]);
+  const [lojaAtual] = useState<string>(() => sessionStorage.getItem("selectedStoreId") || "");
+  const [usuariosDaLoja, setUsuariosDaLoja] = useState<string[]>([]);
 
   const carregar = async () => {
-    const [{ data: p }, { data: t }, { data: u }, { data: v }] = await Promise.all([
+    const [{ data: p }, { data: t }, { data: u }, { data: v }, { data: l }] = await Promise.all([
       supabase.from("jornada_perfis").select("*").order("ordem"),
       supabase.from("jornada_templates").select("*").order("ordem"),
       supabase.from("profiles").select("user_id, full_name").order("full_name"),
       supabase.from("jornada_perfil_usuario").select("user_id, perfil_id"),
+      supabase.from("stores").select("id, name").order("name"),
     ]);
     setPerfis((p || []) as Perfil[]);
     setTemplates(((t || []) as any[]).map((x) => ({
@@ -61,6 +65,16 @@ const AdminJornada = () => {
     })) as Template[]);
     setUsuarios(u || []);
     setVinculos(v || []);
+    setLojas(l || []);
+
+    if (lojaAtual) {
+      const { data: acc } = await supabase
+        .from("user_store_access").select("user_id")
+        .eq("store_id", lojaAtual).eq("approved", true);
+      setUsuariosDaLoja((acc || []).map((a) => a.user_id));
+    } else {
+      setUsuariosDaLoja([]);
+    }
   };
 
   useEffect(() => { if (isAdmin) carregar(); }, [isAdmin]);
