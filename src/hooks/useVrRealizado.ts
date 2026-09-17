@@ -267,6 +267,7 @@ function agregar(
     const dep = canonDept(
       raw.mapa[norm(l.secao)] ?? inferirDepartamento(l.secao, l.categoria) ?? l.categoria ?? "",
     );
+    if (!podeDep(dep)) continue;
     const mix = temPositivacao ? 0 : l.mix;
     add(LOJA, l.date, l.vendas, l.lucro, l.volume, mix);
     if (dep && dep !== LOJA) add(dep, l.date, l.vendas, l.lucro, l.volume, mix);
@@ -277,6 +278,7 @@ function agregar(
     const dep = canonDept(
       raw.mapa[norm(l.secao)] ?? inferirDepartamento(l.secao, l.categoria) ?? l.categoria ?? "",
     );
+    if (!podeDep(dep)) continue;
     add(LOJA, l.date, 0, 0, 0, l.mix);
     if (dep && dep !== LOJA) add(dep, l.date, 0, 0, 0, l.mix);
   }
