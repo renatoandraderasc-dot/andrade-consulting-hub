@@ -334,13 +334,13 @@ const AnaliseAnual = () => {
   };
 
   // ---- filtros ----
-  const baseCat = useMemo(
-    () =>
-      catRows.length
-        ? [...catRows, ...rows.filter(r => !catAnos.includes(r.ano))]
-        : rows,
-    [catRows, catAnos, rows],
-  );
+  const baseCat = useMemo(() => {
+    const base = catRows.length
+      ? [...catRows, ...rows.filter(r => !catAnos.includes(r.ano))]
+      : rows;
+    // Usuario restrito a departamentos: as demais linhas nem entram na conta
+    return restrito ? base.filter(r => permiteDept(r.departamento)) : base;
+  }, [catRows, catAnos, rows, restrito]);
 
   const departamentos = useMemo(
     () =>

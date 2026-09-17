@@ -467,7 +467,8 @@ const Compras = () => {
   // ============ Derived (Aba 2) ============
   // Uma linha por departamento + secao vinda do relatorio compras_vendas_periodo
   const cvItens = useMemo(() => {
-    return cvLinhas.map((l: any) => ({
+    return cvLinhas
+      .map((l: any) => ({
       // Mercadológico 1: WebSac/Oracle mandam "nivel1"/"departamento";
       // no VR o nível 1 é a própria "secao" do relatório.
       departamento:
@@ -483,8 +484,10 @@ const Compras = () => {
       cmv: num(col(l, "custo_com_imposto", "custo_c_imposto", "cmv", "custo")),
       qtde_compra: num(col(l, "qtde_compra")),
       compra: num(col(l, "total_compra", "compra")),
-    }));
-  }, [cvLinhas]);
+      }))
+      // Usuario restrito a departamentos
+      .filter((i) => permiteDept(i.departamento));
+  }, [cvLinhas, restrito]);
 
 
   const cvOpcoes = useMemo(() => {
