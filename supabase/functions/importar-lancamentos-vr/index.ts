@@ -316,10 +316,11 @@ Deno.serve(async (req) => {
       // reconciliamos somente os registros VR desta loja e deste bloco mensal.
       if (!falhouGravacao) {
         const refsAtuais = new Set<string>();
+        const basesAtuais = new Set<string>();
         for (const r of registros) {
           const ref = String(r.origem_ref);
           refsAtuais.add(ref);
-          refsAtuais.add(chaveBase(ref));
+          basesAtuais.add(chaveBase(ref));
         }
         const { data: existentes, error: erroLeitura } = await supabase
           .from("lancamentos")
@@ -335,9 +336,12 @@ Deno.serve(async (req) => {
           const obsoletos = (existentes ?? [])
             .filter((item) => {
             const ref = String(item.origem_ref ?? "");
-            return !refsAtuais.has(ref) && !refsAtuais.has(chaveBase(ref));
+            // Mantem a linha quando a chave exata continua atual ou quando ela
+            // esta no formato antigo (a propria chave base de um registro atual).
+            return !refsAtuais.has(ref) && !basesAtuais.has(ref);
           })
             .map((item) => item.id);
+
 
           for (let i = 0; i < obsoletos.length; i += 100) {
             const { error } = await supabase.from("lancamentos").delete().in("id", obsoletos.slice(i, i + 100));
