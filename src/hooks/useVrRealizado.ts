@@ -338,6 +338,8 @@ export function useVrRealizado(
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const reqRef = useRef(0);
+  // Restricao de departamentos do usuario logado (null = ve tudo)
+  const { permitidos } = useDepartamentosPermitidos();
 
   const run = useCallback(
     async (force: boolean) => {
