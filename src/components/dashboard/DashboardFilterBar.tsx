@@ -104,7 +104,7 @@ export default function DashboardFilterBar({
   );
 
   const resumo = `Período: ${fmtCurto(periodo.inicio)} a ${fmtCurto(periodo.fim)} · ${
-    categoria === TODA_LOJA ? "Loja toda" : categoria
+    categoria === TODA_LOJA ? rotuloTodos : categoria
   }`;
 
   return (
@@ -170,7 +170,7 @@ export default function DashboardFilterBar({
             onChange={(e) => onCategoriaChange(e.target.value)}
             className="bg-transparent text-xs text-foreground focus:outline-none max-w-[220px]"
           >
-            <option value={TODA_LOJA}>Loja toda</option>
+            <option value={TODA_LOJA}>{rotuloTodos}</option>
             {categorias.map((c) => (
               <option key={c.name} value={c.name}>
                 {c.name}
