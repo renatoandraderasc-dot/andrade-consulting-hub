@@ -14,6 +14,7 @@ import * as XLSX from "xlsx";
 import { salvarWorkbook } from "@/lib/exportBranding";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
 import ClientLayout from "@/components/ClientLayout";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -80,6 +81,7 @@ const janela6Meses = (year: number, month: number) => {
 
 const Compras = () => {
   const { user, isAdmin, loading: authLoading } = useAuth();
+  const { restrito, permiteDept } = useDepartamentosPermitidos();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -486,7 +488,7 @@ const Compras = () => {
 
 
   const cvOpcoes = useMemo(() => {
-    const n1 = new Set<string>(cvItens.map((i) => i.departamento));
+    const n1 = new Set<string>(cvItens.filter((i) => permiteDept(i.departamento)).map((i) => i.departamento));
     return { n1: [...n1].sort((a, b) => a.localeCompare(b, "pt-BR")) };
   }, [cvItens]);
 

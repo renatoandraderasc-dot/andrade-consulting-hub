@@ -11,6 +11,7 @@ import {
 
 import ClientLayout from "@/components/ClientLayout";
 import { useAuth } from "@/hooks/useAuth";
+import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
 import { supabase } from "@/integrations/supabase/client";
 import { ALIAS_EAN, chamarRelatorio, avisoRelatorio, pick as col, num } from "@/lib/vrReport";
 
@@ -103,6 +104,7 @@ const PAGE_SIZE = 50;
 
 const EstoqueDinamico = () => {
   const { user, isAdmin, loading: authLoading } = useAuth();
+  const { restrito, permiteDept } = useDepartamentosPermitidos();
   const navigate = useNavigate();
 
   const [stores, setStores] = useState<Store[]>([]);
@@ -236,13 +238,17 @@ const EstoqueDinamico = () => {
   });
 
   const departamentos = useMemo(
-    () => Array.from(new Set((linhas || []).map((l) => l.departamento).filter(Boolean))).sort(),
-    [linhas],
+    () =>
+      Array.from(new Set((linhas || []).map((l) => l.departamento).filter(Boolean)))
+        .filter((d) => permiteDept(d))
+        .sort(),
+    [linhas, restrito],
   );
 
   const filtradas = useMemo(() => {
     const q = busca.trim().toLowerCase();
     return (linhas || []).filter((l) => {
+      if (!permiteDept(l.departamento)) return false;
       if (fDep !== "__all__" && l.departamento !== fDep) return false;
       if (fAbc1.length && !fAbc1.includes(l.abc[0])) return false;
       if (fAbc2 !== "__all__" && l.abc !== fAbc2) return false;
