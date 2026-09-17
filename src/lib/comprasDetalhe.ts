@@ -54,13 +54,13 @@ export async function detalharComprasVendas(
 
   for (const l of compras.dados ?? []) {
     const cur = get(dep(col(l, "departamento", "secao", "nivel1")));
-    cur.compra += num(col(l, "valor_comprado", "total_compra", "compra"));
+    cur.compra += num(col(l, "valor_comprado", "total_compra", "compra", "compras"));
     cur.qtde_compra += num(col(l, "qtd_comprada", "qtde_compra"));
   }
 
   for (const l of vendas.dados ?? []) {
     const cur = get(dep(col(l, "secao", "departamento", "nivel1")));
-    cur.venda += num(col(l, "valor", "venda", "total_vendido", "total_venda"));
+    cur.venda += num(col(l, "valor", "venda", "vendas", "total_vendido", "total_venda"));
     cur.cmv += num(col(l, "custo", "cmv"));
     cur.volume += num(col(l, "qtd", "quantidade", "volume"));
   }

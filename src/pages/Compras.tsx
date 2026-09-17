@@ -257,8 +257,8 @@ const Compras = () => {
           || "SEM DEPARTAMENTO";
 
         const cur = acc[dep] || { compra: 0, venda: 0, cmv: 0 };
-        cur.compra += num(col(l, "total_compra", "compra"));
-        cur.venda += num(col(l, "total_venda", "venda", "total_vendido"));
+        cur.compra += num(col(l, "total_compra", "compra", "compras"));
+        cur.venda += num(col(l, "total_venda", "venda", "vendas", "total_vendido"));
         cur.cmv += num(col(l, "cmv", "custo"));
         acc[dep] = cur;
       }
@@ -479,11 +479,11 @@ const Compras = () => {
         String(col(l, "secao") ?? "").trim().toUpperCase() ||
         "SEM SEÇÃO",
       qtde_venda: num(col(l, "qtde_venda", "quantidade", "volume")),
-      venda: num(col(l, "total_venda", "venda", "total_vendido")),
+      venda: num(col(l, "total_venda", "venda", "vendas", "total_vendido")),
       // Custo com imposto entregue pelo sistema da loja.
       cmv: num(col(l, "custo_com_imposto", "custo_c_imposto", "cmv", "custo")),
       qtde_compra: num(col(l, "qtde_compra")),
-      compra: num(col(l, "total_compra", "compra")),
+      compra: num(col(l, "total_compra", "compra", "compras")),
       }))
       // Usuario restrito a departamentos
       .filter((i) => permiteDept(i.departamento));
