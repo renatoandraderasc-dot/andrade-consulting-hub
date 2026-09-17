@@ -184,7 +184,9 @@ const AdminJornada = () => {
 
           {/* PERFIS */}
           <TabsContent value="perfis" className="mt-4 space-y-3">
-            <Button size="sm" onClick={() => setPerfilEdit({ ...perfilVazio, ordem: perfis.length + 1 })}>
+            <Button size="sm" onClick={() => setPerfilEdit({
+              ...perfilVazio, ordem: perfis.length + 1, store_id: lojaAtual || null,
+            })}>
               <Plus className="w-3.5 h-3.5 mr-1.5" /> Novo perfil
             </Button>
             <div className="rounded-lg border border-border overflow-x-auto">
@@ -192,7 +194,8 @@ const AdminJornada = () => {
                 <thead className="bg-muted/50 text-xs text-muted-foreground">
                   <tr>
                     <th className="text-left p-2">Nome</th><th className="text-left p-2">Chave</th>
-                    <th className="text-left p-2">Cor</th><th className="text-left p-2">Ordem</th>
+                    <th className="text-left p-2">Cor</th><th className="text-left p-2">Loja</th>
+                    <th className="text-left p-2">Ordem</th>
                     <th className="text-left p-2">Ativo</th><th />
                   </tr>
                 </thead>
@@ -202,6 +205,9 @@ const AdminJornada = () => {
                       <td className="p-2">{p.nome}</td>
                       <td className="p-2 text-muted-foreground">{p.chave}</td>
                       <td className="p-2"><span className="inline-block w-5 h-5 rounded" style={{ backgroundColor: p.cor }} /></td>
+                      <td className="p-2 text-muted-foreground">
+                        {p.store_id ? (lojas.find((s) => s.id === p.store_id)?.name || "—") : "Rede inteira"}
+                      </td>
                       <td className="p-2">{p.ordem}</td>
                       <td className="p-2">{p.ativo ? "Sim" : "Não"}</td>
                       <td className="p-2 text-right">
