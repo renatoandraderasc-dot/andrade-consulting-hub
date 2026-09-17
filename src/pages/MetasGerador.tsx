@@ -9,6 +9,7 @@ import ClientLayout from "@/components/ClientLayout";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import CapilaridadeMixTab from "@/components/metas/CapilaridadeMixTab";
+import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
 
 
 interface Store { id: string; name: string; }

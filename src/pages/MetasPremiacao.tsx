@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { CartProgressOverlay } from "@/components/CartProgress";
 import { useVrRealizado, LOJA, canonDept } from "@/hooks/useVrRealizado";
+import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
 import { fmtBRL, fmtPct, MESES, diasNoMes } from "@/lib/metasSugestao";
 import {
   carregarPremiacaoConfig, PREMIACAO_PADRAO, type PremiacaoConfig, type FotoKey,
@@ -95,6 +96,7 @@ const MetasPremiacao = () => {
       if (error || !data?.length) break;
       for (const r of data) {
         const dep = canonDept(r.department || "OUTROS") || "OUTROS";
+        if (!permiteDept(dep)) continue;
         const d = porDep[dep] ?? (porDep[dep] = { vendas: 0, lucro: 0, volume: 0, mix: 0 });
         d.vendas += Number(r.meta_vendas) || 0;
         d.lucro += Number(r.meta_lucro) || 0;
