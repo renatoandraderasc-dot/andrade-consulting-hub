@@ -239,7 +239,14 @@ async function loadRaw(storeId: string, inicio: string, fim: string): Promise<Ra
   return { linhas, mixLinhas, mapa, totais };
 }
 
-function agregar(raw: RawResult, categoria?: string | null): VrRealizado {
+function agregar(
+  raw: RawResult,
+  categoria?: string | null,
+  permitidos?: string[] | null,
+): VrRealizado {
+  // Usuario restrito a alguns departamentos: as linhas dos demais nem entram
+  // na conta (nem no total da LOJA).
+  const podeDep = (dep: string) => !permitidos || permitidos.includes(dep);
   const acc = new Map<string, { date: string; vendas: number; lucro: number; volume: number; mix: number }>();
   const add = (dep: string, date: string, vendas: number, lucro: number, volume: number, mix: number) => {
     const k = `${dep}|${date}`;
