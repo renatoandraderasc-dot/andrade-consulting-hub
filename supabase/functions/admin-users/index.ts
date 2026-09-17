@@ -40,11 +40,12 @@ Deno.serve(async (req) => {
         // Listar todos os usuários
         const { data: { users } } = await admin.auth.admin.listUsers({ perPage: 1000 });
         const userIds = users.map((u) => u.id);
-        const [{ data: profiles }, { data: roles }, { data: stores }, { data: modules }] = await Promise.all([
+        const [{ data: profiles }, { data: roles }, { data: stores }, { data: modules }, { data: deps }] = await Promise.all([
           admin.from("profiles").select("user_id, full_name, blocked").in("user_id", userIds),
           admin.from("user_roles").select("user_id, role").in("user_id", userIds),
           admin.from("user_store_access").select("user_id, store_id, approved, stores(name)").in("user_id", userIds),
           admin.from("user_module_access").select("user_id, module, allowed").in("user_id", userIds),
+          admin.from("user_department_access").select("user_id, department").in("user_id", userIds),
         ]);
         return Response.json(
           { users: users.map((u) => ({
@@ -57,12 +58,13 @@ Deno.serve(async (req) => {
             roles: roles?.filter((r) => r.user_id === u.id).map((r) => r.role) || [],
             stores: stores?.filter((s) => s.user_id === u.id) || [],
             modules: modules?.filter((m) => m.user_id === u.id) || [],
+            departments: deps?.filter((d) => d.user_id === u.id).map((d) => d.department) || [],
           })) },
           { headers: corsHeaders }
         );
       }
       case "create": {
-        const { email, password, full_name, store_ids = [], modules = [], is_admin = false, role } = payload;
+        const { email, password, full_name, store_ids = [], modules = [], departments = [], is_admin = false, role } = payload;
         if (!email || !password) throw new Error("Informe e-mail e senha.");
         const papel: string = role || (is_admin ? "admin" : "user");
         const { data, error } = await admin.auth.admin.createUser({
@@ -91,7 +93,28 @@ Deno.serve(async (req) => {
           );
           if (eMod) throw new Error(`Módulos: ${eMod.message}`);
         }
+        if (departments.length) {
+          const { error: eDep } = await admin.from("user_department_access").upsert(
+            departments.map((d: string) => ({ user_id: uid, department: d })),
+            { onConflict: "user_id,department" }
+          );
+          if (eDep) throw new Error(`Departamentos: ${eDep.message}`);
+        }
         return Response.json({ user: data.user }, { headers: corsHeaders });
+      }
+
+      case "set_departments": {
+        const { user_id, departments = [] } = payload;
+        if (!user_id) throw new Error("Usuário não informado.");
+        const { error: eDel } = await admin.from("user_department_access").delete().eq("user_id", user_id);
+        if (eDel) throw new Error(`Departamentos: ${eDel.message}`);
+        if (departments.length) {
+          const { error: eIns } = await admin.from("user_department_access").insert(
+            departments.map((d: string) => ({ user_id, department: d }))
+          );
+          if (eIns) throw new Error(`Departamentos: ${eIns.message}`);
+        }
+        return Response.json({ ok: true }, { headers: corsHeaders });
       }
 
       case "set_password": {

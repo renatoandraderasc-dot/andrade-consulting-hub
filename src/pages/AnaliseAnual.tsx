@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
 import { supabase } from "@/integrations/supabase/client";
 import { chamarRelatorio, avisoRelatorio, pick, num, lucroDaLinha } from "@/lib/vrReport";
 import ClientLayout from "@/components/ClientLayout";
@@ -51,6 +52,7 @@ const fmtPct = (v: number | null) =>
 
 const AnaliseAnual = () => {
   const { user, isAdmin, loading: authLoading } = useAuth();
+  const { restrito, permiteDept } = useDepartamentosPermitidos();
   const navigate = useNavigate();
   const [storeName, setStoreName] = useState("");
   const [storeId, setStoreId] = useState("");
@@ -332,17 +334,20 @@ const AnaliseAnual = () => {
   };
 
   // ---- filtros ----
-  const baseCat = useMemo(
-    () =>
-      catRows.length
-        ? [...catRows, ...rows.filter(r => !catAnos.includes(r.ano))]
-        : rows,
-    [catRows, catAnos, rows],
-  );
+  const baseCat = useMemo(() => {
+    const base = catRows.length
+      ? [...catRows, ...rows.filter(r => !catAnos.includes(r.ano))]
+      : rows;
+    // Usuario restrito a departamentos: as demais linhas nem entram na conta
+    return restrito ? base.filter(r => permiteDept(r.departamento)) : base;
+  }, [catRows, catAnos, rows, restrito]);
 
   const departamentos = useMemo(
-    () => Array.from(new Set(baseCat.map(r => r.departamento).filter(Boolean))).sort(),
-    [baseCat],
+    () =>
+      Array.from(new Set(baseCat.map(r => r.departamento).filter(Boolean)))
+        .filter(d => permiteDept(d))
+        .sort(),
+    [baseCat, restrito],
   );
   const categorias = useMemo(
     () =>

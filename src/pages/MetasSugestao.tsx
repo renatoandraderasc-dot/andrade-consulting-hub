@@ -7,6 +7,7 @@ import { Sparkles, ChevronLeft, ChevronRight, Lock, LockOpen, RefreshCw, Save, A
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { carregarLojasPermitidas } from "@/lib/lojasPermitidas";
+import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
 import ClientLayout from "@/components/ClientLayout";
 import { useToast } from "@/hooks/use-toast";
 import { useSugestaoMetas, LOJA } from "@/hooks/useSugestaoMetas";
@@ -27,6 +28,7 @@ const dataBR = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 
 const MetasSugestao = () => {
   const { user, isAdmin, isGlobalAdmin, loading: authLoading } = useAuth();
+  const { restrito, permiteDept, filtrarDepts } = useDepartamentosPermitidos();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -70,7 +72,7 @@ const MetasSugestao = () => {
   // default: todos os departamentos (exceto o total da loja)
   useEffect(() => {
     if (!data) return;
-    setSelecionados(data.departamentos.filter((d) => d !== LOJA));
+    setSelecionados(data.departamentos.filter((d) => d !== LOJA && permiteDept(d)));
   }, [data?.departamentos.join("|")]);
 
   // ---------- calculos por departamento ----------
@@ -97,7 +99,7 @@ const MetasSugestao = () => {
   }, [data, ano, mes]);
 
   const deps = useMemo(
-    () => (data ? data.departamentos.filter((d) => d !== LOJA && selecionados.includes(d)) : []),
+    () => (data ? data.departamentos.filter((d) => d !== LOJA && selecionados.includes(d) && permiteDept(d)) : []),
     [data, selecionados],
   );
 

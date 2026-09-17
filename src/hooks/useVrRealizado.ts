@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lucroDaLinha } from "@/lib/vrReport";
+import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
 
 // ============================================================
 // Leitura AO VIVO do realizado do VR (nada e gravado no banco).
@@ -238,7 +239,14 @@ async function loadRaw(storeId: string, inicio: string, fim: string): Promise<Ra
   return { linhas, mixLinhas, mapa, totais };
 }
 
-function agregar(raw: RawResult, categoria?: string | null): VrRealizado {
+function agregar(
+  raw: RawResult,
+  categoria?: string | null,
+  permitidos?: string[] | null,
+): VrRealizado {
+  // Usuario restrito a alguns departamentos: as linhas dos demais nem entram
+  // na conta (nem no total da LOJA).
+  const podeDep = (dep: string) => !permitidos || permitidos.includes(dep);
   const acc = new Map<string, { date: string; vendas: number; lucro: number; volume: number; mix: number }>();
   const add = (dep: string, date: string, vendas: number, lucro: number, volume: number, mix: number) => {
     const k = `${dep}|${date}`;
@@ -259,6 +267,7 @@ function agregar(raw: RawResult, categoria?: string | null): VrRealizado {
     const dep = canonDept(
       raw.mapa[norm(l.secao)] ?? inferirDepartamento(l.secao, l.categoria) ?? l.categoria ?? "",
     );
+    if (!podeDep(dep)) continue;
     const mix = temPositivacao ? 0 : l.mix;
     add(LOJA, l.date, l.vendas, l.lucro, l.volume, mix);
     if (dep && dep !== LOJA) add(dep, l.date, l.vendas, l.lucro, l.volume, mix);
@@ -269,6 +278,7 @@ function agregar(raw: RawResult, categoria?: string | null): VrRealizado {
     const dep = canonDept(
       raw.mapa[norm(l.secao)] ?? inferirDepartamento(l.secao, l.categoria) ?? l.categoria ?? "",
     );
+    if (!podeDep(dep)) continue;
     add(LOJA, l.date, 0, 0, 0, l.mix);
     if (dep && dep !== LOJA) add(dep, l.date, 0, 0, 0, l.mix);
   }
@@ -280,7 +290,7 @@ function agregar(raw: RawResult, categoria?: string | null): VrRealizado {
   // itens sem secao cadastrada, ficando abaixo do faturamento do dia. Quando o
   // total oficial (kpis_periodo) e maior, a diferenca entra na LOJA rateada
   // pelo peso de cada dia — o total do periodo passa a bater com o ERP.
-  if (!categoria && raw.totais && raw.totais.vendas > 0) {
+  if (!categoria && !permitidos && raw.totais && raw.totais.vendas > 0) {
     const dias = [...acc.entries()].filter(([k]) => k.startsWith(`${LOJA}|`));
     const somaVendas = dias.reduce((s, [, v]) => s + v.vendas, 0);
     const difVendas = raw.totais.vendas - somaVendas;
@@ -328,6 +338,8 @@ export function useVrRealizado(
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const reqRef = useRef(0);
+  // Restricao de departamentos do usuario logado (null = ve tudo)
+  const { permitidos } = useDepartamentosPermitidos();
 
   const run = useCallback(
     async (force: boolean) => {
@@ -368,7 +380,10 @@ export function useVrRealizado(
 
   const refresh = useCallback(() => run(true), [run]);
 
-  const data = useMemo(() => (raw ? agregar(raw, categoria) : null), [raw, categoria]);
+  const data = useMemo(
+    () => (raw ? agregar(raw, categoria, permitidos) : null),
+    [raw, categoria, permitidos],
+  );
 
   // Categorias do proprio resultado, ordenadas por faturamento decrescente
   const categorias = useMemo(() => {
@@ -376,12 +391,18 @@ export function useVrRealizado(
     const m = new Map<string, number>();
     for (const l of raw.linhas) {
       if (!l.categoria) continue;
+      if (permitidos) {
+        const dep = canonDept(
+          raw.mapa[norm(l.secao)] ?? inferirDepartamento(l.secao, l.categoria) ?? l.categoria ?? "",
+        );
+        if (!permitidos.includes(dep)) continue;
+      }
       m.set(l.categoria, (m.get(l.categoria) ?? 0) + l.vendas);
     }
     return [...m.entries()]
       .map(([name, total]) => ({ name, total }))
       .sort((a, b) => b.total - a.total);
-  }, [raw]);
+  }, [raw, permitidos]);
 
   return { data, categorias, loading, offline, errorMsg, updatedAt, refresh };
 }
