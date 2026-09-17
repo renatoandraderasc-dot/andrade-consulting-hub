@@ -124,9 +124,9 @@ Deno.serve(async (req) => {
         const dep = mercadologico1(l) || mapa.get(norm(secao)) || "SEM DEPARTAMENTO";
 
         const cur = acc.get(dep) ?? { venda: 0, cmv: 0, compra: 0 };
-        cur.venda += numero(pick(l, "total_venda", "venda", "total_vendido"));
+        cur.venda += numero(pick(l, "total_venda", "venda", "vendas", "total_vendido"));
         cur.cmv += numero(pick(l, "cmv", "custo"));
-        cur.compra += numero(pick(l, "total_compra", "compra"));
+        cur.compra += numero(pick(l, "total_compra", "compra", "compras"));
         acc.set(dep, cur);
       }
       for (const [departamento, t] of acc) {
