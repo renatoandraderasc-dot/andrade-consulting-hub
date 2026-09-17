@@ -290,7 +290,7 @@ function agregar(
   // itens sem secao cadastrada, ficando abaixo do faturamento do dia. Quando o
   // total oficial (kpis_periodo) e maior, a diferenca entra na LOJA rateada
   // pelo peso de cada dia — o total do periodo passa a bater com o ERP.
-  if (!categoria && raw.totais && raw.totais.vendas > 0) {
+  if (!categoria && !permitidos && raw.totais && raw.totais.vendas > 0) {
     const dias = [...acc.entries()].filter(([k]) => k.startsWith(`${LOJA}|`));
     const somaVendas = dias.reduce((s, [, v]) => s + v.vendas, 0);
     const difVendas = raw.totais.vendas - somaVendas;
