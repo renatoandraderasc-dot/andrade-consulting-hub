@@ -15,6 +15,13 @@
       "when": 1789640544924,
       "tag": "0001_jornada_ressincronizar_checklist",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789648945850,
+      "tag": "0002_store_group_members_agregadora",
+      "breakpoints": true
     }
   ]
 }
