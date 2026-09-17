@@ -369,9 +369,9 @@ const Jornada = () => {
           <h1 className="text-xl font-semibold text-foreground">Minha Jornada</h1>
         </div>
 
-        {perfisVisiveis.filter((p) => meusPerfis.includes(p.id)).length > 1 && (
+        {perfisVisiveis.length > 1 && (
           <div className="flex gap-1 mb-3 overflow-x-auto">
-            {perfisVisiveis.filter((p) => meusPerfis.includes(p.id)).map((p) => (
+            {perfisVisiveis.map((p) => (
               <button
                 key={p.id}
                 onClick={() => setPerfil(p.id)}
