@@ -49,15 +49,21 @@ const AdminJornada = () => {
   const [lojas, setLojas] = useState<{ id: string; name: string }[]>([]);
   const [lojaAtual] = useState<string>(() => sessionStorage.getItem("selectedStoreId") || "");
   const [usuariosDaLoja, setUsuariosDaLoja] = useState<string[]>([]);
+  const [lojasPorTpl, setLojasPorTpl] = useState<Record<string, string[]>>({});
+  const [tplLojas, setTplLojas] = useState<string[]>([]);
 
   const carregar = async () => {
-    const [{ data: p }, { data: t }, { data: u }, { data: v }, { data: l }] = await Promise.all([
+    const [{ data: p }, { data: t }, { data: u }, { data: v }, { data: l }, { data: tl }] = await Promise.all([
       supabase.from("jornada_perfis").select("*").order("ordem"),
       supabase.from("jornada_templates").select("*").order("ordem"),
       supabase.from("profiles").select("user_id, full_name").order("full_name"),
       supabase.from("jornada_perfil_usuario").select("user_id, perfil_id"),
       supabase.from("stores").select("id, name").order("name"),
+      supabase.from("jornada_template_loja").select("template_id, store_id"),
     ]);
+    const mapaTl: Record<string, string[]> = {};
+    (tl || []).forEach((r) => { (mapaTl[r.template_id] ||= []).push(r.store_id); });
+    setLojasPorTpl(mapaTl);
     setPerfis((p || []) as Perfil[]);
     setTemplates(((t || []) as any[]).map((x) => ({
       ...x,
@@ -108,6 +114,13 @@ const AdminJornada = () => {
     carregar();
   };
 
+  /** Abre o editor de tarefa já com as lojas onde ela vale. */
+  const abrirTemplate = (t: Template | null) => {
+    if (!t) return;
+    setTplLojas(t.id ? lojasPorTpl[t.id] || [] : []);
+    setTplEdit(t);
+  };
+
   const salvarTemplate = async () => {
     if (!tplEdit) return;
     const { id, ...campos } = tplEdit;
@@ -115,10 +128,22 @@ const AdminJornada = () => {
       ...campos,
       checklist_padrao: campos.checklist_padrao.map((i, idx) => ({ texto: i.texto, ordem: idx + 1 })),
     } as any;
-    const { error } = id
-      ? await supabase.from("jornada_templates").update(payload).eq("id", id)
-      : await supabase.from("jornada_templates").insert(payload);
+    const { data: salvo, error } = id
+      ? await supabase.from("jornada_templates").update(payload).eq("id", id).select("id").single()
+      : await supabase.from("jornada_templates").insert(payload).select("id").single();
     if (error) return toast.error(error.message);
+
+    // lojas onde a tarefa vale (nenhuma marcada = rede inteira)
+    const tplId = (salvo as any)?.id || id;
+    if (tplId) {
+      await supabase.from("jornada_template_loja").delete().eq("template_id", tplId);
+      if (tplLojas.length) {
+        const { error: eL } = await supabase
+          .from("jornada_template_loja")
+          .insert(tplLojas.map((s) => ({ template_id: tplId, store_id: s })));
+        if (eL) return toast.error(eL.message);
+      }
+    }
     toast.success("Tarefa salva");
     setTplEdit(null);
     carregar();
