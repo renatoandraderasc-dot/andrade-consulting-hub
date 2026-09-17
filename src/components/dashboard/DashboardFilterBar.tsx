@@ -83,6 +83,8 @@ interface Props {
   categorias: { name: string; total: number }[];
   onRefresh?: () => void;
   loading?: boolean;
+  /** Rotulo da opcao "tudo" (usuarios restritos veem "Meus departamentos") */
+  rotuloTodos?: string;
 }
 
 export default function DashboardFilterBar({
@@ -93,6 +95,7 @@ export default function DashboardFilterBar({
   categorias,
   onRefresh,
   loading,
+  rotuloTodos = "Loja toda",
 }: Props) {
   const [open, setOpen] = useState(false);
   const range: DateRange = useMemo(
