@@ -156,6 +156,8 @@ Deno.serve(async (req) => {
 
       off += inalterados;
       if (data.length < pagina) break;
+    }
+
 
 
     return json({
