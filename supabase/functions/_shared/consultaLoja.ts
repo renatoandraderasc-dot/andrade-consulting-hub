@@ -176,6 +176,7 @@ export async function consultarRelatorioLoja(opts: {
   const SINONIMOS: Record<string, string[]> = {
     compras_vendas_periodo: ["compras_x_vendas", "compras_vendas", "compras_periodo", "compras_por_secao"],
     compras_por_fornecedor: ["compras_fornecedor", "fornecedores_compras"],
+    estoque_dinamico: ["estoque_atual", "estoque", "estoque_produtos"],
   };
 
   async function chamar(nome: string): Promise<ResultadoConsulta> {
