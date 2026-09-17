@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lucroDaLinha } from "@/lib/vrReport";
+import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
 
 // ============================================================
 // Leitura AO VIVO do realizado do VR (nada e gravado no banco).
