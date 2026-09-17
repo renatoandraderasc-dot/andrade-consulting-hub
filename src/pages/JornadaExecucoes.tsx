@@ -124,12 +124,13 @@ const JornadaExecucoes = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bootstrapped, tick]);
 
-  /** Perfis da rede ou da loja — e, para quem não é admin global, só os perfis dele. */
+  /** Perfis da rede ou da loja. Sem vínculos marcados, mostra todos os perfis da loja. */
+  const semVinculos = meusPerfis.length === 0;
   const perfisVisiveis = useMemo(
     () => perfis
       .filter((p) => !p.store_id || p.store_id === loja)
-      .filter((p) => isGlobalAdmin || meusPerfis.includes(p.id)),
-    [perfis, loja, isGlobalAdmin, meusPerfis],
+      .filter((p) => isGlobalAdmin || semVinculos || meusPerfis.includes(p.id)),
+    [perfis, loja, isGlobalAdmin, semVinculos, meusPerfis],
   );
 
   useEffect(() => {
