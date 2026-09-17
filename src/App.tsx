@@ -118,7 +118,7 @@ const App = () => (
             <Route path="/encartes/editor" element={g("encarte_editor", <EncarteEditor />)} />
             <Route path="/encartes/editor/:id" element={g("encarte_editor", <EncarteEditor />)} />
             <Route path="/jornada" element={g("jornada", <Jornada />)} />
-            <Route path="/jornada/execucoes" element={g("jornada", <JornadaExecucoes />)} />
+            <Route path="/jornada/execucoes" element={g("jornada_execucoes", <JornadaExecucoes />)} />
             <Route path="/admin/jornada" element={g("jornada", <AdminJornada />)} />
             <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
 
