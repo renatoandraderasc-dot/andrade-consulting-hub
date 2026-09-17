@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import HierarquiaVendasTable from "@/components/relatorios/HierarquiaVendasTable";
 import { usePicDepartments } from "@/hooks/usePicDepartments";
 import { usePicDisplayMode } from "@/hooks/usePicDisplay";
+import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
 import ProdutosSemGiro from "@/components/pic/ProdutosSemGiro";
 import { CartProgressOverlay } from "@/components/CartProgress";
 import { useSaasNumber } from "@/hooks/useSaasConfig";
@@ -65,6 +66,7 @@ const pctFmt = (v: number) => `${v.toFixed(2).replace(".", ",")}%`;
 const PIC = () => {
   const refreshSegundos = useSaasNumber("refresh_pic_segundos", 60);
   const { user, isAdmin, loading: authLoading } = useAuth();
+  const { restrito, filtrarDepts } = useDepartamentosPermitidos();
   const navigate = useNavigate();
   const [storeId, setStoreId] = useState("");
   const [storeName, setStoreName] = useState("");
@@ -103,6 +105,12 @@ const PIC = () => {
   // loja; e, em ultimo caso, o total da loja.
   const deptsConfig = usePicDepartments(storeId);
   const DEPARTMENTS = useMemo(() => {
+    // Usuario restrito: so os departamentos liberados (sem o total da loja)
+    if (restrito) {
+      const base = deptsConfig?.length ? deptsConfig : Object.keys(vr ?? {});
+      const libs = filtrarDepts(base.filter((k) => k !== LOJA));
+      return libs.length ? libs : [];
+    }
     if (deptsConfig?.length) return deptsConfig;
 
     const todas = Object.keys(vr ?? {});
@@ -115,7 +123,7 @@ const PIC = () => {
       return temLoja ? [LOJA, ...ordenado] : ordenado;
     }
     return [LOJA];
-  }, [vr, deptsConfig]);
+  }, [vr, deptsConfig, restrito]);
 
 
   useEffect(() => {
