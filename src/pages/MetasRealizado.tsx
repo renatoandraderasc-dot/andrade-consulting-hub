@@ -45,6 +45,7 @@ const iso = (a: number, m: number, d: number) =>
 
 const MetasRealizado = () => {
   const { user, isAdmin, isGlobalAdmin, loading: authLoading } = useAuth();
+  const { restrito, permiteDept, filtrarDepts } = useDepartamentosPermitidos();
   const navigate = useNavigate();
 
   const [stores, setStores] = useState<Store[]>([]);

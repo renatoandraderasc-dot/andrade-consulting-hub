@@ -28,6 +28,7 @@ const dataBR = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 
 const MetasSugestao = () => {
   const { user, isAdmin, isGlobalAdmin, loading: authLoading } = useAuth();
+  const { restrito, permiteDept, filtrarDepts } = useDepartamentosPermitidos();
   const navigate = useNavigate();
   const { toast } = useToast();
 

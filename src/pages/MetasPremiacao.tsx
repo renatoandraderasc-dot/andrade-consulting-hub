@@ -33,6 +33,7 @@ const pct = (a: number, b: number) => (b > 0 ? (a / b) * 100 : 0);
 
 const MetasPremiacao = () => {
   const { user, isAdmin, isGlobalAdmin, loading: authLoading } = useAuth();
+  const { restrito, permiteDept, filtrarDepts } = useDepartamentosPermitidos();
   const navigate = useNavigate();
   const { toast } = useToast();
 

@@ -52,6 +52,7 @@ const baseMonth = (year: number, month: number, base: "ano_anterior" | "mes_ante
 
 const MetasGerador = () => {
   const { user, isAdmin, isGlobalAdmin, loading: authLoading } = useAuth();
+  const { restrito, permiteDept, filtrarDepts } = useDepartamentosPermitidos();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
@@ -61,6 +62,14 @@ const MetasGerador = () => {
   const [storeId, setStoreId] = useState("");
   const [storeName, setStoreName] = useState("");
   const [department, setDepartment] = useState(DEPARTMENTS[0]);
+  // Usuario restrito: nao pode ficar num departamento fora da sua permissao
+  useEffect(() => {
+    if (!restrito) return;
+    if (!permiteDept(department)) {
+      const libs = filtrarDepts(DEPARTMENTS_PIC);
+      if (libs.length) setDepartment(libs[0]);
+    }
+  }, [restrito, department]);
   const [year, setYear] = useState(new Date().getFullYear());
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [base, setBase] = useState<"ano_anterior" | "mes_anterior">("ano_anterior");
@@ -469,9 +478,9 @@ const MetasGerador = () => {
           <div>
             <label className="font-body text-xs text-muted-foreground mb-1 block">Departamento</label>
             <select value={department} onChange={(e) => { if (!confirmDiscardIfDirty()) return; setDepartment(e.target.value); }} className={selectCls}>
-              {DEPARTMENTS_PIC.map((d) => <option key={d} value={d}>{d}</option>)}
-              <option disabled>──────────</option>
-              <option value="LOJA">{deptLabel("LOJA")}</option>
+              {filtrarDepts(DEPARTMENTS_PIC).map((d) => <option key={d} value={d}>{d}</option>)}
+              {!restrito && <option disabled>──────────</option>}
+              {!restrito && <option value="LOJA">{deptLabel("LOJA")}</option>}
             </select>
           </div>
           <div>
