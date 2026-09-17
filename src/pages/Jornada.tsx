@@ -148,10 +148,12 @@ const Jornada = () => {
   const tplPorId = useMemo(() => new Map(templates.map((t) => [t.id, t])), [templates]);
   const perfilPorId = useMemo(() => new Map(perfis.map((p) => [p.id, p])), [perfis]);
 
-  /** Perfis da rede (sem loja) + perfis exclusivos da loja selecionada. */
+  /** Perfis da rede (sem loja) + exclusivos da loja — e só os vinculados ao usuário. */
   const perfisVisiveis = useMemo(
-    () => perfis.filter((p) => !p.store_id || p.store_id === loja),
-    [perfis, loja],
+    () => perfis
+      .filter((p) => !p.store_id || p.store_id === loja)
+      .filter((p) => isGlobalAdmin || meusPerfis.includes(p.id)),
+    [perfis, loja, isGlobalAdmin, meusPerfis],
   );
 
   // se o perfil escolhido não pertence à loja atual, volta para "todos"
@@ -166,6 +168,7 @@ const Jornada = () => {
         if (!t) return null;
         const p = perfilPorId.get(t.perfil_id);
         if (p && p.store_id && p.store_id !== e.store_id) return null;
+        if (!p || !perfisVisiveis.some((v) => v.id === p.id)) return null;
         return { exec: e, tpl: t, perfil: p };
       })
       .filter(Boolean)
@@ -173,7 +176,7 @@ const Jornada = () => {
       .filter((c: any) => (perfil ? c.tpl.perfil_id === perfil : true))
       .filter((c: any) => c.exec.periodo_ref === periodoRef(c.tpl.cadencia as Cadencia, ancora) || c.exec.avulsa)
       .sort((a: any, b: any) => a.tpl.ordem - b.tpl.ordem || a.tpl.titulo.localeCompare(b.tpl.titulo)) as any[];
-  }, [execs, tplPorId, perfilPorId, cadencia, perfil, ancora]);
+  }, [execs, tplPorId, perfilPorId, perfisVisiveis, cadencia, perfil, ancora]);
 
   const marcarPendente = () => setPendente(true);
 

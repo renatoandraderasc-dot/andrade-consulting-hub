@@ -94,6 +94,7 @@ const navGroups: NavGroup[] = [
     icon: ClipboardList,
     items: [
       { key: "jornada", path: "/jornada", label: "Minha Jornada", icon: ClipboardList },
+      { key: "jornada_execucoes", path: "/jornada/execucoes", label: "Execuções", icon: CheckSquare },
       { key: "admin_jornada", path: "/admin/jornada", label: "Admin da Jornada", icon: Settings, admin: true },
     ],
   },

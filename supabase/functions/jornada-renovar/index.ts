@@ -51,6 +51,18 @@ serve(async (req) => {
       .select("id");
     if (e2) throw new Error(e2.message);
 
+    // 2b) lojas escolhidas por tarefa (sem linhas = vale para todas)
+    const { data: vinc, error: e2b } = await sb
+      .from("jornada_template_loja")
+      .select("template_id, store_id");
+    if (e2b) throw new Error(e2b.message);
+    const lojasDoTemplate = new Map<string, Set<string>>();
+    for (const v of vinc ?? []) {
+      const set = lojasDoTemplate.get(v.template_id) ?? new Set<string>();
+      set.add(v.store_id);
+      lojasDoTemplate.set(v.template_id, set);
+    }
+
     const rows: {
       template_id: string;
       store_id: string;
@@ -61,8 +73,10 @@ serve(async (req) => {
     for (const t of templates ?? []) {
       const ref = periodoRef(t.cadencia as "diaria" | "semanal" | "mensal");
       const perfilStore = (t as any).jornada_perfis?.store_id ?? null;
+      const escolhidas = lojasDoTemplate.get(t.id);
       for (const s of stores ?? []) {
         if (perfilStore && perfilStore !== s.id) continue; // perfil exclusivo de outra loja
+        if (escolhidas && !escolhidas.has(s.id)) continue; // tarefa limitada a outras lojas
         rows.push({
           template_id: t.id,
           store_id: s.id,

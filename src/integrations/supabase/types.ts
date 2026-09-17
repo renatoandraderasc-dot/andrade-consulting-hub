@@ -1618,6 +1618,39 @@ export type Database = {
           },
         ]
       }
+      jornada_template_loja: {
+        Row: {
+          created_at: string
+          store_id: string
+          template_id: string
+        }
+        Insert: {
+          created_at?: string
+          store_id: string
+          template_id: string
+        }
+        Update: {
+          created_at?: string
+          store_id?: string
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jornada_template_loja_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jornada_template_loja_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "jornada_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jornada_templates: {
         Row: {
           ativo: boolean

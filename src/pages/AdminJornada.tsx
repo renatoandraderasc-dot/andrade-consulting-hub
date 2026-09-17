@@ -49,15 +49,21 @@ const AdminJornada = () => {
   const [lojas, setLojas] = useState<{ id: string; name: string }[]>([]);
   const [lojaAtual] = useState<string>(() => sessionStorage.getItem("selectedStoreId") || "");
   const [usuariosDaLoja, setUsuariosDaLoja] = useState<string[]>([]);
+  const [lojasPorTpl, setLojasPorTpl] = useState<Record<string, string[]>>({});
+  const [tplLojas, setTplLojas] = useState<string[]>([]);
 
   const carregar = async () => {
-    const [{ data: p }, { data: t }, { data: u }, { data: v }, { data: l }] = await Promise.all([
+    const [{ data: p }, { data: t }, { data: u }, { data: v }, { data: l }, { data: tl }] = await Promise.all([
       supabase.from("jornada_perfis").select("*").order("ordem"),
       supabase.from("jornada_templates").select("*").order("ordem"),
       supabase.from("profiles").select("user_id, full_name").order("full_name"),
       supabase.from("jornada_perfil_usuario").select("user_id, perfil_id"),
       supabase.from("stores").select("id, name").order("name"),
+      supabase.from("jornada_template_loja").select("template_id, store_id"),
     ]);
+    const mapaTl: Record<string, string[]> = {};
+    (tl || []).forEach((r) => { (mapaTl[r.template_id] ||= []).push(r.store_id); });
+    setLojasPorTpl(mapaTl);
     setPerfis((p || []) as Perfil[]);
     setTemplates(((t || []) as any[]).map((x) => ({
       ...x,
@@ -108,6 +114,13 @@ const AdminJornada = () => {
     carregar();
   };
 
+  /** Abre o editor de tarefa já com as lojas onde ela vale. */
+  const abrirTemplate = (t: Template | null) => {
+    if (!t) return;
+    setTplLojas(t.id ? lojasPorTpl[t.id] || [] : []);
+    setTplEdit(t);
+  };
+
   const salvarTemplate = async () => {
     if (!tplEdit) return;
     const { id, ...campos } = tplEdit;
@@ -115,10 +128,22 @@ const AdminJornada = () => {
       ...campos,
       checklist_padrao: campos.checklist_padrao.map((i, idx) => ({ texto: i.texto, ordem: idx + 1 })),
     } as any;
-    const { error } = id
-      ? await supabase.from("jornada_templates").update(payload).eq("id", id)
-      : await supabase.from("jornada_templates").insert(payload);
+    const { data: salvo, error } = id
+      ? await supabase.from("jornada_templates").update(payload).eq("id", id).select("id").single()
+      : await supabase.from("jornada_templates").insert(payload).select("id").single();
     if (error) return toast.error(error.message);
+
+    // lojas onde a tarefa vale (nenhuma marcada = rede inteira)
+    const tplId = (salvo as any)?.id || id;
+    if (tplId) {
+      await supabase.from("jornada_template_loja").delete().eq("template_id", tplId);
+      if (tplLojas.length) {
+        const { error: eL } = await supabase
+          .from("jornada_template_loja")
+          .insert(tplLojas.map((s) => ({ template_id: tplId, store_id: s })));
+        if (eL) return toast.error(eL.message);
+      }
+    }
     toast.success("Tarefa salva");
     setTplEdit(null);
     carregar();
@@ -235,7 +260,7 @@ const AdminJornada = () => {
                   <option key={c} value={c}>{CADENCIA_LABEL[c]}</option>
                 ))}
               </select>
-              <Button size="sm" onClick={() => setTplEdit(templateVazio(fPerfil || perfis[0]?.id || ""))}>
+              <Button size="sm" onClick={() => abrirTemplate(templateVazio(fPerfil || perfis[0]?.id || ""))}>
                 <Plus className="w-3.5 h-3.5 mr-1.5" /> Nova tarefa
               </Button>
             </div>
@@ -246,7 +271,8 @@ const AdminJornada = () => {
                   <tr>
                     <th className="text-left p-2">Título</th><th className="text-left p-2">Perfil</th>
                     <th className="text-left p-2">Cadência</th><th className="text-left p-2">Ordem</th>
-                    <th className="text-left p-2">Rota</th><th className="text-left p-2">Ativo</th><th />
+                    <th className="text-left p-2">Rota</th><th className="text-left p-2">Lojas</th>
+                    <th className="text-left p-2">Ativo</th><th />
                   </tr>
                 </thead>
                 <tbody>
@@ -257,9 +283,14 @@ const AdminJornada = () => {
                       <td className="p-2">{CADENCIA_LABEL[t.cadencia]}</td>
                       <td className="p-2">{t.ordem}</td>
                       <td className="p-2 text-muted-foreground">{t.rota_hub || "—"}</td>
+                      <td className="p-2 text-muted-foreground">
+                        {(lojasPorTpl[t.id!] || []).length
+                          ? `${lojasPorTpl[t.id!].length} loja(s)`
+                          : "Todas as lojas"}
+                      </td>
                       <td className="p-2">{t.ativo ? "Sim" : "Não"}</td>
                       <td className="p-2 text-right whitespace-nowrap">
-                        <Button size="sm" variant="outline" onClick={() => setTplEdit(t)}>Editar</Button>
+                        <Button size="sm" variant="outline" onClick={() => abrirTemplate(t)}>Editar</Button>
                         <Button size="sm" variant="ghost" onClick={() => excluirTemplate(t.id!)}>
                           <Trash2 className="w-3.5 h-3.5" />
                         </Button>
@@ -374,6 +405,35 @@ const AdminJornada = () => {
               </div>
               <Input placeholder="Rota no Hub (ex.: /pic)" value={tplEdit.rota_hub || ""}
                 onChange={(e) => setTplEdit({ ...tplEdit, rota_hub: e.target.value })} />
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-xs font-medium text-muted-foreground">Lojas onde esta tarefa vale</p>
+                  <button type="button" className="text-[11px] text-primary underline"
+                    onClick={() => setTplLojas([])}>
+                    Todas as lojas da rede
+                  </button>
+                </div>
+                <div className="max-h-40 overflow-y-auto rounded-md border border-border p-2 space-y-1">
+                  {lojas.map((s) => (
+                    <label key={s.id} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={tplLojas.includes(s.id)}
+                        onChange={(e) => setTplLojas((l) =>
+                          e.target.checked ? [...l, s.id] : l.filter((x) => x !== s.id))}
+                      />
+                      {s.name}
+                    </label>
+                  ))}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  {tplLojas.length
+                    ? `${tplLojas.length} loja(s) selecionada(s)`
+                    : "Nenhuma marcada — a tarefa vale para todas as lojas."}
+                </p>
+              </div>
+
 
               <div>
                 <p className="text-xs font-medium text-muted-foreground mb-1">Checklist</p>
