@@ -25,7 +25,7 @@ import {
   hojeSP, navegar, periodoLabel, periodoRef,
 } from "@/lib/jornada";
 
-interface Perfil { id: string; chave: string; nome: string; cor: string; ativo: boolean }
+interface Perfil { id: string; chave: string; nome: string; cor: string; ativo: boolean; store_id: string | null }
 interface Template {
   id: string; titulo: string; descricao: string | null; cadencia: Cadencia;
   rota_hub: string | null; ordem: number; perfil_id: string; ativo: boolean;
@@ -76,7 +76,7 @@ const Jornada = () => {
     if (!user) return;
     (async () => {
       const [{ data: p }, { data: t }, { data: mp }] = await Promise.all([
-        supabase.from("jornada_perfis").select("id,chave,nome,cor,ativo").eq("ativo", true).order("ordem"),
+        supabase.from("jornada_perfis").select("id,chave,nome,cor,ativo,store_id").eq("ativo", true).order("ordem"),
         supabase.from("jornada_templates").select("id,titulo,descricao,cadencia,rota_hub,ordem,perfil_id,ativo").eq("ativo", true).order("ordem"),
         supabase.from("jornada_perfil_usuario").select("perfil_id").eq("user_id", user.id),
       ]);
