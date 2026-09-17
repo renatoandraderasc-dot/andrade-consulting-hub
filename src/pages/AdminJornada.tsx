@@ -278,14 +278,14 @@ const AdminJornada = () => {
                 <thead className="bg-muted/50 text-xs text-muted-foreground">
                   <tr>
                     <th className="text-left p-2">Usuário</th>
-                    {perfis.map((p) => <th key={p.id} className="p-2 text-center">{p.nome}</th>)}
+                    {perfisVinculo.map((p) => <th key={p.id} className="p-2 text-center">{p.nome}</th>)}
                   </tr>
                 </thead>
                 <tbody>
-                  {usuarios.map((u) => (
+                  {usuariosVinculo.map((u) => (
                     <tr key={u.user_id} className="border-t border-border">
                       <td className="p-2">{u.full_name || u.user_id.slice(0, 8)}</td>
-                      {perfis.map((p) => {
+                      {perfisVinculo.map((p) => {
                         const on = vinculos.some((v) => v.user_id === u.user_id && v.perfil_id === p.id);
                         return (
                           <td key={p.id} className="p-2 text-center">
