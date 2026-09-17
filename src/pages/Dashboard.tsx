@@ -16,6 +16,7 @@ import HierarquiaVendasTable from "@/components/relatorios/HierarquiaVendasTable
 import VrOfflineNotice from "@/components/VrOfflineNotice";
 import { useAutoRefresh } from "@/hooks/useSaasConfig";
 import { useVrRealizado, canonDept } from "@/hooks/useVrRealizado";
+import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
 import { chamarRelatorio, num, pick } from "@/lib/vrReport";
 import MascotPersona from "@/components/poster/MascotPersona";
 import CouponDivider from "@/components/poster/CouponDivider";
@@ -27,6 +28,7 @@ const CATEGORIA_KEY = "dashboardCategoria";
 
 const Dashboard = () => {
   const { user, loading: authLoading } = useAuth();
+  const { permitidos, restrito, filtrarDepts } = useDepartamentosPermitidos();
   const navigate = useNavigate();
   const [storeName, setStoreName] = useState("");
   const [storeId, setStoreId] = useState("");
@@ -85,19 +87,19 @@ const Dashboard = () => {
 
   // O filtro de categoria manda também nas metas: escolhe o departamento equivalente
   useEffect(() => {
-    if (categoria === TODA_LOJA) { setSelectedDept("LOJA"); return; }
+    if (categoria === TODA_LOJA) { setSelectedDept(restrito ? "" : "LOJA"); return; }
     const alvo = canonDept(categoria);
     const achado =
       departments.find((d) => canonDept(d) === alvo) ||
       departments.find((d) => d.toUpperCase() === categoria.toUpperCase());
-    setSelectedDept(achado || alvo || "LOJA");
-  }, [categoria, departments]);
+    setSelectedDept(achado || alvo || (restrito ? "" : "LOJA"));
+  }, [categoria, departments, restrito]);
 
   useEffect(() => {
-    if (storeId && selectedDept) {
+    if (storeId && (selectedDept || restrito)) {
       fetchDailyData();
     }
-  }, [storeId, selectedDept, periodStart, periodEnd]);
+  }, [storeId, selectedDept, periodStart, periodEnd, restrito]);
 
 
   useEffect(() => {
@@ -175,16 +177,40 @@ const Dashboard = () => {
   };
 
   const fetchDailyData = async () => {
-    const { data } = await supabase
+    let q = supabase
       .from("store_daily_metrics")
-      .select("date, tipo_dia, meta_vendas, meta_lucro, meta_margem_pct, meta_volume, projecao_vendas, projecao_lucro, projecao_margem_pct, projecao_volume")
-      .eq("store_id", storeId)
-      .eq("department", selectedDept)
+      .select("date, tipo_dia, meta_vendas, meta_lucro, meta_margem_pct, meta_volume, projecao_vendas, projecao_lucro, projecao_margem_pct, projecao_volume, department")
+      .eq("store_id", storeId);
+    q = selectedDept ? q.eq("department", selectedDept) : q;
+    const { data } = await q
       .gte("date", periodStart)
       .lte("date", periodEnd)
       .order("date");
 
-    setMetaRows(data || []);
+    let linhas = data || [];
+    if (restrito) {
+      linhas = linhas.filter((l: any) => permitidos!.includes(canonDept(String(l.department || ""))));
+      if (!selectedDept) {
+        // soma as metas dos departamentos liberados, por dia
+        const porDia = new Map<string, any>();
+        for (const l of linhas as any[]) {
+          const cur = porDia.get(l.date) || { date: l.date, tipo_dia: l.tipo_dia, meta_vendas: 0, meta_lucro: 0, meta_volume: 0, projecao_vendas: 0, projecao_lucro: 0, projecao_volume: 0 };
+          cur.meta_vendas += Number(l.meta_vendas) || 0;
+          cur.meta_lucro += Number(l.meta_lucro) || 0;
+          cur.meta_volume += Number(l.meta_volume) || 0;
+          cur.projecao_vendas += Number(l.projecao_vendas) || 0;
+          cur.projecao_lucro += Number(l.projecao_lucro) || 0;
+          cur.projecao_volume += Number(l.projecao_volume) || 0;
+          porDia.set(l.date, cur);
+        }
+        linhas = [...porDia.values()].map((d) => ({
+          ...d,
+          meta_margem_pct: d.meta_vendas > 0 ? (d.meta_lucro / d.meta_vendas) * 100 : 0,
+          projecao_margem_pct: d.projecao_vendas > 0 ? (d.projecao_lucro / d.projecao_vendas) * 100 : 0,
+        }));
+      }
+    }
+    setMetaRows(linhas);
   };
 
   // Metas (banco) + realizado ao vivo (VR)
@@ -226,7 +252,7 @@ const Dashboard = () => {
   useEffect(() => {
     if (!vr) return;
     if (departments.length > 0) return;
-    const deps = Object.keys(vr).filter((d) => d !== "LOJA").sort();
+    const deps = filtrarDepts(Object.keys(vr).filter((d) => d !== "LOJA")).sort();
     if (deps.length > 0) setDepartments(deps);
   }, [vr, departments.length]);
 
@@ -413,6 +439,7 @@ const Dashboard = () => {
           categoria={categoria}
           onCategoriaChange={setCategoria}
           categorias={categorias}
+          rotuloTodos={restrito ? "Meus departamentos" : "Loja toda"}
           onRefresh={refresh}
           loading={loadingVr}
         />
@@ -432,7 +459,7 @@ const Dashboard = () => {
                   {new Date(periodStart + "T12:00:00").toLocaleDateString("pt-BR")} a{" "}
                   {new Date(periodEnd + "T12:00:00").toLocaleDateString("pt-BR")}
                   {" · "}
-                  {categoria === TODA_LOJA ? "Loja toda" : categoria}
+                  {categoria === TODA_LOJA ? (restrito ? "Meus departamentos" : "Loja toda") : categoria}
                 </p>
               </div>
             </div>
