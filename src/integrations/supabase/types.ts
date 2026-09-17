@@ -1582,6 +1582,7 @@ export type Database = {
           id: string
           nome: string
           ordem: number
+          store_id: string | null
         }
         Insert: {
           ativo?: boolean
@@ -1593,6 +1594,7 @@ export type Database = {
           id?: string
           nome: string
           ordem?: number
+          store_id?: string | null
         }
         Update: {
           ativo?: boolean
@@ -1604,8 +1606,17 @@ export type Database = {
           id?: string
           nome?: string
           ordem?: number
+          store_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "jornada_perfis_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       jornada_templates: {
         Row: {

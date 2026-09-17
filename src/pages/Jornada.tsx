@@ -25,7 +25,7 @@ import {
   hojeSP, navegar, periodoLabel, periodoRef,
 } from "@/lib/jornada";
 
-interface Perfil { id: string; chave: string; nome: string; cor: string; ativo: boolean }
+interface Perfil { id: string; chave: string; nome: string; cor: string; ativo: boolean; store_id: string | null }
 interface Template {
   id: string; titulo: string; descricao: string | null; cadencia: Cadencia;
   rota_hub: string | null; ordem: number; perfil_id: string; ativo: boolean;
@@ -76,7 +76,7 @@ const Jornada = () => {
     if (!user) return;
     (async () => {
       const [{ data: p }, { data: t }, { data: mp }] = await Promise.all([
-        supabase.from("jornada_perfis").select("id,chave,nome,cor,ativo").eq("ativo", true).order("ordem"),
+        supabase.from("jornada_perfis").select("id,chave,nome,cor,ativo,store_id").eq("ativo", true).order("ordem"),
         supabase.from("jornada_templates").select("id,titulo,descricao,cadencia,rota_hub,ordem,perfil_id,ativo").eq("ativo", true).order("ordem"),
         supabase.from("jornada_perfil_usuario").select("perfil_id").eq("user_id", user.id),
       ]);
@@ -148,12 +148,25 @@ const Jornada = () => {
   const tplPorId = useMemo(() => new Map(templates.map((t) => [t.id, t])), [templates]);
   const perfilPorId = useMemo(() => new Map(perfis.map((p) => [p.id, p])), [perfis]);
 
+  /** Perfis da rede (sem loja) + perfis exclusivos da loja selecionada. */
+  const perfisVisiveis = useMemo(
+    () => perfis.filter((p) => !p.store_id || p.store_id === loja),
+    [perfis, loja],
+  );
+
+  // se o perfil escolhido não pertence à loja atual, volta para "todos"
+  useEffect(() => {
+    if (perfil && !perfisVisiveis.some((p) => p.id === perfil)) setPerfil("");
+  }, [perfil, perfisVisiveis]);
+
   const cards = useMemo(() => {
     return execs
       .map((e) => {
         const t = tplPorId.get(e.template_id);
         if (!t) return null;
-        return { exec: e, tpl: t, perfil: perfilPorId.get(t.perfil_id) };
+        const p = perfilPorId.get(t.perfil_id);
+        if (p && p.store_id && p.store_id !== e.store_id) return null;
+        return { exec: e, tpl: t, perfil: p };
       })
       .filter(Boolean)
       .filter((c: any) => (cadencia === "todas" ? true : c.tpl.cadencia === cadencia))
@@ -263,7 +276,9 @@ const Jornada = () => {
     toast.success("Tarefa avulsa criada");
   };
 
-  const templatesDoFiltro = templates.filter((t) => (perfil ? t.perfil_id === perfil : true));
+  const templatesDoFiltro = templates
+    .filter((t) => perfisVisiveis.some((p) => p.id === t.perfil_id))
+    .filter((t) => (perfil ? t.perfil_id === perfil : true));
 
   const Card = ({ c }: { c: any }) => {
     const cont = contagens[c.exec.id] || { total: 0, feitos: 0 };
@@ -349,9 +364,9 @@ const Jornada = () => {
           <h1 className="text-xl font-semibold text-foreground">Minha Jornada</h1>
         </div>
 
-        {meusPerfis.length > 1 && (
+        {perfisVisiveis.filter((p) => meusPerfis.includes(p.id)).length > 1 && (
           <div className="flex gap-1 mb-3 overflow-x-auto">
-            {perfis.filter((p) => meusPerfis.includes(p.id)).map((p) => (
+            {perfisVisiveis.filter((p) => meusPerfis.includes(p.id)).map((p) => (
               <button
                 key={p.id}
                 onClick={() => setPerfil(p.id)}
@@ -373,7 +388,7 @@ const Jornada = () => {
             aria-label="Perfil"
           >
             <option value="">Todos os perfis</option>
-            {perfis.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+            {perfisVisiveis.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
           </select>
 
           <div className="flex rounded-md border border-border overflow-hidden">

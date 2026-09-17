@@ -41,7 +41,7 @@ serve(async (req) => {
     // 1) templates ativos
     const { data: templates, error: e1 } = await sb
       .from("jornada_templates")
-      .select("id, cadencia")
+      .select("id, cadencia, jornada_perfis(store_id)")
       .eq("ativo", true);
     if (e1) throw new Error(e1.message);
 
@@ -60,7 +60,9 @@ serve(async (req) => {
 
     for (const t of templates ?? []) {
       const ref = periodoRef(t.cadencia as "diaria" | "semanal" | "mensal");
+      const perfilStore = (t as any).jornada_perfis?.store_id ?? null;
       for (const s of stores ?? []) {
+        if (perfilStore && perfilStore !== s.id) continue; // perfil exclusivo de outra loja
         rows.push({
           template_id: t.id,
           store_id: s.id,

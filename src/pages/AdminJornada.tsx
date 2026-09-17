@@ -15,7 +15,7 @@ import { CADENCIA_LABEL, Cadencia } from "@/lib/jornada";
 
 interface Perfil {
   id?: string; chave: string; nome: string; descricao: string | null;
-  cor: string; icone: string; ordem: number; ativo: boolean;
+  cor: string; icone: string; ordem: number; ativo: boolean; store_id: string | null;
 }
 interface ItemCk { texto: string; ordem: number }
 interface Template {
@@ -25,6 +25,7 @@ interface Template {
 
 const perfilVazio: Perfil = {
   chave: "", nome: "", descricao: "", cor: "#CA3155", icone: "ClipboardList", ordem: 0, ativo: true,
+  store_id: null,
 };
 const templateVazio = (perfil_id: string): Template => ({
   perfil_id, cadencia: "diaria", titulo: "", descricao: "", ordem: 0,
@@ -45,13 +46,17 @@ const AdminJornada = () => {
   const [tplEdit, setTplEdit] = useState<Template | null>(null);
   const [drag, setDrag] = useState<number | null>(null);
   const [renovando, setRenovando] = useState(false);
+  const [lojas, setLojas] = useState<{ id: string; name: string }[]>([]);
+  const [lojaAtual] = useState<string>(() => sessionStorage.getItem("selectedStoreId") || "");
+  const [usuariosDaLoja, setUsuariosDaLoja] = useState<string[]>([]);
 
   const carregar = async () => {
-    const [{ data: p }, { data: t }, { data: u }, { data: v }] = await Promise.all([
+    const [{ data: p }, { data: t }, { data: u }, { data: v }, { data: l }] = await Promise.all([
       supabase.from("jornada_perfis").select("*").order("ordem"),
       supabase.from("jornada_templates").select("*").order("ordem"),
       supabase.from("profiles").select("user_id, full_name").order("full_name"),
       supabase.from("jornada_perfil_usuario").select("user_id, perfil_id"),
+      supabase.from("stores").select("id, name").order("name"),
     ]);
     setPerfis((p || []) as Perfil[]);
     setTemplates(((t || []) as any[]).map((x) => ({
@@ -60,6 +65,16 @@ const AdminJornada = () => {
     })) as Template[]);
     setUsuarios(u || []);
     setVinculos(v || []);
+    setLojas(l || []);
+
+    if (lojaAtual) {
+      const { data: acc } = await supabase
+        .from("user_store_access").select("user_id")
+        .eq("store_id", lojaAtual).eq("approved", true);
+      setUsuariosDaLoja((acc || []).map((a) => a.user_id));
+    } else {
+      setUsuariosDaLoja([]);
+    }
   };
 
   useEffect(() => { if (isAdmin) carregar(); }, [isAdmin]);
@@ -69,6 +84,17 @@ const AdminJornada = () => {
       (!fPerfil || t.perfil_id === fPerfil) && (!fCadencia || t.cadencia === fCadencia)),
     [templates, fPerfil, fCadencia],
   );
+
+  /** Vínculos: só perfis da rede + da loja do header, e só usuários dessa loja. */
+  const perfisVinculo = useMemo(
+    () => perfis.filter((p) => !p.store_id || p.store_id === lojaAtual),
+    [perfis, lojaAtual],
+  );
+  const usuariosVinculo = useMemo(
+    () => (lojaAtual ? usuarios.filter((u) => usuariosDaLoja.includes(u.user_id)) : usuarios),
+    [usuarios, usuariosDaLoja, lojaAtual],
+  );
+
 
   const salvarPerfil = async () => {
     if (!perfilEdit) return;
@@ -158,7 +184,9 @@ const AdminJornada = () => {
 
           {/* PERFIS */}
           <TabsContent value="perfis" className="mt-4 space-y-3">
-            <Button size="sm" onClick={() => setPerfilEdit({ ...perfilVazio, ordem: perfis.length + 1 })}>
+            <Button size="sm" onClick={() => setPerfilEdit({
+              ...perfilVazio, ordem: perfis.length + 1, store_id: lojaAtual || null,
+            })}>
               <Plus className="w-3.5 h-3.5 mr-1.5" /> Novo perfil
             </Button>
             <div className="rounded-lg border border-border overflow-x-auto">
@@ -166,7 +194,8 @@ const AdminJornada = () => {
                 <thead className="bg-muted/50 text-xs text-muted-foreground">
                   <tr>
                     <th className="text-left p-2">Nome</th><th className="text-left p-2">Chave</th>
-                    <th className="text-left p-2">Cor</th><th className="text-left p-2">Ordem</th>
+                    <th className="text-left p-2">Cor</th><th className="text-left p-2">Loja</th>
+                    <th className="text-left p-2">Ordem</th>
                     <th className="text-left p-2">Ativo</th><th />
                   </tr>
                 </thead>
@@ -176,6 +205,9 @@ const AdminJornada = () => {
                       <td className="p-2">{p.nome}</td>
                       <td className="p-2 text-muted-foreground">{p.chave}</td>
                       <td className="p-2"><span className="inline-block w-5 h-5 rounded" style={{ backgroundColor: p.cor }} /></td>
+                      <td className="p-2 text-muted-foreground">
+                        {p.store_id ? (lojas.find((s) => s.id === p.store_id)?.name || "—") : "Rede inteira"}
+                      </td>
                       <td className="p-2">{p.ordem}</td>
                       <td className="p-2">{p.ativo ? "Sim" : "Não"}</td>
                       <td className="p-2 text-right">
@@ -246,14 +278,14 @@ const AdminJornada = () => {
                 <thead className="bg-muted/50 text-xs text-muted-foreground">
                   <tr>
                     <th className="text-left p-2">Usuário</th>
-                    {perfis.map((p) => <th key={p.id} className="p-2 text-center">{p.nome}</th>)}
+                    {perfisVinculo.map((p) => <th key={p.id} className="p-2 text-center">{p.nome}</th>)}
                   </tr>
                 </thead>
                 <tbody>
-                  {usuarios.map((u) => (
+                  {usuariosVinculo.map((u) => (
                     <tr key={u.user_id} className="border-t border-border">
                       <td className="p-2">{u.full_name || u.user_id.slice(0, 8)}</td>
-                      {perfis.map((p) => {
+                      {perfisVinculo.map((p) => {
                         const on = vinculos.some((v) => v.user_id === u.user_id && v.perfil_id === p.id);
                         return (
                           <td key={p.id} className="p-2 text-center">
@@ -289,6 +321,17 @@ const AdminJornada = () => {
                   onChange={(e) => setPerfilEdit({ ...perfilEdit, icone: e.target.value })} />
                 <Input type="number" className="w-24" value={perfilEdit.ordem}
                   onChange={(e) => setPerfilEdit({ ...perfilEdit, ordem: Number(e.target.value) })} />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-1">Loja do perfil</p>
+                <select
+                  value={perfilEdit.store_id || ""}
+                  onChange={(e) => setPerfilEdit({ ...perfilEdit, store_id: e.target.value || null })}
+                  className="w-full rounded-md border border-border bg-secondary px-2 py-2 text-sm"
+                >
+                  <option value="">Rede inteira (todas as lojas)</option>
+                  {lojas.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
               </div>
               <label className="flex items-center gap-2 text-sm">
                 <Switch checked={perfilEdit.ativo}
