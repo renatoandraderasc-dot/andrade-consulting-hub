@@ -15,6 +15,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Checkbox } from "@/components/ui/checkbox";
 import { APP_MODULES } from "@/lib/modules";
 
+// Departamentos que podem ser liberados individualmente (vazio = ve todos)
+const DEPARTAMENTOS = [
+  "ACOUGUE", "HORTIFRUTI", "PADARIA", "MERCEARIA", "FRIOS E LATICINIOS",
+  "BEBIDAS", "PERECIVEIS", "LIMPEZA", "PERFUMARIA", "BAZAR", "ELETRO",
+];
+
 interface ManagedUser {
   id: string;
   email: string;
@@ -25,6 +31,7 @@ interface ManagedUser {
   roles: string[];
   stores: { user_id: string; store_id: string; approved: boolean; stores: { name: string } | null }[];
   modules: { user_id: string; module: string; allowed: boolean }[];
+  departments: string[];
 }
 
 interface Store { id: string; name: string; }
@@ -213,6 +220,7 @@ const CreateUserDialog = ({ stores, onClose, onCreated, call }: any) => {
   const [showPw, setShowPw] = useState(false);
   const [papel, setPapel] = useState<"user" | "supervisor" | "admin">("user");
   const [storeIds, setStoreIds] = useState<string[]>([]);
+  const [deps, setDeps] = useState<string[]>([]);
   const [modules, setModules] = useState<string[]>(APP_MODULES.filter(m => !m.key.startsWith("admin_") && m.key !== "vtex_collector" && m.key !== "websac_sync").map(m => m.key));
   const [saving, setSaving] = useState(false);
 
@@ -220,7 +228,7 @@ const CreateUserDialog = ({ stores, onClose, onCreated, call }: any) => {
     if (!email || !password) { toast({ title: "Preencha email e senha", variant: "destructive" }); return; }
     setSaving(true);
     try {
-      await call("create", { email, password, full_name: fullName, role: papel, is_admin: papel === "admin", store_ids: storeIds, modules });
+      await call("create", { email, password, full_name: fullName, role: papel, is_admin: papel === "admin", store_ids: storeIds, modules, departments: deps });
       toast({ title: "Usuário criado!" });
       onCreated();
     } catch (e: any) { toast({ title: "Erro", description: e.message, variant: "destructive" }); }
@@ -265,6 +273,19 @@ const CreateUserDialog = ({ stores, onClose, onCreated, call }: any) => {
                 <label key={s.id} className="flex items-center gap-2 cursor-pointer text-sm font-body">
                   <Checkbox checked={storeIds.includes(s.id)} onCheckedChange={(v) => setStoreIds(v ? [...storeIds, s.id] : storeIds.filter(x => x !== s.id))} />
                   {s.name}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="font-body text-sm font-semibold mb-2 flex items-center gap-2"><KeySquare className="w-4 h-4" /> Departamentos liberados</p>
+            <p className="text-xs text-muted-foreground mb-2">Deixe tudo desmarcado para o usuário ver todos os departamentos. Marcando algum, ele só enxerga os números desses departamentos.</p>
+            <div className="grid grid-cols-3 gap-2 p-2 border border-border rounded-lg">
+              {DEPARTAMENTOS.map((d) => (
+                <label key={d} className="flex items-center gap-2 cursor-pointer text-sm font-body">
+                  <Checkbox checked={deps.includes(d)} onCheckedChange={(v) => setDeps(v ? [...deps, d] : deps.filter((x: string) => x !== d))} />
+                  {d}
                 </label>
               ))}
             </div>
@@ -318,6 +339,7 @@ const EditUserDialog = ({ user, stores, onClose, onSaved, call }: any) => {
   const [blocked, setBlocked] = useState(!!user.profile?.blocked);
   const [storeIds, setStoreIds] = useState<string[]>(user.stores.filter((s: any) => s.approved).map((s: any) => s.store_id));
   const [moduleKeys, setModuleKeys] = useState<string[]>(user.modules.filter((m: any) => m.allowed).map((m: any) => m.module));
+  const [depKeys, setDepKeys] = useState<string[]>(user.departments || []);
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
@@ -332,6 +354,7 @@ const EditUserDialog = ({ user, stores, onClose, onSaved, call }: any) => {
       if (blocked !== !!user.profile?.blocked) ops.push(call("set_blocked", { user_id: user.id, blocked }));
       ops.push(call("set_stores", { user_id: user.id, store_ids: storeIds }));
       ops.push(call("set_modules", { user_id: user.id, modules: APP_MODULES.map(m => ({ module: m.key, allowed: moduleKeys.includes(m.key) })) }));
+      ops.push(call("set_departments", { user_id: user.id, departments: depKeys }));
       await Promise.all(ops);
       toast({ title: "Alterações salvas!" });
       onSaved();

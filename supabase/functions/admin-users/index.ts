@@ -40,11 +40,12 @@ Deno.serve(async (req) => {
         // Listar todos os usuários
         const { data: { users } } = await admin.auth.admin.listUsers({ perPage: 1000 });
         const userIds = users.map((u) => u.id);
-        const [{ data: profiles }, { data: roles }, { data: stores }, { data: modules }] = await Promise.all([
+        const [{ data: profiles }, { data: roles }, { data: stores }, { data: modules }, { data: deps }] = await Promise.all([
           admin.from("profiles").select("user_id, full_name, blocked").in("user_id", userIds),
           admin.from("user_roles").select("user_id, role").in("user_id", userIds),
           admin.from("user_store_access").select("user_id, store_id, approved, stores(name)").in("user_id", userIds),
           admin.from("user_module_access").select("user_id, module, allowed").in("user_id", userIds),
+          admin.from("user_department_access").select("user_id, department").in("user_id", userIds),
         ]);
         return Response.json(
           { users: users.map((u) => ({
@@ -57,6 +58,7 @@ Deno.serve(async (req) => {
             roles: roles?.filter((r) => r.user_id === u.id).map((r) => r.role) || [],
             stores: stores?.filter((s) => s.user_id === u.id) || [],
             modules: modules?.filter((m) => m.user_id === u.id) || [],
+            departments: deps?.filter((d) => d.user_id === u.id).map((d) => d.department) || [],
           })) },
           { headers: corsHeaders }
         );
