@@ -279,13 +279,13 @@ Deno.serve(async (req) => {
       };
       const mapaManual = new Map<string, { tipo: string; subtipo: string }>();
       for (const m of manuais ?? []) {
-        const ref = String(m.origem_ref ?? "");
-        const val = { tipo: m.tipo, subtipo: m.subtipo };
-        mapaManual.set(ref, val);
-        if (!mapaManual.has(chaveBase(ref))) mapaManual.set(chaveBase(ref), val);
+        // Somente a chave exata: cada parcela guarda a propria classificacao.
+        mapaManual.set(String(m.origem_ref ?? ""), { tipo: m.tipo, subtipo: m.subtipo });
       }
       for (const reg of registros) {
         const refReg = String(reg.origem_ref);
+        // O fallback so alcanca linhas antigas, gravadas exatamente com a chave
+        // base (sem sufixo de parcela) — nunca outra parcela do mesmo titulo.
         const man = mapaManual.get(refReg) ?? mapaManual.get(chaveBase(refReg));
         if (man) {
           reg.tipo = man.tipo;
@@ -293,6 +293,7 @@ Deno.serve(async (req) => {
           (reg as Record<string, unknown>).classificacao_manual = true;
         }
       }
+
 
       let gravados = 0;
 
