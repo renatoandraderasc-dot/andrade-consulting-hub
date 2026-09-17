@@ -176,7 +176,7 @@ const Jornada = () => {
       .filter((c: any) => (perfil ? c.tpl.perfil_id === perfil : true))
       .filter((c: any) => c.exec.periodo_ref === periodoRef(c.tpl.cadencia as Cadencia, ancora) || c.exec.avulsa)
       .sort((a: any, b: any) => a.tpl.ordem - b.tpl.ordem || a.tpl.titulo.localeCompare(b.tpl.titulo)) as any[];
-  }, [execs, tplPorId, perfilPorId, cadencia, perfil, ancora]);
+  }, [execs, tplPorId, perfilPorId, perfisVisiveis, cadencia, perfil, ancora]);
 
   const marcarPendente = () => setPendente(true);
 
