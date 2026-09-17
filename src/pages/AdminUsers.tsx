@@ -430,6 +430,19 @@ const EditUserDialog = ({ user, stores, onClose, onSaved, call }: any) => {
           </div>
 
           <div>
+            <p className="font-body text-sm font-semibold mb-2 flex items-center gap-2"><KeySquare className="w-4 h-4" /> Departamentos liberados</p>
+            <p className="text-xs text-muted-foreground mb-2">Deixe tudo desmarcado para o usuário ver todos os departamentos. Marcando algum, ele só enxerga os números desses departamentos.</p>
+            <div className="grid grid-cols-3 gap-2 p-2 border border-border rounded-lg">
+              {DEPARTAMENTOS.map((d) => (
+                <label key={d} className="flex items-center gap-2 cursor-pointer text-sm font-body">
+                  <Checkbox checked={depKeys.includes(d)} onCheckedChange={(v) => setDepKeys(v ? [...depKeys, d] : depKeys.filter((x: string) => x !== d))} />
+                  {d}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div>
             <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
               <p className="font-body text-sm font-semibold flex items-center gap-2"><KeySquare className="w-4 h-4" /> Módulos visíveis</p>
               <button
