@@ -407,6 +407,35 @@ const AdminJornada = () => {
                 onChange={(e) => setTplEdit({ ...tplEdit, rota_hub: e.target.value })} />
 
               <div>
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-xs font-medium text-muted-foreground">Lojas onde esta tarefa vale</p>
+                  <button type="button" className="text-[11px] text-primary underline"
+                    onClick={() => setTplLojas([])}>
+                    Todas as lojas da rede
+                  </button>
+                </div>
+                <div className="max-h-40 overflow-y-auto rounded-md border border-border p-2 space-y-1">
+                  {lojas.map((s) => (
+                    <label key={s.id} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={tplLojas.includes(s.id)}
+                        onChange={(e) => setTplLojas((l) =>
+                          e.target.checked ? [...l, s.id] : l.filter((x) => x !== s.id))}
+                      />
+                      {s.name}
+                    </label>
+                  ))}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  {tplLojas.length
+                    ? `${tplLojas.length} loja(s) selecionada(s)`
+                    : "Nenhuma marcada — a tarefa vale para todas as lojas."}
+                </p>
+              </div>
+
+
+              <div>
                 <p className="text-xs font-medium text-muted-foreground mb-1">Checklist</p>
                 <div className="space-y-1">
                   {tplEdit.checklist_padrao.map((i, idx) => (
