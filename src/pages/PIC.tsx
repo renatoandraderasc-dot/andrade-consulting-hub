@@ -64,7 +64,7 @@ interface KpiData {
 const pctFmt = (v: number) => `${v.toFixed(2).replace(".", ",")}%`;
 
 const PIC = () => {
-  const refreshSegundos = useSaasNumber("refresh_pic_segundos", 60);
+  
   const { user, isAdmin, loading: authLoading } = useAuth();
   const { restrito, filtrarDepts } = useDepartamentosPermitidos();
   const navigate = useNavigate();
