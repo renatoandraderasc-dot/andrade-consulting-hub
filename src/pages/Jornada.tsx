@@ -148,12 +148,25 @@ const Jornada = () => {
   const tplPorId = useMemo(() => new Map(templates.map((t) => [t.id, t])), [templates]);
   const perfilPorId = useMemo(() => new Map(perfis.map((p) => [p.id, p])), [perfis]);
 
+  /** Perfis da rede (sem loja) + perfis exclusivos da loja selecionada. */
+  const perfisVisiveis = useMemo(
+    () => perfis.filter((p) => !p.store_id || p.store_id === loja),
+    [perfis, loja],
+  );
+
+  // se o perfil escolhido não pertence à loja atual, volta para "todos"
+  useEffect(() => {
+    if (perfil && !perfisVisiveis.some((p) => p.id === perfil)) setPerfil("");
+  }, [perfil, perfisVisiveis]);
+
   const cards = useMemo(() => {
     return execs
       .map((e) => {
         const t = tplPorId.get(e.template_id);
         if (!t) return null;
-        return { exec: e, tpl: t, perfil: perfilPorId.get(t.perfil_id) };
+        const p = perfilPorId.get(t.perfil_id);
+        if (p && p.store_id && p.store_id !== e.store_id) return null;
+        return { exec: e, tpl: t, perfil: p };
       })
       .filter(Boolean)
       .filter((c: any) => (cadencia === "todas" ? true : c.tpl.cadencia === cadencia))
