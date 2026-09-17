@@ -148,10 +148,12 @@ const Jornada = () => {
   const tplPorId = useMemo(() => new Map(templates.map((t) => [t.id, t])), [templates]);
   const perfilPorId = useMemo(() => new Map(perfis.map((p) => [p.id, p])), [perfis]);
 
-  /** Perfis da rede (sem loja) + perfis exclusivos da loja selecionada. */
+  /** Perfis da rede (sem loja) + exclusivos da loja — e só os vinculados ao usuário. */
   const perfisVisiveis = useMemo(
-    () => perfis.filter((p) => !p.store_id || p.store_id === loja),
-    [perfis, loja],
+    () => perfis
+      .filter((p) => !p.store_id || p.store_id === loja)
+      .filter((p) => isGlobalAdmin || meusPerfis.includes(p.id)),
+    [perfis, loja, isGlobalAdmin, meusPerfis],
   );
 
   // se o perfil escolhido não pertence à loja atual, volta para "todos"
