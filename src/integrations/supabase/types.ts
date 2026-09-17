@@ -2694,6 +2694,36 @@ export type Database = {
           },
         ]
       }
+      store_group_members: {
+        Row: {
+          group_store_id: string
+          member_store_id: string
+        }
+        Insert: {
+          group_store_id: string
+          member_store_id: string
+        }
+        Update: {
+          group_store_id?: string
+          member_store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_group_members_group_store_id_fkey"
+            columns: ["group_store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_group_members_member_store_id_fkey"
+            columns: ["member_store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_metrics: {
         Row: {
           clientes: number | null
@@ -3488,6 +3518,24 @@ export type Database = {
           dias_gerados: number
           total_meta: number
         }[]
+      }
+      fn_grupo_recalc_all: { Args: { p_group: string }; Returns: undefined }
+      fn_grupo_recalc_daily: {
+        Args: { p_date: string; p_department: string; p_group: string }
+        Returns: undefined
+      }
+      fn_grupo_recalc_dept_month: {
+        Args: {
+          p_department: string
+          p_group: string
+          p_month: number
+          p_year: number
+        }
+        Returns: undefined
+      }
+      fn_grupo_recalc_store_month: {
+        Args: { p_group: string; p_month: number; p_year: number }
+        Returns: undefined
       }
       gerar_calendario: {
         Args: { p_fim: string; p_inicio: string; p_store_id: string }
