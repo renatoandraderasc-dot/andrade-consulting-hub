@@ -135,17 +135,7 @@ const PIC = () => {
     if (storeId) fetchMetas();
   }, [storeId, selectedMonth, selectedYear, diaIniEfetivo, diaFimEfetivo]);
 
-  useEffect(() => {
-    if (!storeId) return;
-    if (!refreshSegundos || refreshSegundos <= 0) return;
-    const interval = setInterval(refresh, refreshSegundos * 1000);
-    const handleFocus = () => refresh();
-    window.addEventListener("focus", handleFocus);
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener("focus", handleFocus);
-    };
-  }, [storeId, refresh, refreshSegundos]);
+  // Atualização automática desativada: os dados só são recarregados no botão Atualizar.
 
   const fetchStoreInfo = async () => {
     if (!user) return;
