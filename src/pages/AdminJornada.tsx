@@ -15,7 +15,7 @@ import { CADENCIA_LABEL, Cadencia } from "@/lib/jornada";
 
 interface Perfil {
   id?: string; chave: string; nome: string; descricao: string | null;
-  cor: string; icone: string; ordem: number; ativo: boolean;
+  cor: string; icone: string; ordem: number; ativo: boolean; store_id: string | null;
 }
 interface ItemCk { texto: string; ordem: number }
 interface Template {
@@ -25,6 +25,7 @@ interface Template {
 
 const perfilVazio: Perfil = {
   chave: "", nome: "", descricao: "", cor: "#CA3155", icone: "ClipboardList", ordem: 0, ativo: true,
+  store_id: null,
 };
 const templateVazio = (perfil_id: string): Template => ({
   perfil_id, cadencia: "diaria", titulo: "", descricao: "", ordem: 0,
