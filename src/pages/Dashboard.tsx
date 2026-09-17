@@ -157,7 +157,7 @@ const Dashboard = () => {
       .select("department")
       .eq("store_id", storeId);
     if (data) {
-      const unique = [...new Set(data.map((d) => d.department))].sort();
+      const unique = filtrarDepts([...new Set(data.map((d) => d.department))].sort());
       setDepartments(unique);
     }
 
@@ -168,7 +168,7 @@ const Dashboard = () => {
         .select("department")
         .eq("store_id", storeId);
       if (deptData) {
-        const unique = [...new Set(deptData.map((d) => d.department))].sort();
+        const unique = filtrarDepts([...new Set(deptData.map((d) => d.department))].sort());
         setDepartments(unique);
       }
     }
