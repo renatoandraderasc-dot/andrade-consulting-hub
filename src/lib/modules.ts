@@ -31,6 +31,7 @@ export const APP_MODULES = [
   { key: "encarte_editor", label: "Editor de Encarte", path: "/encartes/editor" },
   { key: "encarte_sugestao", label: "Sugestão de Encarte", path: "/encarte-sugestao" },
   { key: "jornada", label: "Jornada", path: "/jornada" },
+  { key: "jornada_execucoes", label: "Jornada: Execuções", path: "/jornada/execucoes" },
   { key: "admin_jornada", label: "Admin: Jornada", path: "/admin/jornada" },
 ] as const;
 
