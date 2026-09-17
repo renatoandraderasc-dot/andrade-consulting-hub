@@ -144,10 +144,23 @@ const AdminJornada = () => {
         if (eL) return toast.error(eL.message);
       }
     }
-    toast.success("Tarefa salva");
+    // aplica o checklist novo nas tarefas em aberto (mantém o que já foi marcado)
+    let atualizadas = 0;
+    if (tplId) {
+      const { data: n } = await supabase.rpc("jornada_ressincronizar_checklist", {
+        p_template_id: tplId,
+      });
+      atualizadas = Number(n) || 0;
+    }
+    toast.success(
+      atualizadas
+        ? `Tarefa salva e atualizada em ${atualizadas} execução(ões) em aberto`
+        : "Tarefa salva",
+    );
     setTplEdit(null);
     carregar();
   };
+
 
   const excluirTemplate = async (id: string) => {
     const { error } = await supabase.from("jornada_templates").delete().eq("id", id);
