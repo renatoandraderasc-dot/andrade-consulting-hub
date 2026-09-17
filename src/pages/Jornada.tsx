@@ -276,7 +276,9 @@ const Jornada = () => {
     toast.success("Tarefa avulsa criada");
   };
 
-  const templatesDoFiltro = templates.filter((t) => (perfil ? t.perfil_id === perfil : true));
+  const templatesDoFiltro = templates
+    .filter((t) => perfisVisiveis.some((p) => p.id === t.perfil_id))
+    .filter((t) => (perfil ? t.perfil_id === perfil : true));
 
   const Card = ({ c }: { c: any }) => {
     const cont = contagens[c.exec.id] || { total: 0, feitos: 0 };
