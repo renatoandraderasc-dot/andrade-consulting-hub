@@ -362,9 +362,9 @@ const Jornada = () => {
           <h1 className="text-xl font-semibold text-foreground">Minha Jornada</h1>
         </div>
 
-        {meusPerfis.length > 1 && (
+        {perfisVisiveis.filter((p) => meusPerfis.includes(p.id)).length > 1 && (
           <div className="flex gap-1 mb-3 overflow-x-auto">
-            {perfis.filter((p) => meusPerfis.includes(p.id)).map((p) => (
+            {perfisVisiveis.filter((p) => meusPerfis.includes(p.id)).map((p) => (
               <button
                 key={p.id}
                 onClick={() => setPerfil(p.id)}
@@ -386,7 +386,7 @@ const Jornada = () => {
             aria-label="Perfil"
           >
             <option value="">Todos os perfis</option>
-            {perfis.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+            {perfisVisiveis.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
           </select>
 
           <div className="flex rounded-md border border-border overflow-hidden">
