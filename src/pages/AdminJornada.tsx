@@ -260,7 +260,7 @@ const AdminJornada = () => {
                   <option key={c} value={c}>{CADENCIA_LABEL[c]}</option>
                 ))}
               </select>
-              <Button size="sm" onClick={() => setTplEdit(templateVazio(fPerfil || perfis[0]?.id || ""))}>
+              <Button size="sm" onClick={() => abrirTemplate(templateVazio(fPerfil || perfis[0]?.id || ""))}>
                 <Plus className="w-3.5 h-3.5 mr-1.5" /> Nova tarefa
               </Button>
             </div>
@@ -271,7 +271,8 @@ const AdminJornada = () => {
                   <tr>
                     <th className="text-left p-2">Título</th><th className="text-left p-2">Perfil</th>
                     <th className="text-left p-2">Cadência</th><th className="text-left p-2">Ordem</th>
-                    <th className="text-left p-2">Rota</th><th className="text-left p-2">Ativo</th><th />
+                    <th className="text-left p-2">Rota</th><th className="text-left p-2">Lojas</th>
+                    <th className="text-left p-2">Ativo</th><th />
                   </tr>
                 </thead>
                 <tbody>
@@ -282,9 +283,14 @@ const AdminJornada = () => {
                       <td className="p-2">{CADENCIA_LABEL[t.cadencia]}</td>
                       <td className="p-2">{t.ordem}</td>
                       <td className="p-2 text-muted-foreground">{t.rota_hub || "—"}</td>
+                      <td className="p-2 text-muted-foreground">
+                        {(lojasPorTpl[t.id!] || []).length
+                          ? `${lojasPorTpl[t.id!].length} loja(s)`
+                          : "Todas as lojas"}
+                      </td>
                       <td className="p-2">{t.ativo ? "Sim" : "Não"}</td>
                       <td className="p-2 text-right whitespace-nowrap">
-                        <Button size="sm" variant="outline" onClick={() => setTplEdit(t)}>Editar</Button>
+                        <Button size="sm" variant="outline" onClick={() => abrirTemplate(t)}>Editar</Button>
                         <Button size="sm" variant="ghost" onClick={() => excluirTemplate(t.id!)}>
                           <Trash2 className="w-3.5 h-3.5" />
                         </Button>
