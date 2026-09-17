@@ -182,7 +182,7 @@ const EstoqueDinamico = () => {
     if (msg) { setAviso(msg); setLinhas([]); setLoading(false); return; }
 
     const base: Linha[] = (r.dados || []).map((l: any) => {
-      const qtdCompra = num(col(l, "qtd_compra", "quantidade_compra"));
+      const qtdCompra = num(col(l, "qtd_compra", "quantidade_compra", "qtd_ultima_entrada"));
       const qtdVenda = num(col(l, "qtd_venda", "quantidade_venda"));
       const progRaw = col(l, "progresso_venda");
       const estRaw = col(l, "estoque_dinamico");
@@ -198,7 +198,8 @@ const EstoqueDinamico = () => {
         ultimaVenda: String(col(l, "ultima_venda", "data_ultima_venda", "dt_ultima_venda") ?? ""),
         diasSemCompra: num(col(l, "dias_desde_ultima_compra", "dias_desde_primeira_compra")),
         qtdCompra,
-        valorCompra: num(col(l, "valor_compra", "total_compra")),
+        valorCompra: num(col(l, "valor_compra", "total_compra")) ||
+          qtdCompra * num(col(l, "custo", "custo_medio")),
         qtdVenda,
         valorVenda: num(col(l, "valor_venda", "total_venda")),
         progresso:
@@ -209,11 +210,41 @@ const EstoqueDinamico = () => {
           estRaw !== undefined && String(estRaw).trim() !== ""
             ? num(estRaw)
             : qtdCompra - qtdVenda,
-        valorEstoqueDinamico: num(col(l, "valor_estoque_dinamico")),
-        estoqueSistema: num(col(l, "estoque_sistema")),
+        valorEstoqueDinamico: num(col(l, "valor_estoque_dinamico", "valor_estoque")),
+        estoqueSistema: num(col(l, "estoque_sistema", "estoque", "estoque_atual")),
         abc: "D4",
       };
     });
+
+    // Pontes que so publicam o estoque atual (sem venda do periodo):
+    // complementa com o ranking de produtos para preencher venda e progresso.
+    const semVenda = base.length > 0 && base.every((l) => l.qtdVenda === 0 && l.valorVenda === 0);
+    if (semVenda) {
+      const rv = await chamarRelatorio(storeId, "ranking_produtos", {
+        inicio: iso(range.from),
+        fim: iso(range.to),
+        limite: 200000,
+      }).catch(() => null);
+      const porCodigo = new Map<string, { qtd: number; valor: number }>();
+      for (const l of (rv?.dados as any[]) || []) {
+        const cod = String(col(l, "codigo", "cod_produto", "id_produto") ?? "");
+        if (!cod) continue;
+        const cur = porCodigo.get(cod) ?? { qtd: 0, valor: 0 };
+        cur.qtd += num(col(l, "volume", "qtd", "quantidade"));
+        cur.valor += num(col(l, "vendas", "valor", "venda", "total_venda"));
+        porCodigo.set(cod, cur);
+      }
+      if (porCodigo.size) {
+        for (const l of base) {
+          const v = porCodigo.get(l.codigo);
+          if (!v) continue;
+          l.qtdVenda = v.qtd;
+          l.valorVenda = v.valor;
+          l.progresso = l.qtdCompra > 0 ? (v.qtd / l.qtdCompra) * 100 : 0;
+          l.estoqueDinamico = l.estoqueSistema || l.qtdCompra - v.qtd;
+        }
+      }
+    }
 
     // Classificacao ABC sobre o resultado inteiro (antes dos filtros)
     const totalVenda = base.reduce((s, l) => s + l.valorVenda, 0);
