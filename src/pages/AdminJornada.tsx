@@ -322,6 +322,17 @@ const AdminJornada = () => {
                 <Input type="number" className="w-24" value={perfilEdit.ordem}
                   onChange={(e) => setPerfilEdit({ ...perfilEdit, ordem: Number(e.target.value) })} />
               </div>
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-1">Loja do perfil</p>
+                <select
+                  value={perfilEdit.store_id || ""}
+                  onChange={(e) => setPerfilEdit({ ...perfilEdit, store_id: e.target.value || null })}
+                  className="w-full rounded-md border border-border bg-secondary px-2 py-2 text-sm"
+                >
+                  <option value="">Rede inteira (todas as lojas)</option>
+                  {lojas.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </div>
               <label className="flex items-center gap-2 text-sm">
                 <Switch checked={perfilEdit.ativo}
                   onCheckedChange={(v) => setPerfilEdit({ ...perfilEdit, ativo: v })} /> Ativo
