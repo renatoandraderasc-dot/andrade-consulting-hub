@@ -168,6 +168,7 @@ const Jornada = () => {
         if (!t) return null;
         const p = perfilPorId.get(t.perfil_id);
         if (p && p.store_id && p.store_id !== e.store_id) return null;
+        if (!p || !perfisVisiveis.some((v) => v.id === p.id)) return null;
         return { exec: e, tpl: t, perfil: p };
       })
       .filter(Boolean)
