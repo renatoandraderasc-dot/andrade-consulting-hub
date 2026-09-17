@@ -85,6 +85,17 @@ const AdminJornada = () => {
     [templates, fPerfil, fCadencia],
   );
 
+  /** Vínculos: só perfis da rede + da loja do header, e só usuários dessa loja. */
+  const perfisVinculo = useMemo(
+    () => perfis.filter((p) => !p.store_id || p.store_id === lojaAtual),
+    [perfis, lojaAtual],
+  );
+  const usuariosVinculo = useMemo(
+    () => (lojaAtual ? usuarios.filter((u) => usuariosDaLoja.includes(u.user_id)) : usuarios),
+    [usuarios, usuariosDaLoja, lojaAtual],
+  );
+
+
   const salvarPerfil = async () => {
     if (!perfilEdit) return;
     const { id, ...campos } = perfilEdit;
