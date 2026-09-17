@@ -317,6 +317,7 @@ const Dashboard = () => {
       const acc = new Map<string, number>();
       for (const l of r.dados || []) {
         const dep = canonDept(String(pick(l, "departamento", "secao", "department") ?? "")) || "SEM DEPARTAMENTO";
+        if (restrito && !permitidos!.includes(dep)) continue;
         acc.set(dep, (acc.get(dep) || 0) + num(pick(l, "venda", "vendas", "total_vendido", "faturamento")));
       }
       return acc;
