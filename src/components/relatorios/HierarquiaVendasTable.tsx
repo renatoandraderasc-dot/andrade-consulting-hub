@@ -7,6 +7,7 @@ import { formatBRL } from "@/lib/formatters";
 import { useHierarquiaVendas, type LinhaHierarquia } from "@/hooks/useHierarquiaVendas";
 import * as XLSX from "xlsx";
 import { salvarWorkbook } from "@/lib/exportBranding";
+import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
 
 // ============================================================
 // Tabela de vendas com abertura progressiva:
@@ -68,18 +69,20 @@ interface Props {
 
 export default function HierarquiaVendasTable({ storeId, inicio, fim, title }: Props) {
   const { linhas, total, loading, errorMsg, updatedAt, refresh } = useHierarquiaVendas(storeId, inicio, fim);
+  const { restrito, permiteDept } = useDepartamentosPermitidos();
   const [abertos, setAbertos] = useState<Set<string>>(new Set());
   const [busca, setBusca] = useState("");
 
   const filtradas = useMemo(() => {
-    const base = linhas ?? [];
+    // Usuario restrito a departamentos: so enxerga os niveis 1 liberados
+    const base = restrito ? (linhas ?? []).filter((l) => permiteDept(l.n1)) : (linhas ?? []);
     const s = busca.trim().toUpperCase();
     if (!s) return base;
     return base.filter(
       (l) =>
         l.n1.includes(s) || l.n2.includes(s) || l.n3.includes(s) || l.produto.includes(s) || l.codigo.includes(s),
     );
-  }, [linhas, busca]);
+  }, [linhas, busca, restrito]);
 
   const arvore = useMemo(() => agrupar(filtradas, 0, ""), [filtradas]);
   const totalFiltrado = useMemo(() => filtradas.reduce((s, l) => s + l.vendas, 0), [filtradas]);
