@@ -378,7 +378,10 @@ export function useVrRealizado(
 
   const refresh = useCallback(() => run(true), [run]);
 
-  const data = useMemo(() => (raw ? agregar(raw, categoria) : null), [raw, categoria]);
+  const data = useMemo(
+    () => (raw ? agregar(raw, categoria, permitidos) : null),
+    [raw, categoria, permitidos],
+  );
 
   // Categorias do proprio resultado, ordenadas por faturamento decrescente
   const categorias = useMemo(() => {
@@ -386,12 +389,18 @@ export function useVrRealizado(
     const m = new Map<string, number>();
     for (const l of raw.linhas) {
       if (!l.categoria) continue;
+      if (permitidos) {
+        const dep = canonDept(
+          raw.mapa[norm(l.secao)] ?? inferirDepartamento(l.secao, l.categoria) ?? l.categoria ?? "",
+        );
+        if (!permitidos.includes(dep)) continue;
+      }
       m.set(l.categoria, (m.get(l.categoria) ?? 0) + l.vendas);
     }
     return [...m.entries()]
       .map(([name, total]) => ({ name, total }))
       .sort((a, b) => b.total - a.total);
-  }, [raw]);
+  }, [raw, permitidos]);
 
   return { data, categorias, loading, offline, errorMsg, updatedAt, refresh };
 }
