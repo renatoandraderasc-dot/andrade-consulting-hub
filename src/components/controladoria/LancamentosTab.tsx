@@ -122,17 +122,19 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
   useEffect(() => {
     if (!storeId) return;
     (async () => {
+      // Nomes: de-para da loja > de-para de outras lojas da rede > padrao global.
       const { data } = await supabase
         .from("vr_lancamento_map")
-        .select("store_id, id_tipo, descricao_vr")
-        .or(`store_id.eq.${storeId},store_id.is.null`);
+        .select("store_id, id_tipo, descricao_vr");
       const padrao: Record<string, string> = {};
+      const daRede: Record<string, string> = {};
       const daLoja: Record<string, string> = {};
       for (const m of (data as any[]) || []) {
         if (!m.descricao_vr) continue;
-        (m.store_id ? daLoja : padrao)[String(m.id_tipo)] = m.descricao_vr;
+        const alvo = !m.store_id ? padrao : m.store_id === storeId ? daLoja : daRede;
+        alvo[String(m.id_tipo)] = m.descricao_vr;
       }
-      setNomesTipo({ ...padrao, ...daLoja });
+      setNomesTipo({ ...padrao, ...daRede, ...daLoja });
     })();
   }, [storeId]);
 
