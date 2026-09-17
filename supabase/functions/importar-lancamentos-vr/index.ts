@@ -279,13 +279,13 @@ Deno.serve(async (req) => {
       };
       const mapaManual = new Map<string, { tipo: string; subtipo: string }>();
       for (const m of manuais ?? []) {
-        const ref = String(m.origem_ref ?? "");
-        const val = { tipo: m.tipo, subtipo: m.subtipo };
-        mapaManual.set(ref, val);
-        if (!mapaManual.has(chaveBase(ref))) mapaManual.set(chaveBase(ref), val);
+        // Somente a chave exata: cada parcela guarda a propria classificacao.
+        mapaManual.set(String(m.origem_ref ?? ""), { tipo: m.tipo, subtipo: m.subtipo });
       }
       for (const reg of registros) {
         const refReg = String(reg.origem_ref);
+        // O fallback so alcanca linhas antigas, gravadas exatamente com a chave
+        // base (sem sufixo de parcela) — nunca outra parcela do mesmo titulo.
         const man = mapaManual.get(refReg) ?? mapaManual.get(chaveBase(refReg));
         if (man) {
           reg.tipo = man.tipo;
@@ -293,6 +293,7 @@ Deno.serve(async (req) => {
           (reg as Record<string, unknown>).classificacao_manual = true;
         }
       }
+
 
       let gravados = 0;
 
@@ -315,10 +316,11 @@ Deno.serve(async (req) => {
       // reconciliamos somente os registros VR desta loja e deste bloco mensal.
       if (!falhouGravacao) {
         const refsAtuais = new Set<string>();
+        const basesAtuais = new Set<string>();
         for (const r of registros) {
           const ref = String(r.origem_ref);
           refsAtuais.add(ref);
-          refsAtuais.add(chaveBase(ref));
+          basesAtuais.add(chaveBase(ref));
         }
         const { data: existentes, error: erroLeitura } = await supabase
           .from("lancamentos")
@@ -334,9 +336,12 @@ Deno.serve(async (req) => {
           const obsoletos = (existentes ?? [])
             .filter((item) => {
             const ref = String(item.origem_ref ?? "");
-            return !refsAtuais.has(ref) && !refsAtuais.has(chaveBase(ref));
+            // Mantem a linha quando a chave exata continua atual ou quando ela
+            // esta no formato antigo (a propria chave base de um registro atual).
+            return !refsAtuais.has(ref) && !basesAtuais.has(ref);
           })
             .map((item) => item.id);
+
 
           for (let i = 0; i < obsoletos.length; i += 100) {
             const { error } = await supabase.from("lancamentos").delete().in("id", obsoletos.slice(i, i + 100));
