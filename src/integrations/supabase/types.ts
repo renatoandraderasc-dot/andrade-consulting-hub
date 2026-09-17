@@ -3549,6 +3549,10 @@ export type Database = {
       }
       importar_lancamentos_vr_auto: { Args: never; Returns: number }
       is_supervisor: { Args: { _user_id?: string }; Returns: boolean }
+      jornada_ressincronizar_checklist: {
+        Args: { p_template_id: string }
+        Returns: number
+      }
       jornada_tem_acesso_loja: { Args: { p_store: string }; Returns: boolean }
       minutos_para_cron: { Args: { minutos: number }; Returns: string }
       pode_gerenciar_loja: { Args: { _store_id: string }; Returns: boolean }
