@@ -16,7 +16,7 @@ import { usePicDisplayMode } from "@/hooks/usePicDisplay";
 import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
 import ProdutosSemGiro from "@/components/pic/ProdutosSemGiro";
 import { CartProgressOverlay } from "@/components/CartProgress";
-import { useSaasNumber } from "@/hooks/useSaasConfig";
+
 
 
 
@@ -64,7 +64,7 @@ interface KpiData {
 const pctFmt = (v: number) => `${v.toFixed(2).replace(".", ",")}%`;
 
 const PIC = () => {
-  const refreshSegundos = useSaasNumber("refresh_pic_segundos", 60);
+  
   const { user, isAdmin, loading: authLoading } = useAuth();
   const { restrito, filtrarDepts } = useDepartamentosPermitidos();
   const navigate = useNavigate();
@@ -135,17 +135,7 @@ const PIC = () => {
     if (storeId) fetchMetas();
   }, [storeId, selectedMonth, selectedYear, diaIniEfetivo, diaFimEfetivo]);
 
-  useEffect(() => {
-    if (!storeId) return;
-    if (!refreshSegundos || refreshSegundos <= 0) return;
-    const interval = setInterval(refresh, refreshSegundos * 1000);
-    const handleFocus = () => refresh();
-    window.addEventListener("focus", handleFocus);
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener("focus", handleFocus);
-    };
-  }, [storeId, refresh, refreshSegundos]);
+  // Atualização automática desativada: os dados só são recarregados no botão Atualizar.
 
   const fetchStoreInfo = async () => {
     if (!user) return;
