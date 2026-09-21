@@ -14,12 +14,14 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Plus, Pencil, Trash2, Copy, Search, CheckSquare } from "lucide-react";
+import { Plus, Pencil, Trash2, Copy, Search, CheckSquare, Download } from "lucide-react";
 import { ImportLancamentos } from "./ImportLancamentos";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAutoRefresh } from "@/hooks/useSaasConfig";
 import { toast } from "sonner";
+import * as XLSX from "xlsx";
+import { salvarWorkbook } from "@/lib/exportBranding";
 import { TIPOS_LANCAMENTO_V2, SUBCONTAS_V2 } from "./contRedeStructure";
 import type { Lancamento } from "./lancamentosTypes";
 
