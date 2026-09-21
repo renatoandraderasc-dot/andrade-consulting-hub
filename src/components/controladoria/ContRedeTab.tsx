@@ -162,6 +162,26 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
 
   useEffect(() => { fetchVendaPeriodo(); }, [fetchVendaPeriodo]);
 
+  // COMPRA DO MÊS = entrada de NF para revenda (histórico de compras do módulo
+  // Compras). Sem isso a linha repetia o pagamento a fornecedores.
+  const [compraNf, setCompraNf] = useState<number | null>(null);
+  useEffect(() => {
+    if (!storeId) { setCompraNf(null); return; }
+    let ativo = true;
+    (async () => {
+      const { data } = await supabase
+        .from("compras_historico")
+        .select("compra")
+        .eq("store_id", storeId)
+        .eq("ano", ano)
+        .eq("mes", mes);
+      if (!ativo) return;
+      const linhas = (data as any[]) || [];
+      setCompraNf(linhas.length ? linhas.reduce((s, l) => s + Number(l.compra || 0), 0) : null);
+    })();
+    return () => { ativo = false; };
+  }, [storeId, mes, ano]);
+
   const structure = modo === "comercial" ? DRE_STRUCTURE_COMERCIAL : DRE_STRUCTURE_FINANCEIRO;
 
   // Deduplicação: mesmo Beneficiário + mesmo valor conta apenas 1 vez no DRE
@@ -203,12 +223,15 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
       overrides.cmv = cmvPeriodo;
       overrides.cmv_merc = cmvPeriodo;
     }
+    // Sem histórico importado a linha fica zerada (e não repetindo o pagamento).
+    overrides.compra_mes = compraNf ?? 0;
+    overrides.compra_fornec = compraNf ?? 0;
     return calcularDRE(structure, lancamentosUnicos.map(l => ({
       tipo: l.tipo,
       subtipo: l.subtipo,
       valor: Number(l.valor),
     })), Object.keys(overrides).length ? overrides : undefined);
-  }, [lancamentosUnicos, structure, modo, vendaPeriodo, cmvPeriodo]);
+  }, [lancamentosUnicos, structure, modo, vendaPeriodo, cmvPeriodo, compraNf]);
 
 
   // For % calculation, use faturamento as base

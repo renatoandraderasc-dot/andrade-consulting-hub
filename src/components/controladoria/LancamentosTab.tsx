@@ -14,12 +14,14 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Plus, Pencil, Trash2, Copy, Search, CheckSquare } from "lucide-react";
+import { Plus, Pencil, Trash2, Copy, Search, CheckSquare, Download } from "lucide-react";
 import { ImportLancamentos } from "./ImportLancamentos";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAutoRefresh } from "@/hooks/useSaasConfig";
 import { toast } from "sonner";
+import * as XLSX from "xlsx";
+import { salvarWorkbook } from "@/lib/exportBranding";
 import { TIPOS_LANCAMENTO_V2, SUBCONTAS_V2 } from "./contRedeStructure";
 import type { Lancamento } from "./lancamentosTypes";
 
@@ -370,6 +372,39 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
   const fmtCurrency = (v: number) =>
     v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+  // Exporta os lancamentos exatamente como vem do banco (todas as colunas),
+  // respeitando os filtros da tela.
+  const exportarRelatorio = () => {
+    if (!filtered.length) { toast.error("Nenhum lançamento para exportar"); return; }
+    const linhas = filtered.map((l: any) => ({
+      data: l.data,
+      competencia_mes: l.competencia_mes,
+      competencia_ano: l.competencia_ano,
+      tipo: l.tipo,
+      subtipo: l.subtipo,
+      descricao: l.descricao,
+      valor: Number(l.valor),
+      tipo_entrada: tipoEntradaDe(l),
+      observacao: l.observacao,
+      status: l.status,
+      origem: l.origem,
+      origem_ref: l.origem_ref,
+      id_tipo: l.id_tipo,
+      classificacao_manual: l.classificacao_manual,
+      created_at: l.created_at,
+      updated_at: l.updated_at,
+      id: l.id,
+      store_id: l.store_id,
+    }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(linhas), "Lançamentos");
+    salvarWorkbook(wb, "Relatório de Lançamentos", [
+      ["Loja", storeName],
+      ["Competência", `${String(filterMes).padStart(2, "0")}/${filterAno}`],
+      ["Lançamentos", String(linhas.length)],
+    ]);
+  };
+
   // Admin check
   if (!isAdmin) {
     return (
@@ -406,6 +441,9 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
               </Button>
             </>
           )}
+          <Button variant="outline" onClick={exportarRelatorio} className="gap-2">
+            <Download className="h-4 w-4" /> Exportar relatório
+          </Button>
           <ImportLancamentos storeId={storeId} userId={user?.id || ""} onImportComplete={fetchLancamentos} />
           <Button onClick={openNew} className="gap-2">
             <Plus className="h-4 w-4" /> Novo Lançamento
