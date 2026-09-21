@@ -223,12 +223,16 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
       overrides.cmv = cmvPeriodo;
       overrides.cmv_merc = cmvPeriodo;
     }
+    if (compraNf !== null) {
+      overrides.compra_mes = compraNf;
+      overrides.compra_fornec = compraNf;
+    }
     return calcularDRE(structure, lancamentosUnicos.map(l => ({
       tipo: l.tipo,
       subtipo: l.subtipo,
       valor: Number(l.valor),
     })), Object.keys(overrides).length ? overrides : undefined);
-  }, [lancamentosUnicos, structure, modo, vendaPeriodo, cmvPeriodo]);
+  }, [lancamentosUnicos, structure, modo, vendaPeriodo, cmvPeriodo, compraNf]);
 
 
   // For % calculation, use faturamento as base
