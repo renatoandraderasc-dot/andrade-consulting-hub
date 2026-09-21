@@ -463,6 +463,12 @@ const Compras = () => {
         meta_venda: Number(m.meta_venda) || 0,
         meta_compra,
         compra_sobre_venda: (Number(m.compra_sobre_venda) || 0) * 100,
+        cmv_pct: (Number(m.cmv_pct) || 0) * 100,
+        excesso_hist: Number(m.excesso_hist) || 0,
+        parcela_excesso: Number(m.parcela_excesso) || 0,
+        venda_hist: Number(m.venda_hist) || 0,
+        cmv_hist: Number(m.cmv_hist) || 0,
+        compra_hist: Number(m.compra_hist) || 0,
         realizado: real.compra,
         saldo,
         consumido,
@@ -474,9 +480,11 @@ const Compras = () => {
     const meta_venda = painelRows.reduce((s, r) => s + r.meta_venda, 0);
     const meta_compra = painelRows.reduce((s, r) => s + r.meta_compra, 0);
     const realizado = painelRows.reduce((s, r) => s + r.realizado, 0);
+    const excesso_hist = painelRows.reduce((s, r) => s + r.excesso_hist, 0);
+    const parcela_excesso = painelRows.reduce((s, r) => s + r.parcela_excesso, 0);
     const saldo = meta_compra - realizado;
     const consumido = meta_compra > 0 ? (realizado / meta_compra) * 100 : 0;
-    return { meta_venda, meta_compra, realizado, saldo, consumido };
+    return { meta_venda, meta_compra, realizado, saldo, consumido, excesso_hist, parcela_excesso };
   }, [painelRows]);
 
   // ============ Derived (Aba 2) ============
