@@ -1004,8 +1004,17 @@ const Compras = () => {
               <h3 className="text-sm font-semibold mb-4">Parâmetros do mês</h3>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Meta de venda do mês</label>
-                  <input type="number" step="0.01" disabled={!isAdmin} value={cfg.meta_venda_mes || ""} onChange={(e) => setCfg({ ...cfg, meta_venda_mes: e.target.value })} className={inputCls} />
+                  <label className="text-xs text-muted-foreground mb-1 block">Meta de venda do mês (Dashboard)</label>
+                  <input type="text" readOnly value={fmtBRL(metaDashboard)} className={`${inputCls} opacity-80`} />
+                  {metaDashboard > 0 ? (
+                    <button type="button" onClick={() => navigate("/dashboard")} className="text-xs text-primary hover:underline mt-1">
+                      Ver no Dashboard
+                    </button>
+                  ) : (
+                    <p className="text-xs text-red-500 mt-1">
+                      Lance a meta de vendas do mês no Dashboard antes de gerar as metas de compra.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="text-xs text-muted-foreground mb-1 block">Parcelas p/ diluir excesso</label>
