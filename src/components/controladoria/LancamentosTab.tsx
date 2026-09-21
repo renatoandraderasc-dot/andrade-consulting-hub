@@ -43,7 +43,7 @@ interface Props {
 }
 
 export const LancamentosTab = ({ storeId, storeName }: Props) => {
-  const { user, isAdmin } = useAuth();
+  const { user } = useAuth();
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -405,30 +405,12 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
     ]);
   };
 
-  // Admin check
-  if (!isAdmin) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-center py-16">
-          <Card className="bg-card border-border max-w-md">
-            <CardContent className="p-8 text-center">
-              <p className="text-lg font-semibold text-foreground mb-2">Acesso Restrito</p>
-              <p className="text-sm text-muted-foreground">
-                A aba de Lançamentos é restrita a administradores.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg sm:text-xl font-bold text-foreground">Lançamentos</h2>
-          <p className="text-sm text-muted-foreground">Cadastre e gerencie os lançamentos financeiros (Admin)</p>
+          <p className="text-sm text-muted-foreground">Cadastre e gerencie os lançamentos financeiros</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {temVr && (
