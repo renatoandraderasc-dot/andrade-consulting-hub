@@ -729,23 +729,49 @@ const Compras = () => {
                   <tr className="border-b border-border text-muted-foreground">
                     <th className="text-left py-2">Departamento</th>
                     <th className="text-right py-2 px-2">Meta venda</th>
+                    <th className="text-right py-2 px-2">CMV % (6m)</th>
+                    <th className="text-right py-2 px-2">Excesso 6m</th>
+                    <th className="text-right py-2 px-2">Parcela do mês</th>
                     <th className="text-right py-2 px-2">Meta compra</th>
-                    <th className="text-right py-2 px-2">C/V %</th>
-                    <th className="text-right py-2 px-2">Realizado</th>
+                    <th className="text-right py-2 px-2">Compra realizada</th>
                     <th className="text-right py-2 px-2">Saldo</th>
                     <th className="text-left py-2 px-2 min-w-[160px]">% consumido</th>
                   </tr>
                 </thead>
                 <tbody>
                   {painelRows.length === 0 && (
-                    <tr><td colSpan={7} className="py-8 text-center text-muted-foreground">Nenhuma meta gerada para este mês. Vá em Configuração.</td></tr>
+                    <tr><td colSpan={9} className="py-8 text-center text-muted-foreground">Nenhuma meta gerada para este mês. Vá em Configuração.</td></tr>
                   )}
-                  {painelRows.map((r) => (
-                    <tr key={r.departamento} className="border-b border-border/50">
-                      <td className="py-2 font-medium">{r.departamento}</td>
+                  {painelRows.map((r) => {
+                    const { inicio, fim } = monthRange(year, month);
+                    const key = chaveProdutos(inicio, fim);
+                    const aberto = !!painelExp[r.departamento];
+                    const secoes = aberto ? secoesDoDep(key, r.departamento) : [];
+                    return (
+                    <Fragment key={r.departamento}>
+                    <tr
+                      onClick={() => {
+                        setPainelExp((p) => ({ ...p, [r.departamento]: !p[r.departamento] }));
+                        if (!aberto) carregarProdutos(inicio, fim);
+                      }}
+                      className="border-b border-border/50 cursor-pointer hover:bg-muted/40"
+                    >
+                      <td className="py-2 font-medium">
+                        <span className="inline-flex items-center gap-1">
+                          {aberto ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                          {r.departamento}
+                        </span>
+                      </td>
                       <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(r.meta_venda)}</td>
+                      <td className="py-2 px-2 text-right tabular-nums">{fmtPct(r.cmv_pct)}</td>
+                      <td
+                        className="py-2 px-2 text-right tabular-nums"
+                        title={`Compra 6m ${fmtBRL(r.compra_hist)} − CMV 6m ${fmtBRL(r.cmv_hist)}`}
+                      >
+                        {fmtBRL(r.excesso_hist)}
+                      </td>
+                      <td className={`py-2 px-2 text-right tabular-nums ${r.parcela_excesso < 0 ? "text-red-500" : ""}`}>{fmtBRL(r.parcela_excesso)}</td>
                       <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(r.meta_compra)}</td>
-                      <td className="py-2 px-2 text-right tabular-nums">{fmtPct(r.compra_sobre_venda)}</td>
                       <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(r.realizado)}</td>
                       <td className={`py-2 px-2 text-right tabular-nums font-medium ${r.saldo < 0 ? "text-red-500" : "text-emerald-500"}`}>{fmtBRL(r.saldo)}</td>
                       <td className="py-2 px-2">
@@ -757,8 +783,67 @@ const Compras = () => {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    {aberto && produtosLoading === key && (
+                      <tr className="bg-muted/10"><td colSpan={9} className="py-2 pl-9 text-xs text-muted-foreground">Carregando abertura por seção e produto…</td></tr>
+                    )}
+                    {aberto && produtosLoading !== key && secoes.length === 0 && (
+                      <tr className="bg-muted/10">
+                        <td colSpan={9} className="py-2 pl-9 text-xs text-muted-foreground">
+                          {produtosAviso || "Sem compras deste departamento no mês."}
+                        </td>
+                      </tr>
+                    )}
+                    {aberto && secoes.map((s) => {
+                      const chave = `${r.departamento}|${s.secao}`;
+                      const abertaSec = !!painelExp[chave];
+                      return (
+                        <Fragment key={chave}>
+                          <tr
+                            onClick={() => setPainelExp((p) => ({ ...p, [chave]: !p[chave] }))}
+                            className="border-b border-border/30 bg-muted/20 cursor-pointer hover:bg-muted/40 text-xs"
+                          >
+                            <td className="py-1.5 pl-9 text-muted-foreground" colSpan={9}>
+                              <span className="inline-flex items-center gap-1">
+                                {abertaSec ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                                {s.secao}
+                              </span>
+                              <span className="ml-3">Venda {fmtBRL(s.venda)} · CMV {fmtBRL(s.cmv)} · Compra {fmtBRL(s.compra)}</span>
+                              <span className={`ml-3 ${Math.max(s.compra - s.cmv, 0) > 0 ? "text-red-500" : ""}`}>
+                                Excesso {fmtBRL(Math.max(s.compra - s.cmv, 0))}
+                              </span>
+                            </td>
+                          </tr>
+                          {abertaSec && produtosDaSecao(key, r.departamento, s.secao).map((p) => (
+                            <tr key={`${chave}|${p.codigo}|${p.descricao}`} className="border-b border-border/20 bg-muted/10 text-xs">
+                              <td className="py-1.5 pl-14 text-muted-foreground" colSpan={9}>
+                                {p.codigo ? `${p.codigo} · ` : ""}{p.descricao || "SEM DESCRIÇÃO"}
+                                <span className="ml-3">Venda {fmtBRL(p.venda)} · CMV {fmtBRL(p.cmv)} · Compra {fmtBRL(p.compra)}</span>
+                                <span className={`ml-3 ${Math.max(p.compra - p.cmv, 0) > 0 ? "text-red-500" : ""}`}>
+                                  Excesso {fmtBRL(Math.max(p.compra - p.cmv, 0))}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </Fragment>
+                      );
+                    })}
+                    </Fragment>
+                    );
+                  })}
                 </tbody>
+                <tfoot>
+                  <tr className="border-t border-border font-semibold">
+                    <td className="py-3">Total</td>
+                    <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(totais.meta_venda)}</td>
+                    <td className="py-3 px-2"></td>
+                    <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(totais.excesso_hist)}</td>
+                    <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(totais.parcela_excesso)}</td>
+                    <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(totais.meta_compra)}</td>
+                    <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(totais.realizado)}</td>
+                    <td className={`py-3 px-2 text-right tabular-nums ${totais.saldo < 0 ? "text-red-500" : "text-emerald-500"}`}>{fmtBRL(totais.saldo)}</td>
+                    <td className="py-3 px-2 text-right tabular-nums">{fmtPct(totais.consumido, 0)}</td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
 
