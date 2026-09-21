@@ -1120,16 +1120,18 @@ const Compras = () => {
                     <th className="text-right py-2 px-2">CMV/V %</th>
                     <th className="text-right py-2 px-2">C/V %</th>
                     <th className="text-right py-2 px-2">Saldo (CMV−Compra)</th>
+                    <th className="text-right py-2 px-2">Excesso</th>
                   </tr>
                 </thead>
                 <tbody>
                   {historicoFiltrado.length === 0 && (
-                    <tr><td colSpan={8} className="py-8 text-center text-muted-foreground">Sem dados. Importe o histórico na aba Configuração.</td></tr>
+                    <tr><td colSpan={9} className="py-8 text-center text-muted-foreground">Sem dados. Importe o histórico na aba Configuração.</td></tr>
                   )}
                   {historicoFiltrado.map((r: any, i) => {
                     const cmvv = r.venda > 0 ? (r.cmv / r.venda) * 100 : 0;
                     const cv = r.venda > 0 ? (r.compra / r.venda) * 100 : 0;
                     const saldo = r.cmv - r.compra;
+                    const excesso = Math.max(r.compra - r.cmv, 0);
                     return (
                       <tr key={i} className="border-b border-border/50">
                         <td className="py-2">{String(r.mes).padStart(2, "0")}/{r.ano}</td>
@@ -1140,6 +1142,7 @@ const Compras = () => {
                         <td className="py-2 px-2 text-right tabular-nums">{fmtPct(cmvv)}</td>
                         <td className="py-2 px-2 text-right tabular-nums">{fmtPct(cv)}</td>
                         <td className={`py-2 px-2 text-right tabular-nums ${saldo < 0 ? "text-red-500" : "text-emerald-500"}`}>{fmtBRL(saldo)}</td>
+                        <td className={`py-2 px-2 text-right tabular-nums ${excesso > 0 ? "text-red-500" : ""}`}>{fmtBRL(excesso)}</td>
                       </tr>
                     );
                   })}
