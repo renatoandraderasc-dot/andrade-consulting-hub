@@ -63,6 +63,7 @@ export default function Relatorios() {
   const [rodado, setRodado] = useState<RelatorioDef | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
+  const [doCache, setDoCache] = useState(false);
 
   useEffect(() => {
     (async () => {
