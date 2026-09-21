@@ -294,17 +294,26 @@ export default function PainelComparativo() {
   }
 
   async function buscarMes(sid: string, ano: number, mes: number, de: string, ate: string, dept: string) {
-    const params: Record<string, unknown> = { inicio: de, fim: ate };
-    if (dept !== TODOS) params.departamento = dept;
-    const r = await comLimite(
-      chamarRelatorio(sid, "diagnostico_mensal", params).catch(() => ({ ...VAZIO, erro: "Falha na consulta." })),
-      70000,
-      { ...VAZIO, erro: "O sistema da loja demorou demais para responder." },
-    );
-    const msg = avisoRelatorio(r);
-    if (msg) return { row: null as MesRow | null, aviso: msg, temDept: true };
+    const chaveDeptCache = dept === TODOS ? "" : dept;
+    const guardado = await lerPeriodoCache(sid, "diagnostico_mensal", chaveDeptCache, de, ate);
 
-    const linhas = r.dados ?? [];
+    let linhas: any[];
+    if (guardado) {
+      linhas = guardado;
+    } else {
+      const params: Record<string, unknown> = { inicio: de, fim: ate };
+      if (dept !== TODOS) params.departamento = dept;
+      const r = await comLimite(
+        chamarRelatorio(sid, "diagnostico_mensal", params).catch(() => ({ ...VAZIO, erro: "Falha na consulta." })),
+        70000,
+        { ...VAZIO, erro: "O sistema da loja demorou demais para responder." },
+      );
+      const msg = avisoRelatorio(r);
+      if (msg) return { row: null as MesRow | null, aviso: msg, temDept: true };
+      linhas = r.dados ?? [];
+      await gravarPeriodoCache(sid, "diagnostico_mensal", chaveDeptCache, de, ate, linhas);
+    }
+
     const temDept = linhas.some((l: any) => pick(l, "departamento", "secao", "setor") !== undefined);
     const row = vazio(ano, mes);
     for (const l of linhas) {
