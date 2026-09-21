@@ -27,6 +27,7 @@ import Compras from "./pages/Compras";
 import EstoqueDinamico from "./pages/EstoqueDinamico";
 import Relatorios from "./pages/Relatorios";
 import PainelAnalitico from "./pages/PainelAnalitico";
+import PainelComparativo from "./pages/PainelComparativo";
 import Repricing from "./pages/Repricing";
 import Pricing from "./pages/Pricing";
 import VtexCollector from "./pages/VtexCollector";
