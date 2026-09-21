@@ -96,7 +96,36 @@ const Controladoria = () => {
     }
   };
 
-  if (authLoading) {
+  const canSeeTab = (module: string, adminOnly?: boolean) =>
+    isAdmin || (!adminOnly && (allowedModules === null || allowedModules.has("controladoria") || allowedModules.has(module)));
+
+  const visibleTabs = CONTROLADORIA_TABS.filter((t) => canSeeTab(t.module, t.adminOnly));
+
+  // Ao terminar de carregar as permissões, abre na primeira aba liberada.
+  useEffect(() => {
+    if (allowedModules !== undefined) {
+      setTab(CONTROLADORIA_TABS.find((t) => canSeeTab(t.module, t.adminOnly))?.value || "contrede");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allowedModules, isAdmin]);
+
+  const tabContent = (value: string) => {
+    switch (value) {
+      case "contrede": return <ContRedeTab storeId={storeId} onGoClassificacao={() => setTab("classificacao-vr")} />;
+      case "lancamentos": return <LancamentosTab storeId={storeId} storeName={storeName} />;
+      case "historico": return <HistoricoTab storeId={storeId} />;
+      case "classificacoes": return <ClassificacoesConfigTab />;
+      case "categorias": return <CategoriasConfigTab />;
+      case "agenda": return <AgendaFinanceiraTab storeId={storeId} />;
+      case "analise-financeira": return <AnaliseFinanceiraTab storeId={storeId} storeName={storeName} />;
+      case "agenda-analise": return <AgendaAnaliseTab storeId={storeId} />;
+      case "dados-vr": return <DadosVrTab storeId={storeId} />;
+      case "classificacao-vr": return <ClassificacaoVrTab storeId={storeId} />;
+      default: return null;
+    }
+  };
+
+  if (authLoading || allowedModules === undefined) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p className="text-muted-foreground font-body">Carregando...</p>
