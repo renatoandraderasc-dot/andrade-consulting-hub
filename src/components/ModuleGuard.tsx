@@ -50,9 +50,20 @@ const ModuleGuard = ({ module, children }: ModuleGuardProps) => {
   }
 
   // módulos que dão acesso à mesma rota (ex.: visualizador só de %)
+  // Controladoria: a rota /controladoria abre se o usuário tiver o módulo
+  // completo OU qualquer uma das abas liberadas individualmente.
+  const CONTROLADORIA_KEYS = [
+    "controladoria", "controladoria_contrede", "controladoria_lancamentos",
+    "controladoria_historico", "controladoria_classificacoes", "controladoria_categorias",
+    "controladoria_agenda", "controladoria_analise_financeira", "controladoria_agenda_analise",
+    "controladoria_dados_vr", "controladoria_classificacao_vr",
+  ];
   const ALIASES: Record<string, string[]> = {
     pic: ["pic", "pic_percentual"],
     pic_percentual: ["pic", "pic_percentual"],
+    ...Object.fromEntries(
+      CONTROLADORIA_KEYS.map((k) => [k, CONTROLADORIA_KEYS])
+    ),
   };
   const keys = ALIASES[module] || [module];
 
