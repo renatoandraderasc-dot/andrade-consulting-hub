@@ -39,6 +39,28 @@ const Controladoria = () => {
   const [storeName, setStoreName] = useState("");
   const [storeId, setStoreId] = useState("");
   const [tab, setTab] = useState("contrede");
+  // undefined = ainda carregando permissões; null = sem restrição (tudo liberado)
+  const [allowedModules, setAllowedModules] = useState<Set<string> | null | undefined>(undefined);
+
+  useEffect(() => {
+    if (!user || isAdmin) {
+      setAllowedModules(null);
+      return;
+    }
+    let active = true;
+    supabase
+      .from("user_module_access")
+      .select("module, allowed")
+      .eq("user_id", user.id)
+      .then(({ data }) => {
+        if (!active) return;
+        const rows = data || [];
+        setAllowedModules(
+          rows.length === 0 ? null : new Set(rows.filter((r) => r.allowed).map((r) => r.module))
+        );
+      });
+    return () => { active = false; };
+  }, [user, isAdmin]);
 
 
   useEffect(() => {
