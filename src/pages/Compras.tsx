@@ -18,7 +18,6 @@ import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
 import ClientLayout from "@/components/ClientLayout";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import HierarquiaVendasTable from "@/components/relatorios/HierarquiaVendasTable";
 import { carregarBaseCatalogo } from "@/lib/catalogoProdutos";
 import { CartProgressOverlay } from "@/components/CartProgress";
 import { useAutoRefresh } from "@/hooks/useSaasConfig";
@@ -107,6 +106,14 @@ const Compras = () => {
   const [fornecedores, setFornecedores] = useState<any[]>([]);
   const [fornLoading, setFornLoading] = useState(false);
 
+  // Abertura ate produto (relatorio compras_vendas_produto), carregada
+  // apenas quando o usuario expande uma secao e mantida em cache por periodo.
+  const [produtosCache, setProdutosCache] = useState<Record<string, ProdLinha[]>>({});
+  const [produtosLoading, setProdutosLoading] = useState<string | null>(null);
+  const [produtosAviso, setProdutosAviso] = useState<string | null>(null);
+  const [painelExp, setPainelExp] = useState<Record<string, boolean>>({});
+  const [metaDashboard, setMetaDashboard] = useState(0);
+
   // Aba 3
   const [cfg, setCfg] = useState<any>({
     meta_venda_mes: 0, parcelas_excesso: 3, hist_inicio: "", hist_fim: "",
@@ -182,6 +189,11 @@ const Compras = () => {
       const { inicio, fim } = janela6Meses(year, month);
       setCfg({ meta_venda_mes: 0, parcelas_excesso: 6, hist_inicio: inicio, hist_fim: fim });
     }
+    // A meta de venda do mes e sempre a do Dashboard de Vendas (depto LOJA).
+    const { data: metaDash } = await (supabase as any).rpc("meta_venda_mes_dashboard", {
+      p_store_id: storeId, p_ano: year, p_mes: month,
+    });
+    setMetaDashboard(Number(metaDash) || 0);
   };
 
 
