@@ -176,11 +176,11 @@ export const DRE_STRUCTURE_COMERCIAL: DRENode[] = [
     ],
   },
 
-  // ===== COMPRA DO MÊS =====
+  // ===== COMPRA DO MÊS (entrada de NF para revenda, vinda do histórico de compras) =====
   {
-    id: "compra_mes", name: "COMPRA DO MÊS", level: 0, isGroup: true, isResult: false, tipo: "Compra do Mês",
+    id: "compra_mes", name: "COMPRA DO MÊS (ENTRADA DE NF)", level: 0, isGroup: true, isResult: false, tipo: "Compra do Mês",
     children: [
-      { id: "compra_fornec", name: "Pagamento Fornecedores", level: 1, isGroup: false, isResult: false, tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS", catchAll: true },
+      { id: "compra_fornec", name: "Entrada de NF para revenda", level: 1, isGroup: false, isResult: false, tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS", catchAll: true },
     ],
   },
 
