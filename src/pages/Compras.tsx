@@ -256,6 +256,9 @@ const Compras = () => {
           || mapa.get(norm(String(col(l, "secao") ?? "")))
           || "SEM DEPARTAMENTO";
 
+        // Usuario restrito a departamentos: ignora os demais.
+        if (restrito && !permiteDept(dep)) continue;
+
         const cur = acc[dep] || { compra: 0, venda: 0, cmv: 0 };
         cur.compra += num(col(l, "total_compra", "compra", "compras"));
         cur.venda += num(col(l, "total_venda", "venda", "vendas", "total_vendido"));
