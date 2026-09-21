@@ -79,7 +79,7 @@ export default function Relatorios() {
   );
   const nomeLoja = lojas.find((l) => l.id === storeId)?.name ?? "";
 
-  async function rodar() {
+  async function rodar(forcar = false) {
     if (!storeId) {
       toast({ title: "Escolha a loja", variant: "destructive" });
       return;
@@ -92,6 +92,20 @@ export default function Relatorios() {
     setAviso(null);
     setLinhas([]);
     setColunas([]);
+    setDoCache(false);
+
+    if (forcar) await limparPeriodoCache(storeId, def.nome, "", inicio, fim);
+
+    const guardado = forcar ? null : await lerPeriodoCache(storeId, def.nome, "", inicio, fim);
+    if (guardado?.length) {
+      setCarregando(false);
+      setRodado(def);
+      setDoCache(true);
+      setColunas(Object.keys(guardado[0]));
+      setLinhas(guardado);
+      return;
+    }
+
     const r = await chamarRelatorio(storeId, def.nome, { inicio, fim });
     setCarregando(false);
     setRodado(def);
@@ -111,6 +125,7 @@ export default function Relatorios() {
     }
     setColunas(Object.keys(dados[0]));
     setLinhas(dados);
+    await gravarPeriodoCache(storeId, def.nome, "", inicio, fim, dados);
   }
 
   function exportar() {
