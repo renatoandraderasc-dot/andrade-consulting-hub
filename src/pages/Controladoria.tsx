@@ -152,114 +152,22 @@ const Controladoria = () => {
 
         <Tabs value={tab} onValueChange={setTab} className="w-full">
           <TabsList className="mb-6 bg-card border border-border h-11 flex-wrap">
-            <TabsTrigger
-              value="contrede"
-              className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
-            >
-              Cont Rede
-            </TabsTrigger>
-            <TabsTrigger
-              value="lancamentos"
-              className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
-            >
-              Lançamentos
-            </TabsTrigger>
-            <TabsTrigger
-              value="historico"
-              className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
-            >
-              Histórico
-            </TabsTrigger>
-            <TabsTrigger
-              value="classificacoes"
-              className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
-            >
-              Classificações
-            </TabsTrigger>
-            <TabsTrigger
-              value="categorias"
-              className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
-            >
-              Categorias
-            </TabsTrigger>
-            <TabsTrigger
-              value="agenda"
-              className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
-            >
-              Agenda Financeira
-            </TabsTrigger>
-            <TabsTrigger
-              value="analise-financeira"
-              className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
-            >
-              Análise Financeira
-            </TabsTrigger>
-            <TabsTrigger
-              value="agenda-analise"
-              className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
-            >
-              Análise Agenda
-            </TabsTrigger>
-            <TabsTrigger
-              value="dados-vr"
-              className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
-            >
-              Dados do VR
-            </TabsTrigger>
-            {isAdmin && (
+            {visibleTabs.map((t) => (
               <TabsTrigger
-                value="classificacao-vr"
+                key={t.value}
+                value={t.value}
                 className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
               >
-                Classificação VR
+                {t.label}
               </TabsTrigger>
-            )}
+            ))}
           </TabsList>
 
-
-          <TabsContent value="contrede">
-            <ContRedeTab storeId={storeId} onGoClassificacao={() => setTab("classificacao-vr")} />
-          </TabsContent>
-
-          {isAdmin && (
-            <TabsContent value="classificacao-vr">
-              <ClassificacaoVrTab storeId={storeId} />
+          {visibleTabs.map((t) => (
+            <TabsContent key={t.value} value={t.value}>
+              {tabContent(t.value)}
             </TabsContent>
-          )}
-
-
-          <TabsContent value="lancamentos">
-            <LancamentosTab storeId={storeId} storeName={storeName} />
-          </TabsContent>
-
-          <TabsContent value="historico">
-            <HistoricoTab storeId={storeId} />
-          </TabsContent>
-
-          <TabsContent value="classificacoes">
-            <ClassificacoesConfigTab />
-          </TabsContent>
-
-          <TabsContent value="categorias">
-            <CategoriasConfigTab />
-          </TabsContent>
-
-          <TabsContent value="agenda">
-            <AgendaFinanceiraTab storeId={storeId} />
-          </TabsContent>
-
-          <TabsContent value="analise-financeira">
-            <AnaliseFinanceiraTab storeId={storeId} storeName={storeName} />
-          </TabsContent>
-
-          <TabsContent value="agenda-analise">
-            <AgendaAnaliseTab storeId={storeId} />
-          </TabsContent>
-
-          <TabsContent value="dados-vr">
-            <DadosVrTab storeId={storeId} />
-          </TabsContent>
-
+          ))}
         </Tabs>
       </div>
     </ClientLayout>
