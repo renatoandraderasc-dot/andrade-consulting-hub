@@ -162,6 +162,26 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
 
   useEffect(() => { fetchVendaPeriodo(); }, [fetchVendaPeriodo]);
 
+  // COMPRA DO MÊS = entrada de NF para revenda (histórico de compras do módulo
+  // Compras). Sem isso a linha repetia o pagamento a fornecedores.
+  const [compraNf, setCompraNf] = useState<number | null>(null);
+  useEffect(() => {
+    if (!storeId) { setCompraNf(null); return; }
+    let ativo = true;
+    (async () => {
+      const { data } = await supabase
+        .from("compras_historico")
+        .select("compra")
+        .eq("store_id", storeId)
+        .eq("ano", ano)
+        .eq("mes", mes);
+      if (!ativo) return;
+      const linhas = (data as any[]) || [];
+      setCompraNf(linhas.length ? linhas.reduce((s, l) => s + Number(l.compra || 0), 0) : null);
+    })();
+    return () => { ativo = false; };
+  }, [storeId, mes, ano]);
+
   const structure = modo === "comercial" ? DRE_STRUCTURE_COMERCIAL : DRE_STRUCTURE_FINANCEIRO;
 
   // Deduplicação: mesmo Beneficiário + mesmo valor conta apenas 1 vez no DRE
