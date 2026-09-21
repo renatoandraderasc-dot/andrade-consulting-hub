@@ -46,6 +46,7 @@ const navGroups: NavGroup[] = [
       { key: "dashboard", path: "/dashboard", label: "Dashboard", icon: BarChart3 },
       { key: "pic", path: "/pic", label: "PIC", icon: Trophy },
       { key: "analise_anual", path: "/analise-anual", label: "Análise Anual", icon: TrendingUp },
+      { key: "relatorios", path: "/relatorios", label: "Relatórios", icon: FileSpreadsheet },
     ],
   },
   {
