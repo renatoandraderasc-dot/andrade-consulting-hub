@@ -150,8 +150,18 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
     });
   }, [user, isAdmin]);
 
-  const canSee = (key: string) =>
-    isAdmin || allowedModules === null || allowedModules.size === 0 || allowedModules.has(key);
+  const CONTROLADORIA_TAB_KEYS = [
+    "controladoria_contrede", "controladoria_lancamentos", "controladoria_historico",
+    "controladoria_classificacoes", "controladoria_categorias", "controladoria_agenda",
+    "controladoria_analise_financeira", "controladoria_agenda_analise",
+    "controladoria_dados_vr", "controladoria_classificacao_vr",
+  ];
+  const canSee = (key: string) => {
+    if (isAdmin || allowedModules === null || allowedModules.size === 0 || allowedModules.has(key)) return true;
+    // Controladoria aparece no menu se o usuário tiver qualquer aba liberada.
+    if (key === "controladoria") return CONTROLADORIA_TAB_KEYS.some((k) => allowedModules!.has(k));
+    return false;
+  };
 
   const handleSignOut = async () => {
     await signOut();

@@ -17,12 +17,50 @@ import { ClassificacaoVrTab } from "@/components/controladoria/ClassificacaoVrTa
 import { ClipboardList } from "lucide-react";
 import { motion } from "framer-motion";
 
+// Cada aba da Controladoria pode ser liberada/bloqueada individualmente no
+// Controle de Páginas (Admin: Usuários). O módulo completo "controladoria"
+// libera todas de uma vez.
+const CONTROLADORIA_TABS = [
+  { value: "contrede", label: "Cont Rede", module: "controladoria_contrede" },
+  { value: "lancamentos", label: "Lançamentos", module: "controladoria_lancamentos" },
+  { value: "historico", label: "Histórico", module: "controladoria_historico" },
+  { value: "classificacoes", label: "Classificações", module: "controladoria_classificacoes" },
+  { value: "categorias", label: "Categorias", module: "controladoria_categorias" },
+  { value: "agenda", label: "Agenda Financeira", module: "controladoria_agenda" },
+  { value: "analise-financeira", label: "Análise Financeira", module: "controladoria_analise_financeira" },
+  { value: "agenda-analise", label: "Análise Agenda", module: "controladoria_agenda_analise" },
+  { value: "dados-vr", label: "Dados do VR", module: "controladoria_dados_vr" },
+  { value: "classificacao-vr", label: "Classificação VR", module: "controladoria_classificacao_vr", adminOnly: true },
+];
+
 const Controladoria = () => {
   const { user, isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [storeName, setStoreName] = useState("");
   const [storeId, setStoreId] = useState("");
   const [tab, setTab] = useState("contrede");
+  // undefined = ainda carregando permissões; null = sem restrição (tudo liberado)
+  const [allowedModules, setAllowedModules] = useState<Set<string> | null | undefined>(undefined);
+
+  useEffect(() => {
+    if (!user || isAdmin) {
+      setAllowedModules(null);
+      return;
+    }
+    let active = true;
+    supabase
+      .from("user_module_access")
+      .select("module, allowed")
+      .eq("user_id", user.id)
+      .then(({ data }) => {
+        if (!active) return;
+        const rows = data || [];
+        setAllowedModules(
+          rows.length === 0 ? null : new Set(rows.filter((r) => r.allowed).map((r) => r.module))
+        );
+      });
+    return () => { active = false; };
+  }, [user, isAdmin]);
 
 
   useEffect(() => {
@@ -58,7 +96,36 @@ const Controladoria = () => {
     }
   };
 
-  if (authLoading) {
+  const canSeeTab = (module: string, adminOnly?: boolean) =>
+    isAdmin || (!adminOnly && (allowedModules === null || allowedModules.has("controladoria") || allowedModules.has(module)));
+
+  const visibleTabs = CONTROLADORIA_TABS.filter((t) => canSeeTab(t.module, t.adminOnly));
+
+  // Ao terminar de carregar as permissões, abre na primeira aba liberada.
+  useEffect(() => {
+    if (allowedModules !== undefined) {
+      setTab(CONTROLADORIA_TABS.find((t) => canSeeTab(t.module, t.adminOnly))?.value || "contrede");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allowedModules, isAdmin]);
+
+  const tabContent = (value: string) => {
+    switch (value) {
+      case "contrede": return <ContRedeTab storeId={storeId} onGoClassificacao={() => setTab("classificacao-vr")} />;
+      case "lancamentos": return <LancamentosTab storeId={storeId} storeName={storeName} />;
+      case "historico": return <HistoricoTab storeId={storeId} />;
+      case "classificacoes": return <ClassificacoesConfigTab />;
+      case "categorias": return <CategoriasConfigTab />;
+      case "agenda": return <AgendaFinanceiraTab storeId={storeId} />;
+      case "analise-financeira": return <AnaliseFinanceiraTab storeId={storeId} storeName={storeName} />;
+      case "agenda-analise": return <AgendaAnaliseTab storeId={storeId} />;
+      case "dados-vr": return <DadosVrTab storeId={storeId} />;
+      case "classificacao-vr": return <ClassificacaoVrTab storeId={storeId} />;
+      default: return null;
+    }
+  };
+
+  if (authLoading || allowedModules === undefined) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p className="text-muted-foreground font-body">Carregando...</p>
@@ -85,114 +152,22 @@ const Controladoria = () => {
 
         <Tabs value={tab} onValueChange={setTab} className="w-full">
           <TabsList className="mb-6 bg-card border border-border h-11 flex-wrap">
-            <TabsTrigger
-              value="contrede"
-              className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
-            >
-              Cont Rede
-            </TabsTrigger>
-            <TabsTrigger
-              value="lancamentos"
-              className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
-            >
-              Lançamentos
-            </TabsTrigger>
-            <TabsTrigger
-              value="historico"
-              className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
-            >
-              Histórico
-            </TabsTrigger>
-            <TabsTrigger
-              value="classificacoes"
-              className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
-            >
-              Classificações
-            </TabsTrigger>
-            <TabsTrigger
-              value="categorias"
-              className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
-            >
-              Categorias
-            </TabsTrigger>
-            <TabsTrigger
-              value="agenda"
-              className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
-            >
-              Agenda Financeira
-            </TabsTrigger>
-            <TabsTrigger
-              value="analise-financeira"
-              className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
-            >
-              Análise Financeira
-            </TabsTrigger>
-            <TabsTrigger
-              value="agenda-analise"
-              className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
-            >
-              Análise Agenda
-            </TabsTrigger>
-            <TabsTrigger
-              value="dados-vr"
-              className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
-            >
-              Dados do VR
-            </TabsTrigger>
-            {isAdmin && (
+            {visibleTabs.map((t) => (
               <TabsTrigger
-                value="classificacao-vr"
+                key={t.value}
+                value={t.value}
                 className="data-[state=active]:bg-secondary data-[state=active]:text-secondary-foreground px-3 sm:px-6 font-medium text-xs sm:text-sm"
               >
-                Classificação VR
+                {t.label}
               </TabsTrigger>
-            )}
+            ))}
           </TabsList>
 
-
-          <TabsContent value="contrede">
-            <ContRedeTab storeId={storeId} onGoClassificacao={() => setTab("classificacao-vr")} />
-          </TabsContent>
-
-          {isAdmin && (
-            <TabsContent value="classificacao-vr">
-              <ClassificacaoVrTab storeId={storeId} />
+          {visibleTabs.map((t) => (
+            <TabsContent key={t.value} value={t.value}>
+              {tabContent(t.value)}
             </TabsContent>
-          )}
-
-
-          <TabsContent value="lancamentos">
-            <LancamentosTab storeId={storeId} storeName={storeName} />
-          </TabsContent>
-
-          <TabsContent value="historico">
-            <HistoricoTab storeId={storeId} />
-          </TabsContent>
-
-          <TabsContent value="classificacoes">
-            <ClassificacoesConfigTab />
-          </TabsContent>
-
-          <TabsContent value="categorias">
-            <CategoriasConfigTab />
-          </TabsContent>
-
-          <TabsContent value="agenda">
-            <AgendaFinanceiraTab storeId={storeId} />
-          </TabsContent>
-
-          <TabsContent value="analise-financeira">
-            <AnaliseFinanceiraTab storeId={storeId} storeName={storeName} />
-          </TabsContent>
-
-          <TabsContent value="agenda-analise">
-            <AgendaAnaliseTab storeId={storeId} />
-          </TabsContent>
-
-          <TabsContent value="dados-vr">
-            <DadosVrTab storeId={storeId} />
-          </TabsContent>
-
+          ))}
         </Tabs>
       </div>
     </ClientLayout>
