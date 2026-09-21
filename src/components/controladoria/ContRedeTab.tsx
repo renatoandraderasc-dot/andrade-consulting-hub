@@ -223,10 +223,9 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
       overrides.cmv = cmvPeriodo;
       overrides.cmv_merc = cmvPeriodo;
     }
-    if (compraNf !== null) {
-      overrides.compra_mes = compraNf;
-      overrides.compra_fornec = compraNf;
-    }
+    // Sem histórico importado a linha fica zerada (e não repetindo o pagamento).
+    overrides.compra_mes = compraNf ?? 0;
+    overrides.compra_fornec = compraNf ?? 0;
     return calcularDRE(structure, lancamentosUnicos.map(l => ({
       tipo: l.tipo,
       subtipo: l.subtipo,
