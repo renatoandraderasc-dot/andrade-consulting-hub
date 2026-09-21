@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { carregarLojasPermitidas, type LojaSimples } from "@/lib/lojasPermitidas";
 import { chamarRelatorio, avisoRelatorio, pick, num, txt } from "@/lib/vrReport";
+import { lerPeriodoCache, gravarPeriodoCache } from "@/lib/relatorioCache";
 import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
 import { chaveDept } from "@/lib/departamentosPermitidos";
 import { exportarPdf, exportarPptx, type BlocoExport } from "@/lib/exportComparativo";
