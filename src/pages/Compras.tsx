@@ -414,10 +414,10 @@ const Compras = () => {
 
   const gerarMetas = async () => {
     if (!isAdmin) return;
-    if (!(Number(cfg.meta_venda_mes) > 0)) {
+    if (!(metaDashboard > 0)) {
       toast({
-        title: "Cadastre a meta de faturamento",
-        description: "Informe a meta de venda do mês e salve antes de gerar as metas de compra.",
+        title: "Meta de venda não encontrada",
+        description: "Lance a meta de vendas do mês no Dashboard antes de gerar as metas de compra.",
         variant: "destructive",
       });
       return;
