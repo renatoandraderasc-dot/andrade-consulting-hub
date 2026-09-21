@@ -103,6 +103,7 @@ const App = () => (
             <Route path="/estoque-dinamico" element={g("estoque_dinamico", <EstoqueDinamico />)} />
             <Route path="/relatorios" element={g("relatorios", <Relatorios />)} />
             <Route path="/painel-analitico" element={g("painel_analitico", <PainelAnalitico />)} />
+            <Route path="/painel-comparativo" element={g("painel_comparativo", <PainelComparativo />)} />
             <Route path="/precificacao/pricing" element={g("pricing", <Pricing />)} />
             <Route path="/repricing" element={g("repricing", <Repricing />)} />
             <Route path="/vtex-collector" element={g("vtex_collector", <VtexCollector />)} />
