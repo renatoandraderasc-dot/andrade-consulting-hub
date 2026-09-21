@@ -17,6 +17,22 @@ import { ClassificacaoVrTab } from "@/components/controladoria/ClassificacaoVrTa
 import { ClipboardList } from "lucide-react";
 import { motion } from "framer-motion";
 
+// Cada aba da Controladoria pode ser liberada/bloqueada individualmente no
+// Controle de Páginas (Admin: Usuários). O módulo completo "controladoria"
+// libera todas de uma vez.
+const CONTROLADORIA_TABS = [
+  { value: "contrede", label: "Cont Rede", module: "controladoria_contrede" },
+  { value: "lancamentos", label: "Lançamentos", module: "controladoria_lancamentos" },
+  { value: "historico", label: "Histórico", module: "controladoria_historico" },
+  { value: "classificacoes", label: "Classificações", module: "controladoria_classificacoes" },
+  { value: "categorias", label: "Categorias", module: "controladoria_categorias" },
+  { value: "agenda", label: "Agenda Financeira", module: "controladoria_agenda" },
+  { value: "analise-financeira", label: "Análise Financeira", module: "controladoria_analise_financeira" },
+  { value: "agenda-analise", label: "Análise Agenda", module: "controladoria_agenda_analise" },
+  { value: "dados-vr", label: "Dados do VR", module: "controladoria_dados_vr" },
+  { value: "classificacao-vr", label: "Classificação VR", module: "controladoria_classificacao_vr", adminOnly: true },
+];
+
 const Controladoria = () => {
   const { user, isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
