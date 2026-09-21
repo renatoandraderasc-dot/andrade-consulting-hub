@@ -324,10 +324,15 @@ export default function PainelAnalitico() {
         </div>
 
         {carregando && (
-          <div className="grid gap-3 md:grid-cols-4">
-            {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
-          </div>
+          <>
+            <CartProgressOverlay value={progresso} label="Carregando o Painel Analítico" detail={etapa} />
+            <CartProgress value={progresso} label="Carregando o Painel Analítico" detail={etapa} />
+            <div className="grid gap-3 md:grid-cols-4">
+              {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
+            </div>
+          </>
         )}
+
 
         {!carregando && aviso && (
           <Card className="p-4 text-sm">{aviso}</Card>
