@@ -18,13 +18,24 @@ import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
 import ClientLayout from "@/components/ClientLayout";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import HierarquiaVendasTable from "@/components/relatorios/HierarquiaVendasTable";
 import { carregarBaseCatalogo } from "@/lib/catalogoProdutos";
 import { CartProgressOverlay } from "@/components/CartProgress";
 import { useAutoRefresh } from "@/hooks/useSaasConfig";
 
 
 interface Store { id: string; name: string }
+
+/** Linha do relatorio compras_vendas_produto (abertura ate produto). */
+interface ProdLinha {
+  departamento: string;
+  secao: string;
+  codigo: string;
+  descricao: string;
+  ean: string;
+  venda: number;
+  cmv: number;
+  compra: number;
+}
 
 const MONTHS = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
@@ -107,6 +118,14 @@ const Compras = () => {
   const [fornecedores, setFornecedores] = useState<any[]>([]);
   const [fornLoading, setFornLoading] = useState(false);
 
+  // Abertura ate produto (relatorio compras_vendas_produto), carregada
+  // apenas quando o usuario expande uma secao e mantida em cache por periodo.
+  const [produtosCache, setProdutosCache] = useState<Record<string, ProdLinha[]>>({});
+  const [produtosLoading, setProdutosLoading] = useState<string | null>(null);
+  const [produtosAviso, setProdutosAviso] = useState<string | null>(null);
+  const [painelExp, setPainelExp] = useState<Record<string, boolean>>({});
+  const [metaDashboard, setMetaDashboard] = useState(0);
+
   // Aba 3
   const [cfg, setCfg] = useState<any>({
     meta_venda_mes: 0, parcelas_excesso: 3, hist_inicio: "", hist_fim: "",
@@ -182,6 +201,11 @@ const Compras = () => {
       const { inicio, fim } = janela6Meses(year, month);
       setCfg({ meta_venda_mes: 0, parcelas_excesso: 6, hist_inicio: inicio, hist_fim: fim });
     }
+    // A meta de venda do mes e sempre a do Dashboard de Vendas (depto LOJA).
+    const { data: metaDash } = await (supabase as any).rpc("meta_venda_mes_dashboard", {
+      p_store_id: storeId, p_ano: year, p_mes: month,
+    });
+    setMetaDashboard(Number(metaDash) || 0);
   };
 
 
@@ -402,10 +426,10 @@ const Compras = () => {
 
   const gerarMetas = async () => {
     if (!isAdmin) return;
-    if (!(Number(cfg.meta_venda_mes) > 0)) {
+    if (!(metaDashboard > 0)) {
       toast({
-        title: "Cadastre a meta de faturamento",
-        description: "Informe a meta de venda do mês e salve antes de gerar as metas de compra.",
+        title: "Meta de venda não encontrada",
+        description: "Lance a meta de vendas do mês no Dashboard antes de gerar as metas de compra.",
         variant: "destructive",
       });
       return;
@@ -451,6 +475,12 @@ const Compras = () => {
         meta_venda: Number(m.meta_venda) || 0,
         meta_compra,
         compra_sobre_venda: (Number(m.compra_sobre_venda) || 0) * 100,
+        cmv_pct: (Number(m.cmv_pct) || 0) * 100,
+        excesso_hist: Number(m.excesso_hist) || 0,
+        parcela_excesso: Number(m.parcela_excesso) || 0,
+        venda_hist: Number(m.venda_hist) || 0,
+        cmv_hist: Number(m.cmv_hist) || 0,
+        compra_hist: Number(m.compra_hist) || 0,
         realizado: real.compra,
         saldo,
         consumido,
@@ -462,9 +492,11 @@ const Compras = () => {
     const meta_venda = painelRows.reduce((s, r) => s + r.meta_venda, 0);
     const meta_compra = painelRows.reduce((s, r) => s + r.meta_compra, 0);
     const realizado = painelRows.reduce((s, r) => s + r.realizado, 0);
+    const excesso_hist = painelRows.reduce((s, r) => s + r.excesso_hist, 0);
+    const parcela_excesso = painelRows.reduce((s, r) => s + r.parcela_excesso, 0);
     const saldo = meta_compra - realizado;
     const consumido = meta_compra > 0 ? (realizado / meta_compra) * 100 : 0;
-    return { meta_venda, meta_compra, realizado, saldo, consumido };
+    return { meta_venda, meta_compra, realizado, saldo, consumido, excesso_hist, parcela_excesso };
   }, [painelRows]);
 
   // ============ Derived (Aba 2) ============
@@ -555,30 +587,91 @@ const Compras = () => {
     [cvFiltrados],
   );
 
+  // Excesso liquido: compra total menos CMV total (pode ficar negativo).
+  const cvExcessoLiquido = cvTotais.compra - cvTotais.cmv;
+
+  // ---- Abertura ate produto (compras_vendas_produto), sob acao do usuario ----
+  const chaveProdutos = (inicio: string, fim: string) => `${storeId}|${inicio}|${fim}`;
+
+  const carregarProdutos = async (inicio: string, fim: string) => {
+    const key = chaveProdutos(inicio, fim);
+    if (!storeId || !inicio || !fim || produtosCache[key] || produtosLoading === key) return;
+    setProdutosLoading(key);
+    try {
+      const r = await chamarRelatorio(storeId, "compras_vendas_produto", { inicio, fim });
+      setProdutosAviso(avisoRelatorio(r));
+      const linhas: ProdLinha[] = (r.dados || [])
+        .map((l: any) => ({
+          departamento: mercadologico1(l) || "SEM DEPARTAMENTO",
+          secao: String(col(l, "secao", "nivel2", "grupo", "categoria") ?? "").trim().toUpperCase() || "SEM SEÇÃO",
+          codigo: String(col(l, "codigo", "cod_produto", "id_produto") ?? ""),
+          descricao: String(col(l, "descricao", "produto") ?? "").trim(),
+          ean: String(col(l, "barras", "ean", "codigo_barras") ?? ""),
+          venda: num(col(l, "total_venda", "venda", "vendas", "total_vendido")),
+          cmv: num(col(l, "custo_com_imposto", "custo_c_imposto", "cmv", "custo")),
+          compra: num(col(l, "total_compra", "compra", "compras")),
+        }))
+        .filter((p: ProdLinha) => permiteDept(p.departamento));
+      setProdutosCache((c) => ({ ...c, [key]: linhas }));
+    } catch (e: any) {
+      setProdutosAviso(e?.message ?? String(e));
+      setProdutosCache((c) => ({ ...c, [key]: [] }));
+    } finally {
+      setProdutosLoading(null);
+    }
+  };
+
+  const produtosDaSecao = (key: string, dep: string, secao: string) =>
+    (produtosCache[key] || [])
+      .filter((p) => chaveDep(p.departamento) === chaveDep(dep) && chaveDep(p.secao) === chaveDep(secao))
+      .sort((a, b) => b.venda - a.venda);
+
+  const secoesDoDep = (key: string, dep: string) => {
+    const acc = new Map<string, { secao: string; venda: number; cmv: number; compra: number }>();
+    for (const p of produtosCache[key] || []) {
+      if (chaveDep(p.departamento) !== chaveDep(dep)) continue;
+      const cur = acc.get(p.secao) ?? { secao: p.secao, venda: 0, cmv: 0, compra: 0 };
+      cur.venda += p.venda; cur.cmv += p.cmv; cur.compra += p.compra;
+      acc.set(p.secao, cur);
+    }
+    return [...acc.values()].sort((a, b) => b.compra - a.compra);
+  };
+
   const exportarComprasVendas = () => {
     const linhas: any[] = [];
     for (const g of cvGrupos) {
       linhas.push({
         Nível: "Departamento", Departamento: g.departamento, Seção: "",
-        "Qtd venda": g.qtde_venda, Venda: g.venda, CMV: g.cmv,
+        Venda: g.venda, CMV: g.cmv,
         "Margem %": g.margem, "Markup %": g.markup,
-        "Qtd compra": g.qtde_compra, Compra: g.compra,
-        "Venda - Compra": g.saldo_venda, "CMV - Compra": g.saldo_cmv,
+        Compra: g.compra, "CMV - Compra": g.saldo_cmv,
+        Excesso: Math.max(g.compra - g.cmv, 0),
         "Compra/Venda %": g.cv, "Compra/CMV %": g.ccmv, "Participação %": g.part,
       });
       for (const s of g.secoes) {
         linhas.push({
           Nível: "Seção", Departamento: g.departamento, Seção: s.secao,
-          "Qtd venda": s.qtde_venda, Venda: s.venda, CMV: s.cmv,
+          Venda: s.venda, CMV: s.cmv,
           "Margem %": s.margem, "Markup %": s.markup,
-          "Qtd compra": s.qtde_compra, Compra: s.compra,
-          "Venda - Compra": s.saldo_venda, "CMV - Compra": s.saldo_cmv,
+          Compra: s.compra, "CMV - Compra": s.saldo_cmv,
+          Excesso: Math.max(s.compra - s.cmv, 0),
           "Compra/Venda %": s.cv, "Compra/CMV %": s.ccmv, "Participação %": s.part,
         });
       }
     }
+    const produtos = (produtosCache[chaveProdutos(cvInicio, cvFim)] || []).map((p) => ({
+      Departamento: p.departamento, Seção: p.secao, Código: p.codigo,
+      Descrição: p.descricao, EAN: p.ean,
+      Venda: p.venda, CMV: p.cmv, Compra: p.compra,
+      "CMV - Compra": p.cmv - p.compra,
+      Excesso: Math.max(p.compra - p.cmv, 0),
+      "Margem %": p.venda > 0 ? ((p.venda - p.cmv) / p.venda) * 100 : 0,
+    }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(linhas), "Compras x Vendas");
+    if (produtos.length) {
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(produtos), "Produtos");
+    }
     salvarWorkbook(wb, "Compras x Vendas", [["Período", `${cvInicio} a ${cvFim}`]]);
   };
 
@@ -717,23 +810,49 @@ const Compras = () => {
                   <tr className="border-b border-border text-muted-foreground">
                     <th className="text-left py-2">Departamento</th>
                     <th className="text-right py-2 px-2">Meta venda</th>
+                    <th className="text-right py-2 px-2">CMV % (6m)</th>
+                    <th className="text-right py-2 px-2">Excesso 6m</th>
+                    <th className="text-right py-2 px-2">Parcela do mês</th>
                     <th className="text-right py-2 px-2">Meta compra</th>
-                    <th className="text-right py-2 px-2">C/V %</th>
-                    <th className="text-right py-2 px-2">Realizado</th>
+                    <th className="text-right py-2 px-2">Compra realizada</th>
                     <th className="text-right py-2 px-2">Saldo</th>
                     <th className="text-left py-2 px-2 min-w-[160px]">% consumido</th>
                   </tr>
                 </thead>
                 <tbody>
                   {painelRows.length === 0 && (
-                    <tr><td colSpan={7} className="py-8 text-center text-muted-foreground">Nenhuma meta gerada para este mês. Vá em Configuração.</td></tr>
+                    <tr><td colSpan={9} className="py-8 text-center text-muted-foreground">Nenhuma meta gerada para este mês. Vá em Configuração.</td></tr>
                   )}
-                  {painelRows.map((r) => (
-                    <tr key={r.departamento} className="border-b border-border/50">
-                      <td className="py-2 font-medium">{r.departamento}</td>
+                  {painelRows.map((r) => {
+                    const { inicio, fim } = monthRange(year, month);
+                    const key = chaveProdutos(inicio, fim);
+                    const aberto = !!painelExp[r.departamento];
+                    const secoes = aberto ? secoesDoDep(key, r.departamento) : [];
+                    return (
+                    <Fragment key={r.departamento}>
+                    <tr
+                      onClick={() => {
+                        setPainelExp((p) => ({ ...p, [r.departamento]: !p[r.departamento] }));
+                        if (!aberto) carregarProdutos(inicio, fim);
+                      }}
+                      className="border-b border-border/50 cursor-pointer hover:bg-muted/40"
+                    >
+                      <td className="py-2 font-medium">
+                        <span className="inline-flex items-center gap-1">
+                          {aberto ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                          {r.departamento}
+                        </span>
+                      </td>
                       <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(r.meta_venda)}</td>
+                      <td className="py-2 px-2 text-right tabular-nums">{fmtPct(r.cmv_pct)}</td>
+                      <td
+                        className="py-2 px-2 text-right tabular-nums"
+                        title={`Compra 6m ${fmtBRL(r.compra_hist)} − CMV 6m ${fmtBRL(r.cmv_hist)}`}
+                      >
+                        {fmtBRL(r.excesso_hist)}
+                      </td>
+                      <td className={`py-2 px-2 text-right tabular-nums ${r.parcela_excesso < 0 ? "text-red-500" : ""}`}>{fmtBRL(r.parcela_excesso)}</td>
                       <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(r.meta_compra)}</td>
-                      <td className="py-2 px-2 text-right tabular-nums">{fmtPct(r.compra_sobre_venda)}</td>
                       <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(r.realizado)}</td>
                       <td className={`py-2 px-2 text-right tabular-nums font-medium ${r.saldo < 0 ? "text-red-500" : "text-emerald-500"}`}>{fmtBRL(r.saldo)}</td>
                       <td className="py-2 px-2">
@@ -745,8 +864,67 @@ const Compras = () => {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    {aberto && produtosLoading === key && (
+                      <tr className="bg-muted/10"><td colSpan={9} className="py-2 pl-9 text-xs text-muted-foreground">Carregando abertura por seção e produto…</td></tr>
+                    )}
+                    {aberto && produtosLoading !== key && secoes.length === 0 && (
+                      <tr className="bg-muted/10">
+                        <td colSpan={9} className="py-2 pl-9 text-xs text-muted-foreground">
+                          {produtosAviso || "Sem compras deste departamento no mês."}
+                        </td>
+                      </tr>
+                    )}
+                    {aberto && secoes.map((s) => {
+                      const chave = `${r.departamento}|${s.secao}`;
+                      const abertaSec = !!painelExp[chave];
+                      return (
+                        <Fragment key={chave}>
+                          <tr
+                            onClick={() => setPainelExp((p) => ({ ...p, [chave]: !p[chave] }))}
+                            className="border-b border-border/30 bg-muted/20 cursor-pointer hover:bg-muted/40 text-xs"
+                          >
+                            <td className="py-1.5 pl-9 text-muted-foreground" colSpan={9}>
+                              <span className="inline-flex items-center gap-1">
+                                {abertaSec ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                                {s.secao}
+                              </span>
+                              <span className="ml-3">Venda {fmtBRL(s.venda)} · CMV {fmtBRL(s.cmv)} · Compra {fmtBRL(s.compra)}</span>
+                              <span className={`ml-3 ${Math.max(s.compra - s.cmv, 0) > 0 ? "text-red-500" : ""}`}>
+                                Excesso {fmtBRL(Math.max(s.compra - s.cmv, 0))}
+                              </span>
+                            </td>
+                          </tr>
+                          {abertaSec && produtosDaSecao(key, r.departamento, s.secao).map((p) => (
+                            <tr key={`${chave}|${p.codigo}|${p.descricao}`} className="border-b border-border/20 bg-muted/10 text-xs">
+                              <td className="py-1.5 pl-14 text-muted-foreground" colSpan={9}>
+                                {p.codigo ? `${p.codigo} · ` : ""}{p.descricao || "SEM DESCRIÇÃO"}
+                                <span className="ml-3">Venda {fmtBRL(p.venda)} · CMV {fmtBRL(p.cmv)} · Compra {fmtBRL(p.compra)}</span>
+                                <span className={`ml-3 ${Math.max(p.compra - p.cmv, 0) > 0 ? "text-red-500" : ""}`}>
+                                  Excesso {fmtBRL(Math.max(p.compra - p.cmv, 0))}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </Fragment>
+                      );
+                    })}
+                    </Fragment>
+                    );
+                  })}
                 </tbody>
+                <tfoot>
+                  <tr className="border-t border-border font-semibold">
+                    <td className="py-3">Total</td>
+                    <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(totais.meta_venda)}</td>
+                    <td className="py-3 px-2"></td>
+                    <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(totais.excesso_hist)}</td>
+                    <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(totais.parcela_excesso)}</td>
+                    <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(totais.meta_compra)}</td>
+                    <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(totais.realizado)}</td>
+                    <td className={`py-3 px-2 text-right tabular-nums ${totais.saldo < 0 ? "text-red-500" : "text-emerald-500"}`}>{fmtBRL(totais.saldo)}</td>
+                    <td className="py-3 px-2 text-right tabular-nums">{fmtPct(totais.consumido, 0)}</td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
 
@@ -817,7 +995,7 @@ const Compras = () => {
 
             {cvGrupos.length > 0 && (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
                   <KpiCard label="Total venda" value={fmtBRL(cvTotais.venda)} />
                   <KpiCard label="CMV" value={fmtBRL(cvTotais.cmv)} />
                   <KpiCard label="Total compra" value={fmtBRL(cvTotais.compra)} />
@@ -828,22 +1006,29 @@ const Compras = () => {
                     tone={cvExcessoCompra < 0 ? "danger" : "success"}
                     emphasis
                   />
+                  <KpiCard
+                    label={cvExcessoLiquido >= 0 ? "Excesso líquido" : "Compra abaixo do CMV"}
+                    value={fmtBRL(Math.abs(cvExcessoLiquido))}
+                    tone={cvExcessoLiquido > 0 ? "danger" : "success"}
+                    emphasis
+                  />
                 </div>
+                <p className="text-xs text-muted-foreground -mt-3 mb-6">
+                  O excesso bruto soma só as seções que compraram acima do CMV; o líquido desconta as que compraram abaixo.
+                </p>
 
                 <div className="bg-card border border-border rounded-xl p-5 overflow-x-auto mb-6">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-border text-muted-foreground">
-                        <th className="text-left py-2">Departamento / Seção</th>
-                        <th className="text-right py-2 px-2">Qtd venda</th>
+                        <th className="text-left py-2">Departamento / Seção / Produto</th>
                         <th className="text-right py-2 px-2">Venda</th>
                         <th className="text-right py-2 px-2">CMV</th>
                         <th className="text-right py-2 px-2">Margem %</th>
                         <th className="text-right py-2 px-2">Markup %</th>
-                        <th className="text-right py-2 px-2">Qtd compra</th>
                         <th className="text-right py-2 px-2">Compra</th>
-                        <th className="text-right py-2 px-2">Venda − Compra</th>
                         <th className="text-right py-2 px-2">CMV − Compra</th>
+                        <th className="text-right py-2 px-2">Excesso</th>
                         <th className="text-right py-2 px-2">Compra / Venda</th>
                         <th className="text-right py-2 px-2">Compra / CMV</th>
                         <th className="text-right py-2 px-2">Participação</th>
@@ -853,6 +1038,7 @@ const Compras = () => {
                       {cvGrupos.map((g) => {
                         const aberto = !!expandidos[g.departamento];
                         const toneCcmv = (v: number) => (v > 100 ? "text-red-500" : v < 85 ? "text-amber-500" : "");
+                        const excessoDe = (r: { cmv: number; compra: number }) => Math.max(r.compra - r.cmv, 0);
                         return (
                           <Fragment key={g.departamento}>
                             <tr
@@ -866,36 +1052,84 @@ const Compras = () => {
                                   <span className="text-xs text-muted-foreground">({g.secoes.length})</span>
                                 </span>
                               </td>
-                              <td className="py-2 px-2 text-right tabular-nums">{fmtNum(g.qtde_venda, 2)}</td>
                               <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(g.venda)}</td>
                               <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(g.cmv)}</td>
                               <td className="py-2 px-2 text-right tabular-nums">{fmtPct(g.margem)}</td>
                               <td className="py-2 px-2 text-right tabular-nums">{fmtPct(g.markup)}</td>
-                              <td className="py-2 px-2 text-right tabular-nums">{fmtNum(g.qtde_compra, 2)}</td>
                               <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(g.compra)}</td>
-                              <td className={`py-2 px-2 text-right tabular-nums ${g.saldo_venda < 0 ? "text-red-500" : ""}`}>{fmtBRL(g.saldo_venda)}</td>
                               <td className={`py-2 px-2 text-right tabular-nums ${g.saldo_cmv < 0 ? "text-red-500" : ""}`}>{fmtBRL(g.saldo_cmv)}</td>
+                              <td className={`py-2 px-2 text-right tabular-nums ${excessoDe(g) > 0 ? "text-red-500" : ""}`}>{fmtBRL(excessoDe(g))}</td>
                               <td className="py-2 px-2 text-right tabular-nums">{fmtPct(g.cv)}</td>
                               <td className={`py-2 px-2 text-right tabular-nums font-medium ${toneCcmv(g.ccmv)}`}>{fmtPct(g.ccmv)}</td>
                               <td className="py-2 px-2 text-right tabular-nums">{fmtPct(g.part, 2)}</td>
                             </tr>
-                            {aberto && g.secoes.map((s) => (
-                              <tr key={`${g.departamento}|${s.secao}`} className="border-b border-border/30 bg-muted/20">
-                                <td className="py-2 pl-9 text-muted-foreground">{s.secao}</td>
-                                <td className="py-2 px-2 text-right tabular-nums">{fmtNum(s.qtde_venda, 2)}</td>
-                                <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(s.venda)}</td>
-                                <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(s.cmv)}</td>
-                                <td className="py-2 px-2 text-right tabular-nums">{fmtPct(s.margem)}</td>
-                                <td className="py-2 px-2 text-right tabular-nums">{fmtPct(s.markup)}</td>
-                                <td className="py-2 px-2 text-right tabular-nums">{fmtNum(s.qtde_compra, 2)}</td>
-                                <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(s.compra)}</td>
-                                <td className={`py-2 px-2 text-right tabular-nums ${s.saldo_venda < 0 ? "text-red-500" : ""}`}>{fmtBRL(s.saldo_venda)}</td>
-                                <td className={`py-2 px-2 text-right tabular-nums ${s.saldo_cmv < 0 ? "text-red-500" : ""}`}>{fmtBRL(s.saldo_cmv)}</td>
-                                <td className="py-2 px-2 text-right tabular-nums">{fmtPct(s.cv)}</td>
-                                <td className={`py-2 px-2 text-right tabular-nums ${toneCcmv(s.ccmv)}`}>{fmtPct(s.ccmv)}</td>
-                                <td className="py-2 px-2 text-right tabular-nums">{fmtPct(s.part, 2)}</td>
-                              </tr>
-                            ))}
+                            {aberto && g.secoes.map((s) => {
+                              const chave = `${g.departamento}|${s.secao}`;
+                              const abertoSec = !!expandidos[chave];
+                              const key = chaveProdutos(cvInicio, cvFim);
+                              const produtos = abertoSec ? produtosDaSecao(key, g.departamento, s.secao) : [];
+                              return (
+                                <Fragment key={chave}>
+                                  <tr
+                                    onClick={() => {
+                                      setExpandidos((p) => ({ ...p, [chave]: !p[chave] }));
+                                      if (!abertoSec) carregarProdutos(cvInicio, cvFim);
+                                    }}
+                                    className="border-b border-border/30 bg-muted/20 cursor-pointer hover:bg-muted/40"
+                                  >
+                                    <td className="py-2 pl-9 text-muted-foreground">
+                                      <span className="inline-flex items-center gap-1">
+                                        {abertoSec ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                                        {s.secao}
+                                      </span>
+                                    </td>
+                                    <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(s.venda)}</td>
+                                    <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(s.cmv)}</td>
+                                    <td className="py-2 px-2 text-right tabular-nums">{fmtPct(s.margem)}</td>
+                                    <td className="py-2 px-2 text-right tabular-nums">{fmtPct(s.markup)}</td>
+                                    <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(s.compra)}</td>
+                                    <td className={`py-2 px-2 text-right tabular-nums ${s.saldo_cmv < 0 ? "text-red-500" : ""}`}>{fmtBRL(s.saldo_cmv)}</td>
+                                    <td className={`py-2 px-2 text-right tabular-nums ${excessoDe(s) > 0 ? "text-red-500" : ""}`}>{fmtBRL(excessoDe(s))}</td>
+                                    <td className="py-2 px-2 text-right tabular-nums">{fmtPct(s.cv)}</td>
+                                    <td className={`py-2 px-2 text-right tabular-nums ${toneCcmv(s.ccmv)}`}>{fmtPct(s.ccmv)}</td>
+                                    <td className="py-2 px-2 text-right tabular-nums">{fmtPct(s.part, 2)}</td>
+                                  </tr>
+                                  {abertoSec && produtosLoading === key && (
+                                    <tr className="bg-muted/10"><td colSpan={11} className="py-2 pl-14 text-xs text-muted-foreground">Carregando produtos…</td></tr>
+                                  )}
+                                  {abertoSec && produtosLoading !== key && produtos.length === 0 && (
+                                    <tr className="bg-muted/10">
+                                      <td colSpan={11} className="py-2 pl-14 text-xs text-muted-foreground">
+                                        {produtosAviso || "Sem produtos nesta seção no período."}
+                                      </td>
+                                    </tr>
+                                  )}
+                                  {abertoSec && produtos.map((p) => {
+                                    const margem = p.venda > 0 ? ((p.venda - p.cmv) / p.venda) * 100 : 0;
+                                    const markup = p.cmv > 0 ? ((p.venda - p.cmv) / p.cmv) * 100 : 0;
+                                    const excesso = Math.max(p.compra - p.cmv, 0);
+                                    return (
+                                      <tr key={`${chave}|${p.codigo}|${p.descricao}`} className="border-b border-border/20 bg-muted/10 text-xs">
+                                        <td className="py-1.5 pl-14 text-muted-foreground">
+                                          {p.codigo ? `${p.codigo} · ` : ""}{p.descricao || "SEM DESCRIÇÃO"}
+                                          {p.ean ? <span className="ml-2 opacity-70">{p.ean}</span> : null}
+                                        </td>
+                                        <td className="py-1.5 px-2 text-right tabular-nums">{fmtBRL(p.venda)}</td>
+                                        <td className="py-1.5 px-2 text-right tabular-nums">{fmtBRL(p.cmv)}</td>
+                                        <td className="py-1.5 px-2 text-right tabular-nums">{fmtPct(margem)}</td>
+                                        <td className="py-1.5 px-2 text-right tabular-nums">{fmtPct(markup)}</td>
+                                        <td className="py-1.5 px-2 text-right tabular-nums">{fmtBRL(p.compra)}</td>
+                                        <td className={`py-1.5 px-2 text-right tabular-nums ${p.cmv - p.compra < 0 ? "text-red-500" : ""}`}>{fmtBRL(p.cmv - p.compra)}</td>
+                                        <td className={`py-1.5 px-2 text-right tabular-nums ${excesso > 0 ? "text-red-500" : ""}`}>{fmtBRL(excesso)}</td>
+                                        <td className="py-1.5 px-2 text-right tabular-nums">{fmtPct(p.venda > 0 ? (p.compra / p.venda) * 100 : 0)}</td>
+                                        <td className="py-1.5 px-2 text-right tabular-nums">{fmtPct(p.cmv > 0 ? (p.compra / p.cmv) * 100 : 0)}</td>
+                                        <td className="py-1.5 px-2 text-right tabular-nums">{fmtPct(cvTotais.venda > 0 ? (p.venda / cvTotais.venda) * 100 : 0, 2)}</td>
+                                      </tr>
+                                    );
+                                  })}
+                                </Fragment>
+                              );
+                            })}
                           </Fragment>
                         );
                       })}
@@ -903,15 +1137,13 @@ const Compras = () => {
                     <tfoot>
                       <tr className="border-t border-border font-semibold">
                         <td className="py-3">Total</td>
-                        <td className="py-3 px-2 text-right tabular-nums">{fmtNum(cvTotais.qtde_venda, 2)}</td>
                         <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(cvTotais.venda)}</td>
                         <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(cvTotais.cmv)}</td>
                         <td className="py-3 px-2 text-right tabular-nums">{fmtPct(cvTotais.venda > 0 ? ((cvTotais.venda - cvTotais.cmv) / cvTotais.venda) * 100 : 0)}</td>
                         <td className="py-3 px-2 text-right tabular-nums">{fmtPct(cvTotais.cmv > 0 ? ((cvTotais.venda - cvTotais.cmv) / cvTotais.cmv) * 100 : 0)}</td>
-                        <td className="py-3 px-2 text-right tabular-nums">{fmtNum(cvTotais.qtde_compra, 2)}</td>
                         <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(cvTotais.compra)}</td>
-                        <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(cvTotais.venda - cvTotais.compra)}</td>
                         <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(cvTotais.cmv - cvTotais.compra)}</td>
+                        <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(Math.max(cvTotais.compra - cvTotais.cmv, 0))}</td>
                         <td className="py-3 px-2 text-right tabular-nums">{fmtPct(cvTotais.venda > 0 ? (cvTotais.compra / cvTotais.venda) * 100 : 0)}</td>
                         <td className="py-3 px-2 text-right tabular-nums">{fmtPct(cvTotais.cmv > 0 ? (cvTotais.compra / cvTotais.cmv) * 100 : 0)}</td>
                         <td className="py-3 px-2 text-right tabular-nums">100,00%</td>
@@ -964,17 +1196,6 @@ const Compras = () => {
               </div>
             )}
 
-            {/* Vendas com abertura até produto */}
-            {storeId && (
-              <div className="mt-6">
-                <HierarquiaVendasTable
-                  storeId={storeId}
-                  inicio={cvInicio}
-                  fim={cvFim}
-                  title="Vendas por mercadológico (abre até produto)"
-                />
-              </div>
-            )}
           </TabsContent>
 
 
@@ -992,8 +1213,17 @@ const Compras = () => {
               <h3 className="text-sm font-semibold mb-4">Parâmetros do mês</h3>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Meta de venda do mês</label>
-                  <input type="number" step="0.01" disabled={!isAdmin} value={cfg.meta_venda_mes || ""} onChange={(e) => setCfg({ ...cfg, meta_venda_mes: e.target.value })} className={inputCls} />
+                  <label className="text-xs text-muted-foreground mb-1 block">Meta de venda do mês (Dashboard)</label>
+                  <input type="text" readOnly value={fmtBRL(metaDashboard)} className={`${inputCls} opacity-80`} />
+                  {metaDashboard > 0 ? (
+                    <button type="button" onClick={() => navigate("/dashboard")} className="text-xs text-primary hover:underline mt-1">
+                      Ver no Dashboard
+                    </button>
+                  ) : (
+                    <p className="text-xs text-red-500 mt-1">
+                      Lance a meta de vendas do mês no Dashboard antes de gerar as metas de compra.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="text-xs text-muted-foreground mb-1 block">Parcelas p/ diluir excesso</label>
@@ -1022,7 +1252,7 @@ const Compras = () => {
                   <button onClick={importar6Meses} disabled={importando} className={btnGhost}>
                     <Download className={`w-4 h-4 ${importando ? "animate-pulse" : ""}`} /> Importar 6 meses por departamento
                   </button>
-                  <button onClick={gerarMetas} disabled={gerando} className={btnPrimary}>
+                  <button onClick={gerarMetas} disabled={gerando || metaDashboard <= 0} className={btnPrimary}>
                     <Wand2 className="w-4 h-4" /> Gerar metas de compra
                   </button>
                 </div>
@@ -1108,16 +1338,18 @@ const Compras = () => {
                     <th className="text-right py-2 px-2">CMV/V %</th>
                     <th className="text-right py-2 px-2">C/V %</th>
                     <th className="text-right py-2 px-2">Saldo (CMV−Compra)</th>
+                    <th className="text-right py-2 px-2">Excesso</th>
                   </tr>
                 </thead>
                 <tbody>
                   {historicoFiltrado.length === 0 && (
-                    <tr><td colSpan={8} className="py-8 text-center text-muted-foreground">Sem dados. Importe o histórico na aba Configuração.</td></tr>
+                    <tr><td colSpan={9} className="py-8 text-center text-muted-foreground">Sem dados. Importe o histórico na aba Configuração.</td></tr>
                   )}
                   {historicoFiltrado.map((r: any, i) => {
                     const cmvv = r.venda > 0 ? (r.cmv / r.venda) * 100 : 0;
                     const cv = r.venda > 0 ? (r.compra / r.venda) * 100 : 0;
                     const saldo = r.cmv - r.compra;
+                    const excesso = Math.max(r.compra - r.cmv, 0);
                     return (
                       <tr key={i} className="border-b border-border/50">
                         <td className="py-2">{String(r.mes).padStart(2, "0")}/{r.ano}</td>
@@ -1128,6 +1360,7 @@ const Compras = () => {
                         <td className="py-2 px-2 text-right tabular-nums">{fmtPct(cmvv)}</td>
                         <td className="py-2 px-2 text-right tabular-nums">{fmtPct(cv)}</td>
                         <td className={`py-2 px-2 text-right tabular-nums ${saldo < 0 ? "text-red-500" : "text-emerald-500"}`}>{fmtBRL(saldo)}</td>
+                        <td className={`py-2 px-2 text-right tabular-nums ${excesso > 0 ? "text-red-500" : ""}`}>{fmtBRL(excesso)}</td>
                       </tr>
                     );
                   })}

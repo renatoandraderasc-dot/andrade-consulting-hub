@@ -93,8 +93,20 @@ Deno.serve(async (req) => {
     const mapa = new Map<string, string>();
     for (const m of mapas ?? []) mapa.set(norm(m.secao_vr), m.department);
 
-    // busca compras x vendas no sistema da loja (VR ou WebSac)
+    // busca compras x vendas no sistema da loja (VR ou WebSac).
+    // Preferimos o relatorio por produto: ele traz o mercadologico 1 real,
+    // entao o historico fica com os mesmos departamentos da tela.
     async function buscar(ini: string, fimM: string): Promise<Record<string, string>[]> {
+      const produto = await consultarRelatorioLoja({
+        supabaseUrl, serviceKey, storeId: store_id,
+        relatorio: "compras_vendas_produto",
+        params: { inicio: ini, fim: fimM },
+        cfg,
+      });
+      if (produto.ok && Array.isArray(produto.dados) && produto.dados.length) {
+        return produto.dados as Record<string, string>[];
+      }
+
       const r = await consultarRelatorioLoja({
         supabaseUrl, serviceKey, storeId: store_id,
         relatorio: "compras_vendas_periodo",
@@ -125,7 +137,7 @@ Deno.serve(async (req) => {
 
         const cur = acc.get(dep) ?? { venda: 0, cmv: 0, compra: 0 };
         cur.venda += numero(pick(l, "total_venda", "venda", "vendas", "total_vendido"));
-        cur.cmv += numero(pick(l, "cmv", "custo"));
+        cur.cmv += numero(pick(l, "custo_com_imposto", "custo_c_imposto", "cmv", "custo"));
         cur.compra += numero(pick(l, "total_compra", "compra", "compras"));
         acc.set(dep, cur);
       }
