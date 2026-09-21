@@ -13,6 +13,8 @@ import { chamarRelatorio, avisoRelatorio, pick, num } from "@/lib/vrReport";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CartProgress, CartProgressOverlay } from "@/components/CartProgress";
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 
@@ -160,6 +162,9 @@ export default function PainelAnalitico() {
   const [aviso, setAviso] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
   const [carregado, setCarregado] = useState(false);
+  const [progresso, setProgresso] = useState(0);
+  const [etapa, setEtapa] = useState("");
+
 
   useEffect(() => {
     (async () => {
@@ -173,6 +178,36 @@ export default function PainelAnalitico() {
 
   const nomeLoja = lojas.find((l) => l.id === storeId)?.name ?? "";
 
+  async function comLimite<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
+    return await Promise.race([p, new Promise<T>((r) => setTimeout(() => r(fallback), ms))]);
+  }
+
+  const VAZIO = { dados: [] as any[], indisponivel: false, offline: false, erro: null as string | null };
+
+  /** Busca um ano em 4 blocos trimestrais (consulta anual estoura o tempo da ponte). */
+  async function buscarAno(sid: string, y: number, onPasso: (etapa: string) => void) {
+    const blocos: Array<[string, string, string]> = [
+      [`${y}-01-01`, `${y}-03-31`, `1º trimestre de ${y}`],
+      [`${y}-04-01`, `${y}-06-30`, `2º trimestre de ${y}`],
+      [`${y}-07-01`, `${y}-09-30`, `3º trimestre de ${y}`],
+      [`${y}-10-01`, `${y}-12-31`, `4º trimestre de ${y}`],
+    ];
+    const linhas: any[] = [];
+    let aviso: string | null = null;
+    for (const [inicio, fim, rotulo] of blocos) {
+      onPasso(rotulo);
+      const r = await comLimite(
+        chamarRelatorio(sid, "diagnostico_mensal", { inicio, fim }).catch(() => ({ ...VAZIO, erro: "Falha na consulta." })),
+        70000,
+        { ...VAZIO, erro: "O sistema da loja demorou demais para responder." },
+      );
+      const msg = avisoRelatorio(r);
+      if (msg) { if (!aviso) aviso = msg; continue; }
+      linhas.push(...(r.dados || []));
+    }
+    return { linhas, aviso };
+  }
+
   async function carregar() {
     if (!storeId) {
       toast({ title: "Escolha a loja", variant: "destructive" });
@@ -180,22 +215,37 @@ export default function PainelAnalitico() {
     }
     setCarregando(true);
     setAviso(null);
-    const cfg = await supabase.from("stores").select("area_m2, colaboradores").eq("id", storeId).maybeSingle();
-    setAreaM2(Number((cfg.data as any)?.area_m2) || 500);
-    setColaboradores(Number((cfg.data as any)?.colaboradores) || 25);
+    setProgresso(2);
+    setEtapa("Lendo o cadastro da loja");
+    try {
+      const cfg = await supabase.from("stores").select("area_m2, colaboradores").eq("id", storeId).maybeSingle();
+      setAreaM2(Number((cfg.data as any)?.area_m2) || 500);
+      setColaboradores(Number((cfg.data as any)?.colaboradores) || 25);
 
-    const [a, b] = await Promise.all([
-      chamarRelatorio(storeId, "diagnostico_mensal", { inicio: `${ano}-01-01`, fim: `${ano}-12-31` }),
-      chamarRelatorio(storeId, "diagnostico_mensal", { inicio: `${ano - 1}-01-01`, fim: `${ano - 1}-12-31` }),
-    ]);
-    setCarregando(false);
-    setCarregado(true);
+      let feitos = 0;
+      const passo = (rotulo: string) => {
+        setEtapa(rotulo);
+        setProgresso(5 + Math.round((feitos / 8) * 90));
+        feitos += 1;
+      };
 
-    const msg = avisoRelatorio(a);
-    if (msg) { setAtual([]); setAnterior([]); setAviso(msg); return; }
-    setAtual(mapear(a.dados || []));
-    setAnterior(mapear(b.dados || []));
+      const a = await buscarAno(storeId, ano, passo);
+      const b = await buscarAno(storeId, ano - 1, passo);
+
+      setProgresso(100);
+      setEtapa("Montando os gráficos");
+      setAtual(mapear(a.linhas));
+      setAnterior(mapear(b.linhas));
+      if (a.linhas.length === 0 && a.aviso) setAviso(a.aviso);
+      setCarregado(true);
+    } catch (e: any) {
+      setAviso(e?.message || "Não foi possível carregar os dados agora.");
+      setCarregado(true);
+    } finally {
+      setCarregando(false);
+    }
   }
+
 
   const totAtual = useMemo(() => somar(atual), [atual]);
   const totAnt = useMemo(() => somar(anterior), [anterior]);
@@ -274,10 +324,15 @@ export default function PainelAnalitico() {
         </div>
 
         {carregando && (
-          <div className="grid gap-3 md:grid-cols-4">
-            {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
-          </div>
+          <>
+            <CartProgressOverlay value={progresso} label="Carregando o Painel Analítico" detail={etapa} />
+            <CartProgress value={progresso} label="Carregando o Painel Analítico" detail={etapa} />
+            <div className="grid gap-3 md:grid-cols-4">
+              {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
+            </div>
+          </>
         )}
+
 
         {!carregando && aviso && (
           <Card className="p-4 text-sm">{aviso}</Card>
