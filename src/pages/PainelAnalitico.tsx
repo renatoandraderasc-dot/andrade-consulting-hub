@@ -184,28 +184,23 @@ export default function PainelAnalitico() {
 
   const VAZIO = { dados: [] as any[], indisponivel: false, offline: false, erro: null as string | null };
 
-  /** Busca um ano em 4 blocos trimestrais (consulta anual estoura o tempo da ponte). */
-  async function buscarAno(sid: string, y: number, onPasso: (etapa: string) => void) {
-    const blocos: Array<[string, string, string]> = [
-      [`${y}-01-01`, `${y}-03-31`, `1º trimestre de ${y}`],
-      [`${y}-04-01`, `${y}-06-30`, `2º trimestre de ${y}`],
-      [`${y}-07-01`, `${y}-09-30`, `3º trimestre de ${y}`],
-      [`${y}-10-01`, `${y}-12-31`, `4º trimestre de ${y}`],
-    ];
-    const linhas: any[] = [];
-    let aviso: string | null = null;
-    for (const [inicio, fim, rotulo] of blocos) {
-      onPasso(rotulo);
-      const r = await comLimite(
-        chamarRelatorio(sid, "diagnostico_mensal", { inicio, fim }).catch(() => ({ ...VAZIO, erro: "Falha na consulta." })),
-        70000,
-        { ...VAZIO, erro: "O sistema da loja demorou demais para responder." },
-      );
-      const msg = avisoRelatorio(r);
-      if (msg) { if (!aviso) aviso = msg; continue; }
-      linhas.push(...(r.dados || []));
-    }
-    return { linhas, aviso };
+  const ultimoDia = (y: number, m: number) => new Date(Date.UTC(y, m, 0)).getUTCDate();
+
+  /** Busca UM mês na ponte da loja. */
+  async function buscarMes(sid: string, y: number, m: number) {
+    const mm = String(m).padStart(2, "0");
+    const inicio = `${y}-${mm}-01`;
+    const fim = `${y}-${mm}-${String(ultimoDia(y, m)).padStart(2, "0")}`;
+    const r = await comLimite(
+      chamarRelatorio(sid, "diagnostico_mensal", { inicio, fim }).catch(() => ({ ...VAZIO, erro: "Falha na consulta." })),
+      70000,
+      { ...VAZIO, erro: "O sistema da loja demorou demais para responder." },
+    );
+    const msg = avisoRelatorio(r);
+    if (msg) return { row: null as MesRow | null, aviso: msg };
+    const rows = mapear(r.dados || []);
+    const row = rows.length ? { ...somar(rows), mes: m } : vazio(m);
+    return { row, aviso: null as string | null };
   }
 
   async function carregar() {
@@ -222,21 +217,61 @@ export default function PainelAnalitico() {
       setAreaM2(Number((cfg.data as any)?.area_m2) || 500);
       setColaboradores(Number((cfg.data as any)?.colaboradores) || 25);
 
-      let feitos = 0;
-      const passo = (rotulo: string) => {
-        setEtapa(rotulo);
-        setProgresso(5 + Math.round((feitos / 8) * 90));
-        feitos += 1;
-      };
+      const hoje = new Date();
+      const anoAtualReal = hoje.getFullYear();
+      const mesAtualReal = hoje.getMonth() + 1;
+      // mês ainda em andamento (ou futuro) não é gravado: só fecha no 1º dia do mês seguinte
+      const fechado = (y: number, m: number) => y < anoAtualReal || (y === anoAtualReal && m < mesAtualReal);
+      const futuro = (y: number, m: number) => y > anoAtualReal || (y === anoAtualReal && m > mesAtualReal);
 
-      const a = await buscarAno(storeId, ano, passo);
-      const b = await buscarAno(storeId, ano - 1, passo);
+      const anos = [ano, ano - 1];
+      const { data: gravados } = await supabase
+        .from("painel_mensal")
+        .select("ano, mes, dados")
+        .eq("store_id", storeId)
+        .in("ano", anos);
+
+      const cache = new Map<string, MesRow>();
+      for (const g of gravados ?? []) {
+        const d = (g as any).dados as MesRow | null;
+        if (d) cache.set(`${(g as any).ano}-${(g as any).mes}`, { ...vazio((g as any).mes), ...d, mes: (g as any).mes });
+      }
+
+      const pendentes: Array<[number, number]> = [];
+      for (const y of anos) {
+        for (let m = 1; m <= 12; m++) {
+          if (futuro(y, m)) continue;
+          if (!cache.has(`${y}-${m}`)) pendentes.push([y, m]);
+        }
+      }
+
+      let avisoGeral: string | null = null;
+      const novos: any[] = [];
+      let feitos = 0;
+      for (const [y, m] of pendentes) {
+        setEtapa(`Buscando ${MESES[m - 1]}/${y}`);
+        setProgresso(5 + Math.round((feitos / Math.max(pendentes.length, 1)) * 92));
+        feitos += 1;
+        const { row, aviso: msg } = await buscarMes(storeId, y, m);
+        if (msg) { if (!avisoGeral) avisoGeral = msg; continue; }
+        if (row) {
+          cache.set(`${y}-${m}`, row);
+          if (fechado(y, m)) novos.push({ store_id: storeId, ano: y, mes: m, dados: row as any, atualizado_em: new Date().toISOString() });
+        }
+      }
+
+      if (novos.length) {
+        setEtapa("Guardando os meses fechados");
+        await supabase.from("painel_mensal").upsert(novos, { onConflict: "store_id,ano,mes" });
+      }
 
       setProgresso(100);
       setEtapa("Montando os gráficos");
-      setAtual(mapear(a.linhas));
-      setAnterior(mapear(b.linhas));
-      if (a.linhas.length === 0 && a.aviso) setAviso(a.aviso);
+      const monta = (y: number) =>
+        Array.from({ length: 12 }, (_, i) => cache.get(`${y}-${i + 1}`)).filter(Boolean) as MesRow[];
+      setAtual(monta(ano));
+      setAnterior(monta(ano - 1));
+      if (monta(ano).length === 0 && avisoGeral) setAviso(avisoGeral);
       setCarregado(true);
     } catch (e: any) {
       setAviso(e?.message || "Não foi possível carregar os dados agora.");
