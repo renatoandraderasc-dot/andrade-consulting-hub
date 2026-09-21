@@ -36,6 +36,13 @@
       "when": 1790000751388,
       "tag": "0004_stores_area_colaboradores",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790002163718,
+      "tag": "0005_painel_mensal_cache",
+      "breakpoints": true
     }
   ]
 }

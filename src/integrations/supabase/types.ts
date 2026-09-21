@@ -1910,6 +1910,41 @@ export type Database = {
           },
         ]
       }
+      painel_mensal: {
+        Row: {
+          ano: number
+          atualizado_em: string
+          dados: Json
+          id: string
+          mes: number
+          store_id: string
+        }
+        Insert: {
+          ano: number
+          atualizado_em?: string
+          dados?: Json
+          id?: string
+          mes: number
+          store_id: string
+        }
+        Update: {
+          ano?: number
+          atualizado_em?: string
+          dados?: Json
+          id?: string
+          mes?: number
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "painel_mensal_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plataformas_detectadas: {
         Row: {
           coletor_disponivel: boolean
