@@ -976,17 +976,6 @@ const Compras = () => {
               </div>
             )}
 
-            {/* Vendas com abertura até produto */}
-            {storeId && (
-              <div className="mt-6">
-                <HierarquiaVendasTable
-                  storeId={storeId}
-                  inicio={cvInicio}
-                  fim={cvFim}
-                  title="Vendas por mercadológico (abre até produto)"
-                />
-              </div>
-            )}
           </TabsContent>
 
 
