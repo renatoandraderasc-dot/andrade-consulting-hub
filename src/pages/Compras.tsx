@@ -575,30 +575,91 @@ const Compras = () => {
     [cvFiltrados],
   );
 
+  // Excesso liquido: compra total menos CMV total (pode ficar negativo).
+  const cvExcessoLiquido = cvTotais.compra - cvTotais.cmv;
+
+  // ---- Abertura ate produto (compras_vendas_produto), sob acao do usuario ----
+  const chaveProdutos = (inicio: string, fim: string) => `${storeId}|${inicio}|${fim}`;
+
+  const carregarProdutos = async (inicio: string, fim: string) => {
+    const key = chaveProdutos(inicio, fim);
+    if (!storeId || !inicio || !fim || produtosCache[key] || produtosLoading === key) return;
+    setProdutosLoading(key);
+    try {
+      const r = await chamarRelatorio(storeId, "compras_vendas_produto", { inicio, fim });
+      setProdutosAviso(avisoRelatorio(r));
+      const linhas: ProdLinha[] = (r.dados || [])
+        .map((l: any) => ({
+          departamento: mercadologico1(l) || "SEM DEPARTAMENTO",
+          secao: String(col(l, "secao", "nivel2", "grupo", "categoria") ?? "").trim().toUpperCase() || "SEM SEÇÃO",
+          codigo: String(col(l, "codigo", "cod_produto", "id_produto") ?? ""),
+          descricao: String(col(l, "descricao", "produto") ?? "").trim(),
+          ean: String(col(l, "barras", "ean", "codigo_barras") ?? ""),
+          venda: num(col(l, "total_venda", "venda", "vendas", "total_vendido")),
+          cmv: num(col(l, "custo_com_imposto", "custo_c_imposto", "cmv", "custo")),
+          compra: num(col(l, "total_compra", "compra", "compras")),
+        }))
+        .filter((p: ProdLinha) => permiteDept(p.departamento));
+      setProdutosCache((c) => ({ ...c, [key]: linhas }));
+    } catch (e: any) {
+      setProdutosAviso(e?.message ?? String(e));
+      setProdutosCache((c) => ({ ...c, [key]: [] }));
+    } finally {
+      setProdutosLoading(null);
+    }
+  };
+
+  const produtosDaSecao = (key: string, dep: string, secao: string) =>
+    (produtosCache[key] || [])
+      .filter((p) => chaveDep(p.departamento) === chaveDep(dep) && chaveDep(p.secao) === chaveDep(secao))
+      .sort((a, b) => b.venda - a.venda);
+
+  const secoesDoDep = (key: string, dep: string) => {
+    const acc = new Map<string, { secao: string; venda: number; cmv: number; compra: number }>();
+    for (const p of produtosCache[key] || []) {
+      if (chaveDep(p.departamento) !== chaveDep(dep)) continue;
+      const cur = acc.get(p.secao) ?? { secao: p.secao, venda: 0, cmv: 0, compra: 0 };
+      cur.venda += p.venda; cur.cmv += p.cmv; cur.compra += p.compra;
+      acc.set(p.secao, cur);
+    }
+    return [...acc.values()].sort((a, b) => b.compra - a.compra);
+  };
+
   const exportarComprasVendas = () => {
     const linhas: any[] = [];
     for (const g of cvGrupos) {
       linhas.push({
         Nível: "Departamento", Departamento: g.departamento, Seção: "",
-        "Qtd venda": g.qtde_venda, Venda: g.venda, CMV: g.cmv,
+        Venda: g.venda, CMV: g.cmv,
         "Margem %": g.margem, "Markup %": g.markup,
-        "Qtd compra": g.qtde_compra, Compra: g.compra,
-        "Venda - Compra": g.saldo_venda, "CMV - Compra": g.saldo_cmv,
+        Compra: g.compra, "CMV - Compra": g.saldo_cmv,
+        Excesso: Math.max(g.compra - g.cmv, 0),
         "Compra/Venda %": g.cv, "Compra/CMV %": g.ccmv, "Participação %": g.part,
       });
       for (const s of g.secoes) {
         linhas.push({
           Nível: "Seção", Departamento: g.departamento, Seção: s.secao,
-          "Qtd venda": s.qtde_venda, Venda: s.venda, CMV: s.cmv,
+          Venda: s.venda, CMV: s.cmv,
           "Margem %": s.margem, "Markup %": s.markup,
-          "Qtd compra": s.qtde_compra, Compra: s.compra,
-          "Venda - Compra": s.saldo_venda, "CMV - Compra": s.saldo_cmv,
+          Compra: s.compra, "CMV - Compra": s.saldo_cmv,
+          Excesso: Math.max(s.compra - s.cmv, 0),
           "Compra/Venda %": s.cv, "Compra/CMV %": s.ccmv, "Participação %": s.part,
         });
       }
     }
+    const produtos = (produtosCache[chaveProdutos(cvInicio, cvFim)] || []).map((p) => ({
+      Departamento: p.departamento, Seção: p.secao, Código: p.codigo,
+      Descrição: p.descricao, EAN: p.ean,
+      Venda: p.venda, CMV: p.cmv, Compra: p.compra,
+      "CMV - Compra": p.cmv - p.compra,
+      Excesso: Math.max(p.compra - p.cmv, 0),
+      "Margem %": p.venda > 0 ? ((p.venda - p.cmv) / p.venda) * 100 : 0,
+    }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(linhas), "Compras x Vendas");
+    if (produtos.length) {
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(produtos), "Produtos");
+    }
     salvarWorkbook(wb, "Compras x Vendas", [["Período", `${cvInicio} a ${cvFim}`]]);
   };
 
