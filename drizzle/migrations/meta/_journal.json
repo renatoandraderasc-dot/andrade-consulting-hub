@@ -29,6 +29,13 @@
       "when": 1789650152849,
       "tag": "0003_user_department_access",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790000751388,
+      "tag": "0004_stores_area_colaboradores",
+      "breakpoints": true
     }
   ]
 }
