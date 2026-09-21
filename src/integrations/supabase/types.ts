@@ -411,8 +411,12 @@ export type Database = {
       compras_meta: {
         Row: {
           ano: number
+          cmv_hist: number | null
+          cmv_pct: number | null
+          compra_hist: number | null
           compra_sobre_venda: number
           departamento: string
+          excesso_hist: number | null
           gerado_em: string
           id: string
           mes: number
@@ -421,11 +425,16 @@ export type Database = {
           parcela_excesso: number
           participacao: number
           store_id: string
+          venda_hist: number | null
         }
         Insert: {
           ano: number
+          cmv_hist?: number | null
+          cmv_pct?: number | null
+          compra_hist?: number | null
           compra_sobre_venda?: number
           departamento: string
+          excesso_hist?: number | null
           gerado_em?: string
           id?: string
           mes: number
@@ -434,11 +443,16 @@ export type Database = {
           parcela_excesso?: number
           participacao?: number
           store_id: string
+          venda_hist?: number | null
         }
         Update: {
           ano?: number
+          cmv_hist?: number | null
+          cmv_pct?: number | null
+          compra_hist?: number | null
           compra_sobre_venda?: number
           departamento?: string
+          excesso_hist?: number | null
           gerado_em?: string
           id?: string
           mes?: number
@@ -447,6 +461,7 @@ export type Database = {
           parcela_excesso?: number
           participacao?: number
           store_id?: string
+          venda_hist?: number | null
         }
         Relationships: [
           {
@@ -3702,6 +3717,10 @@ export type Database = {
         Returns: number
       }
       jornada_tem_acesso_loja: { Args: { p_store: string }; Returns: boolean }
+      meta_venda_mes_dashboard: {
+        Args: { p_ano: number; p_mes: number; p_store_id: string }
+        Returns: number
+      }
       minutos_para_cron: { Args: { minutos: number }; Returns: string }
       pode_gerenciar_loja: { Args: { _store_id: string }; Returns: boolean }
       redistribuir_metas: {
