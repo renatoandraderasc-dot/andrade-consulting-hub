@@ -25,6 +25,18 @@ import { useAutoRefresh } from "@/hooks/useSaasConfig";
 
 interface Store { id: string; name: string }
 
+/** Linha do relatorio compras_vendas_produto (abertura ate produto). */
+interface ProdLinha {
+  departamento: string;
+  secao: string;
+  codigo: string;
+  descricao: string;
+  ean: string;
+  venda: number;
+  cmv: number;
+  compra: number;
+}
+
 const MONTHS = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
 const NIVEL_LABEL: Record<string, string> = {
