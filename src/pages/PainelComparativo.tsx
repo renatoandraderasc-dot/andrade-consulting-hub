@@ -389,9 +389,11 @@ export default function PainelComparativo() {
   const subtituloExport = `${nomeLoja} · ${rotuloDept} · ${periodoTexto}`;
 
   async function exportar(tipo: "pdf" | "pptx") {
-    const lista: BlocoExport[] = INDICADORES
-      .map((i) => ({ titulo: `${i.titulo} — ${nomeLoja}`, subtitulo: i.descricao, el: blocos.current[i.key] }))
-      .filter((b): b is BlocoExport => !!b.el);
+    const lista: BlocoExport[] = [];
+    for (const i of INDICADORES) {
+      const el = blocos.current[i.key];
+      if (el) lista.push({ titulo: `${i.titulo} — ${nomeLoja}`, subtitulo: i.descricao, el });
+    }
     if (!lista.length) { toast({ title: "Carregue os dados antes de exportar", variant: "destructive" }); return; }
     setExportando(true);
     try {
