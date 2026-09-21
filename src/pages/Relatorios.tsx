@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { carregarLojasPermitidas, type LojaSimples } from "@/lib/lojasPermitidas";
 import { chamarRelatorio, avisoRelatorio } from "@/lib/vrReport";
 import { salvarWorkbook } from "@/lib/exportBranding";
+import { lerPeriodoCache, gravarPeriodoCache, limparPeriodoCache } from "@/lib/relatorioCache";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
