@@ -118,11 +118,12 @@ const JornadaExecucoes = () => {
     setLoading(false);
   }, [loja, refsPeriodo]);
 
+  // Recarrega na 1a carga, no Atualizar e quando o usuario troca de loja/periodo.
   useEffect(() => {
     if (!bootstrapped) return;
     carregar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bootstrapped, tick]);
+  }, [bootstrapped, tick, loja, refsPeriodo]);
 
   /** Perfis da rede ou da loja. Sem vínculos marcados, mostra todos os perfis da loja. */
   const semVinculos = meusPerfis.length === 0;
@@ -142,6 +143,7 @@ const JornadaExecucoes = () => {
 
   const linhas = useMemo(() => {
     return execs
+      .filter((e) => e.store_id === loja)
       .map((e) => {
         const tpl = tplPorId.get(e.template_id);
         if (!tpl) return null;

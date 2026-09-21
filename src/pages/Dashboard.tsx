@@ -189,7 +189,11 @@ const Dashboard = () => {
 
     let linhas = data || [];
     if (restrito) {
-      linhas = linhas.filter((l: any) => permitidos!.includes(canonDept(String(l.department || ""))));
+      const porDept = linhas.filter((l: any) => permiteDept(String(l.department || "")));
+      // Loja que só tem meta lançada no total ("LOJA"): usa esse total como referência.
+      linhas = porDept.length
+        ? porDept
+        : linhas.filter((l: any) => chaveDept(String(l.department || "")) === "LOJA");
       if (!selectedDept) {
         // soma as metas dos departamentos liberados, por dia
         const porDia = new Map<string, any>();
@@ -317,7 +321,7 @@ const Dashboard = () => {
       const acc = new Map<string, number>();
       for (const l of r.dados || []) {
         const dep = canonDept(String(pick(l, "departamento", "secao", "department") ?? "")) || "SEM DEPARTAMENTO";
-        if (restrito && !permitidos!.includes(dep)) continue;
+        if (restrito && !permiteDept(dep)) continue;
         acc.set(dep, (acc.get(dep) || 0) + num(pick(l, "venda", "vendas", "total_vendido", "faturamento")));
       }
       return acc;
