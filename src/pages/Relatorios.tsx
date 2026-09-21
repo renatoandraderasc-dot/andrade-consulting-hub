@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { carregarLojasPermitidas, type LojaSimples } from "@/lib/lojasPermitidas";
 import { chamarRelatorio, avisoRelatorio } from "@/lib/vrReport";
 import { salvarWorkbook } from "@/lib/exportBranding";
+import { lerPeriodoCache, gravarPeriodoCache, limparPeriodoCache } from "@/lib/relatorioCache";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -63,6 +64,7 @@ export default function Relatorios() {
   const [rodado, setRodado] = useState<RelatorioDef | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(false);
+  const [doCache, setDoCache] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -78,7 +80,7 @@ export default function Relatorios() {
   );
   const nomeLoja = lojas.find((l) => l.id === storeId)?.name ?? "";
 
-  async function rodar() {
+  async function rodar(forcar = false) {
     if (!storeId) {
       toast({ title: "Escolha a loja", variant: "destructive" });
       return;
@@ -91,6 +93,20 @@ export default function Relatorios() {
     setAviso(null);
     setLinhas([]);
     setColunas([]);
+    setDoCache(false);
+
+    if (forcar) await limparPeriodoCache(storeId, def.nome, "", inicio, fim);
+
+    const guardado = forcar ? null : await lerPeriodoCache(storeId, def.nome, "", inicio, fim);
+    if (guardado?.length) {
+      setCarregando(false);
+      setRodado(def);
+      setDoCache(true);
+      setColunas(Object.keys(guardado[0]));
+      setLinhas(guardado);
+      return;
+    }
+
     const r = await chamarRelatorio(storeId, def.nome, { inicio, fim });
     setCarregando(false);
     setRodado(def);
@@ -110,6 +126,7 @@ export default function Relatorios() {
     }
     setColunas(Object.keys(dados[0]));
     setLinhas(dados);
+    await gravarPeriodoCache(storeId, def.nome, "", inicio, fim, dados);
   }
 
   function exportar() {
@@ -169,13 +186,17 @@ export default function Relatorios() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <Button onClick={rodar} disabled={carregando}>
+            <Button onClick={() => rodar(false)} disabled={carregando}>
               <Play className="h-4 w-4 mr-2" />
               {carregando ? "Consultando..." : "Rodar relatório"}
+            </Button>
+            <Button variant="outline" onClick={() => rodar(true)} disabled={carregando}>
+              Refazer consulta
             </Button>
             <Button variant="outline" onClick={exportar} disabled={!linhas.length}>
               <Download className="h-4 w-4 mr-2" /> Exportar Excel
             </Button>
+            {doCache && <Badge variant="secondary">Dados guardados</Badge>}
             <span className="text-xs text-muted-foreground">{def.descricao}</span>
           </div>
         </Card>
