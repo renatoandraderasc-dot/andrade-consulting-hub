@@ -157,7 +157,7 @@ const JornadaExecucoes = () => {
       .filter((l: any) => (status === "todos" ? true : l.exec.status === status))
       .filter((l: any) => l.exec.avulsa || l.exec.periodo_ref === periodoRef(l.tpl.cadencia as Cadencia, ancora))
       .sort((a: any, b: any) => a.tpl.ordem - b.tpl.ordem || a.tpl.titulo.localeCompare(b.tpl.titulo)) as any[];
-  }, [execs, tplPorId, perfilPorId, perfisVisiveis, cadencia, perfil, status, ancora]);
+  }, [execs, loja, tplPorId, perfilPorId, perfisVisiveis, cadencia, perfil, status, ancora]);
 
   const resumo = useMemo(() => {
     const total = linhas.length;

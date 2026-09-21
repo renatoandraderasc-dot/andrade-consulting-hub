@@ -28,7 +28,7 @@ const CATEGORIA_KEY = "dashboardCategoria";
 
 const Dashboard = () => {
   const { user, loading: authLoading } = useAuth();
-  const { permitidos, restrito, filtrarDepts } = useDepartamentosPermitidos();
+  const { permitidos, restrito, filtrarDepts, permiteDept, chaveDept } = useDepartamentosPermitidos();
   const navigate = useNavigate();
   const [storeName, setStoreName] = useState("");
   const [storeId, setStoreId] = useState("");
