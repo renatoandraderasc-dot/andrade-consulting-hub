@@ -97,9 +97,14 @@ const Controladoria = () => {
   };
 
   const canSeeTab = (module: string, adminOnly?: boolean) =>
-    isAdmin || (!adminOnly && (allowedModules === null || allowedModules.has("controladoria") || allowedModules.has(module)));
+    isAdmin ||
+    (!adminOnly &&
+      (!allowedModules ||
+        allowedModules.has("controladoria") ||
+        allowedModules.has(module)));
 
   const visibleTabs = CONTROLADORIA_TABS.filter((t) => canSeeTab(t.module, t.adminOnly));
+
 
   // Ao terminar de carregar as permissões, abre na primeira aba liberada.
   useEffect(() => {
