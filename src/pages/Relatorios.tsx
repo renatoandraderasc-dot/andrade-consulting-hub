@@ -186,13 +186,17 @@ export default function Relatorios() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <Button onClick={rodar} disabled={carregando}>
+            <Button onClick={() => rodar(false)} disabled={carregando}>
               <Play className="h-4 w-4 mr-2" />
               {carregando ? "Consultando..." : "Rodar relatório"}
+            </Button>
+            <Button variant="outline" onClick={() => rodar(true)} disabled={carregando}>
+              Refazer consulta
             </Button>
             <Button variant="outline" onClick={exportar} disabled={!linhas.length}>
               <Download className="h-4 w-4 mr-2" /> Exportar Excel
             </Button>
+            {doCache && <Badge variant="secondary">Dados guardados</Badge>}
             <span className="text-xs text-muted-foreground">{def.descricao}</span>
           </div>
         </Card>
