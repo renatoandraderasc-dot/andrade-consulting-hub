@@ -21,6 +21,8 @@ interface StoreItem {
   id: string;
   name: string;
   created_at: string;
+  area_m2: number | null;
+  colaboradores: number | null;
 }
 
 const AdminStores = () => {
@@ -33,6 +35,8 @@ const AdminStores = () => {
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
+  const [editArea, setEditArea] = useState("");
+  const [editColab, setEditColab] = useState("");
   const [picDisplay, setPicDisplay] = useState<PicDisplayMap>({});
   const [savingPic, setSavingPic] = useState<string | null>(null);
 
@@ -86,7 +90,13 @@ const AdminStores = () => {
   const updateStore = async (id: string) => {
     const name = editName.trim();
     if (!name) return;
-    const { error } = await supabase.from("stores").update({ name }).eq("id", id);
+    const area = Number(String(editArea).replace(",", "."));
+    const colab = Number(String(editColab).replace(",", "."));
+    const { error } = await supabase.from("stores").update({
+      name,
+      area_m2: isFinite(area) && area > 0 ? area : 500,
+      colaboradores: isFinite(colab) && colab > 0 ? Math.round(colab) : 25,
+    }).eq("id", id);
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
@@ -161,13 +171,27 @@ const AdminStores = () => {
               className="bg-card border border-border rounded-xl p-4 flex items-center justify-between gap-3"
             >
               {editingId === store.id ? (
-                <div className="flex-1 flex gap-2">
+                <div className="flex-1 flex flex-wrap gap-2">
                   <Input
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && updateStore(store.id)}
                     autoFocus
-                    className="flex-1"
+                    className="flex-1 min-w-[160px]"
+                  />
+                  <Input
+                    value={editArea}
+                    onChange={(e) => setEditArea(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && updateStore(store.id)}
+                    placeholder="Área (m²)"
+                    className="w-28"
+                  />
+                  <Input
+                    value={editColab}
+                    onChange={(e) => setEditColab(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && updateStore(store.id)}
+                    placeholder="Colaboradores"
+                    className="w-32"
                   />
                   <Button size="sm" onClick={() => updateStore(store.id)}>
                     <Check className="w-4 h-4" />
@@ -180,14 +204,24 @@ const AdminStores = () => {
                 <>
                   <div className="flex items-center gap-3">
                     <Store className="w-4 h-4 text-muted-foreground" />
-                    <span className="font-body font-semibold text-sm">{store.name}</span>
+                    <div>
+                      <span className="font-body font-semibold text-sm">{store.name}</span>
+                      <p className="text-xs text-muted-foreground">
+                        {Number(store.area_m2 ?? 500).toLocaleString("pt-BR")} m² · {store.colaboradores ?? 25} colaboradores
+                      </p>
+                    </div>
                   </div>
                   <div className="flex gap-1">
                     <Button
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8"
-                      onClick={() => { setEditingId(store.id); setEditName(store.name); }}
+                      onClick={() => {
+                        setEditingId(store.id);
+                        setEditName(store.name);
+                        setEditArea(String(store.area_m2 ?? 500));
+                        setEditColab(String(store.colaboradores ?? 25));
+                      }}
                     >
                       <Pencil className="w-3.5 h-3.5" />
                     </Button>

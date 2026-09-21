@@ -2882,16 +2882,22 @@ export type Database = {
       }
       stores: {
         Row: {
+          area_m2: number
+          colaboradores: number
           created_at: string
           id: string
           name: string
         }
         Insert: {
+          area_m2?: number
+          colaboradores?: number
           created_at?: string
           id?: string
           name: string
         }
         Update: {
+          area_m2?: number
+          colaboradores?: number
           created_at?: string
           id?: string
           name?: string
