@@ -1034,7 +1034,7 @@ const Compras = () => {
                   <button onClick={importar6Meses} disabled={importando} className={btnGhost}>
                     <Download className={`w-4 h-4 ${importando ? "animate-pulse" : ""}`} /> Importar 6 meses por departamento
                   </button>
-                  <button onClick={gerarMetas} disabled={gerando} className={btnPrimary}>
+                  <button onClick={gerarMetas} disabled={gerando || metaDashboard <= 0} className={btnPrimary}>
                     <Wand2 className="w-4 h-4" /> Gerar metas de compra
                   </button>
                 </div>
