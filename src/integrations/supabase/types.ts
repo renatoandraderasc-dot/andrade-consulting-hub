@@ -1945,6 +1945,44 @@ export type Database = {
           },
         ]
       }
+      painel_periodo_cache: {
+        Row: {
+          ate: string
+          atualizado_em: string
+          dados: Json
+          de: string
+          departamento: string
+          relatorio: string
+          store_id: string
+        }
+        Insert: {
+          ate: string
+          atualizado_em?: string
+          dados: Json
+          de: string
+          departamento?: string
+          relatorio: string
+          store_id: string
+        }
+        Update: {
+          ate?: string
+          atualizado_em?: string
+          dados?: Json
+          de?: string
+          departamento?: string
+          relatorio?: string
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "painel_periodo_cache_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plataformas_detectadas: {
         Row: {
           coletor_disponivel: boolean

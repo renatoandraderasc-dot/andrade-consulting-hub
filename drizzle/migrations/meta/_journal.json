@@ -43,6 +43,13 @@
       "when": 1790002163718,
       "tag": "0005_painel_mensal_cache",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790015469621,
+      "tag": "0006_painel_periodo_cache",
+      "breakpoints": true
     }
   ]
 }
