@@ -137,7 +137,7 @@ Deno.serve(async (req) => {
 
         const cur = acc.get(dep) ?? { venda: 0, cmv: 0, compra: 0 };
         cur.venda += numero(pick(l, "total_venda", "venda", "vendas", "total_vendido"));
-        cur.cmv += numero(pick(l, "cmv", "custo"));
+        cur.cmv += numero(pick(l, "custo_com_imposto", "custo_c_imposto", "cmv", "custo"));
         cur.compra += numero(pick(l, "total_compra", "compra", "compras"));
         acc.set(dep, cur);
       }
