@@ -7,6 +7,7 @@ export const APP_MODULES = [
   { key: "estoque_dinamico", label: "Estoque Dinâmico", path: "/estoque-dinamico" },
   { key: "relatorios", label: "Relatórios", path: "/relatorios" },
   { key: "painel_analitico", label: "Painel Analítico", path: "/painel-analitico" },
+  { key: "painel_comparativo", label: "Comparativo de Indicadores", path: "/painel-comparativo" },
   { key: "pic", label: "PIC", path: "/pic" },
   { key: "pic_percentual", label: "PIC: somente % (visualizador)", path: "/pic" },
   { key: "pic_padaria", label: "Dashboard Padaria", path: "/pic/padaria" },
