@@ -84,6 +84,67 @@ const AnaliseAnual = () => {
     })();
   }, [user, authLoading]);
 
+  // ------------------------------------------------------------------
+  // Reconciliacao com o faturamento oficial do ERP.
+  // O relatorio por secao ignora itens sem secao cadastrada, ficando abaixo
+  // do total do mes (mesmo problema ja tratado no Dashboard de Vendas).
+  // Para cada mes buscamos o total oficial (kpis_periodo) e, quando ele e
+  // maior, a diferenca e rateada entre as linhas do mes pelo peso da venda.
+  // ------------------------------------------------------------------
+  const reconciliarTotais = async (sid: string, base: Row[]) => {
+    const hoje0 = new Date();
+    const meses = Array.from(new Set(base.map(r => `${r.ano}-${r.mes}`)))
+      .map(k => ({ ano: Number(k.split("-")[0]), mes: Number(k.split("-")[1]) }))
+      .filter(t => t.ano < hoje0.getFullYear() || (t.ano === hoje0.getFullYear() && t.mes <= hoje0.getMonth() + 1))
+      .sort((a, b) => a.ano - b.ano || a.mes - b.mes);
+    if (!meses.length) return;
+
+    const oficiais = new Map<string, { vendas: number; lucro: number; volume: number }>();
+    const lote = 6;
+    for (let i = 0; i < meses.length; i += lote) {
+      const partes = await Promise.all(
+        meses.slice(i, i + lote).map((t) => {
+          const mm = String(t.mes).padStart(2, "0");
+          const ini = `${t.ano}-${mm}-01`;
+          const f = `${t.ano}-${mm}-${new Date(t.ano, t.mes, 0).getDate()}`;
+          return chamarRelatorio(sid, "kpis_periodo", { inicio: ini, fim: f })
+            .then((r) => ({ t, r }))
+            .catch(() => null);
+        }),
+      );
+      for (const parte of partes) {
+        if (!parte || parte.r.indisponivel || parte.r.offline || parte.r.erro) continue;
+        const l: any = parte.r.dados?.[0];
+        if (!l) continue;
+        const vendas = num(pick(l, "faturamento", "total_vendido", "vendas", "venda"));
+        if (vendas <= 0) continue;
+        oficiais.set(`${parte.t.ano}-${parte.t.mes}`, {
+          vendas,
+          lucro: num(pick(l, "lucro", "lucro_bruto")),
+          volume: num(pick(l, "volume", "quantidade", "qtde")),
+        });
+      }
+    }
+    if (!oficiais.size) return;
+
+    const ajustadas = base.map(r => ({ ...r }));
+    for (const [chave, of] of oficiais) {
+      const linhas = ajustadas.filter(r => `${r.ano}-${r.mes}` === chave);
+      const somaV = linhas.reduce((s, r) => s + r.faturamento, 0);
+      const dif = of.vendas - somaV;
+      if (somaV <= 0 || dif <= 0.01) continue;
+      const difL = Math.max(of.lucro - linhas.reduce((s, r) => s + r.lucro, 0), 0);
+      const difVol = Math.max(of.volume - linhas.reduce((s, r) => s + r.volume, 0), 0);
+      for (const r of linhas) {
+        const peso = r.faturamento / somaV;
+        r.faturamento += dif * peso;
+        r.lucro += difL * peso;
+        r.volume += difVol * peso;
+      }
+    }
+    setRows(ajustadas);
+  };
+
   const carregar = async (sid: string) => {
     setLoading(true);
     setErro("");
@@ -160,6 +221,9 @@ const AnaliseAnual = () => {
         const vivos = Array.from(acc.values());
         if (vivos.length) {
           setRows(vivos);
+          // O relatorio por secao perde as vendas de itens sem secao cadastrada.
+          // Reconcilia cada mes com o total oficial do ERP (mesma regra do Dashboard).
+          reconciliarTotais(sid, vivos);
           return;
         }
         throw new Error("sem dados");
