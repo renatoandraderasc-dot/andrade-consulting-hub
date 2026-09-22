@@ -113,15 +113,18 @@ const PIC = () => {
     }
     if (deptsConfig?.length) return deptsConfig;
 
+    // Mostra TODOS os departamentos que vierem do sistema da loja.
+    // Os padroes (Padaria/Acougue/Hortifruti) vem primeiro, depois os demais em
+    // ordem alfabetica.
     const todas = Object.keys(vr ?? {});
     const keys = todas.filter((k) => k !== LOJA);
     const temLoja = todas.includes(LOJA);
     const presentes = DEFAULT_DEPARTMENTS.filter((d) => keys.includes(d));
-    if (presentes.length) return temLoja ? [LOJA, ...presentes] : presentes;
-    if (keys.length) {
-      const ordenado = keys.sort((a, b) => a.localeCompare(b, "pt-BR"));
-      return temLoja ? [LOJA, ...ordenado] : ordenado;
-    }
+    const outros = keys
+      .filter((k) => !presentes.includes(k))
+      .sort((a, b) => a.localeCompare(b, "pt-BR"));
+    const lista = [...presentes, ...outros];
+    if (lista.length) return temLoja ? [LOJA, ...lista] : lista;
     return [LOJA];
   }, [vr, deptsConfig, restrito]);
 
