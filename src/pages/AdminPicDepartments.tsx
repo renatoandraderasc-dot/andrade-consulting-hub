@@ -20,8 +20,9 @@ import {
   fetchPicDepartmentsMap,
   savePicDepartmentsMap,
 } from "@/hooks/usePicDepartments";
+import { DEPARTAMENTOS_PADRAO, carregarDepartamentosLoja } from "@/lib/departamentosLoja";
 
-const BASE_DEPARTMENTS = ["LOJA", "PADARIA", "AÇOUGUE", "HORTIFRUTI", "OUTROS"];
+const BASE_DEPARTMENTS = ["LOJA", ...DEPARTAMENTOS_PADRAO];
 
 interface StoreItem {
   id: string;
@@ -54,17 +55,12 @@ const AdminPicDepartments = () => {
     })();
   }, [isAdmin]);
 
-  // Sugestoes: departamentos ja usados nas metas da loja
+  // Sugestoes: todos os departamentos cadastrados ou já usados pela loja.
   useEffect(() => {
     if (!storeId) return;
     (async () => {
-      const { data } = await supabase
-        .from("store_daily_metrics")
-        .select("department")
-        .eq("store_id", storeId)
-        .limit(2000);
-      const vistos = Array.from(new Set((data || []).map((r: any) => String(r.department))));
-      const extras = vistos.filter((d) => !BASE_DEPARTMENTS.includes(d)).sort();
+      const vistos = await carregarDepartamentosLoja(storeId);
+      const extras = vistos.filter((d) => !BASE_DEPARTMENTS.includes(d));
       setOptions([...BASE_DEPARTMENTS, ...extras]);
     })();
   }, [storeId]);

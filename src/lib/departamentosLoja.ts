@@ -19,9 +19,11 @@ const rotulo = (s: string) => {
 
 export async function carregarDepartamentosLoja(storeId: string): Promise<string[]> {
   if (!storeId) return [...DEPARTAMENTOS_PADRAO];
-  const [{ data: mapas }, { data: metas }] = await Promise.all([
+  const [{ data: mapas }, { data: metas }, { data: compras }, { data: historico }] = await Promise.all([
     supabase.from("vr_secao_departamento").select("department").eq("store_id", storeId),
     supabase.from("store_daily_metrics").select("department").eq("store_id", storeId).limit(5000),
+    supabase.from("compras_departamento").select("departamento").eq("store_id", storeId).eq("ativo", true),
+    supabase.from("compras_historico").select("departamento").eq("store_id", storeId).limit(5000),
   ]);
 
   const vistos = new Map<string, string>();
@@ -35,6 +37,8 @@ export async function carregarDepartamentosLoja(storeId: string): Promise<string
   for (const d of DEPARTAMENTOS_PADRAO) add(d);
   for (const m of mapas ?? []) add(m.department as string);
   for (const m of metas ?? []) add(m.department as string);
+  for (const m of compras ?? []) add(m.departamento as string);
+  for (const m of historico ?? []) add(m.departamento as string);
 
   const lista = [...vistos.values()];
   const padrao = lista.filter((d) => DEPARTAMENTOS_PADRAO.includes(d));
