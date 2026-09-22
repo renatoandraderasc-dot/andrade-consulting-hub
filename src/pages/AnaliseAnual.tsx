@@ -160,6 +160,9 @@ const AnaliseAnual = () => {
         const vivos = Array.from(acc.values());
         if (vivos.length) {
           setRows(vivos);
+          // O relatorio por secao perde as vendas de itens sem secao cadastrada.
+          // Reconcilia cada mes com o total oficial do ERP (mesma regra do Dashboard).
+          reconciliarTotais(sid, vivos);
           return;
         }
         throw new Error("sem dados");
