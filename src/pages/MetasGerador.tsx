@@ -62,14 +62,24 @@ const MetasGerador = () => {
   const [storeId, setStoreId] = useState("");
   const [storeName, setStoreName] = useState("");
   const [department, setDepartment] = useState(DEPARTMENTS[0]);
+  // Departamentos da loja (todos os que existem no sistema/metas dela)
+  const [deptsLoja, setDeptsLoja] = useState<string[]>(DEPARTAMENTOS_PADRAO);
+  useEffect(() => {
+    if (!storeId) return;
+    let vivo = true;
+    carregarDepartamentosLoja(storeId).then((l) => vivo && setDeptsLoja(l));
+    return () => {
+      vivo = false;
+    };
+  }, [storeId]);
   // Usuario restrito: nao pode ficar num departamento fora da sua permissao
   useEffect(() => {
     if (!restrito) return;
     if (!permiteDept(department)) {
-      const libs = filtrarDepts(DEPARTMENTS_PIC);
+      const libs = filtrarDepts(deptsLoja);
       if (libs.length) setDepartment(libs[0]);
     }
-  }, [restrito, department]);
+  }, [restrito, department, deptsLoja]);
   const [year, setYear] = useState(new Date().getFullYear());
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [base, setBase] = useState<"ano_anterior" | "mes_anterior">("ano_anterior");
