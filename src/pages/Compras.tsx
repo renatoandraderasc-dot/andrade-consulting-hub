@@ -464,14 +464,28 @@ const Compras = () => {
       const cur = indice.get(k) ?? { compra: 0, venda: 0, cmv: 0 };
       indice.set(k, { compra: cur.compra + v.compra, venda: cur.venda + v.venda, cmv: cur.cmv + v.cmv });
     }
-    return metas.map((m) => {
+    const metasPorDep = new Map<string, any>();
+    for (const meta of metas) metasPorDep.set(chaveDep(meta.departamento), meta);
+    const departamentos = new Map<string, string>();
+    for (const d of deptosView) {
+      if (d.ativo !== false && permiteDept(d.departamento)) departamentos.set(chaveDep(d.departamento), d.departamento);
+    }
+    for (const meta of metas) {
+      if (permiteDept(meta.departamento)) departamentos.set(chaveDep(meta.departamento), meta.departamento);
+    }
+    for (const nome of Object.keys(realizadoDep)) {
+      if (permiteDept(nome)) departamentos.set(chaveDep(nome), nome);
+    }
+
+    return [...departamentos.entries()].map(([chave, departamento]) => {
+      const m = metasPorDep.get(chave) ?? {};
       const real = indice.get(chaveDep(m.departamento)) || { compra: 0, venda: 0, cmv: 0 };
 
       const meta_compra = Number(m.meta_compra) || 0;
       const saldo = meta_compra - real.compra;
       const consumido = meta_compra > 0 ? (real.compra / meta_compra) * 100 : 0;
       return {
-        departamento: m.departamento,
+        departamento,
         meta_venda: Number(m.meta_venda) || 0,
         meta_compra,
         compra_sobre_venda: (Number(m.compra_sobre_venda) || 0) * 100,
@@ -485,8 +499,8 @@ const Compras = () => {
         saldo,
         consumido,
       };
-    }).sort((a, b) => b.meta_compra - a.meta_compra);
-  }, [metas, realizadoDep]);
+    }).sort((a, b) => b.meta_compra - a.meta_compra || a.departamento.localeCompare(b.departamento, "pt-BR"));
+  }, [metas, realizadoDep, deptosView, restrito]);
 
   const totais = useMemo(() => {
     const meta_venda = painelRows.reduce((s, r) => s + r.meta_venda, 0);
@@ -693,9 +707,12 @@ const Compras = () => {
   }, [historico, historicoDep]);
 
   const deptOptions = useMemo(() => {
-    const set = new Set<string>(historico.map((r: any) => r.departamento));
-    return Array.from(set).sort();
-  }, [historico]);
+    const set = new Set<string>([
+      ...historico.map((r: any) => r.departamento),
+      ...deptos.filter((d: any) => d.ativo !== false).map((d: any) => d.departamento),
+    ]);
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }, [historico, deptos]);
 
   // Todos os departamentos vistos no histórico / no mês entram na edição,
   // mesmo os que ainda não têm cadastro de taxas.
