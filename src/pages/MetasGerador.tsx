@@ -10,12 +10,12 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import CapilaridadeMixTab from "@/components/metas/CapilaridadeMixTab";
 import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
+import { DEPARTAMENTOS_PADRAO, carregarDepartamentosLoja } from "@/lib/departamentosLoja";
 
 
 interface Store { id: string; name: string; }
 
-const DEPARTMENTS_PIC = ["PADARIA", "AÇOUGUE", "HORTIFRUTI"];
-const DEPARTMENTS = [...DEPARTMENTS_PIC, "LOJA"];
+const DEPARTMENTS = [...DEPARTAMENTOS_PADRAO, "LOJA"];
 const deptLabel = (d: string) => (d === "LOJA" ? "Supermercado — Total" : d);
 const MONTHS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 const DIAS_SEM: [string, string][] = [
