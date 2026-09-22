@@ -488,7 +488,7 @@ const MetasGerador = () => {
           <div>
             <label className="font-body text-xs text-muted-foreground mb-1 block">Departamento</label>
             <select value={department} onChange={(e) => { if (!confirmDiscardIfDirty()) return; setDepartment(e.target.value); }} className={selectCls}>
-              {filtrarDepts(DEPARTMENTS_PIC).map((d) => <option key={d} value={d}>{d}</option>)}
+              {filtrarDepts(deptsLoja).map((d) => <option key={d} value={d}>{d}</option>)}
               {!restrito && <option disabled>──────────</option>}
               {!restrito && <option value="LOJA">{deptLabel("LOJA")}</option>}
             </select>
