@@ -467,8 +467,11 @@ const Compras = () => {
     const metasPorDep = new Map<string, any>();
     for (const meta of metas) metasPorDep.set(chaveDep(meta.departamento), meta);
     const departamentos = new Map<string, string>();
-    for (const d of deptosView) {
+    for (const d of deptos) {
       if (d.ativo !== false && permiteDept(d.departamento)) departamentos.set(chaveDep(d.departamento), d.departamento);
+    }
+    for (const nome of mercadologicos1) {
+      if (permiteDept(nome)) departamentos.set(chaveDep(nome), nome);
     }
     for (const meta of metas) {
       if (permiteDept(meta.departamento)) departamentos.set(chaveDep(meta.departamento), meta.departamento);
@@ -479,7 +482,7 @@ const Compras = () => {
 
     return [...departamentos.entries()].map(([chave, departamento]) => {
       const m = metasPorDep.get(chave) ?? {};
-      const real = indice.get(chaveDep(m.departamento)) || { compra: 0, venda: 0, cmv: 0 };
+      const real = indice.get(chave) || { compra: 0, venda: 0, cmv: 0 };
 
       const meta_compra = Number(m.meta_compra) || 0;
       const saldo = meta_compra - real.compra;
@@ -500,7 +503,7 @@ const Compras = () => {
         consumido,
       };
     }).sort((a, b) => b.meta_compra - a.meta_compra || a.departamento.localeCompare(b.departamento, "pt-BR"));
-  }, [metas, realizadoDep, deptosView, restrito]);
+  }, [metas, realizadoDep, deptos, mercadologicos1, restrito]);
 
   const totais = useMemo(() => {
     const meta_venda = painelRows.reduce((s, r) => s + r.meta_venda, 0);
