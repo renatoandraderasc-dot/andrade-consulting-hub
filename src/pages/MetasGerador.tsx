@@ -10,12 +10,12 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import CapilaridadeMixTab from "@/components/metas/CapilaridadeMixTab";
 import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
+import { DEPARTAMENTOS_PADRAO, carregarDepartamentosLoja } from "@/lib/departamentosLoja";
 
 
 interface Store { id: string; name: string; }
 
-const DEPARTMENTS_PIC = ["PADARIA", "AÇOUGUE", "HORTIFRUTI"];
-const DEPARTMENTS = [...DEPARTMENTS_PIC, "LOJA"];
+const DEPARTMENTS = [...DEPARTAMENTOS_PADRAO, "LOJA"];
 const deptLabel = (d: string) => (d === "LOJA" ? "Supermercado — Total" : d);
 const MONTHS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 const DIAS_SEM: [string, string][] = [
@@ -62,14 +62,24 @@ const MetasGerador = () => {
   const [storeId, setStoreId] = useState("");
   const [storeName, setStoreName] = useState("");
   const [department, setDepartment] = useState(DEPARTMENTS[0]);
+  // Departamentos da loja (todos os que existem no sistema/metas dela)
+  const [deptsLoja, setDeptsLoja] = useState<string[]>(DEPARTAMENTOS_PADRAO);
+  useEffect(() => {
+    if (!storeId) return;
+    let vivo = true;
+    carregarDepartamentosLoja(storeId).then((l) => vivo && setDeptsLoja(l));
+    return () => {
+      vivo = false;
+    };
+  }, [storeId]);
   // Usuario restrito: nao pode ficar num departamento fora da sua permissao
   useEffect(() => {
     if (!restrito) return;
     if (!permiteDept(department)) {
-      const libs = filtrarDepts(DEPARTMENTS_PIC);
+      const libs = filtrarDepts(deptsLoja);
       if (libs.length) setDepartment(libs[0]);
     }
-  }, [restrito, department]);
+  }, [restrito, department, deptsLoja]);
   const [year, setYear] = useState(new Date().getFullYear());
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [base, setBase] = useState<"ano_anterior" | "mes_anterior">("ano_anterior");
@@ -478,7 +488,7 @@ const MetasGerador = () => {
           <div>
             <label className="font-body text-xs text-muted-foreground mb-1 block">Departamento</label>
             <select value={department} onChange={(e) => { if (!confirmDiscardIfDirty()) return; setDepartment(e.target.value); }} className={selectCls}>
-              {filtrarDepts(DEPARTMENTS_PIC).map((d) => <option key={d} value={d}>{d}</option>)}
+              {filtrarDepts(deptsLoja).map((d) => <option key={d} value={d}>{d}</option>)}
               {!restrito && <option disabled>──────────</option>}
               {!restrito && <option value="LOJA">{deptLabel("LOJA")}</option>}
             </select>
