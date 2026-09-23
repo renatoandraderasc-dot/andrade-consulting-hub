@@ -4,11 +4,8 @@ import { comprasAgrupadas, detalharComprasVendas } from "@/lib/comprasDetalhe";
 import { useNavigate } from "react-router-dom";
 import {
   ShoppingCart, TrendingUp, TrendingDown, Wallet, Target, Download, Wand2, Save, RefreshCw, Info,
-  ChevronRight, ChevronDown, FilterX,
+  ChevronRight, ChevronDown,
 } from "lucide-react";
-import {
-  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuCheckboxItem,
-} from "@/components/ui/dropdown-menu";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   LabelList, LineChart, Line, Legend, CartesianGrid,
@@ -117,8 +114,8 @@ const Compras = () => {
   const [cvLoading, setCvLoading] = useState(false);
   const [cvAviso, setCvAviso] = useState<string | null>(null);
   const [fN1, setFN1] = useState("__all__");
-  // Departamentos retirados da apuracao (chaveDep); vazio = nada retirado
-  const [cvExcluir, setCvExcluir] = useState<string[]>([]);
+  // Departamentos retirados da apuracao: definidos na Configuracao
+  // (departamento desmarcado como "ativo").
   const [expandidos, setExpandidos] = useState<Record<string, boolean>>({});
   const [fornecedores, setFornecedores] = useState<any[]>([]);
   const [fornLoading, setFornLoading] = useState(false);
@@ -578,6 +575,12 @@ const Compras = () => {
     part: vendaTotal > 0 ? (r.venda / vendaTotal) * 100 : 0,
   });
 
+  // Retirados da apuracao = departamentos inativos na Configuracao.
+  const cvExcluir = useMemo(
+    () => deptos.filter((d: any) => d.ativo === false).map((d: any) => chaveDep(d.departamento)),
+    [deptos],
+  );
+
   const cvFiltrados = useMemo(
     () => cvItens.filter(
       (i) => !cvExcluir.includes(chaveDep(i.departamento)) && (fN1 === "__all__" || i.departamento === fN1),
@@ -1036,40 +1039,10 @@ const Compras = () => {
                   {fN1 !== "__all__" && (
                     <button onClick={() => setFN1("__all__")} className={btnGhost}>Limpar filtro</button>
                   )}
-                  {cvOpcoes.n1.length > 1 && (
-                    <>
-                      <div>
-                        <label className="text-xs text-muted-foreground mb-1 block">Retirar da apuração</label>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button className={btnGhost}>
-                              <FilterX className="w-4 h-4" />
-                              Departamentos{cvExcluir.length > 0 ? ` (${cvExcluir.length})` : ""}
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent className="max-h-72 w-64 overflow-y-auto" align="start">
-                            {cvOpcoes.n1.map((o) => (
-                              <DropdownMenuCheckboxItem
-                                key={o}
-                                checked={cvExcluir.includes(chaveDep(o))}
-                                onCheckedChange={(v) => {
-                                  const k = chaveDep(o);
-                                  setCvExcluir((prev) => (v ? (prev.includes(k) ? prev : [...prev, k]) : prev.filter((x) => x !== k)));
-                                }}
-                                onSelect={(e) => e.preventDefault()}
-                              >
-                                {o}
-                              </DropdownMenuCheckboxItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                      {cvExcluir.length > 0 && (
-                        <button onClick={() => setCvExcluir([])} className={btnGhost}>
-                          Trazer de volta ({cvExcluir.length})
-                        </button>
-                      )}
-                    </>
+                  {cvExcluir.length > 0 && (
+                    <span className="text-xs text-muted-foreground self-center">
+                      {cvExcluir.length} departamento(s) fora da apuração (Configuração)
+                    </span>
                   )}
                   <button onClick={exportarComprasVendas} className={btnGhost}>
                     <Download className="w-4 h-4" /> Exportar Excel
