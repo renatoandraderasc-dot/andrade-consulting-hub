@@ -25,24 +25,40 @@ const ModuleGuard = ({ module, children }: ModuleGuardProps) => {
       return;
     }
     let active = true;
+    const timer = window.setTimeout(() => {
+      if (active) setAllowed(null);
+    }, 8000);
     supabase
       .from("user_module_access")
       .select("module, allowed")
       .eq("user_id", user.id)
-      .then(({ data }) => {
-        if (!active) return;
-        const rows = data || [];
-        // no rows = no restriction configured
-        if (rows.length === 0) return setAllowed(null);
-        setAllowed(new Set(rows.filter((r) => r.allowed).map((r) => r.module)));
-      });
+      .then(
+        ({ data }) => {
+          if (!active) return;
+          window.clearTimeout(timer);
+          const rows = data || [];
+          // no rows = no restriction configured
+          if (rows.length === 0) return setAllowed(null);
+          setAllowed(new Set(rows.filter((r) => r.allowed).map((r) => r.module)));
+        },
+        () => {
+          if (!active) return;
+          window.clearTimeout(timer);
+          setAllowed(null);
+        },
+      );
     return () => {
       active = false;
+      window.clearTimeout(timer);
     };
   }, [user, isAdmin, loading]);
 
   if (loading || allowed === undefined) {
-    return <div className="min-h-screen bg-background" />;
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-sm text-muted-foreground">Validando seu acesso...</p>
+      </div>
+    );
   }
 
   if (!user) {

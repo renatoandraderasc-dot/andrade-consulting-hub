@@ -2,6 +2,17 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 
+const AUTH_QUERY_TIMEOUT_MS = 8000;
+
+function withTimeout<T>(promise: PromiseLike<T>): Promise<T> {
+  return Promise.race([
+    Promise.resolve(promise),
+    new Promise<T>((_, reject) =>
+      window.setTimeout(() => reject(new Error("auth_timeout")), AUTH_QUERY_TIMEOUT_MS),
+    ),
+  ]);
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -33,13 +44,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const isAdmin = isGlobalAdmin || isSupervisor;
 
   const checkAdmin = async (userId: string) => {
-    const { data } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId);
-    const roles = (data || []).map((r) => r.role as string);
-    setIsGlobalAdmin(roles.includes("admin"));
-    setIsSupervisor(roles.includes("supervisor"));
+    try {
+      const { data } = await withTimeout(
+        supabase.from("user_roles").select("role").eq("user_id", userId),
+      );
+      const roles = (data || []).map((r) => r.role as string);
+      setIsGlobalAdmin(roles.includes("admin"));
+      setIsSupervisor(roles.includes("supervisor"));
+    } catch {
+      setIsGlobalAdmin(false);
+      setIsSupervisor(false);
+    }
   };
 
   useEffect(() => {
@@ -48,7 +63,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          setTimeout(() => checkAdmin(session.user.id), 0);
+          void checkAdmin(session.user.id);
         } else {
           setIsGlobalAdmin(false);
           setIsSupervisor(false);
@@ -57,14 +72,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        checkAdmin(session.user.id);
-      }
-      setLoading(false);
-    });
+    withTimeout(supabase.auth.getSession())
+      .then(({ data: { session } }) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        if (session?.user) void checkAdmin(session.user.id);
+      })
+      .catch(() => {
+        setSession(null);
+        setUser(null);
+      })
+      .finally(() => setLoading(false));
 
     return () => subscription.unsubscribe();
   }, []);

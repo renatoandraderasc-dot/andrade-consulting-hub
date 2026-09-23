@@ -164,13 +164,14 @@ const Login = () => {
           "acesso",
         );
         access = r.data;
-      } catch {
-        navigate(postLoginTarget);
+      } catch (err) {
+        setError(ehFalhaDeRede(err) ? MSG_REDE : "Não foi possível validar seu acesso. Tente novamente.");
+        setLoading(false);
         return;
       }
 
       if (!access || access.length === 0) {
-        await supabase.auth.signOut();
+        await comTimeout(supabase.auth.signOut(), 8000, "logout").catch(() => undefined);
         setError("Você ainda não tem acesso aprovado. Aguarde a aprovação do administrador.");
         setLoading(false);
         return;
