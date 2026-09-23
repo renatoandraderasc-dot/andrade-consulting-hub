@@ -25,6 +25,7 @@ import DashboardFinanceiro from "./pages/DashboardFinanceiro";
 import AnaliseAnual from "./pages/AnaliseAnual";
 import Compras from "./pages/Compras";
 import EstoqueDinamico from "./pages/EstoqueDinamico";
+import CapilaridadeMix from "./pages/CapilaridadeMix";
 import Relatorios from "./pages/Relatorios";
 import PainelAnalitico from "./pages/PainelAnalitico";
 import PainelComparativo from "./pages/PainelComparativo";
