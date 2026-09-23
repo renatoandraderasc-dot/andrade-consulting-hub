@@ -131,6 +131,7 @@ const navGroups: NavGroup[] = [
     items: [
       { key: "admin_parametrizacoes", path: "/admin/parametrizacoes", label: "Parametrizações Gerais", icon: Settings2 },
       { key: "admin_conexoes", path: "/admin/conexoes", label: "Conexões", icon: Plug },
+      { key: "admin_diagnostico", path: "/admin/diagnostico", label: "Diagnóstico do Sistema", icon: Activity },
       { key: "admin_sites_concorrentes", path: "/admin/sites-concorrentes", label: "Catálogo de Sites", icon: Globe },
       { key: "vtex_collector", path: "/vtex-collector", label: "Coletor de Preços", icon: Database },
       { key: "websac_sync", path: "/websac-sync", label: "Sync WebSac", icon: RefreshCw },
