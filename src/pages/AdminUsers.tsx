@@ -223,6 +223,9 @@ const CreateUserDialog = ({ stores, onClose, onCreated, call }: any) => {
   const [deps, setDeps] = useState<string[]>([]);
   const [modules, setModules] = useState<string[]>(APP_MODULES.filter(m => !m.key.startsWith("admin_") && m.key !== "vtex_collector" && m.key !== "websac_sync").map(m => m.key));
   const [saving, setSaving] = useState(false);
+  const [buscaMod, setBuscaMod] = useState("");
+  const modulosFiltrados = APP_MODULES.filter((m) =>
+    m.label.toLowerCase().includes(buscaMod.trim().toLowerCase()));
 
   const submit = async () => {
     if (!email || !password) { toast({ title: "Preencha email e senha", variant: "destructive" }); return; }
@@ -302,13 +305,22 @@ const CreateUserDialog = ({ stores, onClose, onCreated, call }: any) => {
                 Perfil PIC VISUALIZADOR
               </button>
             </div>
-            <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 border border-border rounded-lg">
-              {APP_MODULES.map((m) => (
+            <Input
+              value={buscaMod}
+              onChange={(e) => setBuscaMod(e.target.value)}
+              placeholder={`Buscar entre ${APP_MODULES.length} módulos...`}
+              className="mb-2 h-9"
+            />
+            <div className="grid grid-cols-2 gap-2 max-h-72 overflow-y-auto p-2 border border-border rounded-lg">
+              {modulosFiltrados.map((m) => (
                 <label key={m.key} className="flex items-center gap-2 cursor-pointer text-sm font-body">
                   <Checkbox checked={modules.includes(m.key)} onCheckedChange={(v) => setModules(v ? [...modules, m.key] : modules.filter(x => x !== m.key))} />
                   {m.label}
                 </label>
               ))}
+              {modulosFiltrados.length === 0 && (
+                <p className="text-xs text-muted-foreground col-span-2">Nenhum módulo encontrado.</p>
+              )}
             </div>
           </div>
         </div>
@@ -339,6 +351,9 @@ const EditUserDialog = ({ user, stores, onClose, onSaved, call }: any) => {
   const [blocked, setBlocked] = useState(!!user.profile?.blocked);
   const [storeIds, setStoreIds] = useState<string[]>(user.stores.filter((s: any) => s.approved).map((s: any) => s.store_id));
   const [moduleKeys, setModuleKeys] = useState<string[]>(user.modules.filter((m: any) => m.allowed).map((m: any) => m.module));
+  const [buscaMod, setBuscaMod] = useState("");
+  const modulosFiltrados = APP_MODULES.filter((m) =>
+    m.label.toLowerCase().includes(buscaMod.trim().toLowerCase()));
   const [depKeys, setDepKeys] = useState<string[]>(user.departments || []);
   const [saving, setSaving] = useState(false);
 
@@ -454,13 +469,22 @@ const EditUserDialog = ({ user, stores, onClose, onSaved, call }: any) => {
               </button>
             </div>
             <p className="text-xs text-muted-foreground font-body mb-2">Marque o que esse usuário pode acessar. Admin enxerga tudo independente desta lista. "PIC: somente %" oculta valores em R$ no PIC (análise por produto e volume continuam liberadas).</p>
-            <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 border border-border rounded-lg">
-              {APP_MODULES.map((m) => (
+            <Input
+              value={buscaMod}
+              onChange={(e) => setBuscaMod(e.target.value)}
+              placeholder={`Buscar entre ${APP_MODULES.length} módulos...`}
+              className="mb-2 h-9"
+            />
+            <div className="grid grid-cols-2 gap-2 max-h-72 overflow-y-auto p-2 border border-border rounded-lg">
+              {modulosFiltrados.map((m) => (
                 <label key={m.key} className="flex items-center gap-2 cursor-pointer text-sm font-body">
                   <Checkbox checked={moduleKeys.includes(m.key)} onCheckedChange={(v) => setModuleKeys(v ? [...moduleKeys, m.key] : moduleKeys.filter(x => x !== m.key))} />
                   {m.label}
                 </label>
               ))}
+              {modulosFiltrados.length === 0 && (
+                <p className="text-xs text-muted-foreground col-span-2">Nenhum módulo encontrado.</p>
+              )}
             </div>
           </div>
 
