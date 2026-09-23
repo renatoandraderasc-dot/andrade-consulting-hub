@@ -52,9 +52,14 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    supabase.functions.invoke("list-stores").then(({ data }) => {
-      if (data?.stores) setStores(data.stores);
-    });
+    supabase.functions
+      .invoke("list-stores")
+      .then(({ data }) => {
+        if (data?.stores) setStores(data.stores);
+      })
+      .catch(() => {
+        /* lista de lojas é opcional: só é usada no cadastro */
+      });
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
