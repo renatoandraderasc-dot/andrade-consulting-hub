@@ -85,6 +85,13 @@
       "when": 1790170880265,
       "tag": "0011_fn_diagnostico_sistema",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1790182444651,
+      "tag": "0012_tighten_permissive_read_policies",
+      "breakpoints": true
     }
   ]
 }
