@@ -16,6 +16,7 @@ import {
 import { ThemeToggle } from "@/components/ThemeToggle";
 import ChangePasswordDialog from "@/components/ChangePasswordDialog";
 import StoreSwitcher from "@/components/StoreSwitcher";
+import UltimaAtualizacaoBadge from "@/components/UltimaAtualizacaoBadge";
 import andradeLogo from "@/assets/andrade-logo.png";
 
 
@@ -234,6 +235,7 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
           </nav>
 
           <div className="ml-auto flex items-center gap-2">
+            <UltimaAtualizacaoBadge />
             <div className="hidden sm:block"><StoreSwitcher /></div>
             <ThemeToggle />
 
