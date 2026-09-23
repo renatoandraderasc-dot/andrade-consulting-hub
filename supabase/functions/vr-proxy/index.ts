@@ -58,7 +58,18 @@ Deno.serve(async (req) => {
       .maybeSingle();
     const cfg = (cfgRow as ConfigLojaCache | null) ?? null;
 
+    // ultima leitura guardada (usada sempre que a loja nao responder)
+    const ultima = async () =>
+      await lerUltimaLeitura({ supabaseUrl, serviceKey, storeId: store_id, relatorio, params });
+
     if (!cfg) {
+      const u = await ultima();
+      if (u) {
+        return json({
+          ok: true, relatorio, dados: u.dados, origem: "cache",
+          cache_em: u.atualizado_em, aviso: "dados da ultima atualizacao",
+        });
+      }
       return json({ ok: true, relatorio, dados: [], aviso: "loja sem conexao VR cadastrada" });
     }
 
@@ -70,6 +81,13 @@ Deno.serve(async (req) => {
       });
       if (!r.ok) {
         console.error("vr-proxy falha (diario_d1)", JSON.stringify({ store_id, relatorio, erro: r.erro }));
+        const u = await ultima();
+        if (u) {
+          return json({
+            ok: true, relatorio, dados: u.dados, origem: "cache",
+            cache_em: u.atualizado_em, modo: "diario_d1", aviso: "dados da ultima atualizacao",
+          });
+        }
         return json({ erro: r.erro ?? "falha ao consultar o sistema da loja", dados: [] }, 200);
       }
       return json({
@@ -86,9 +104,20 @@ Deno.serve(async (req) => {
     if (!r.ok) {
       const msg = r.erro ?? "falha ao consultar o sistema da loja";
       console.error("vr-proxy falha", JSON.stringify({ store_id, relatorio, erro: msg }));
+      const u = await ultima();
+      if (u) {
+        return json({
+          ok: true, relatorio, dados: u.dados, origem: "cache",
+          cache_em: u.atualizado_em, modo: "ao_vivo", aviso: "dados da ultima atualizacao",
+        });
+      }
       return json({ erro: msg, dados: [] }, 200);
     }
-    return json({ ok: true, relatorio, dados: r.dados, modo: "ao_vivo" });
+    // guarda a leitura para servir de historico quando a loja cair
+    const em = await gravarUltimaLeitura({
+      supabaseUrl, serviceKey, storeId: store_id, relatorio, params, dados: r.dados, origem: "proxy",
+    });
+    return json({ ok: true, relatorio, dados: r.dados, modo: "ao_vivo", origem: "ponte", cache_em: em });
   } catch (e) {
     return json({ erro: e instanceof Error ? e.message : String(e) }, 500);
   }
