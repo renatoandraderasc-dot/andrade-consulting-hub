@@ -101,23 +101,13 @@ const Login = () => {
         return;
       }
 
-      // Login: uma tentativa, e se cair a rede, uma segunda antes de avisar.
-      let signInData;
-      let signInError;
-      for (let tentativa = 0; tentativa < 2; tentativa++) {
-        try {
-          const r = await comTimeout(
-            supabase.auth.signInWithPassword({ email, password }),
-            20000,
-            "login",
-          );
-          signInData = r.data;
-          signInError = r.error;
-          break;
-        } catch (err) {
-          if (!ehFalhaDeRede(err) || tentativa === 1) throw err;
-        }
-      }
+      // Uma única tentativa curta: repetir automaticamente mantinha a tela
+      // parada por até 40 segundos quando o navegador estava sem resposta.
+      const { data: signInData, error: signInError } = await comTimeout(
+        supabase.auth.signInWithPassword({ email, password }),
+        12000,
+        "login",
+      );
 
       if (signInError) {
         setError(signInError.message);

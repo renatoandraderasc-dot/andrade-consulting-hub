@@ -16,7 +16,7 @@ interface ModuleGuardProps {
 const ModuleGuard = ({ module, children }: ModuleGuardProps) => {
   const { user, isAdmin, loading } = useAuth();
   const location = useLocation();
-  const [allowed, setAllowed] = useState<Set<string> | null | undefined>(undefined);
+  const [allowed, setAllowed] = useState<Set<string> | null>(null);
 
   useEffect(() => {
     if (loading) return;
@@ -25,9 +25,11 @@ const ModuleGuard = ({ module, children }: ModuleGuardProps) => {
       return;
     }
     let active = true;
+    // A segurança dos dados continua nas políticas do banco. A leitura desta
+    // tabela serve apenas para organizar a navegação e nunca deve bloquear a tela.
     const timer = window.setTimeout(() => {
       if (active) setAllowed(null);
-    }, 8000);
+    }, 4000);
     supabase
       .from("user_module_access")
       .select("module, allowed")
@@ -53,7 +55,7 @@ const ModuleGuard = ({ module, children }: ModuleGuardProps) => {
     };
   }, [user, isAdmin, loading]);
 
-  if (loading || allowed === undefined) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p className="text-sm text-muted-foreground">Validando seu acesso...</p>

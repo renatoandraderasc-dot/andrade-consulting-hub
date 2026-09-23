@@ -26,7 +26,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { CartProgressOverlay } from "@/components/CartProgress";
-import { useAutoRefresh } from "@/hooks/useSaasConfig";
 
 interface Store { id: string; name: string }
 
@@ -101,6 +100,16 @@ type SortKey =
   | "qtdCompra" | "valorCompra" | "qtdVenda" | "valorVenda" | "progresso" | "estoqueDinamico";
 
 const PAGE_SIZE = 50;
+const CONSULTA_TIMEOUT_MS = 45000;
+
+function limitarEspera<T>(promise: Promise<T>, ms = CONSULTA_TIMEOUT_MS): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      window.setTimeout(() => reject(new Error("consulta_timeout")), ms),
+    ),
+  ]);
+}
 
 const EstoqueDinamico = () => {
   const { user, isAdmin, loading: authLoading } = useAuth();
@@ -174,12 +183,13 @@ const EstoqueDinamico = () => {
   const buscar = async () => {
     if (!storeId || !range?.from || !range?.to) return;
     setLoading(true); setAviso(null); setPage(1);
-    const r = await chamarRelatorio(storeId, "estoque_dinamico", {
-      inicio: iso(range.from),
-      fim: iso(range.to),
-    });
-    const msg = avisoRelatorio(r);
-    if (msg) { setAviso(msg); setLinhas([]); setLoading(false); return; }
+    try {
+      const r = await limitarEspera(chamarRelatorio(storeId, "estoque_dinamico", {
+        inicio: iso(range.from),
+        fim: iso(range.to),
+      }));
+      const msg = avisoRelatorio(r);
+      if (msg) { setAviso(msg); return; }
 
     const base: Linha[] = (r.dados || []).map((l: any) => {
       const qtdCompra = num(col(l, "qtd_compra", "quantidade_compra", "qtd_ultima_entrada"));
@@ -219,12 +229,12 @@ const EstoqueDinamico = () => {
     // Pontes que so publicam o estoque atual (sem venda do periodo):
     // complementa com o ranking de produtos para preencher venda e progresso.
     const semVenda = base.length > 0 && base.every((l) => l.qtdVenda === 0 && l.valorVenda === 0);
-    if (semVenda) {
-      const rv = await chamarRelatorio(storeId, "ranking_produtos", {
-        inicio: iso(range.from),
-        fim: iso(range.to),
-        limite: 200000,
-      }).catch(() => null);
+      if (semVenda) {
+        const rv = await limitarEspera(chamarRelatorio(storeId, "ranking_produtos", {
+          inicio: iso(range.from),
+          fim: iso(range.to),
+          limite: 200000,
+        }), 30000).catch(() => null);
       const porCodigo = new Map<string, { qtd: number; valor: number }>();
       for (const l of (rv?.dados as any[]) || []) {
         const cod = String(col(l, "codigo", "cod_produto", "id_produto") ?? "");
@@ -259,14 +269,17 @@ const EstoqueDinamico = () => {
       }
     });
 
-    setLinhas(base);
-    setLoading(false);
+      setLinhas(base);
+    } catch {
+      setAviso(
+        linhas?.length
+          ? "A nova consulta demorou mais que o esperado. Mantivemos os últimos dados exibidos."
+          : "A consulta demorou mais que o esperado. Tente novamente com um intervalo menor.",
+      );
+    } finally {
+      setLoading(false);
+    }
   };
-
-  // Atualização automática parametrizável (Parametrizações Gerais)
-  useAutoRefresh("refresh_estoque_segundos", () => {
-    if (linhas && !loading) buscar();
-  });
 
   const departamentos = useMemo(
     () =>
@@ -373,7 +386,7 @@ const EstoqueDinamico = () => {
 
   return (
     <ClientLayout storeName={storeName}>
-      <div className="p-4 md:p-6 space-y-4 max-w-[1600px] mx-auto">
+      <div className="w-full max-w-[1600px] mx-auto space-y-4 p-3 sm:p-4 md:p-6">
         <div className="flex items-center gap-2">
           <h1 className="text-xl md:text-2xl font-bold text-foreground">Estoque Dinâmico</h1>
           <Tooltip>
@@ -390,9 +403,9 @@ const EstoqueDinamico = () => {
         </div>
 
         <Card className="p-4 space-y-4">
-          <div className="flex flex-wrap items-end gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[auto_auto_auto_minmax(240px,1fr)_auto] xl:items-end">
             {stores.length > 1 && (
-              <div className="space-y-1">
+              <div className="min-w-0 space-y-1">
                 <label className="text-xs text-muted-foreground">Loja</label>
                 <Select
                   value={storeId}
@@ -403,7 +416,7 @@ const EstoqueDinamico = () => {
                     setLinhas(null);
                   }}
                 >
-                  <SelectTrigger className="w-[220px]"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-full xl:w-[220px]"><SelectValue /></SelectTrigger>
                   <SelectContent className="bg-popover">
                     {stores.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                   </SelectContent>
@@ -411,12 +424,12 @@ const EstoqueDinamico = () => {
               </div>
             )}
 
-            <div className="space-y-1">
+            <div className="min-w-0 space-y-1">
               <label className="text-xs text-muted-foreground">Intervalo</label>
               <Popover open={calOpen} onOpenChange={setCalOpen}>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className="justify-start gap-2 w-[260px]">
-                    <CalendarDays className="w-4 h-4" /> {rotuloRange}
+                  <Button variant="outline" className="w-full justify-start gap-2 xl:w-[260px]">
+                    <CalendarDays className="w-4 h-4 shrink-0" /> <span className="truncate">{rotuloRange}</span>
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0 bg-popover" align="start">
@@ -430,7 +443,7 @@ const EstoqueDinamico = () => {
                   </div>
                   <Calendar
                     mode="range"
-                    numberOfMonths={2}
+                    numberOfMonths={1}
                     locale={ptBR}
                     selected={range}
                     onSelect={setRange}
@@ -440,11 +453,11 @@ const EstoqueDinamico = () => {
               </Popover>
             </div>
 
-            <Button onClick={() => { setCalOpen(false); buscar(); }} disabled={!storeId || !range?.from || !range?.to || loading}>
+            <Button className="w-full sm:w-auto" onClick={() => { setCalOpen(false); buscar(); }} disabled={!storeId || !range?.from || !range?.to || loading}>
               Aplicar
             </Button>
 
-            <div className="space-y-1 flex-1 min-w-[200px]">
+            <div className="min-w-0 space-y-1">
               <label className="text-xs text-muted-foreground">Buscar</label>
               <div className="relative">
                 <Search className="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -453,16 +466,16 @@ const EstoqueDinamico = () => {
               </div>
             </div>
 
-            <Button variant="outline" onClick={exportar} disabled={!ordenadas.length} className="gap-2">
+            <Button variant="outline" onClick={exportar} disabled={!ordenadas.length} className="w-full gap-2 sm:w-auto">
               <Download className="w-4 h-4" /> Exportar Excel
             </Button>
           </div>
 
-          <div className="flex flex-wrap gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-[auto_auto_1fr_auto]">
             <div className="space-y-1">
               <div className="text-xs text-muted-foreground">Departamento</div>
               <Select value={fDep} onValueChange={setFDep}>
-                <SelectTrigger className="h-7 w-[220px] text-xs"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-8 w-full text-xs xl:w-[220px]"><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-popover">
                   <SelectItem value="__all__">Todos os departamentos</SelectItem>
                   {departamentos.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
@@ -472,8 +485,8 @@ const EstoqueDinamico = () => {
 
             <div className="space-y-1">
               <div className="text-xs text-muted-foreground">Classificação ABC</div>
-              <div className="flex items-center gap-2">
-                <div className="flex gap-1">
+               <div className="flex flex-wrap items-center gap-2">
+                 <div className="flex flex-wrap gap-1">
                   {["A", "B", "C", "D"].map((c) => (
                     <Button key={c} size="sm" variant={fAbc1.includes(c) ? "default" : "secondary"}
                       className="h-7 w-8 text-[11px]" onClick={() => toggle(fAbc1, setFAbc1, c)}>{c}</Button>
@@ -514,7 +527,7 @@ const EstoqueDinamico = () => {
           </Card>
         )}
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-4">
           {[
             { label: "Valor comprado", valor: fmtBRL(totais.valorCompra) },
             { label: "Valor vendido", valor: fmtBRL(totais.valorVenda) },
@@ -523,7 +536,7 @@ const EstoqueDinamico = () => {
           ].map((c) => (
             <Card key={c.label} className="p-4">
               <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{c.label}</div>
-              <div className="text-lg md:text-xl font-bold text-foreground mt-1">{c.valor}</div>
+              <div className="mt-1 break-words text-lg font-bold text-foreground md:text-xl">{c.valor}</div>
             </Card>
           ))}
         </div>
@@ -613,13 +626,13 @@ const EstoqueDinamico = () => {
           )}
 
           {ordenadas.length > PAGE_SIZE && (
-            <div className="flex items-center justify-between p-3 border-t border-border text-xs">
+            <div className="flex flex-col gap-3 border-t border-border p-3 text-xs sm:flex-row sm:items-center sm:justify-between">
               <span className="text-muted-foreground">
                 Página {page} de {totalPages} — {ordenadas.length} produtos
               </span>
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>Anterior</Button>
-                <Button size="sm" variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>Próxima</Button>
+              <div className="grid grid-cols-2 gap-2">
+                <Button className="w-full" size="sm" variant="outline" disabled={page === 1} onClick={() => setPage((p) => p - 1)}>Anterior</Button>
+                <Button className="w-full" size="sm" variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>Próxima</Button>
               </div>
             </div>
           )}
