@@ -355,12 +355,27 @@ const Compras = () => {
     } finally { setSavingCfg(false); }
   };
 
+  // As taxas sao digitadas em % e guardadas como fracao (10 % -> 0,10).
+  const fracaoDoPct = (texto: any, padrao: number) => {
+    if (texto === undefined || texto === null || String(texto).trim() === "") return padrao;
+    const n = Number(String(texto).replace(",", "."));
+    return Number.isFinite(n) ? n / 100 : padrao;
+  };
+
+  const pctInput = (d: any, campo: "tx_perdas" | "tx_recuperacao", padrao: number) => {
+    const bruto = d[`${campo}_pct`];
+    if (bruto !== undefined && bruto !== null) return String(bruto);
+    const valor = d[campo] == null ? padrao : Number(d[campo]);
+    const pct = (Number.isFinite(valor) ? valor : padrao) * 100;
+    return String(Number(pct.toFixed(3)));
+  };
+
   const salvarDepto = async (row: any, silencioso = false) => {
     if (!isAdmin) return;
     try {
       const valores = {
-        tx_perdas: Number(row.tx_perdas) || 0,
-        tx_recuperacao: Number(row.tx_recuperacao) || 0,
+        tx_perdas: fracaoDoPct(row.tx_perdas_pct, Number(row.tx_perdas) || 0),
+        tx_recuperacao: fracaoDoPct(row.tx_recuperacao_pct, row.tx_recuperacao == null ? 1 : Number(row.tx_recuperacao)),
         ativo: !!row.ativo,
       };
       if (row.id) {
@@ -604,6 +619,12 @@ const Compras = () => {
     [cvFiltrados],
   );
 
+  // Saldo: soma de quem comprou ABAIXO do CMV (compra menor que o custo vendido)
+  const cvSaldoTotal = useMemo(
+    () => cvFiltrados.reduce((s, r) => s + Math.max(r.cmv - r.compra, 0), 0),
+    [cvFiltrados],
+  );
+
   // Excesso liquido: compra total menos CMV total (pode ficar negativo).
   const cvExcessoLiquido = cvTotais.compra - cvTotais.cmv;
 
@@ -661,7 +682,7 @@ const Compras = () => {
         Nível: "Departamento", Departamento: g.departamento, Seção: "",
         Venda: g.venda, CMV: g.cmv,
         "Margem %": g.margem, "Markup %": g.markup,
-        Compra: g.compra, "CMV - Compra": g.saldo_cmv,
+        Compra: g.compra, Saldo: Math.max(g.cmv - g.compra, 0),
         Excesso: Math.max(g.compra - g.cmv, 0),
         "Compra/Venda %": g.cv, "Compra/CMV %": g.ccmv, "Participação %": g.part,
       });
@@ -670,7 +691,7 @@ const Compras = () => {
           Nível: "Seção", Departamento: g.departamento, Seção: s.secao,
           Venda: s.venda, CMV: s.cmv,
           "Margem %": s.margem, "Markup %": s.markup,
-          Compra: s.compra, "CMV - Compra": s.saldo_cmv,
+          Compra: s.compra, Saldo: Math.max(s.cmv - s.compra, 0),
           Excesso: Math.max(s.compra - s.cmv, 0),
           "Compra/Venda %": s.cv, "Compra/CMV %": s.ccmv, "Participação %": s.part,
         });
@@ -680,7 +701,7 @@ const Compras = () => {
       Departamento: p.departamento, Seção: p.secao, Código: p.codigo,
       Descrição: p.descricao, EAN: p.ean,
       Venda: p.venda, CMV: p.cmv, Compra: p.compra,
-      "CMV - Compra": p.cmv - p.compra,
+      Saldo: Math.max(p.cmv - p.compra, 0),
       Excesso: Math.max(p.compra - p.cmv, 0),
       "Margem %": p.venda > 0 ? ((p.venda - p.cmv) / p.venda) * 100 : 0,
     }));
@@ -1015,7 +1036,7 @@ const Compras = () => {
 
             {cvGrupos.length > 0 && (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-4 xl:grid-cols-7 gap-4 mb-6">
                   <KpiCard label="Total venda" value={fmtBRL(cvTotais.venda)} />
                   <KpiCard label="CMV" value={fmtBRL(cvTotais.cmv)} />
                   <KpiCard label="Total compra" value={fmtBRL(cvTotais.compra)} />
@@ -1027,6 +1048,12 @@ const Compras = () => {
                     emphasis
                   />
                   <KpiCard
+                    label="Saldo do período"
+                    value={fmtBRL(cvSaldoTotal)}
+                    tone="success"
+                    emphasis
+                  />
+                  <KpiCard
                     label={cvExcessoLiquido >= 0 ? "Excesso líquido" : "Compra abaixo do CMV"}
                     value={fmtBRL(Math.abs(cvExcessoLiquido))}
                     tone={cvExcessoLiquido > 0 ? "danger" : "success"}
@@ -1034,7 +1061,7 @@ const Compras = () => {
                   />
                 </div>
                 <p className="text-xs text-muted-foreground -mt-3 mb-6">
-                  O excesso bruto soma só as seções que compraram acima do CMV; o líquido desconta as que compraram abaixo.
+                  O excesso soma as seções que compraram acima do CMV; o saldo soma as que compraram abaixo. O líquido é a diferença entre os dois.
                 </p>
 
                 <div className="bg-card border border-border rounded-xl p-5 overflow-x-auto mb-6">
@@ -1047,7 +1074,7 @@ const Compras = () => {
                         <th className="text-right py-2 px-2">Margem %</th>
                         <th className="text-right py-2 px-2">Markup %</th>
                         <th className="text-right py-2 px-2">Compra</th>
-                        <th className="text-right py-2 px-2">CMV − Compra</th>
+                        <th className="text-right py-2 px-2">Saldo</th>
                         <th className="text-right py-2 px-2">Excesso</th>
                         <th className="text-right py-2 px-2">Compra / Venda</th>
                         <th className="text-right py-2 px-2">Compra / CMV</th>
@@ -1059,6 +1086,7 @@ const Compras = () => {
                         const aberto = !!expandidos[g.departamento];
                         const toneCcmv = (v: number) => (v > 100 ? "text-red-500" : v < 85 ? "text-amber-500" : "");
                         const excessoDe = (r: { cmv: number; compra: number }) => Math.max(r.compra - r.cmv, 0);
+                        const saldoDe = (r: { cmv: number; compra: number }) => Math.max(r.cmv - r.compra, 0);
                         return (
                           <Fragment key={g.departamento}>
                             <tr
@@ -1077,7 +1105,7 @@ const Compras = () => {
                               <td className="py-2 px-2 text-right tabular-nums">{fmtPct(g.margem)}</td>
                               <td className="py-2 px-2 text-right tabular-nums">{fmtPct(g.markup)}</td>
                               <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(g.compra)}</td>
-                              <td className={`py-2 px-2 text-right tabular-nums ${g.saldo_cmv < 0 ? "text-red-500" : ""}`}>{fmtBRL(g.saldo_cmv)}</td>
+                              <td className={`py-2 px-2 text-right tabular-nums ${saldoDe(g) > 0 ? "text-emerald-500" : ""}`}>{fmtBRL(saldoDe(g))}</td>
                               <td className={`py-2 px-2 text-right tabular-nums ${excessoDe(g) > 0 ? "text-red-500" : ""}`}>{fmtBRL(excessoDe(g))}</td>
                               <td className="py-2 px-2 text-right tabular-nums">{fmtPct(g.cv)}</td>
                               <td className={`py-2 px-2 text-right tabular-nums font-medium ${toneCcmv(g.ccmv)}`}>{fmtPct(g.ccmv)}</td>
@@ -1108,7 +1136,7 @@ const Compras = () => {
                                     <td className="py-2 px-2 text-right tabular-nums">{fmtPct(s.margem)}</td>
                                     <td className="py-2 px-2 text-right tabular-nums">{fmtPct(s.markup)}</td>
                                     <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(s.compra)}</td>
-                                    <td className={`py-2 px-2 text-right tabular-nums ${s.saldo_cmv < 0 ? "text-red-500" : ""}`}>{fmtBRL(s.saldo_cmv)}</td>
+                                    <td className={`py-2 px-2 text-right tabular-nums ${saldoDe(s) > 0 ? "text-emerald-500" : ""}`}>{fmtBRL(saldoDe(s))}</td>
                                     <td className={`py-2 px-2 text-right tabular-nums ${excessoDe(s) > 0 ? "text-red-500" : ""}`}>{fmtBRL(excessoDe(s))}</td>
                                     <td className="py-2 px-2 text-right tabular-nums">{fmtPct(s.cv)}</td>
                                     <td className={`py-2 px-2 text-right tabular-nums ${toneCcmv(s.ccmv)}`}>{fmtPct(s.ccmv)}</td>
@@ -1139,7 +1167,7 @@ const Compras = () => {
                                         <td className="py-1.5 px-2 text-right tabular-nums">{fmtPct(margem)}</td>
                                         <td className="py-1.5 px-2 text-right tabular-nums">{fmtPct(markup)}</td>
                                         <td className="py-1.5 px-2 text-right tabular-nums">{fmtBRL(p.compra)}</td>
-                                        <td className={`py-1.5 px-2 text-right tabular-nums ${p.cmv - p.compra < 0 ? "text-red-500" : ""}`}>{fmtBRL(p.cmv - p.compra)}</td>
+                                        <td className={`py-1.5 px-2 text-right tabular-nums ${p.cmv - p.compra > 0 ? "text-emerald-500" : ""}`}>{fmtBRL(Math.max(p.cmv - p.compra, 0))}</td>
                                         <td className={`py-1.5 px-2 text-right tabular-nums ${excesso > 0 ? "text-red-500" : ""}`}>{fmtBRL(excesso)}</td>
                                         <td className="py-1.5 px-2 text-right tabular-nums">{fmtPct(p.venda > 0 ? (p.compra / p.venda) * 100 : 0)}</td>
                                         <td className="py-1.5 px-2 text-right tabular-nums">{fmtPct(p.cmv > 0 ? (p.compra / p.cmv) * 100 : 0)}</td>
@@ -1162,7 +1190,7 @@ const Compras = () => {
                         <td className="py-3 px-2 text-right tabular-nums">{fmtPct(cvTotais.venda > 0 ? ((cvTotais.venda - cvTotais.cmv) / cvTotais.venda) * 100 : 0)}</td>
                         <td className="py-3 px-2 text-right tabular-nums">{fmtPct(cvTotais.cmv > 0 ? ((cvTotais.venda - cvTotais.cmv) / cvTotais.cmv) * 100 : 0)}</td>
                         <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(cvTotais.compra)}</td>
-                        <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(cvTotais.cmv - cvTotais.compra)}</td>
+                        <td className="py-3 px-2 text-right tabular-nums text-emerald-500">{fmtBRL(cvSaldoTotal)}</td>
                         <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(Math.max(cvTotais.compra - cvTotais.cmv, 0))}</td>
                         <td className="py-3 px-2 text-right tabular-nums">{fmtPct(cvTotais.venda > 0 ? (cvTotais.compra / cvTotais.venda) * 100 : 0)}</td>
                         <td className="py-3 px-2 text-right tabular-nums">{fmtPct(cvTotais.cmv > 0 ? (cvTotais.compra / cvTotais.cmv) * 100 : 0)}</td>
@@ -1310,10 +1338,10 @@ const Compras = () => {
                         {!d.id && <span className="ml-2 text-[10px] text-muted-foreground">(novo)</span>}
                       </td>
                       <td className="py-2 px-2 text-right">
-                        <input type="number" step="0.001" disabled={!isAdmin} value={d.tx_perdas ?? 0} onChange={(e) => editarDepto(d.departamento, { tx_perdas: parseFloat(e.target.value) || 0 })} className="w-24 bg-transparent border border-border rounded px-2 py-1 text-right tabular-nums" />
+                        <input type="text" inputMode="decimal" disabled={!isAdmin} value={pctInput(d, "tx_perdas", 0)} onChange={(e) => editarDepto(d.departamento, { tx_perdas_pct: e.target.value })} className="w-24 bg-transparent border border-border rounded px-2 py-1 text-right tabular-nums" />
                       </td>
                       <td className="py-2 px-2 text-right">
-                        <input type="number" step="0.001" disabled={!isAdmin} value={d.tx_recuperacao ?? 1} onChange={(e) => editarDepto(d.departamento, { tx_recuperacao: parseFloat(e.target.value) || 0 })} className="w-24 bg-transparent border border-border rounded px-2 py-1 text-right tabular-nums" />
+                        <input type="text" inputMode="decimal" disabled={!isAdmin} value={pctInput(d, "tx_recuperacao", 1)} onChange={(e) => editarDepto(d.departamento, { tx_recuperacao_pct: e.target.value })} className="w-24 bg-transparent border border-border rounded px-2 py-1 text-right tabular-nums" />
                       </td>
                       <td className="py-2 px-2 text-center">
                         <input type="checkbox" disabled={!isAdmin} checked={!!d.ativo} onChange={(e) => editarDepto(d.departamento, { ativo: e.target.checked })} />

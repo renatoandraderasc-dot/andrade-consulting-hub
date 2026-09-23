@@ -64,6 +64,13 @@
       "when": 1790121910738,
       "tag": "0008_grupo_recalc_daily_mix_volume",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790123785316,
+      "tag": "0009_metas_compra_taxas",
+      "breakpoints": true
     }
   ]
 }
