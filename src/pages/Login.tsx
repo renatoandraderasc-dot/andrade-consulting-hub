@@ -20,6 +20,22 @@ function sanitizeNext(raw: string | null): string | null {
   return raw;
 }
 
+// Evita telas travadas: qualquer chamada que passar do tempo vira erro tratado.
+function comTimeout<T>(p: PromiseLike<T>, ms: number, rotulo: string): Promise<T> {
+  return Promise.race([
+    Promise.resolve(p),
+    new Promise<T>((_, rej) => setTimeout(() => rej(new Error(`timeout:${rotulo}`)), ms)),
+  ]);
+}
+
+function ehFalhaDeRede(err: unknown): boolean {
+  const m = String((err as Error)?.message || err || "");
+  return /failed to fetch|networkerror|load failed|timeout:/i.test(m);
+}
+
+const MSG_REDE =
+  "Não foi possível falar com o servidor agora. Verifique sua conexão e tente novamente.";
+
 const Login = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
