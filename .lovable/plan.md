@@ -1,10 +1,14 @@
-# Exibir todos os departamentos do Medeiros
+# Corrigir Estoque Dinâmico do Nascimento
+
+## Objetivo
+Eliminar a tela presa em “Validando seu acesso…”, impedir que a consulta fique parada em 95% e ajustar a tela para funcionar em janelas menores e celulares.
 
 ## Alterações
-- Consolidar departamentos cadastrados, históricos, metas e mapeamentos da loja numa lista única.
-- Fazer o painel de Compras mostrar departamentos ativos mesmo sem meta gerada no mês.
-- Usar a mesma lista completa na configuração do PIC.
-- Validar a tela de Compras e os estados vazios.
+- Tornar a validação de acesso limitada por tempo e reaproveitar a sessão já confirmada, sem deixar uma tela preta indefinidamente.
+- Proteger a consulta do Estoque Dinâmico com limite de espera, encerramento garantido e preservação dos últimos dados disponíveis quando a loja demorar.
+- Remover a atualização automática desta tela para evitar novas consultas pesadas durante o uso.
+- Ajustar filtros, calendário, indicadores, tabela e paginação para larguras menores, mantendo rolagem horizontal apenas nos dados detalhados.
+- Validar a rota autenticada e o resultado em tela pequena e desktop.
 
-## Observação técnica
-Os valores antes consolidados em “OUTROS” só podem ser redistribuídos após o relatório detalhado da ponte retornar o mercadológico real. A interface deixará de ocultar os demais departamentos enquanto preserva os totais existentes.
+## Limite
+As mudanças serão restritas à validação de acesso compartilhada e à tela Estoque Dinâmico; nenhuma regra de cálculo será alterada.
