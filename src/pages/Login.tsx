@@ -121,6 +121,9 @@ const Login = () => {
 
       const userId = signInData.user.id;
 
+      // A autenticação já foi concluída. As consultas abaixo apenas escolhem
+      // loja e página inicial; falhas nelas não podem devolver erro de login.
+
       // Consultas de perfil não podem travar a entrada: em caso de falha,
       // o usuário entra e a própria tela resolve as permissões.
       let isAdmin = false;
@@ -155,8 +158,7 @@ const Login = () => {
         );
         access = r.data;
       } catch (err) {
-        setError(ehFalhaDeRede(err) ? MSG_REDE : "Não foi possível validar seu acesso. Tente novamente.");
-        setLoading(false);
+        navigate(postLoginTarget);
         return;
       }
 

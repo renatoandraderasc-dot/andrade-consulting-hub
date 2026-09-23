@@ -233,7 +233,7 @@ const EstoqueDinamico = () => {
         const rv = await limitarEspera(chamarRelatorio(storeId, "ranking_produtos", {
           inicio: iso(range.from),
           fim: iso(range.to),
-          limite: 200000,
+          limite: 50000,
         }), 30000).catch(() => null);
       const porCodigo = new Map<string, { qtd: number; valor: number }>();
       for (const l of (rv?.dados as any[]) || []) {
