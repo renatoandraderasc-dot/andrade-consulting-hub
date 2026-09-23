@@ -8,4 +8,4 @@
 
 - [ ] Corrigir indisponibilidade persistente durante todo o dia na validação de acesso
 
-- [ ] Corrigir resposta sem tabela do Estoque Dinâmico no WebSac Nascimento
+- [x] Corrigir resposta sem tabela do Estoque Dinâmico no WebSac Nascimento
