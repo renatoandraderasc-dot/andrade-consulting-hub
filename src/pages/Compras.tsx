@@ -4,8 +4,11 @@ import { comprasAgrupadas, detalharComprasVendas } from "@/lib/comprasDetalhe";
 import { useNavigate } from "react-router-dom";
 import {
   ShoppingCart, TrendingUp, TrendingDown, Wallet, Target, Download, Wand2, Save, RefreshCw, Info,
-  ChevronRight, ChevronDown,
+  ChevronRight, ChevronDown, FilterX,
 } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuCheckboxItem,
+} from "@/components/ui/dropdown-menu";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   LabelList, LineChart, Line, Legend, CartesianGrid,
@@ -114,6 +117,8 @@ const Compras = () => {
   const [cvLoading, setCvLoading] = useState(false);
   const [cvAviso, setCvAviso] = useState<string | null>(null);
   const [fN1, setFN1] = useState("__all__");
+  // Departamentos retirados da apuracao (chaveDep); vazio = nada retirado
+  const [cvExcluir, setCvExcluir] = useState<string[]>([]);
   const [expandidos, setExpandidos] = useState<Record<string, boolean>>({});
   const [fornecedores, setFornecedores] = useState<any[]>([]);
   const [fornLoading, setFornLoading] = useState(false);
