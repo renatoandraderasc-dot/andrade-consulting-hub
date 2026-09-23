@@ -349,7 +349,7 @@ Deno.serve(async (req) => {
         }
       }
       gravadosTotal += gravados;
-      detalhe.push({ periodo: b.ini, linhas_api: linhas.length, gravados });
+      detalhe.push({ periodo: b.ini, linhas_api: linhas.length, gravados, preservados_manual: preservadosManual });
     }
 
 
