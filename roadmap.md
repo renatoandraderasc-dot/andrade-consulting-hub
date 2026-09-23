@@ -7,3 +7,5 @@
 - [x] Unificar Saldo e Excesso em uma coluna no Compras × Vendas e no Excel.
 
 - [ ] Corrigir indisponibilidade persistente durante todo o dia na validação de acesso
+
+- [x] Corrigir resposta sem tabela do Estoque Dinâmico no WebSac Nascimento
