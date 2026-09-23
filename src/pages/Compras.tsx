@@ -359,8 +359,8 @@ const Compras = () => {
     if (!isAdmin) return;
     try {
       const valores = {
-        tx_perdas: Number(row.tx_perdas) || 0,
-        tx_recuperacao: Number(row.tx_recuperacao) || 0,
+        tx_perdas: fracaoDoPct(row.tx_perdas_pct, Number(row.tx_perdas) || 0),
+        tx_recuperacao: fracaoDoPct(row.tx_recuperacao_pct, row.tx_recuperacao == null ? 1 : Number(row.tx_recuperacao)),
         ativo: !!row.ativo,
       };
       if (row.id) {
@@ -1021,7 +1021,7 @@ const Compras = () => {
 
             {cvGrupos.length > 0 && (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-4 xl:grid-cols-7 gap-4 mb-6">
                   <KpiCard label="Total venda" value={fmtBRL(cvTotais.venda)} />
                   <KpiCard label="CMV" value={fmtBRL(cvTotais.cmv)} />
                   <KpiCard label="Total compra" value={fmtBRL(cvTotais.compra)} />
@@ -1033,6 +1033,12 @@ const Compras = () => {
                     emphasis
                   />
                   <KpiCard
+                    label="Saldo do período"
+                    value={fmtBRL(cvSaldoTotal)}
+                    tone="success"
+                    emphasis
+                  />
+                  <KpiCard
                     label={cvExcessoLiquido >= 0 ? "Excesso líquido" : "Compra abaixo do CMV"}
                     value={fmtBRL(Math.abs(cvExcessoLiquido))}
                     tone={cvExcessoLiquido > 0 ? "danger" : "success"}
@@ -1040,7 +1046,7 @@ const Compras = () => {
                   />
                 </div>
                 <p className="text-xs text-muted-foreground -mt-3 mb-6">
-                  O excesso bruto soma só as seções que compraram acima do CMV; o líquido desconta as que compraram abaixo.
+                  O excesso soma as seções que compraram acima do CMV; o saldo soma as que compraram abaixo. O líquido é a diferença entre os dois.
                 </p>
 
                 <div className="bg-card border border-border rounded-xl p-5 overflow-x-auto mb-6">
@@ -1317,10 +1323,10 @@ const Compras = () => {
                         {!d.id && <span className="ml-2 text-[10px] text-muted-foreground">(novo)</span>}
                       </td>
                       <td className="py-2 px-2 text-right">
-                        <input type="number" step="0.001" disabled={!isAdmin} value={d.tx_perdas ?? 0} onChange={(e) => editarDepto(d.departamento, { tx_perdas: parseFloat(e.target.value) || 0 })} className="w-24 bg-transparent border border-border rounded px-2 py-1 text-right tabular-nums" />
+                        <input type="text" inputMode="decimal" disabled={!isAdmin} value={pctInput(d, "tx_perdas", 0)} onChange={(e) => editarDepto(d.departamento, { tx_perdas_pct: e.target.value })} className="w-24 bg-transparent border border-border rounded px-2 py-1 text-right tabular-nums" />
                       </td>
                       <td className="py-2 px-2 text-right">
-                        <input type="number" step="0.001" disabled={!isAdmin} value={d.tx_recuperacao ?? 1} onChange={(e) => editarDepto(d.departamento, { tx_recuperacao: parseFloat(e.target.value) || 0 })} className="w-24 bg-transparent border border-border rounded px-2 py-1 text-right tabular-nums" />
+                        <input type="text" inputMode="decimal" disabled={!isAdmin} value={pctInput(d, "tx_recuperacao", 1)} onChange={(e) => editarDepto(d.departamento, { tx_recuperacao_pct: e.target.value })} className="w-24 bg-transparent border border-border rounded px-2 py-1 text-right tabular-nums" />
                       </td>
                       <td className="py-2 px-2 text-center">
                         <input type="checkbox" disabled={!isAdmin} checked={!!d.ativo} onChange={(e) => editarDepto(d.departamento, { ativo: e.target.checked })} />
