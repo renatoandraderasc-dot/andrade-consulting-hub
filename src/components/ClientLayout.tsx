@@ -17,6 +17,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import ChangePasswordDialog from "@/components/ChangePasswordDialog";
 import StoreSwitcher from "@/components/StoreSwitcher";
 import UltimaAtualizacaoBadge from "@/components/UltimaAtualizacaoBadge";
+import { limparAtualizacao } from "@/lib/ultimaAtualizacao";
 import andradeLogo from "@/assets/andrade-logo.png";
 
 
@@ -169,6 +170,9 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
     await signOut();
     navigate("/");
   };
+
+  // cada tela mostra a data dos proprios dados
+  useEffect(() => { limparAtualizacao(); }, [location.pathname]);
 
   const isActive = (path: string) => location.pathname === path;
 
