@@ -37,6 +37,7 @@ export const APP_MODULES = [
   { key: "admin_questions", label: "Admin: Perguntas", path: "/admin/questions" },
   { key: "admin_users", label: "Admin: Usuários", path: "/admin/users" },
   { key: "admin_conexoes", label: "Admin: Gestão de Conexão", path: "/admin/conexoes" },
+  { key: "admin_diagnostico", label: "Admin: Diagnóstico do Sistema", path: "/admin/diagnostico" },
   { key: "admin_site", label: "Admin: Página Inicial", path: "/admin/site" },
   { key: "vtex_collector", label: "Coletor de Preços", path: "/vtex-collector" },
   { key: "websac_sync", label: "Sync WebSac", path: "/websac-sync" },

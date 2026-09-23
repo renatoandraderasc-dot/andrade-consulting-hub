@@ -46,6 +46,7 @@ import OAuthConsent from "./pages/OAuthConsent";
 import AdminSite from "./pages/AdminSite";
 import AdminSitesConcorrentes from "./pages/AdminSitesConcorrentes";
 import AdminConexoes from "./pages/AdminConexoes";
+import Diagnostico from "./pages/Diagnostico";
 import AdminRede from "./pages/AdminRede";
 import AdminParametrizacoes from "./pages/AdminParametrizacoes";
 import Jornada from "./pages/Jornada";
@@ -118,6 +119,7 @@ const App = () => (
             <Route path="/admin/rede" element={g("admin_rede", <AdminRede />)} />
             <Route path="/admin/parametrizacoes" element={g("admin_parametrizacoes", <AdminParametrizacoes />)} />
             <Route path="/admin/conexoes" element={g("admin_conexoes", <AdminConexoes />)} />
+            <Route path="/admin/diagnostico" element={g("admin_diagnostico", <Diagnostico />)} />
             <Route path="/admin/site" element={g("admin_site", <AdminSite />)} />
             <Route path="/admin/sites-concorrentes" element={g("admin_sites_concorrentes", <AdminSitesConcorrentes />)} />
             <Route path="/produtos" element={g("produtos", <Produtos />)} />
