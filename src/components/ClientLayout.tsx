@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   BarChart3, CheckSquare, Settings, Settings2, Users, LogOut, Menu, X, ArrowLeft,
   Target, ClipboardList, DollarSign, Database, RefreshCw, Trophy, Store, ShoppingCart, LayoutTemplate, TrendingUp, Package, KeyRound, Plug, ScanLine, Tags, ChevronDown, Globe, Network,
-  Thermometer, LayoutDashboard, FileSpreadsheet,
+  Thermometer, LayoutDashboard, FileSpreadsheet, Layers,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -49,6 +49,7 @@ const navGroups: NavGroup[] = [
       { key: "relatorios", path: "/relatorios", label: "Relatórios", icon: FileSpreadsheet },
       { key: "painel_analitico", path: "/painel-analitico", label: "Painel Analítico", icon: BarChart3 },
       { key: "painel_comparativo", path: "/painel-comparativo", label: "Comparativo", icon: TrendingUp },
+      { key: "capilaridade_mix", path: "/capilaridade-mix", label: "Capilaridade de Mix", icon: Layers },
     ],
   },
   {

@@ -25,6 +25,7 @@ import DashboardFinanceiro from "./pages/DashboardFinanceiro";
 import AnaliseAnual from "./pages/AnaliseAnual";
 import Compras from "./pages/Compras";
 import EstoqueDinamico from "./pages/EstoqueDinamico";
+import CapilaridadeMix from "./pages/CapilaridadeMix";
 import Relatorios from "./pages/Relatorios";
 import PainelAnalitico from "./pages/PainelAnalitico";
 import PainelComparativo from "./pages/PainelComparativo";
@@ -101,6 +102,7 @@ const App = () => (
 
             <Route path="/compras" element={g("compras", <Compras />)} />
             <Route path="/estoque-dinamico" element={g("estoque_dinamico", <EstoqueDinamico />)} />
+            <Route path="/capilaridade-mix" element={g("capilaridade_mix", <CapilaridadeMix />)} />
             <Route path="/relatorios" element={g("relatorios", <Relatorios />)} />
             <Route path="/painel-analitico" element={g("painel_analitico", <PainelAnalitico />)} />
             <Route path="/painel-comparativo" element={g("painel_comparativo", <PainelComparativo />)} />
