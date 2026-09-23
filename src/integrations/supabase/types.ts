@@ -3634,6 +3634,7 @@ export type Database = {
           total_meta: number
         }[]
       }
+      fn_diagnostico_sistema: { Args: never; Returns: Json }
       fn_grupo_recalc_all: { Args: { p_group: string }; Returns: undefined }
       fn_grupo_recalc_daily: {
         Args: { p_date: string; p_department: string; p_group: string }
