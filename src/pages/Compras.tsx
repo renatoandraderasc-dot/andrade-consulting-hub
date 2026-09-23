@@ -604,6 +604,12 @@ const Compras = () => {
     [cvFiltrados],
   );
 
+  // Saldo: soma de quem comprou ABAIXO do CMV (compra menor que o custo vendido)
+  const cvSaldoTotal = useMemo(
+    () => cvFiltrados.reduce((s, r) => s + Math.max(r.cmv - r.compra, 0), 0),
+    [cvFiltrados],
+  );
+
   // Excesso liquido: compra total menos CMV total (pode ficar negativo).
   const cvExcessoLiquido = cvTotais.compra - cvTotais.cmv;
 
