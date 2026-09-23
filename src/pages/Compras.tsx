@@ -117,8 +117,8 @@ const Compras = () => {
   const [cvLoading, setCvLoading] = useState(false);
   const [cvAviso, setCvAviso] = useState<string | null>(null);
   const [fN1, setFN1] = useState("__all__");
-  // Departamentos retirados da apuracao (chaveDep); vazio = nada retirado
-  const [cvExcluir, setCvExcluir] = useState<string[]>([]);
+  // Departamentos retirados da apuracao: definidos na Configuracao
+  // (departamento desmarcado como "ativo").
   const [expandidos, setExpandidos] = useState<Record<string, boolean>>({});
   const [fornecedores, setFornecedores] = useState<any[]>([]);
   const [fornLoading, setFornLoading] = useState(false);
@@ -577,6 +577,12 @@ const Compras = () => {
     ccmv: r.cmv > 0 ? (r.compra / r.cmv) * 100 : 0,
     part: vendaTotal > 0 ? (r.venda / vendaTotal) * 100 : 0,
   });
+
+  // Retirados da apuracao = departamentos inativos na Configuracao.
+  const cvExcluir = useMemo(
+    () => deptos.filter((d: any) => d.ativo === false).map((d: any) => chaveDep(d.departamento)),
+    [deptos],
+  );
 
   const cvFiltrados = useMemo(
     () => cvItens.filter(
