@@ -1036,6 +1036,41 @@ const Compras = () => {
                   {fN1 !== "__all__" && (
                     <button onClick={() => setFN1("__all__")} className={btnGhost}>Limpar filtro</button>
                   )}
+                  {cvOpcoes.n1.length > 1 && (
+                    <>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Retirar da apuração</label>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className={btnGhost}>
+                              <FilterX className="w-4 h-4" />
+                              Departamentos{cvExcluir.length > 0 ? ` (${cvExcluir.length})` : ""}
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="max-h-72 w-64 overflow-y-auto" align="start">
+                            {cvOpcoes.n1.map((o) => (
+                              <DropdownMenuCheckboxItem
+                                key={o}
+                                checked={cvExcluir.includes(chaveDep(o))}
+                                onCheckedChange={(v) => {
+                                  const k = chaveDep(o);
+                                  setCvExcluir((prev) => (v ? (prev.includes(k) ? prev : [...prev, k]) : prev.filter((x) => x !== k)));
+                                }}
+                                onSelect={(e) => e.preventDefault()}
+                              >
+                                {o}
+                              </DropdownMenuCheckboxItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      {cvExcluir.length > 0 && (
+                        <button onClick={() => setCvExcluir([])} className={btnGhost}>
+                          Trazer de volta ({cvExcluir.length})
+                        </button>
+                      )}
+                    </>
+                  )}
                   <button onClick={exportarComprasVendas} className={btnGhost}>
                     <Download className="w-4 h-4" /> Exportar Excel
                   </button>
