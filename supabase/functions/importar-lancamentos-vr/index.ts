@@ -330,6 +330,8 @@ Deno.serve(async (req) => {
           const obsoletos = (existentes ?? [])
             .filter((item) => {
             const ref = String(item.origem_ref ?? "");
+            // Nunca remove linhas editadas manualmente.
+            if (ehManual(ref)) return false;
             // Mantem a linha quando a chave exata continua atual ou quando ela
             // esta no formato antigo (a propria chave base de um registro atual).
             return !refsAtuais.has(ref) && !basesAtuais.has(ref);
