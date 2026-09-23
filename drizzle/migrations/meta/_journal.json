@@ -71,6 +71,13 @@
       "when": 1790123785316,
       "tag": "0009_metas_compra_taxas",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790129329874,
+      "tag": "0010_compras_historico_saldo_excesso_assinado",
+      "breakpoints": true
     }
   ]
 }
