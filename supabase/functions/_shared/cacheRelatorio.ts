@@ -136,3 +136,58 @@ export async function consultarComCache(opts: {
 
   return { ...r, origem: "ponte", cache_em: agora, recortado_d1: rec.recortado };
 }
+
+// ============================================================
+// Ultima leitura guardada (vale para TODAS as lojas, inclusive
+// as em modo ao vivo). Quando a ponte nao responde, a tela mostra
+// a ultima leitura em vez de "sem conexao".
+// ============================================================
+export async function lerUltimaLeitura(opts: {
+  supabaseUrl: string;
+  serviceKey: string;
+  storeId: string;
+  relatorio: string;
+  params?: Record<string, unknown>;
+}): Promise<{ dados: Record<string, unknown>[]; atualizado_em: string } | null> {
+  const service = createClient(opts.supabaseUrl, opts.serviceKey);
+  const chave = chaveParams(opts.params ?? {});
+  const { data } = await service
+    .from("relatorio_cache")
+    .select("dados, atualizado_em")
+    .eq("store_id", opts.storeId)
+    .eq("relatorio", opts.relatorio)
+    .eq("params_chave", chave)
+    .maybeSingle();
+  if (!data) return null;
+  return {
+    dados: (data.dados as Record<string, unknown>[]) ?? [],
+    atualizado_em: data.atualizado_em as string,
+  };
+}
+
+export async function gravarUltimaLeitura(opts: {
+  supabaseUrl: string;
+  serviceKey: string;
+  storeId: string;
+  relatorio: string;
+  params?: Record<string, unknown>;
+  dados: Record<string, unknown>[];
+  origem?: string;
+}): Promise<string> {
+  const agora = new Date().toISOString();
+  if (!Array.isArray(opts.dados) || opts.dados.length === 0) return agora;
+  const service = createClient(opts.supabaseUrl, opts.serviceKey);
+  const params = opts.params ?? {};
+  await service.from("relatorio_cache").upsert({
+    store_id: opts.storeId,
+    relatorio: opts.relatorio,
+    params_chave: chaveParams(params),
+    params,
+    fim: normalizarData((params as Record<string, unknown>).fim ?? (params as Record<string, unknown>).data),
+    dados: opts.dados,
+    linhas: opts.dados.length,
+    origem: opts.origem ?? "proxy",
+    atualizado_em: agora,
+  }, { onConflict: "store_id,relatorio,params_chave" });
+  return agora;
+}
