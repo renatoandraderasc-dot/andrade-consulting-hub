@@ -149,7 +149,7 @@ export function useSiteContent() {
       }
     })();
     const channel = supabase
-      .channel("site_content_home")
+      .channel(`site_content_home_${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "site_content", filter: "id=eq.home" }, (payload: any) => {
         setContent(deepMerge(DEFAULT_CONTENT, payload.new?.data || {}));
       })
