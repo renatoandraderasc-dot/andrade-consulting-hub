@@ -4,8 +4,11 @@ import { comprasAgrupadas, detalharComprasVendas } from "@/lib/comprasDetalhe";
 import { useNavigate } from "react-router-dom";
 import {
   ShoppingCart, TrendingUp, TrendingDown, Wallet, Target, Download, Wand2, Save, RefreshCw, Info,
-  ChevronRight, ChevronDown,
+  ChevronRight, ChevronDown, FilterX,
 } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuCheckboxItem,
+} from "@/components/ui/dropdown-menu";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   LabelList, LineChart, Line, Legend, CartesianGrid,
@@ -114,6 +117,8 @@ const Compras = () => {
   const [cvLoading, setCvLoading] = useState(false);
   const [cvAviso, setCvAviso] = useState<string | null>(null);
   const [fN1, setFN1] = useState("__all__");
+  // Departamentos retirados da apuracao (chaveDep); vazio = nada retirado
+  const [cvExcluir, setCvExcluir] = useState<string[]>([]);
   const [expandidos, setExpandidos] = useState<Record<string, boolean>>({});
   const [fornecedores, setFornecedores] = useState<any[]>([]);
   const [fornLoading, setFornLoading] = useState(false);
@@ -574,8 +579,10 @@ const Compras = () => {
   });
 
   const cvFiltrados = useMemo(
-    () => cvItens.filter((i) => fN1 === "__all__" || i.departamento === fN1),
-    [cvItens, fN1],
+    () => cvItens.filter(
+      (i) => !cvExcluir.includes(chaveDep(i.departamento)) && (fN1 === "__all__" || i.departamento === fN1),
+    ),
+    [cvItens, fN1, cvExcluir],
   );
 
   const cvTotais = useMemo(() => {
@@ -697,7 +704,9 @@ const Compras = () => {
         });
       }
     }
-    const produtos = (produtosCache[chaveProdutos(cvInicio, cvFim)] || []).map((p) => ({
+    const produtos = (produtosCache[chaveProdutos(cvInicio, cvFim)] || [])
+      .filter((p) => !cvExcluir.includes(chaveDep(p.departamento)))
+      .map((p) => ({
       Departamento: p.departamento, Seção: p.secao, Código: p.codigo,
       Descrição: p.descricao, EAN: p.ean,
       Venda: p.venda, CMV: p.cmv, Compra: p.compra,
@@ -1026,6 +1035,41 @@ const Compras = () => {
                   </div>
                   {fN1 !== "__all__" && (
                     <button onClick={() => setFN1("__all__")} className={btnGhost}>Limpar filtro</button>
+                  )}
+                  {cvOpcoes.n1.length > 1 && (
+                    <>
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Retirar da apuração</label>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className={btnGhost}>
+                              <FilterX className="w-4 h-4" />
+                              Departamentos{cvExcluir.length > 0 ? ` (${cvExcluir.length})` : ""}
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="max-h-72 w-64 overflow-y-auto" align="start">
+                            {cvOpcoes.n1.map((o) => (
+                              <DropdownMenuCheckboxItem
+                                key={o}
+                                checked={cvExcluir.includes(chaveDep(o))}
+                                onCheckedChange={(v) => {
+                                  const k = chaveDep(o);
+                                  setCvExcluir((prev) => (v ? (prev.includes(k) ? prev : [...prev, k]) : prev.filter((x) => x !== k)));
+                                }}
+                                onSelect={(e) => e.preventDefault()}
+                              >
+                                {o}
+                              </DropdownMenuCheckboxItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      {cvExcluir.length > 0 && (
+                        <button onClick={() => setCvExcluir([])} className={btnGhost}>
+                          Trazer de volta ({cvExcluir.length})
+                        </button>
+                      )}
+                    </>
                   )}
                   <button onClick={exportarComprasVendas} className={btnGhost}>
                     <Download className="w-4 h-4" /> Exportar Excel
