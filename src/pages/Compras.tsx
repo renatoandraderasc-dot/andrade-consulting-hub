@@ -4,11 +4,8 @@ import { comprasAgrupadas, detalharComprasVendas } from "@/lib/comprasDetalhe";
 import { useNavigate } from "react-router-dom";
 import {
   ShoppingCart, TrendingUp, TrendingDown, Wallet, Target, Download, Wand2, Save, RefreshCw, Info,
-  ChevronRight, ChevronDown, FilterX,
+  ChevronRight, ChevronDown,
 } from "lucide-react";
-import {
-  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuCheckboxItem,
-} from "@/components/ui/dropdown-menu";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   LabelList, LineChart, Line, Legend, CartesianGrid,
