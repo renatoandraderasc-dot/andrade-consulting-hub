@@ -355,6 +355,21 @@ const Compras = () => {
     } finally { setSavingCfg(false); }
   };
 
+  // As taxas sao digitadas em % e guardadas como fracao (10 % -> 0,10).
+  const fracaoDoPct = (texto: any, padrao: number) => {
+    if (texto === undefined || texto === null || String(texto).trim() === "") return padrao;
+    const n = Number(String(texto).replace(",", "."));
+    return Number.isFinite(n) ? n / 100 : padrao;
+  };
+
+  const pctInput = (d: any, campo: "tx_perdas" | "tx_recuperacao", padrao: number) => {
+    const bruto = d[`${campo}_pct`];
+    if (bruto !== undefined && bruto !== null) return String(bruto);
+    const valor = d[campo] == null ? padrao : Number(d[campo]);
+    const pct = (Number.isFinite(valor) ? valor : padrao) * 100;
+    return String(Number(pct.toFixed(3)));
+  };
+
   const salvarDepto = async (row: any, silencioso = false) => {
     if (!isAdmin) return;
     try {
