@@ -10,7 +10,7 @@
 // ============================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { consultarRelatorioLoja } from "../_shared/consultaLoja.ts";
-import { consultarComCache, type ConfigLojaCache } from "../_shared/cacheRelatorio.ts";
+import { consultarComCache, gravarUltimaLeitura, lerUltimaLeitura, type ConfigLojaCache } from "../_shared/cacheRelatorio.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
