@@ -46,6 +46,7 @@ import OAuthConsent from "./pages/OAuthConsent";
 import AdminSite from "./pages/AdminSite";
 import AdminSitesConcorrentes from "./pages/AdminSitesConcorrentes";
 import AdminConexoes from "./pages/AdminConexoes";
+import Diagnostico from "./pages/Diagnostico";
 import AdminRede from "./pages/AdminRede";
 import AdminParametrizacoes from "./pages/AdminParametrizacoes";
 import Jornada from "./pages/Jornada";
