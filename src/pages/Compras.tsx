@@ -579,8 +579,10 @@ const Compras = () => {
   });
 
   const cvFiltrados = useMemo(
-    () => cvItens.filter((i) => fN1 === "__all__" || i.departamento === fN1),
-    [cvItens, fN1],
+    () => cvItens.filter(
+      (i) => !cvExcluir.includes(chaveDep(i.departamento)) && (fN1 === "__all__" || i.departamento === fN1),
+    ),
+    [cvItens, fN1, cvExcluir],
   );
 
   const cvTotais = useMemo(() => {
@@ -702,7 +704,9 @@ const Compras = () => {
         });
       }
     }
-    const produtos = (produtosCache[chaveProdutos(cvInicio, cvFim)] || []).map((p) => ({
+    const produtos = (produtosCache[chaveProdutos(cvInicio, cvFim)] || [])
+      .filter((p) => !cvExcluir.includes(chaveDep(p.departamento)))
+      .map((p) => ({
       Departamento: p.departamento, Seção: p.secao, Código: p.codigo,
       Descrição: p.descricao, EAN: p.ean,
       Venda: p.venda, CMV: p.cmv, Compra: p.compra,
