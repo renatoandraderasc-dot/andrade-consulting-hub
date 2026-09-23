@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { registrarAtualizacao } from "@/lib/ultimaAtualizacao";
 
 // ============================================================
 // Utilitario compartilhado para consultar relatorios ao vivo
@@ -18,6 +19,10 @@ export interface RelatorioResultado {
   offline: boolean;
   /** falha real, para exibir ao usuario */
   erro: string | null;
+  /** quando os dados exibidos foram lidos do sistema da loja */
+  atualizadoEm?: string | null;
+  /** true quando vieram da ultima leitura guardada */
+  doCache?: boolean;
 }
 
 const INDISPONIVEL = /relatorio nao encontrado|nao encontrado|nao existe|nao cadastrado|parametro ausente|parametros obrigatorios|404|ORA-\d+|illegal variable|invalid identifier|not supported/i;
@@ -93,10 +98,13 @@ export async function chamarRelatorio(
 
   const d = (data as any)?.dados ?? data;
   const dados = Array.isArray(d) ? d : Array.isArray(d?.dados) ? d.dados : [];
+  const atualizadoEm = (data as any)?.cache_em ?? null;
+  const doCache = (data as any)?.origem === "cache";
+  registrarAtualizacao(atualizadoEm, doCache);
   if (await usaCustoReposicao(storeId)) {
     for (const l of dados) if (l && typeof l === "object") (l as any).__custoReposicao = true;
   }
-  return { dados, indisponivel: false, offline: false, erro: null };
+  return { dados, indisponivel: false, offline: false, erro: null, atualizadoEm, doCache };
 }
 
 // ============================================================
