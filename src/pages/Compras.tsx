@@ -904,8 +904,8 @@ const Compras = () => {
                       <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(r.meta_venda)}</td>
                       <td className="py-2 px-2 text-right tabular-nums">{fmtPct(r.cmv_pct)}</td>
                       <td
-                        className="py-2 px-2 text-right tabular-nums"
-                        title={`Compra 6m ${fmtBRL(r.compra_hist)} − CMV 6m ${fmtBRL(r.cmv_hist)}`}
+                        className={`py-2 px-2 text-right tabular-nums ${r.cmv_hist - r.compra_hist < 0 ? "text-red-500" : "text-emerald-500"}`}
+                        title={`CMV histórico ${fmtBRL(r.cmv_hist)} − Compra histórica ${fmtBRL(r.compra_hist)}`}
                       >
                         {fmtBRL(r.cmv_hist - r.compra_hist)}
                       </td>
@@ -975,7 +975,9 @@ const Compras = () => {
                     <td className="py-3">Total</td>
                     <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(totais.meta_venda)}</td>
                     <td className="py-3 px-2"></td>
-                    <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(painelRows.reduce((s, r) => s + r.cmv_hist - r.compra_hist, 0))}</td>
+                    <td className={`py-3 px-2 text-right tabular-nums ${painelRows.reduce((s, r) => s + r.cmv_hist - r.compra_hist, 0) < 0 ? "text-red-500" : "text-emerald-500"}`}>
+                      {fmtBRL(painelRows.reduce((s, r) => s + r.cmv_hist - r.compra_hist, 0))}
+                    </td>
                     <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(totais.parcela_excesso)}</td>
                     <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(totais.meta_compra)}</td>
                     <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(totais.realizado)}</td>
@@ -1161,11 +1163,11 @@ const Compras = () => {
                                     <td className="py-2 px-2 text-right tabular-nums">{fmtPct(s.part, 2)}</td>
                                   </tr>
                                   {abertoSec && produtosLoading === key && (
-                                    <tr className="bg-muted/10"><td colSpan={11} className="py-2 pl-14 text-xs text-muted-foreground">Carregando produtos…</td></tr>
+                                    <tr className="bg-muted/10"><td colSpan={10} className="py-2 pl-14 text-xs text-muted-foreground">Carregando produtos…</td></tr>
                                   )}
                                   {abertoSec && produtosLoading !== key && produtos.length === 0 && (
                                     <tr className="bg-muted/10">
-                                      <td colSpan={11} className="py-2 pl-14 text-xs text-muted-foreground">
+                                      <td colSpan={10} className="py-2 pl-14 text-xs text-muted-foreground">
                                         {produtosAviso || "Sem produtos nesta seção no período."}
                                       </td>
                                     </tr>
