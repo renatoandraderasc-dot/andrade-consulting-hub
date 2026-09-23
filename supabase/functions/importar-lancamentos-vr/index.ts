@@ -260,16 +260,15 @@ Deno.serve(async (req) => {
 
       }
 
-      // Respeita edicoes manuais: se o usuario ja trocou a conta do lancamento,
-      // a reimportacao mantem a classificacao dele.
+      // Respeita edicoes manuais: qualquer lancamento ja editado a mao pelo
+      // usuario NAO e sobrescrito pela reimportacao (conta, valor, data,
+      // descricao, observacao — tudo do manual prevalece).
       const { data: manuais } = await supabase
         .from("lancamentos")
-        .select("origem_ref, tipo, subtipo")
+        .select("origem_ref")
         .eq("store_id", store_id)
         .eq("origem", "VR")
-        .eq("classificacao_manual", true)
-        .gte("data", b.ini)
-        .lte("data", b.fim);
+        .eq("classificacao_manual", true);
       // A chave gerada para pagamentos ja mudou de formato (ganhou o sufixo da
       // parcela). Alem da chave exata, comparamos uma chave "base" sem o ultimo
       // segmento, para reconhecer as linhas gravadas no formato anterior.
@@ -277,22 +276,17 @@ Deno.serve(async (req) => {
         const partes = ref.split("-");
         return partes.length > 2 ? partes.slice(0, -1).join("-") : ref;
       };
-      const mapaManual = new Map<string, { tipo: string; subtipo: string }>();
-      for (const m of manuais ?? []) {
-        // Somente a chave exata: cada parcela guarda a propria classificacao.
-        mapaManual.set(String(m.origem_ref ?? ""), { tipo: m.tipo, subtipo: m.subtipo });
+      const refsManuais = new Set<string>();
+      for (const m of manuais ?? []) refsManuais.add(String(m.origem_ref ?? ""));
+      const ehManual = (ref: string) =>
+        refsManuais.has(ref) || refsManuais.has(chaveBase(ref));
+
+      // Remove do lote tudo que o usuario ja ajustou manualmente.
+      const preservadosManual = registros.filter((r) => ehManual(String(r.origem_ref))).length;
+      for (let i = registros.length - 1; i >= 0; i--) {
+        if (ehManual(String(registros[i].origem_ref))) registros.splice(i, 1);
       }
-      for (const reg of registros) {
-        const refReg = String(reg.origem_ref);
-        // O fallback so alcanca linhas antigas, gravadas exatamente com a chave
-        // base (sem sufixo de parcela) — nunca outra parcela do mesmo titulo.
-        const man = mapaManual.get(refReg) ?? mapaManual.get(chaveBase(refReg));
-        if (man) {
-          reg.tipo = man.tipo;
-          reg.subtipo = man.subtipo;
-          (reg as Record<string, unknown>).classificacao_manual = true;
-        }
-      }
+
 
 
       let gravados = 0;
