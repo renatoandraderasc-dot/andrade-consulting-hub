@@ -15,6 +15,7 @@ export const APP_MODULES = [
   { key: "analise_anual", label: "Análise Anual", path: "/analise-anual" },
   { key: "compras", label: "Compras", path: "/compras" },
   { key: "estoque_dinamico", label: "Estoque Dinâmico", path: "/estoque-dinamico" },
+  { key: "capilaridade_mix", label: "Capilaridade de Mix", path: "/capilaridade-mix" },
   { key: "relatorios", label: "Relatórios", path: "/relatorios" },
   { key: "painel_analitico", label: "Painel Analítico", path: "/painel-analitico" },
   { key: "painel_comparativo", label: "Comparativo de Indicadores", path: "/painel-comparativo" },
