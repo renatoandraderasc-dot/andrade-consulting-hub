@@ -3750,6 +3750,7 @@ export type Database = {
       sync_diario_d1_auto: { Args: never; Returns: undefined }
       sync_rede_mensal_auto: { Args: never; Returns: number }
       tem_acesso_loja: { Args: { _store_id: string }; Returns: boolean }
+      usuario_ativo: { Args: never; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "user" | "supervisor"
