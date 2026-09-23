@@ -81,6 +81,13 @@ Deno.serve(async (req) => {
 
     const base = cfg.api_url.replace(/\/+$/, "");
 
+    // O console SQL do WebSac so devolve a grade HTML quando a instrucao
+    // comeca literalmente com SELECT. Consultas validas iniciadas por WITH
+    // eram executadas, mas a resposta vinha apenas como "Sucesso".
+    const consultaExecutavel = /^\s*with\b/i.test(consulta)
+      ? `SELECT * FROM (${consulta.trim().replace(/;\s*$/, "")}) AS consulta_websac`
+      : consulta;
+
     // ---- login para obter PHPSESSID ------------------------------
     let usuario = Deno.env.get("WEBSAC_USERNAME") ?? "";
     let senha = Deno.env.get("WEBSAC_PASSWORD") ?? "";
@@ -127,7 +134,7 @@ Deno.serve(async (req) => {
       if (!cookie) return json({ erro: "WebSac nao devolveu sessao" }, 401);
     }
 
-    const url = `${base}/ajax/pgadmin_executar.php?query=${encodeURIComponent(consulta)}`;
+    const url = `${base}/ajax/pgadmin_executar.php?query=${encodeURIComponent(consultaExecutavel)}`;
     const headers: Record<string, string> = {
       "X-Requested-With": "XMLHttpRequest",
       "User-Agent": ua,
