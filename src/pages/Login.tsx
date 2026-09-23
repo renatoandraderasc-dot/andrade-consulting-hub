@@ -20,6 +20,22 @@ function sanitizeNext(raw: string | null): string | null {
   return raw;
 }
 
+// Evita telas travadas: qualquer chamada que passar do tempo vira erro tratado.
+function comTimeout<T>(p: PromiseLike<T>, ms: number, rotulo: string): Promise<T> {
+  return Promise.race([
+    Promise.resolve(p),
+    new Promise<T>((_, rej) => setTimeout(() => rej(new Error(`timeout:${rotulo}`)), ms)),
+  ]);
+}
+
+function ehFalhaDeRede(err: unknown): boolean {
+  const m = String((err as Error)?.message || err || "");
+  return /failed to fetch|networkerror|load failed|timeout:/i.test(m);
+}
+
+const MSG_REDE =
+  "Não foi possível falar com o servidor agora. Verifique sua conexão e tente novamente.";
+
 const Login = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -36,9 +52,14 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    supabase.functions.invoke("list-stores").then(({ data }) => {
-      if (data?.stores) setStores(data.stores);
-    });
+    supabase.functions
+      .invoke("list-stores")
+      .then(({ data }) => {
+        if (data?.stores) setStores(data.stores);
+      })
+      .catch(() => {
+        /* lista de lojas é opcional: só é usada no cadastro */
+      });
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -47,69 +68,130 @@ const Login = () => {
     setSuccess("");
     setLoading(true);
 
-    if (isSignup) {
-      if (!selectedStore) {
-        setError("Selecione uma loja.");
+    try {
+      if (isSignup) {
+        if (!selectedStore) {
+          setError("Selecione uma loja.");
+          setLoading(false);
+          return;
+        }
+        const { data: signUpData, error: signUpError } = await comTimeout(
+          supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              data: { full_name: fullName },
+              emailRedirectTo: window.location.origin + (nextPath ?? ""),
+            },
+          }),
+          20000,
+          "signup",
+        );
+        if (signUpError) {
+          setError(signUpError.message);
+        } else if (signUpData.user) {
+          await supabase.from("user_store_access").insert({
+            user_id: signUpData.user.id,
+            store_id: selectedStore,
+            approved: false,
+          });
+          setSuccess("Cadastro realizado! Aguarde a aprovação do administrador para acessar o sistema.");
+        }
         setLoading(false);
         return;
       }
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { full_name: fullName },
-          emailRedirectTo: window.location.origin + (nextPath ?? ""),
-        },
-      });
-      if (signUpError) {
-        setError(signUpError.message);
-      } else if (signUpData.user) {
-        await supabase.from("user_store_access").insert({
-          user_id: signUpData.user.id,
-          store_id: selectedStore,
-          approved: false,
-        });
-        setSuccess("Cadastro realizado! Aguarde a aprovação do administrador para acessar o sistema.");
-      }
-    } else {
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-      if (signInError) {
-        setError(signInError.message);
-      } else if (signInData.user) {
-        // Check if user is admin (admins can access any store)
-        const { data: roles } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", signInData.user.id)
-          .eq("role", "admin");
-        const isAdmin = roles && roles.length > 0;
 
-        if (isAdmin) {
-          sessionStorage.removeItem("selectedStoreId");
-          navigate(postLoginTarget);
-        } else {
-          // Regular users: resolve the store(s) already approved for them
-          const { data: access } = await supabase
-            .from("user_store_access")
-            .select("store_id")
-            .eq("user_id", signInData.user.id)
-            .eq("approved", true);
-          if (!access || access.length === 0) {
-            await supabase.auth.signOut();
-            setError("Você ainda não tem acesso aprovado. Aguarde a aprovação do administrador.");
-          } else {
-            sessionStorage.setItem("selectedStoreId", access[0].store_id);
-            const allowed = await getAllowedModules(signInData.user.id);
-            const landing = await getLandingPath(signInData.user.id);
-            const nextAllowed =
-              nextPath &&
-              (allowed === null ||
-                APP_MODULES.some((m) => allowed.has(m.key) && nextPath.startsWith(m.path)));
-            navigate(nextAllowed ? nextPath! : landing);
-
-          }
+      // Login: uma tentativa, e se cair a rede, uma segunda antes de avisar.
+      let signInData;
+      let signInError;
+      for (let tentativa = 0; tentativa < 2; tentativa++) {
+        try {
+          const r = await comTimeout(
+            supabase.auth.signInWithPassword({ email, password }),
+            20000,
+            "login",
+          );
+          signInData = r.data;
+          signInError = r.error;
+          break;
+        } catch (err) {
+          if (!ehFalhaDeRede(err) || tentativa === 1) throw err;
         }
       }
+
+      if (signInError) {
+        setError(signInError.message);
+        setLoading(false);
+        return;
+      }
+      if (!signInData?.user) {
+        setLoading(false);
+        return;
+      }
+
+      const userId = signInData.user.id;
+
+      // Consultas de perfil não podem travar a entrada: em caso de falha,
+      // o usuário entra e a própria tela resolve as permissões.
+      let isAdmin = false;
+      try {
+        const { data: roles } = await comTimeout(
+          supabase.from("user_roles").select("role").eq("user_id", userId).eq("role", "admin"),
+          12000,
+          "roles",
+        );
+        isAdmin = !!roles && roles.length > 0;
+      } catch {
+        navigate(postLoginTarget);
+        return;
+      }
+
+      if (isAdmin) {
+        sessionStorage.removeItem("selectedStoreId");
+        navigate(postLoginTarget);
+        return;
+      }
+
+      let access;
+      try {
+        const r = await comTimeout(
+          supabase
+            .from("user_store_access")
+            .select("store_id")
+            .eq("user_id", userId)
+            .eq("approved", true),
+          12000,
+          "acesso",
+        );
+        access = r.data;
+      } catch {
+        navigate(postLoginTarget);
+        return;
+      }
+
+      if (!access || access.length === 0) {
+        await supabase.auth.signOut();
+        setError("Você ainda não tem acesso aprovado. Aguarde a aprovação do administrador.");
+        setLoading(false);
+        return;
+      }
+
+      sessionStorage.setItem("selectedStoreId", access[0].store_id);
+      try {
+        const allowed = await comTimeout(getAllowedModules(userId), 12000, "modulos");
+        const landing = await comTimeout(getLandingPath(userId), 12000, "landing");
+        const nextAllowed =
+          nextPath &&
+          (allowed === null ||
+            APP_MODULES.some((m) => allowed.has(m.key) && nextPath.startsWith(m.path)));
+        navigate(nextAllowed ? nextPath! : landing);
+      } catch {
+        navigate(postLoginTarget);
+      }
+    } catch (err) {
+      setError(ehFalhaDeRede(err) ? MSG_REDE : String((err as Error)?.message || err));
+      setLoading(false);
+      return;
     }
     setLoading(false);
   };
