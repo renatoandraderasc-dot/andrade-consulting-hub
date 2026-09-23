@@ -102,6 +102,7 @@ const App = () => (
 
             <Route path="/compras" element={g("compras", <Compras />)} />
             <Route path="/estoque-dinamico" element={g("estoque_dinamico", <EstoqueDinamico />)} />
+            <Route path="/capilaridade-mix" element={g("capilaridade_mix", <CapilaridadeMix />)} />
             <Route path="/relatorios" element={g("relatorios", <Relatorios />)} />
             <Route path="/painel-analitico" element={g("painel_analitico", <PainelAnalitico />)} />
             <Route path="/painel-comparativo" element={g("painel_comparativo", <PainelComparativo />)} />
