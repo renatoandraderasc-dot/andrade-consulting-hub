@@ -667,7 +667,7 @@ const Compras = () => {
         Nível: "Departamento", Departamento: g.departamento, Seção: "",
         Venda: g.venda, CMV: g.cmv,
         "Margem %": g.margem, "Markup %": g.markup,
-        Compra: g.compra, "CMV - Compra": g.saldo_cmv,
+        Compra: g.compra, Saldo: Math.max(g.cmv - g.compra, 0),
         Excesso: Math.max(g.compra - g.cmv, 0),
         "Compra/Venda %": g.cv, "Compra/CMV %": g.ccmv, "Participação %": g.part,
       });
@@ -676,7 +676,7 @@ const Compras = () => {
           Nível: "Seção", Departamento: g.departamento, Seção: s.secao,
           Venda: s.venda, CMV: s.cmv,
           "Margem %": s.margem, "Markup %": s.markup,
-          Compra: s.compra, "CMV - Compra": s.saldo_cmv,
+          Compra: s.compra, Saldo: Math.max(s.cmv - s.compra, 0),
           Excesso: Math.max(s.compra - s.cmv, 0),
           "Compra/Venda %": s.cv, "Compra/CMV %": s.ccmv, "Participação %": s.part,
         });
@@ -686,7 +686,7 @@ const Compras = () => {
       Departamento: p.departamento, Seção: p.secao, Código: p.codigo,
       Descrição: p.descricao, EAN: p.ean,
       Venda: p.venda, CMV: p.cmv, Compra: p.compra,
-      "CMV - Compra": p.cmv - p.compra,
+      Saldo: Math.max(p.cmv - p.compra, 0),
       Excesso: Math.max(p.compra - p.cmv, 0),
       "Margem %": p.venda > 0 ? ((p.venda - p.cmv) / p.venda) * 100 : 0,
     }));
@@ -1053,7 +1053,7 @@ const Compras = () => {
                         <th className="text-right py-2 px-2">Margem %</th>
                         <th className="text-right py-2 px-2">Markup %</th>
                         <th className="text-right py-2 px-2">Compra</th>
-                        <th className="text-right py-2 px-2">CMV − Compra</th>
+                        <th className="text-right py-2 px-2">Saldo</th>
                         <th className="text-right py-2 px-2">Excesso</th>
                         <th className="text-right py-2 px-2">Compra / Venda</th>
                         <th className="text-right py-2 px-2">Compra / CMV</th>
@@ -1065,6 +1065,7 @@ const Compras = () => {
                         const aberto = !!expandidos[g.departamento];
                         const toneCcmv = (v: number) => (v > 100 ? "text-red-500" : v < 85 ? "text-amber-500" : "");
                         const excessoDe = (r: { cmv: number; compra: number }) => Math.max(r.compra - r.cmv, 0);
+                        const saldoDe = (r: { cmv: number; compra: number }) => Math.max(r.cmv - r.compra, 0);
                         return (
                           <Fragment key={g.departamento}>
                             <tr
@@ -1083,7 +1084,7 @@ const Compras = () => {
                               <td className="py-2 px-2 text-right tabular-nums">{fmtPct(g.margem)}</td>
                               <td className="py-2 px-2 text-right tabular-nums">{fmtPct(g.markup)}</td>
                               <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(g.compra)}</td>
-                              <td className={`py-2 px-2 text-right tabular-nums ${g.saldo_cmv < 0 ? "text-red-500" : ""}`}>{fmtBRL(g.saldo_cmv)}</td>
+                              <td className={`py-2 px-2 text-right tabular-nums ${saldoDe(g) > 0 ? "text-emerald-500" : ""}`}>{fmtBRL(saldoDe(g))}</td>
                               <td className={`py-2 px-2 text-right tabular-nums ${excessoDe(g) > 0 ? "text-red-500" : ""}`}>{fmtBRL(excessoDe(g))}</td>
                               <td className="py-2 px-2 text-right tabular-nums">{fmtPct(g.cv)}</td>
                               <td className={`py-2 px-2 text-right tabular-nums font-medium ${toneCcmv(g.ccmv)}`}>{fmtPct(g.ccmv)}</td>
@@ -1114,7 +1115,7 @@ const Compras = () => {
                                     <td className="py-2 px-2 text-right tabular-nums">{fmtPct(s.margem)}</td>
                                     <td className="py-2 px-2 text-right tabular-nums">{fmtPct(s.markup)}</td>
                                     <td className="py-2 px-2 text-right tabular-nums">{fmtBRL(s.compra)}</td>
-                                    <td className={`py-2 px-2 text-right tabular-nums ${s.saldo_cmv < 0 ? "text-red-500" : ""}`}>{fmtBRL(s.saldo_cmv)}</td>
+                                    <td className={`py-2 px-2 text-right tabular-nums ${saldoDe(s) > 0 ? "text-emerald-500" : ""}`}>{fmtBRL(saldoDe(s))}</td>
                                     <td className={`py-2 px-2 text-right tabular-nums ${excessoDe(s) > 0 ? "text-red-500" : ""}`}>{fmtBRL(excessoDe(s))}</td>
                                     <td className="py-2 px-2 text-right tabular-nums">{fmtPct(s.cv)}</td>
                                     <td className={`py-2 px-2 text-right tabular-nums ${toneCcmv(s.ccmv)}`}>{fmtPct(s.ccmv)}</td>
@@ -1145,7 +1146,7 @@ const Compras = () => {
                                         <td className="py-1.5 px-2 text-right tabular-nums">{fmtPct(margem)}</td>
                                         <td className="py-1.5 px-2 text-right tabular-nums">{fmtPct(markup)}</td>
                                         <td className="py-1.5 px-2 text-right tabular-nums">{fmtBRL(p.compra)}</td>
-                                        <td className={`py-1.5 px-2 text-right tabular-nums ${p.cmv - p.compra < 0 ? "text-red-500" : ""}`}>{fmtBRL(p.cmv - p.compra)}</td>
+                                        <td className={`py-1.5 px-2 text-right tabular-nums ${p.cmv - p.compra > 0 ? "text-emerald-500" : ""}`}>{fmtBRL(Math.max(p.cmv - p.compra, 0))}</td>
                                         <td className={`py-1.5 px-2 text-right tabular-nums ${excesso > 0 ? "text-red-500" : ""}`}>{fmtBRL(excesso)}</td>
                                         <td className="py-1.5 px-2 text-right tabular-nums">{fmtPct(p.venda > 0 ? (p.compra / p.venda) * 100 : 0)}</td>
                                         <td className="py-1.5 px-2 text-right tabular-nums">{fmtPct(p.cmv > 0 ? (p.compra / p.cmv) * 100 : 0)}</td>
@@ -1168,7 +1169,7 @@ const Compras = () => {
                         <td className="py-3 px-2 text-right tabular-nums">{fmtPct(cvTotais.venda > 0 ? ((cvTotais.venda - cvTotais.cmv) / cvTotais.venda) * 100 : 0)}</td>
                         <td className="py-3 px-2 text-right tabular-nums">{fmtPct(cvTotais.cmv > 0 ? ((cvTotais.venda - cvTotais.cmv) / cvTotais.cmv) * 100 : 0)}</td>
                         <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(cvTotais.compra)}</td>
-                        <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(cvTotais.cmv - cvTotais.compra)}</td>
+                        <td className="py-3 px-2 text-right tabular-nums text-emerald-500">{fmtBRL(cvSaldoTotal)}</td>
                         <td className="py-3 px-2 text-right tabular-nums">{fmtBRL(Math.max(cvTotais.compra - cvTotais.cmv, 0))}</td>
                         <td className="py-3 px-2 text-right tabular-nums">{fmtPct(cvTotais.venda > 0 ? (cvTotais.compra / cvTotais.venda) * 100 : 0)}</td>
                         <td className="py-3 px-2 text-right tabular-nums">{fmtPct(cvTotais.cmv > 0 ? (cvTotais.compra / cvTotais.cmv) * 100 : 0)}</td>
