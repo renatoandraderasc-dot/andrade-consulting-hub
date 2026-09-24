@@ -372,16 +372,20 @@ const Dashboard = () => {
     const hoje = new Date();
     const hojeStr = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(hoje.getDate()).padStart(2, "0")}`;
     const ateD1 = dailyData.filter((d) => !d.iso || d.iso < hojeStr);
+    // Dias ainda sem realizado (hoje em diante): entram na projecao pela meta.
+    const deHoje = dailyData.filter((d) => d.iso && d.iso >= hojeStr);
 
     const metaAcumVendas = ateD1.reduce((s, d) => s + d.metaVendas, 0);
     const realVendas = ateD1.reduce((s, d) => s + d.realizadoVendas, 0);
-    const projVendas = dailyData.reduce((s, d) => s + d.projecaoVendas, 0);
     const metaAcumLucro = ateD1.reduce((s, d) => s + d.metaLucro, 0);
     const realLucro = ateD1.reduce((s, d) => s + d.realizadoLucro, 0);
-    const projLucro = dailyData.reduce((s, d) => s + d.projecaoLucro, 0);
     const metaAcumVol = ateD1.reduce((s, d) => s + d.metaVolume, 0);
     const realVol = ateD1.reduce((s, d) => s + d.realizadoVolume, 0);
-    const projVol = dailyData.reduce((s, d) => s + d.projecaoVolume, 0);
+
+    // Projecao = realizado ate ontem + metas do dia corrente ate o fim do mes
+    const projVendas = realVendas + deHoje.reduce((s, d) => s + d.metaVendas, 0);
+    const projLucro = realLucro + deHoje.reduce((s, d) => s + d.metaLucro, 0);
+    const projVol = realVol + deHoje.reduce((s, d) => s + d.metaVolume, 0);
 
     // Standardized margin: realized profit ÷ realized revenue (same rule everywhere in the app)
     const metaMargemPct = metaAcumVendas > 0 ? (metaAcumLucro / metaAcumVendas) * 100 : 0;

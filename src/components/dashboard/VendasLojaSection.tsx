@@ -206,8 +206,8 @@ export default function VendasLojaSection({ storeId, startDate, endDate, categor
         // Fix: was accMeta + accReal (double-counted). Correct = cumulative meta only.
         "Meta acumulada": accMeta,
         "Realizado acumulado": accReal,
-        // Projeção (meta diária) apenas nos dias futuros
-        "Projeção": r.date > hojeStr ? r.metaVendas : null,
+        // Projeção (meta diária) do dia corrente em diante
+        "Projeção": r.date >= hojeStr ? r.metaVendas : null,
       };
     });
   }, [opRows, hojeStr]);
