@@ -14,7 +14,7 @@ interface Store {
  * e recarrega para que todos os dados sejam refeitos para a loja ativa.
  */
 const StoreSwitcher = () => {
-  const { user, isGlobalAdmin } = useAuth();
+  const { user } = useAuth();
   const [stores, setStores] = useState<Store[]>([]);
   const [current, setCurrent] = useState<string>(
     () => sessionStorage.getItem("selectedStoreId") || ""
@@ -25,33 +25,17 @@ const StoreSwitcher = () => {
     let cancelled = false;
 
     const load = async () => {
-      let list: Store[] = [];
-      if (isGlobalAdmin) {
-        const { data } = await supabase.from("stores").select("id, name").order("name");
-        list = data || [];
-      } else {
-        const { data: access } = await supabase
-          .from("user_store_access")
-          .select("store_id")
-          .eq("user_id", user.id)
-          .eq("approved", true);
-        const ids = (access || []).map((a) => a.store_id);
-        if (ids.length) {
-          const { data } = await supabase
-            .from("stores")
-            .select("id, name")
-            .in("id", ids)
-            .order("name");
-          list = data || [];
-        }
-      }
+      // Uma consulta apenas. As regras do banco devolvem todas as lojas para
+      // administrador e somente as aprovadas para os demais usuários.
+      const { data } = await supabase.from("stores").select("id, name").order("name");
+      const list: Store[] = data || [];
       if (cancelled) return;
       setStores(list);
       const saved = sessionStorage.getItem("selectedStoreId");
       if ((!saved || !list.some((s) => s.id === saved)) && list.length) {
         sessionStorage.setItem("selectedStoreId", list[0].id);
         setCurrent(list[0].id);
-        window.dispatchEvent(new CustomEvent("store-changed", { detail: list[0].id }));
+        window.location.reload();
       }
     };
 
@@ -59,7 +43,7 @@ const StoreSwitcher = () => {
     return () => {
       cancelled = true;
     };
-  }, [user, isGlobalAdmin]);
+  }, [user]);
 
   const change = (id: string) => {
     if (!id || id === current) return;

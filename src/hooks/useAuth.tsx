@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 
@@ -41,9 +41,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isGlobalAdmin, setIsGlobalAdmin] = useState(false);
   const [isSupervisor, setIsSupervisor] = useState(false);
   const [loading, setLoading] = useState(true);
+  const roleCheckUserRef = useRef<string | null>(null);
   const isAdmin = isGlobalAdmin || isSupervisor;
 
   const checkAdmin = async (userId: string) => {
+    if (roleCheckUserRef.current === userId) return;
+    roleCheckUserRef.current = userId;
     try {
       const { data } = await withTimeout(
         supabase.from("user_roles").select("role").eq("user_id", userId),
@@ -52,6 +55,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsGlobalAdmin(roles.includes("admin"));
       setIsSupervisor(roles.includes("supervisor"));
     } catch {
+      roleCheckUserRef.current = null;
       setIsGlobalAdmin(false);
       setIsSupervisor(false);
     }
@@ -65,6 +69,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (session?.user) {
           void checkAdmin(session.user.id);
         } else {
+          roleCheckUserRef.current = null;
           setIsGlobalAdmin(false);
           setIsSupervisor(false);
         }

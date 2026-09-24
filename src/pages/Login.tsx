@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LogIn, UserPlus } from "lucide-react";
 import andradeLogo from "@/assets/andrade-logo.png";
-import { getLandingPath, getAllowedModules, APP_MODULES } from "@/lib/modules";
 
 interface Store {
   id: string;
@@ -119,68 +118,11 @@ const Login = () => {
         return;
       }
 
-      const userId = signInData.user.id;
-
-      // A autenticação já foi concluída. As consultas abaixo apenas escolhem
-      // loja e página inicial; falhas nelas não podem devolver erro de login.
-
-      // Consultas de perfil não podem travar a entrada: em caso de falha,
-      // o usuário entra e a própria tela resolve as permissões.
-      let isAdmin = false;
-      try {
-        const { data: roles } = await comTimeout(
-          supabase.from("user_roles").select("role").eq("user_id", userId).eq("role", "admin"),
-          12000,
-          "roles",
-        );
-        isAdmin = !!roles && roles.length > 0;
-      } catch {
-        navigate(postLoginTarget);
-        return;
-      }
-
-      if (isAdmin) {
-        sessionStorage.removeItem("selectedStoreId");
-        navigate(postLoginTarget);
-        return;
-      }
-
-      let access;
-      try {
-        const r = await comTimeout(
-          supabase
-            .from("user_store_access")
-            .select("store_id")
-            .eq("user_id", userId)
-            .eq("approved", true),
-          12000,
-          "acesso",
-        );
-        access = r.data;
-      } catch (err) {
-        navigate(postLoginTarget);
-        return;
-      }
-
-      if (!access || access.length === 0) {
-        await comTimeout(supabase.auth.signOut(), 8000, "logout").catch(() => undefined);
-        setError("Você ainda não tem acesso aprovado. Aguarde a aprovação do administrador.");
-        setLoading(false);
-        return;
-      }
-
-      sessionStorage.setItem("selectedStoreId", access[0].store_id);
-      try {
-        const allowed = await comTimeout(getAllowedModules(userId), 12000, "modulos");
-        const landing = await comTimeout(getLandingPath(userId), 12000, "landing");
-        const nextAllowed =
-          nextPath &&
-          (allowed === null ||
-            APP_MODULES.some((m) => allowed.has(m.key) && nextPath.startsWith(m.path)));
-        navigate(nextAllowed ? nextPath! : landing);
-      } catch {
-        navigate(postLoginTarget);
-      }
+      // A senha válida encerra o login imediatamente. Loja, perfil e módulos
+      // carregam na área interna sem manter o usuário preso nesta tela.
+      sessionStorage.removeItem("selectedStoreId");
+      navigate(postLoginTarget, { replace: true });
+      return;
     } catch (err) {
       setError(ehFalhaDeRede(err) ? MSG_REDE : String((err as Error)?.message || err));
       setLoading(false);

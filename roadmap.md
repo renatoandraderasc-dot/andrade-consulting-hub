@@ -6,6 +6,8 @@
 - [x] Renomear Excesso 6M para Histórico e totalizar saldos positivos e negativos.
 - [x] Unificar Saldo e Excesso em uma coluna no Compras × Vendas e no Excel.
 
-- [ ] Corrigir indisponibilidade persistente durante todo o dia na validação de acesso
+- [x] Corrigir indisponibilidade persistente durante todo o dia na validação de acesso
+
+- [x] Acelerar o login administrativo e garantir a lista completa de lojas
 
 - [x] Corrigir resposta sem tabela do Estoque Dinâmico no WebSac Nascimento
