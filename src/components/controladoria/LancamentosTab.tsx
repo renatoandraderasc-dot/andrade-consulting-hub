@@ -463,7 +463,11 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
               </Button>
             </>
           )}
+          <Button variant="outline" onClick={classificarTodos} disabled={classificando}>
+            {classificando ? "Classificando..." : "Classificar"}
+          </Button>
           <Button variant="outline" onClick={exportarRelatorio} className="gap-2">
+
             <Download className="h-4 w-4" /> Exportar relatório
           </Button>
           <ImportLancamentos storeId={storeId} userId={user?.id || ""} onImportComplete={fetchLancamentos} />
