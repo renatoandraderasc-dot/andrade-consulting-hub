@@ -131,6 +131,7 @@ export const ContRedeTab = ({ storeId }: Props) => {
     if (!storeId) return;
     setLoading(true);
     const todos: any[] = [];
+    const idsVistos = new Set<string>();
     for (let de = 0; ; de += 1000) {
       const { data } = await supabase
         .from("lancamentos")
@@ -138,8 +139,16 @@ export const ContRedeTab = ({ storeId }: Props) => {
         .eq("store_id", storeId)
         .eq("competencia_ano", ano)
         .eq("status", "ativo")
+        // Ordem estável por id: sem ela as páginas podem variar entre requisições
+        // e somar um lançamento duas vezes (ou pular) no DRE.
+        .order("id", { ascending: true })
         .range(de, de + 999);
-      todos.push(...(data || []));
+      for (const l of data || []) {
+        if (!idsVistos.has(l.id)) {
+          idsVistos.add(l.id);
+          todos.push(l);
+        }
+      }
       if (!data || data.length < 1000) break;
     }
     // De-para por tipo de pagamento (id_tipo): o da loja vence o padrão
