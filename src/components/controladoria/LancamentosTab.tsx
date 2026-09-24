@@ -291,6 +291,11 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
       toast.error("Informe um valor válido");
       return;
     }
+    if (!form.tipo || !form.subtipo) {
+      toast.error("Todo lançamento precisa de destino: escolha o Tipo e a Subconta");
+      return;
+    }
+
     if (!storeId || !user) return;
 
     const payload = {
