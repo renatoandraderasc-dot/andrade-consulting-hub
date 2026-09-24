@@ -56,6 +56,48 @@ const rotulo = (ms?: number | null, erro?: string | null) => {
   return "Muito lento";
 };
 
+const AtualizarTodas = () => {
+  const [rodando, setRodando] = useState(false);
+  const [progresso, setProgresso] = useState<string | null>(null);
+
+  const atualizar = async () => {
+    setRodando(true);
+    const { data: lojas } = await supabase
+      .from("store_vr_config")
+      .select("store_id, stores(name)")
+      .eq("modo_sync", "diario_d1");
+    const lista = (lojas ?? []) as { store_id: string; stores: { name: string } | null }[];
+    let ok = 0;
+    for (let i = 0; i < lista.length; i++) {
+      const l = lista[i];
+      setProgresso(`Atualizando ${l.stores?.name ?? "loja"} (${i + 1} de ${lista.length})...`);
+      try {
+        const { error } = await supabase.functions.invoke("sync-diario-d1", { body: { store_id: l.store_id } });
+        if (!error) ok++;
+      } catch { /* segue para a próxima loja */ }
+    }
+    setProgresso(`Concluído: ${ok} de ${lista.length} lojas atualizadas às ${new Date().toLocaleTimeString("pt-BR")}.`);
+    setRodando(false);
+  };
+
+  return (
+    <Card className="p-4 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h2 className="font-semibold">Atualizar números de todas as telas</h2>
+        <p className="text-sm text-muted-foreground">
+          Busca vendas e demais números nos sistemas das lojas e guarda no banco. Roda sozinho todo dia às 08:00;
+          use o botão só se precisar antes.
+        </p>
+        {progresso && <p className="text-sm mt-1">{progresso}</p>}
+      </div>
+      <Button onClick={atualizar} disabled={rodando}>
+        <RefreshCw className={`h-4 w-4 mr-2 ${rodando ? "animate-spin" : ""}`} />
+        {rodando ? "Atualizando..." : "Atualizar tudo agora"}
+      </Button>
+    </Card>
+  );
+};
+
 const Diagnostico = () => {
   const { user, isGlobalAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -127,6 +169,8 @@ const Diagnostico = () => {
             {carregando ? "Medindo..." : "Medir agora"}
           </Button>
         </div>
+
+        <AtualizarTodas />
 
         <div className="grid gap-4 md:grid-cols-3">
           {testes.map((t) => {
