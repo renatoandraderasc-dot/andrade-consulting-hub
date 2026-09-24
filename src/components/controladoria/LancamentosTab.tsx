@@ -82,7 +82,13 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
     status: "ativo",
   });
 
-  const subcontas = SUBCONTAS_V2[form.tipo] || [];
+  // A lista sempre inclui a conta que ja esta gravada no lancamento, para que o
+  // campo Subconta nunca apareca em branco (contas antigas do ERP inclusive).
+  const subcontas = useMemo(() => {
+    const base = SUBCONTAS_V2[form.tipo] || [];
+    return form.subtipo && !base.includes(form.subtipo) ? [form.subtipo, ...base] : base;
+  }, [form.tipo, form.subtipo]);
+
 
   useEffect(() => {
     if (storeId) fetchLancamentos();
