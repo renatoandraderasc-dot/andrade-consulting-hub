@@ -11,7 +11,7 @@ import { useVrRealizado, VrDia, LOJA, canonDept } from "@/hooks/useVrRealizado";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import HierarquiaVendasTable from "@/components/relatorios/HierarquiaVendasTable";
-import { usePicDepartments } from "@/hooks/usePicDepartments";
+import { usePicDepartments, ALL_PIC_KPIS, usePicKpis } from "@/hooks/usePicDepartments";
 import { usePicDisplayMode } from "@/hooks/usePicDisplay";
 import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
 import ProdutosSemGiro from "@/components/pic/ProdutosSemGiro";
@@ -104,6 +104,12 @@ const PIC = () => {
   // PIC) quando existir; senao os padroes; senao os que vierem do sistema da
   // loja; e, em ultimo caso, o total da loja.
   const deptsConfig = usePicDepartments(storeId);
+  // Índices ativos no PIC (parametrização por loja; vazio = todos)
+  const kpisConfig = usePicKpis(storeId);
+  const KPIS_ATIVOS = useMemo(() => {
+    if (!kpisConfig || kpisConfig.length === 0) return [...ALL_PIC_KPIS];
+    return ALL_PIC_KPIS.filter((k) => kpisConfig.includes(k));
+  }, [kpisConfig]);
   const DEPARTMENTS = useMemo(() => {
     // Usuario restrito: so os departamentos liberados (sem o total da loja)
     if (restrito) {
@@ -513,7 +519,7 @@ const PIC = () => {
             {/* Department Cards */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {DEPARTMENTS.map((dept, deptIdx) => (
-                <DepartmentCard key={dept} dept={dept} kpis={deptKpis[dept] || {}} viewMode={viewMode} delay={deptIdx * 0.1} today={today} soPct={soPct} />
+                <DepartmentCard key={dept} dept={dept} kpis={deptKpis[dept] || {}} viewMode={viewMode} delay={deptIdx * 0.1} today={today} soPct={soPct} kpiKeys={KPIS_ATIVOS} />
               ))}
             </div>
 
@@ -552,10 +558,10 @@ interface DeptCardProps {
   delay: number;
   today: number;
   soPct: boolean;
+  kpiKeys: string[];
 }
 
-const DepartmentCard = ({ dept, kpis, viewMode, delay, today, soPct }: DeptCardProps) => {
-  const kpiKeys = ["faturamento", "quantidade", "volume", "arrecadacao"];
+const DepartmentCard = ({ dept, kpis, viewMode, delay, today, soPct, kpiKeys }: DeptCardProps) => {
 
   return (
     <motion.div
