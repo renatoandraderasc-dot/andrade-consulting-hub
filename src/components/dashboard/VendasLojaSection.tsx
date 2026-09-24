@@ -159,11 +159,13 @@ export default function VendasLojaSection({ storeId, startDate, endDate, categor
     // Média diária considerando apenas dias com operação já realizados
     const mediaDiaria = diasComRealizado > 0 ? realVendas / diasComRealizado : 0;
 
+    // O dia corrente ainda nao tem realizado (regra D-1), entao a sua meta
+    // entra na projecao junto com os dias futuros.
     const metasRestantesVendas = opRows
-      .filter((r) => r.date > hojeStr)
+      .filter((r) => r.date >= hojeStr)
       .reduce((s, r) => s + r.metaVendas, 0);
     const metasRestantesLucro = opRows
-      .filter((r) => r.date > hojeStr)
+      .filter((r) => r.date >= hojeStr)
       .reduce((s, r) => s + r.metaLucro, 0);
 
     const projecaoMes = realVendas + metasRestantesVendas;
@@ -204,8 +206,8 @@ export default function VendasLojaSection({ storeId, startDate, endDate, categor
         // Fix: was accMeta + accReal (double-counted). Correct = cumulative meta only.
         "Meta acumulada": accMeta,
         "Realizado acumulado": accReal,
-        // Projeção (meta diária) apenas nos dias futuros
-        "Projeção": r.date > hojeStr ? r.metaVendas : null,
+        // Projeção (meta diária) do dia corrente em diante
+        "Projeção": r.date >= hojeStr ? r.metaVendas : null,
       };
     });
   }, [opRows, hojeStr]);
