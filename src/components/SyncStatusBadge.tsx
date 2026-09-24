@@ -27,47 +27,33 @@ const SyncStatusBadge = ({ storeId, onSyncChange }: Props) => {
   const [info, setInfo] = useState<SyncInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchInfo = async () => {
-    const { data } = await supabase
-      .from("store_vr_config")
-      .select("last_sync_at, last_error")
-      .eq("store_id", storeId)
-      .maybeSingle();
-    const nextInfo = data ?? { last_sync_at: null, last_error: null };
-    setInfo((previous) => {
-      if (previous && previous.last_sync_at !== nextInfo.last_sync_at) {
-        onSyncChange?.();
-      }
-      return nextInfo;
-    });
-    setLoading(false);
-  };
-
   useEffect(() => {
     if (!storeId) return;
-    fetchInfo();
-    // Atualização via realtime (usa o próprio payload, sem nova consulta).
-    // Sem polling periódico: evita sobrecarga do banco.
-    const channel = supabase
-      .channel(`sync-status-${storeId}-${Math.random().toString(36).slice(2)}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "store_vr_config", filter: `store_id=eq.${storeId}` },
-        (payload: any) => {
-          const row = payload?.new;
-          if (!row || !("last_sync_at" in row)) return;
-          const nextInfo = { last_sync_at: row.last_sync_at ?? null, last_error: row.last_error ?? null };
-          setInfo((previous) => {
-            if (previous && previous.last_sync_at !== nextInfo.last_sync_at) onSyncChange?.();
-            return nextInfo;
-          });
-        },
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Consulta o banco no máximo 1 vez por dia por loja; senão usa o salvo.
+    const chave = `sync_status_${storeId}`;
+    const hoje = new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+    try {
+      const salvo = JSON.parse(localStorage.getItem(chave) || "null");
+      if (salvo && salvo.dia === hoje) {
+        setInfo(salvo.info);
+        setLoading(false);
+        return;
+      }
+    } catch { /* ignora */ }
+    let ativo = true;
+    (async () => {
+      const { data, error } = await supabase
+        .from("store_vr_config")
+        .select("last_sync_at, last_error")
+        .eq("store_id", storeId)
+        .maybeSingle();
+      if (!ativo) return;
+      const nextInfo = data ?? { last_sync_at: null, last_error: null };
+      if (!error) localStorage.setItem(chave, JSON.stringify({ dia: hoje, info: nextInfo }));
+      setInfo(nextInfo);
+      setLoading(false);
+    })();
+    return () => { ativo = false; };
   }, [storeId]);
 
   if (loading || !info) return null;
