@@ -549,13 +549,14 @@ export const DRE_STRUCTURE_FINANCEIRO: DRENode[] = [
     ],
   },
 
-  // ===== COMPRA DO MÊS (entrada de NF para revenda — exibida para confronto) =====
+  // ===== ENTRADA DE NF PARA REVENDA (compras do mês — informativo) =====
   {
-    id: "compra_mes", name: "COMPRA DO MÊS (ENTRADA DE NF)", level: 0, isGroup: true, isResult: false, tipo: "Compra do Mês",
+    id: "compra_mes", name: "ENTRADA DE NF PARA REVENDA (COMPRA DO MÊS)", level: 0, isGroup: true, isResult: false,
     children: [
-      { id: "compra_fornec", name: "Entrada de NF para revenda", level: 1, isGroup: false, isResult: false, tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" },
+      { id: "compra_fornec", name: "Entrada de NF para revenda", level: 1, isGroup: false, isResult: false },
     ],
   },
+
 
   // ===== RESULTADO OPERACIONAL (apurado pelo PAGAMENTO DE FORNECEDORES) =====
   {
