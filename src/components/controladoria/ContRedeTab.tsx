@@ -14,38 +14,26 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronRight, ChevronDown, Pencil, X } from "lucide-react";
+import { ChevronRight, ChevronDown, Pencil, X, RefreshCw, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import type { Lancamento } from "./lancamentosTypes";
-import { CompetenciasDisponiveis } from "./CompetenciasDisponiveis";
-import { ImportarVrBlock } from "./ImportarVrBlock";
 import {
   DRE_STRUCTURE_COMERCIAL, DRE_STRUCTURE_FINANCEIRO,
   calcularDRE, TIPOS_LANCAMENTO_V2, SUBCONTAS_V2,
   type DRENode,
 } from "./contRedeStructure";
 
-const mesesOptions = [
-  { value: 1, label: "Janeiro" }, { value: 2, label: "Fevereiro" },
-  { value: 3, label: "Março" }, { value: 4, label: "Abril" },
-  { value: 5, label: "Maio" }, { value: 6, label: "Junho" },
-  { value: 7, label: "Julho" }, { value: 8, label: "Agosto" },
-  { value: 9, label: "Setembro" }, { value: 10, label: "Outubro" },
-  { value: 11, label: "Novembro" }, { value: 12, label: "Dezembro" },
-];
-const anos = ["2024", "2025", "2026"];
+const MESES_CURTOS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+const anoAtual = new Date().getFullYear();
+const anos = Array.from({ length: anoAtual - 2023 }, (_, i) => String(2024 + i));
 
-const STORAGE_KEY_MES = "controladoria_mes";
 const STORAGE_KEY_ANO = "controladoria_ano";
 
-function getStoredMes(): number {
-  const stored = sessionStorage.getItem(STORAGE_KEY_MES);
-  return stored ? Number(stored) : new Date().getMonth() + 1;
-}
 function getStoredAno(): number {
   const stored = sessionStorage.getItem(STORAGE_KEY_ANO);
-  return stored ? Number(stored) : new Date().getFullYear();
+  return stored ? Number(stored) : anoAtual;
 }
 
 interface Props {
@@ -53,11 +41,16 @@ interface Props {
   onGoClassificacao?: () => void;
 }
 
-
 const fmtCurrency = (v: number) => {
   const neg = v < 0;
   const abs = Math.abs(v);
   const str = abs.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  return neg ? `(${str})` : str;
+};
+const fmtCompacto = (v: number) => {
+  if (!v) return "—";
+  const neg = v < 0;
+  const str = Math.abs(v).toLocaleString("pt-BR", { maximumFractionDigits: 0 });
   return neg ? `(${str})` : str;
 };
 
@@ -69,12 +62,41 @@ const fmtDate = (d: string) => {
   }
 };
 
-export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
-  const [mes, setMes] = useState(getStoredMes);
+type VendaMes = { venda: number; cmv: number } | null;
+
+// Lê faturamento/CMV de um mês tentando os relatórios publicados pela loja
+async function lerVendaMes(storeId: string, ano: number, mes: number, preferido: string | null) {
+  const inicio = `${ano}-${String(mes).padStart(2, "0")}-01`;
+  const fim = new Date(ano, mes, 0).toISOString().slice(0, 10);
+  const base = ["dre_periodo", "kpis_periodo", "vendas_secao_periodo", "vendas_dep_periodo"];
+  const candidatos = preferido ? [preferido, ...base.filter((c) => c !== preferido)] : base;
+  let aviso: string | null = null;
+  for (const rel of candidatos) {
+    const r = await chamarRelatorio(storeId, rel, { inicio, fim });
+    const av = avisoRelatorio(r);
+    if (av) { aviso = av; continue; }
+    if (!r.dados.length) continue;
+    const venda = r.dados.reduce(
+      (s, x) => s + num(pick(x, "receita_bruta", "faturamento", "total_vendido", "venda", "vendas", "valor_venda")), 0);
+    let cmv = r.dados.reduce((s, x) => s + Math.abs(num(pick(x, "cmv", "custo", "custo_total"))), 0);
+    if (cmv === 0) {
+      const lucro = r.dados.reduce((s, x) => s + num(pick(x, "lucro", "lucro_bruto", "margem_valor")), 0);
+      if (lucro !== 0 && venda !== 0) cmv = Math.abs(venda - lucro);
+    }
+    if (venda === 0 && cmv === 0) continue;
+    return { valor: { venda, cmv } as VendaMes, rel, aviso: null };
+  }
+  return { valor: null as VendaMes, rel: preferido, aviso };
+}
+
+export const ContRedeTab = ({ storeId }: Props) => {
+  const { user } = useAuth();
   const [ano, setAno] = useState(getStoredAno);
   const [modo, setModo] = useState<"comercial" | "financeiro">("comercial");
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
+  const [mapaVr, setMapaVr] = useState<Map<number, { tipo: string; subtipo: string }>>(new Map());
   const [loading, setLoading] = useState(false);
+  const [atualizando, setAtualizando] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [detailFilter, setDetailFilter] = useState<{ tipo: string; subtipo?: string } | null>(null);
 
@@ -85,104 +107,122 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
     data: "", tipo: "", subtipo: "", descricao: "", valor: "", observacao: "", status: "ativo",
   });
 
-  // Persist mes/ano
-  useEffect(() => { sessionStorage.setItem(STORAGE_KEY_MES, String(mes)); }, [mes]);
   useEffect(() => { sessionStorage.setItem(STORAGE_KEY_ANO, String(ano)); }, [ano]);
 
-  const fetchData = useCallback(() => {
+  // Meses exibidos: o ano todo (no ano corrente, até o mês atual)
+  const mesesAno = useMemo(() => {
+    const ate = ano === anoAtual ? new Date().getMonth() + 1 : ano < anoAtual ? 12 : 0;
+    return Array.from({ length: ate }, (_, i) => i + 1);
+  }, [ano]);
+
+  const fetchData = useCallback(async () => {
     if (!storeId) return;
     setLoading(true);
-    supabase
-      .from("lancamentos")
-      .select("*")
-      .eq("store_id", storeId)
-      .eq("competencia_mes", mes)
-      .eq("competencia_ano", ano)
-      .eq("status", "ativo")
-      .then(({ data }) => {
-        setLancamentos((data as any[]) || []);
-        setLoading(false);
-      });
-  }, [storeId, mes, ano]);
+    const todos: any[] = [];
+    for (let de = 0; ; de += 1000) {
+      const { data } = await supabase
+        .from("lancamentos")
+        .select("*")
+        .eq("store_id", storeId)
+        .eq("competencia_ano", ano)
+        .eq("status", "ativo")
+        .range(de, de + 999);
+      todos.push(...(data || []));
+      if (!data || data.length < 1000) break;
+    }
+    // De-para por tipo de pagamento (id_tipo): o da loja vence o padrão
+    const { data: mapas } = await supabase
+      .from("vr_lancamento_map")
+      .select("store_id, id_tipo, tipo, subtipo")
+      .or(`store_id.eq.${storeId},store_id.is.null`);
+    const padrao = new Map<number, { tipo: string; subtipo: string }>();
+    const daLoja = new Map<number, { tipo: string; subtipo: string }>();
+    for (const m of (mapas as any[]) || []) {
+      if (!m.tipo) continue;
+      (m.store_id ? daLoja : padrao).set(Number(m.id_tipo), { tipo: m.tipo, subtipo: m.subtipo || "" });
+    }
+    setMapaVr(new Map([...padrao, ...daLoja]));
+    setLancamentos(todos as Lancamento[]);
+    setLoading(false);
+  }, [storeId, ano]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Faturamento = Venda do Período e CMV LOJA = CMV do Período (ao vivo na API do VR)
-  const [vendaPeriodo, setVendaPeriodo] = useState<number | null>(null);
-  const [cmvPeriodo, setCmvPeriodo] = useState<number | null>(null);
+  // Faturamento/CMV por mês (ao vivo no sistema da loja)
+  const [vendas, setVendas] = useState<Record<number, VendaMes>>({});
   const [vendaErro, setVendaErro] = useState<string | null>(null);
+  const [lendoVendas, setLendoVendas] = useState<string | null>(null);
 
-  // Nem toda loja publica o mesmo relatorio: tentamos em cascata ate achar
-  // um que devolva faturamento/CMV do periodo.
-  const fetchVendaPeriodo = useCallback(async () => {
-    if (!storeId) { setVendaPeriodo(null); setCmvPeriodo(null); return; }
-    const inicio = `${ano}-${String(mes).padStart(2, "0")}-01`;
-    const fim = new Date(ano, mes, 0).toISOString().slice(0, 10);
-
-    const CANDIDATOS = ["dre_periodo", "kpis_periodo", "vendas_secao_periodo", "vendas_dep_periodo"];
-    let ultimoAviso: string | null = null;
-
-    for (const rel of CANDIDATOS) {
-      const r = await chamarRelatorio(storeId, rel, { inicio, fim });
-      const aviso = avisoRelatorio(r);
-      if (aviso) { ultimoAviso = aviso; continue; }
-      if (!r.dados.length) continue;
-
-      const venda = r.dados.reduce(
-        (s, x) => s + num(pick(x, "receita_bruta", "faturamento", "total_vendido", "venda", "vendas", "valor_venda")),
-        0,
-      );
-      let cmv = r.dados.reduce(
-        (s, x) => s + Math.abs(num(pick(x, "cmv", "custo", "custo_total"))),
-        0,
-      );
-      // Conectores que so publicam lucro (ex.: kpis_periodo do VR):
-      // CMV = venda - lucro
-      if (cmv === 0) {
-        const lucro = r.dados.reduce(
-          (s, x) => s + num(pick(x, "lucro", "lucro_bruto", "margem_valor")),
-          0,
-        );
-        if (lucro !== 0 && venda !== 0) cmv = Math.abs(venda - lucro);
-      }
-      if (venda === 0 && cmv === 0) continue;
-
-      setVendaPeriodo(venda);
-      setCmvPeriodo(cmv);
-
-      setVendaErro(null);
-      return;
+  const fetchVendas = useCallback(async () => {
+    if (!storeId || !mesesAno.length) { setVendas({}); return; }
+    const res: Record<number, VendaMes> = {};
+    let preferido: string | null = null;
+    let aviso: string | null = null;
+    for (const m of mesesAno) {
+      setLendoVendas(`Lendo vendas de ${MESES_CURTOS[m - 1]}/${ano}...`);
+      const r = await lerVendaMes(storeId, ano, m, preferido);
+      res[m] = r.valor;
+      if (r.valor) preferido = r.rel;
+      else aviso = r.aviso ?? aviso;
+      setVendas({ ...res });
     }
+    setLendoVendas(null);
+    setVendaErro(Object.values(res).some(Boolean) ? null : aviso ?? "o sistema da loja não retornou vendas");
+  }, [storeId, ano, mesesAno]);
 
-    setVendaPeriodo(null);
-    setCmvPeriodo(null);
-    setVendaErro(ultimoAviso ?? "o sistema da loja não retornou vendas para este período");
-  }, [storeId, mes, ano]);
+  useEffect(() => { fetchVendas(); }, [fetchVendas]);
 
-
-  useEffect(() => { fetchVendaPeriodo(); }, [fetchVendaPeriodo]);
-
-  // COMPRA DO MÊS = entrada de NF para revenda (histórico de compras do módulo
-  // Compras). Sem isso a linha repetia o pagamento a fornecedores.
-  const [compraNf, setCompraNf] = useState<number | null>(null);
+  // COMPRA DO MÊS = entrada de NF para revenda (histórico do módulo Compras)
+  const [comprasNf, setComprasNf] = useState<Record<number, number>>({});
   useEffect(() => {
-    if (!storeId) { setCompraNf(null); return; }
+    if (!storeId) { setComprasNf({}); return; }
     let ativo = true;
     (async () => {
       const { data } = await supabase
         .from("compras_historico")
-        .select("compra")
+        .select("mes, compra")
         .eq("store_id", storeId)
-        .eq("ano", ano)
-        .eq("mes", mes);
+        .eq("ano", ano);
       if (!ativo) return;
-      const linhas = (data as any[]) || [];
-      setCompraNf(linhas.length ? linhas.reduce((s, l) => s + Number(l.compra || 0), 0) : null);
+      const acc: Record<number, number> = {};
+      for (const l of (data as any[]) || []) acc[l.mes] = (acc[l.mes] || 0) + Number(l.compra || 0);
+      setComprasNf(acc);
     })();
     return () => { ativo = false; };
-  }, [storeId, mes, ano]);
+  }, [storeId, ano]);
+
+  // Botão Atualizar: busca no sistema os lançamentos dos últimos 12 meses
+  const atualizar = async () => {
+    if (!storeId || !user) { toast.error("Selecione uma loja"); return; }
+    setAtualizando(true);
+    const hoje = new Date();
+    const fim = hoje.toISOString().slice(0, 10);
+    const ini = new Date(Date.UTC(hoje.getUTCFullYear(), hoje.getUTCMonth() - 11, 1)).toISOString().slice(0, 10);
+    const { data, error } = await supabase.functions.invoke("importar-lancamentos-vr", {
+      body: { store_id: storeId, user_id: user.id, inicio: ini, fim },
+    });
+    const payload = data as any;
+    if (error || payload?.erro) {
+      toast.error(`Falha ao ler o sistema da loja: ${error?.message || payload?.erro}`);
+    } else {
+      const pend = (payload?.pendentes ?? []).length;
+      toast.success(`${payload?.gravados ?? 0} lançamento(s) atualizados (últimos 12 meses)` +
+        (pend ? ` · ${pend} tipo(s) de pagamento sem classificação` : ""));
+    }
+    await fetchData();
+    await fetchVendas();
+    setAtualizando(false);
+  };
 
   const structure = modo === "comercial" ? DRE_STRUCTURE_COMERCIAL : DRE_STRUCTURE_FINANCEIRO;
+
+  // Classificação pelo tipo de pagamento (de-para), salvo edição manual
+  const lancamentosClass = useMemo(() => lancamentos.map((l) => {
+    const idTipo = (l as any).id_tipo;
+    if ((l as any).classificacao_manual || idTipo === null || idTipo === undefined) return l;
+    const cls = mapaVr.get(Number(idTipo));
+    return cls ? { ...l, tipo: cls.tipo, subtipo: cls.subtipo } : l;
+  }), [lancamentos, mapaVr]);
 
   // Deduplicação: mesmo Beneficiário + mesmo valor conta apenas 1 vez no DRE
   const beneficiarioDe = (l: Lancamento) =>
@@ -191,7 +231,7 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
   const duplicadosIds = useMemo(() => {
     const vistos = new Map<string, string>();
     const dups = new Set<string>();
-    [...lancamentos]
+    [...lancamentosClass]
       .sort((a, b) => (a.data < b.data ? -1 : a.data > b.data ? 1 : a.id.localeCompare(b.id)))
       .forEach(l => {
         const chave = l.origem_ref
@@ -201,43 +241,43 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
         else vistos.set(chave, l.id);
       });
     return dups;
-  }, [lancamentos]);
+  }, [lancamentosClass]);
 
   const lancamentosUnicos = useMemo(
-    () => lancamentos.filter(l => !duplicadosIds.has(l.id)),
-    [lancamentos, duplicadosIds],
+    () => lancamentosClass.filter(l => !duplicadosIds.has(l.id)),
+    [lancamentosClass, duplicadosIds],
   );
 
   const valorDuplicado = useMemo(
-    () => lancamentos.filter(l => duplicadosIds.has(l.id)).reduce((s, l) => s + Number(l.valor), 0),
-    [lancamentos, duplicadosIds],
+    () => lancamentosClass.filter(l => duplicadosIds.has(l.id)).reduce((s, l) => s + Number(l.valor), 0),
+    [lancamentosClass, duplicadosIds],
   );
 
-  const dreValues = useMemo(() => {
-    const overrides: Record<string, number> = {};
-    if (modo === "comercial" && vendaPeriodo !== null) {
-      overrides.faturamento = vendaPeriodo;
-      overrides.venda_bruta = vendaPeriodo;
+  // DRE de cada mês + total do ano
+  const drePorMes = useMemo(() => {
+    const porMes = new Map<number, Map<string, number>>();
+    for (const m of mesesAno) {
+      const overrides: Record<string, number> = {};
+      const v = vendas[m];
+      if (modo === "comercial" && v) {
+        overrides.faturamento = v.venda;
+        overrides.venda_bruta = v.venda;
+        overrides.cmv = v.cmv;
+        overrides.cmv_merc = v.cmv;
+      }
+      overrides.compra_mes = comprasNf[m] ?? 0;
+      overrides.compra_fornec = comprasNf[m] ?? 0;
+      const doMes = lancamentosUnicos.filter(l => Number(l.competencia_mes) === m);
+      porMes.set(m, calcularDRE(structure, doMes.map(l => ({
+        tipo: l.tipo, subtipo: l.subtipo, valor: Number(l.valor),
+      })), overrides));
     }
-    if (modo === "comercial" && cmvPeriodo !== null) {
-      overrides.cmv = cmvPeriodo;
-      overrides.cmv_merc = cmvPeriodo;
-    }
-    // Sem histórico importado a linha fica zerada (e não repetindo o pagamento).
-    overrides.compra_mes = compraNf ?? 0;
-    overrides.compra_fornec = compraNf ?? 0;
-    return calcularDRE(structure, lancamentosUnicos.map(l => ({
-      tipo: l.tipo,
-      subtipo: l.subtipo,
-      valor: Number(l.valor),
-    })), Object.keys(overrides).length ? overrides : undefined);
-  }, [lancamentosUnicos, structure, modo, vendaPeriodo, cmvPeriodo, compraNf]);
+    const total = new Map<string, number>();
+    for (const mapa of porMes.values()) for (const [k, v] of mapa) total.set(k, (total.get(k) || 0) + v);
+    return { porMes, total };
+  }, [lancamentosUnicos, structure, modo, vendas, comprasNf, mesesAno]);
 
-
-  // For % calculation, use faturamento as base
-  const faturamentoBase = dreValues.get("faturamento") || 1;
-
-
+  const faturamentoAno = drePorMes.total.get("faturamento") || 0;
 
   const toggle = (id: string) => {
     setExpanded(prev => {
@@ -248,12 +288,8 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
   };
 
   const handleRowClick = (node: DRENode) => {
-    if (node.isGroup) {
-      toggle(node.id);
-    }
-    if (node.tipo) {
-      setDetailFilter({ tipo: node.tipo });
-    }
+    if (node.isGroup) toggle(node.id);
+    if (node.tipo) setDetailFilter({ tipo: node.tipo });
   };
 
   const handleChildClick = (tipo: string, subtipo: string) => {
@@ -261,7 +297,7 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
   };
 
   const filteredLancamentos = detailFilter
-    ? lancamentos.filter(l => {
+    ? lancamentosClass.filter(l => {
         if (l.tipo !== detailFilter.tipo) return false;
         if (detailFilter.subtipo && l.subtipo !== detailFilter.subtipo) return false;
         return true;
@@ -293,6 +329,7 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
       descricao: editForm.descricao || null,
       observacao: editForm.observacao || null,
       status: editForm.status,
+      classificacao_manual: true,
       updated_at: new Date().toISOString(),
     };
     if (!vr) {
@@ -304,7 +341,6 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
       .update(payload)
       .eq("id", editingLancamento.id);
 
-
     if (error) { toast.error("Erro ao atualizar"); return; }
     toast.success("Lançamento atualizado");
     setEditDialogOpen(false);
@@ -314,69 +350,74 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
 
   const subcontas = SUBCONTAS_V2[editForm.tipo] || [];
 
-  // Detect if a node name starts with a number (section header like "4.1 |")
   const isSectionHeader = (name: string) => /^\d/.test(name);
+
+  const colunas = `minmax(220px,1fr) repeat(${mesesAno.length}, 96px) 120px 64px`;
+
+  const celulas = (id: string, destaque: string) => (
+    <>
+      {mesesAno.map(m => {
+        const v = drePorMes.porMes.get(m)?.get(id) || 0;
+        return (
+          <div key={m} className={`text-right font-mono ${v < 0 ? "text-red-600" : ""} ${destaque}`}>
+            {fmtCompacto(v)}
+          </div>
+        );
+      })}
+      {(() => {
+        const t = drePorMes.total.get(id) || 0;
+        const pct = faturamentoAno !== 0 ? (t / faturamentoAno) * 100 : 0;
+        return (
+          <>
+            <div className={`text-right font-mono font-semibold ${t < 0 ? "text-red-600" : ""} ${destaque}`}>{fmtCompacto(t)}</div>
+            <div className={`text-right font-mono text-muted-foreground ${destaque}`}>{pct.toFixed(1)}%</div>
+          </>
+        );
+      })()}
+    </>
+  );
 
   const renderNode = (node: DRENode) => {
     const isExpanded = expanded.has(node.id);
-    const value = dreValues.get(node.id) || 0;
-    const pct = faturamentoBase !== 0 ? (value / faturamentoBase) * 100 : 0;
     const isClickable = !!node.tipo || !!node.calcPctOf;
     const isActive = detailFilter?.tipo === node.tipo && !detailFilter?.subtipo;
     const isSection = (node.isGroup || !!node.calcPctOf) && isSectionHeader(node.name);
+    const hover = "group-hover:font-bold group-hover:text-orange-600 dark:group-hover:text-orange-400";
 
     return (
       <div key={node.id}>
         <div
-          className={`group grid grid-cols-[1fr_140px_80px] sm:grid-cols-[1fr_160px_100px] items-center px-4 border-b border-border text-sm transition-all duration-200
+          style={{ gridTemplateColumns: colunas }}
+          className={`group grid gap-x-2 items-center px-4 border-b border-border text-xs transition-all duration-200 hover:bg-orange-50 dark:hover:bg-orange-950/20
             ${node.isResult ? "bg-accent/20 font-bold text-foreground py-3" : ""}
             ${isSection ? "bg-secondary/10 font-semibold py-2.5" : "py-2"}
-            ${!node.isResult && !isSection ? "hover:bg-orange-50 dark:hover:bg-orange-950/20" : "hover:bg-orange-50 dark:hover:bg-orange-950/20"}
             ${isClickable ? "cursor-pointer" : ""}
             ${isActive ? "bg-primary/10 border-l-2 border-l-primary" : ""}
           `}
           onClick={() => node.isGroup ? handleRowClick(node) : null}
         >
-          <div className="flex items-center gap-2">
-            {node.isGroup && (
-              isExpanded
-                ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
-                : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-            )}
-            {!node.isGroup && <span className="w-4 shrink-0" />}
-            <span className={`${node.isResult ? "text-foreground" : "text-foreground/90"} ${isSection ? "text-foreground" : ""} group-hover:font-bold group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-all duration-200`}>
-              {node.name}
-            </span>
+          <div className="flex items-center gap-2 sticky left-0 bg-card/95">
+            {node.isGroup
+              ? (isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />)
+              : <span className="w-4 shrink-0" />}
+            <span className={`text-sm text-foreground/90 ${hover}`}>{node.name}</span>
           </div>
-          <div className={`text-right font-mono text-sm group-hover:font-bold group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-all duration-200 ${value < 0 ? "text-red-600 group-hover:text-orange-600" : ""}`}>
-            {fmtCurrency(value)}
-          </div>
-          <div className="text-right font-mono text-muted-foreground text-xs group-hover:font-bold group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-all duration-200">
-            {pct.toFixed(2)}%
-          </div>
+          {celulas(node.id, hover)}
         </div>
 
-        {/* Children */}
         {node.isGroup && isExpanded && node.children?.map(child => {
-          const childVal = dreValues.get(child.id) || 0;
-          const childPct = faturamentoBase !== 0 ? (childVal / faturamentoBase) * 100 : 0;
           const isChildActive = detailFilter?.tipo === child.tipo && detailFilter?.subtipo === child.subtipo;
-
           return (
             <div
               key={child.id}
-              className={`group grid grid-cols-[1fr_140px_80px] sm:grid-cols-[1fr_160px_100px] items-center px-4 py-1.5 border-b border-border/30 text-xs cursor-pointer transition-all duration-200
+              style={{ gridTemplateColumns: colunas }}
+              className={`group grid gap-x-2 items-center px-4 py-1.5 border-b border-border/30 text-xs cursor-pointer transition-all duration-200
                 ${isChildActive ? "bg-primary/10 border-l-2 border-l-primary" : "hover:bg-orange-50 dark:hover:bg-orange-950/20"}
               `}
               onClick={() => child.tipo && child.subtipo && handleChildClick(child.tipo, child.subtipo)}
             >
-              <div className="pl-8 text-foreground/75 group-hover:font-bold group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-all duration-200">{child.name}</div>
-              <div className={`text-right font-mono group-hover:font-bold group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-all duration-200 ${childVal < 0 ? "text-red-600" : ""}`}>
-                {fmtCurrency(childVal)}
-              </div>
-              <div className="text-right font-mono text-muted-foreground group-hover:font-bold group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-all duration-200">
-                {childPct.toFixed(2)}%
-              </div>
+              <div className={`pl-8 text-foreground/75 sticky left-0 bg-card/95 ${hover}`}>{child.name}</div>
+              {celulas(child.id, hover)}
             </div>
           );
         })}
@@ -389,21 +430,50 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
       <div>
         <h2 className="text-lg sm:text-xl font-bold text-foreground">Cont Rede</h2>
         <p className="text-sm text-muted-foreground">
-          Painel consolidado de controladoria — estrutura fixa, cálculos determinísticos
+          DRE do ano, mês a mês — lançamentos classificados pelo tipo de pagamento
         </p>
       </div>
 
-      <ImportarVrBlock
-        storeId={storeId}
-        onImported={fetchData}
-        onGoClassificacao={onGoClassificacao}
-      />
+      {/* Filters */}
+      <Card className="bg-card border-border">
+        <CardContent className="p-4 flex flex-wrap gap-3 items-center">
+          <Select value={String(ano)} onValueChange={v => setAno(Number(v))}>
+            <SelectTrigger className="w-[100px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {anos.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+            </SelectContent>
+          </Select>
+
+          <Button onClick={atualizar} disabled={atualizando || !storeId}>
+            {atualizando ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+            {atualizando ? "Atualizando..." : "Atualizar"}
+          </Button>
+          <span className="text-xs text-muted-foreground">Busca no sistema os lançamentos dos últimos 12 meses</span>
+
+          <div className="flex gap-1 ml-auto">
+            <Button
+              size="sm"
+              variant={modo === "comercial" ? "default" : "outline"}
+              onClick={() => setModo("comercial")}
+            >
+              Comercial
+            </Button>
+            <Button
+              size="sm"
+              variant={modo === "financeiro" ? "default" : "outline"}
+              onClick={() => setModo("financeiro")}
+            >
+              Financeiro
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {modo === "comercial" && (
         <p className="text-xs text-muted-foreground">
-          {vendaPeriodo !== null
-            ? `VR ao vivo — Faturamento (Venda do Período): ${fmtCurrency(vendaPeriodo)} · CMV LOJA (CMV do Período): ${fmtCurrency(cmvPeriodo ?? 0)}`
-            : `Dados do VR indisponíveis${vendaErro ? ` — ${vendaErro}` : ""}; usando lançamentos.`}
+          {lendoVendas ?? (vendaErro
+            ? `Vendas do sistema indisponíveis — ${vendaErro}; usando lançamentos.`
+            : "Faturamento e CMV de cada mês lidos do sistema da loja.")}
         </p>
       )}
 
@@ -414,65 +484,18 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
           </p>
           <p className="text-xs text-muted-foreground mt-1">
             Mesmo beneficiário e mesmo valor: apenas 1 é somado no DRE. Total ignorado:{" "}
-            {fmtCurrency(valorDuplicado)}. Os duplicados aparecem marcados como "DUPLICADO" na lista de lançamentos.
+            {fmtCurrency(valorDuplicado)}.
           </p>
         </div>
       )}
-
-
-      {/* Filters */}
-      <Card className="bg-card border-border">
-        <CardContent className="p-4 flex flex-wrap gap-3 items-center">
-          <Select value={String(mes)} onValueChange={v => setMes(Number(v))}>
-            <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {mesesOptions.map(m => <SelectItem key={m.value} value={String(m.value)}>{m.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <Select value={String(ano)} onValueChange={v => setAno(Number(v))}>
-            <SelectTrigger className="w-[100px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {anos.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
-            </SelectContent>
-          </Select>
-
-          {/* Toggle Comercial / Financeiro */}
-          <div className="flex gap-1 ml-auto">
-            <Button
-              size="sm"
-              variant={modo === "comercial" ? "default" : "outline"}
-              onClick={() => setModo("comercial")}
-              className={modo === "comercial" ? "bg-orange-500 hover:bg-orange-600 text-white" : ""}
-            >
-              Comercial
-            </Button>
-            <Button
-              size="sm"
-              variant={modo === "financeiro" ? "default" : "outline"}
-              onClick={() => setModo("financeiro")}
-              className={modo === "financeiro" ? "bg-orange-500 hover:bg-orange-600 text-white" : ""}
-            >
-              Financeiro
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <CompetenciasDisponiveis
-        storeId={storeId}
-        onSelect={(m, a) => { setMes(m); setAno(a); }}
-      />
 
       {loading && <p className="text-muted-foreground text-sm">Carregando dados...</p>}
 
       {!loading && lancamentos.length === 0 && (
         <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 px-4 py-4 text-sm">
-          <p className="font-semibold text-foreground">
-            Nenhum lançamento em {mesesOptions.find(m => m.value === mes)?.label}/{ano}
-          </p>
+          <p className="font-semibold text-foreground">Nenhum lançamento em {ano}</p>
           <p className="text-xs text-muted-foreground mt-1">
-            A estrutura do DRE aparece zerada porque não há lançamentos desta loja nesta competência.
-            Escolha outro mês/ano ou importe os lançamentos na aba de entrada de dados.
+            Clique em Atualizar para buscar os lançamentos no sistema da loja.
           </p>
         </div>
       )}
@@ -481,17 +504,23 @@ export const ContRedeTab = ({ storeId, onGoClassificacao }: Props) => {
       <Card className="bg-card border-border overflow-hidden">
         <CardHeader className="pb-0">
           <CardTitle className="text-base font-semibold">
-            {modo === "comercial" ? "DRE Comercial" : "DRE Financeiro"}
+            {modo === "comercial" ? "DRE Comercial" : "DRE Financeiro"} — {ano}
           </CardTitle>
-          <p className="text-xs text-muted-foreground">Clique em uma linha para ver os lançamentos</p>
+          <p className="text-xs text-muted-foreground">Clique em uma linha para ver os lançamentos do ano</p>
         </CardHeader>
-        <CardContent className="p-0 mt-4">
-          <div className="grid grid-cols-[1fr_140px_80px] sm:grid-cols-[1fr_160px_100px] items-center px-4 py-2.5 bg-secondary/10 border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-            <div>Conta</div>
-            <div className="text-right">Valor</div>
-            <div className="text-right">% Fat.</div>
+        <CardContent className="p-0 mt-4 overflow-x-auto">
+          <div className="min-w-max">
+            <div
+              style={{ gridTemplateColumns: colunas }}
+              className="grid gap-x-2 items-center px-4 py-2.5 bg-secondary/10 border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wide"
+            >
+              <div className="sticky left-0">Conta</div>
+              {mesesAno.map(m => <div key={m} className="text-right">{MESES_CURTOS[m - 1]}</div>)}
+              <div className="text-right">Total</div>
+              <div className="text-right">% Fat.</div>
+            </div>
+            {structure.map(renderNode)}
           </div>
-          {structure.map(renderNode)}
         </CardContent>
       </Card>
 
