@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { CheckCircle2, AlertTriangle, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useSaasNumber } from "@/hooks/useSaasConfig";
 
 interface Props {
   storeId: string;
@@ -25,7 +24,6 @@ const formatDateTime = (iso: string) => {
 };
 
 const SyncStatusBadge = ({ storeId, onSyncChange }: Props) => {
-  const refreshSegundos = useSaasNumber("refresh_pic_segundos", 60);
   const [info, setInfo] = useState<SyncInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -48,20 +46,29 @@ const SyncStatusBadge = ({ storeId, onSyncChange }: Props) => {
   useEffect(() => {
     if (!storeId) return;
     fetchInfo();
+    // Atualização via realtime (usa o próprio payload, sem nova consulta).
+    // Sem polling periódico: evita sobrecarga do banco.
     const channel = supabase
-      .channel(`sync-status-${storeId}`)
+      .channel(`sync-status-${storeId}-${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "store_vr_config", filter: `store_id=eq.${storeId}` },
-        () => fetchInfo(),
+        (payload: any) => {
+          const row = payload?.new;
+          if (!row || !("last_sync_at" in row)) return;
+          const nextInfo = { last_sync_at: row.last_sync_at ?? null, last_error: row.last_error ?? null };
+          setInfo((previous) => {
+            if (previous && previous.last_sync_at !== nextInfo.last_sync_at) onSyncChange?.();
+            return nextInfo;
+          });
+        },
       )
       .subscribe();
-    const interval = refreshSegundos > 0 ? setInterval(fetchInfo, refreshSegundos * 1000) : undefined;
     return () => {
       supabase.removeChannel(channel);
-      if (interval) clearInterval(interval);
     };
-  }, [storeId, onSyncChange, refreshSegundos]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storeId]);
 
   if (loading || !info) return null;
 
