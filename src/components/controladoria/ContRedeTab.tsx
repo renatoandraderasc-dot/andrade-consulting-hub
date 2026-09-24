@@ -427,7 +427,7 @@ export const ContRedeTab = ({ storeId }: Props) => {
               onClick={() => child.tipo && child.subtipo && handleChildClick(child.tipo, child.subtipo)}
             >
               <div className={`pl-8 text-foreground/75 sticky left-0 bg-card/95 ${hover}`}>{child.name}</div>
-              {celulas(child.id, hover)}
+              {celulas(child.id, hover, node.id)}
             </div>
           );
         })}
