@@ -352,25 +352,35 @@ export const ContRedeTab = ({ storeId }: Props) => {
 
   const isSectionHeader = (name: string) => /^\d/.test(name);
 
-  const colunas = `minmax(220px,1fr) repeat(${mesesAno.length}, 96px) 120px 64px`;
+  const colunas = `minmax(220px,1fr) repeat(${mesesAno.length}, 110px) 130px 64px`;
 
-  const celulas = (id: string, destaque: string) => (
+  const pctStr = (v: number, base: number) =>
+    base !== 0 ? `${((v / Math.abs(base)) * 100).toFixed(1)}%` : "—";
+
+  // Percentuais por mês: grupos/seções sobre o faturamento do mês;
+  // subcontas sobre o total do próprio grupo naquele mês.
+  const celulas = (id: string, destaque: string, parentId?: string) => (
     <>
       {mesesAno.map(m => {
-        const v = drePorMes.porMes.get(m)?.get(id) || 0;
+        const mapaMes = drePorMes.porMes.get(m);
+        const v = mapaMes?.get(id) || 0;
+        const base = parentId
+          ? mapaMes?.get(parentId) || 0
+          : mapaMes?.get("faturamento") || 0;
         return (
           <div key={m} className={`text-right font-mono ${v < 0 ? "text-red-600" : ""} ${destaque}`}>
-            {fmtCompacto(v)}
+            <div>{fmtCompacto(v)}</div>
+            <div className="text-[10px] text-muted-foreground font-normal">{pctStr(v, base)}</div>
           </div>
         );
       })}
       {(() => {
         const t = drePorMes.total.get(id) || 0;
-        const pct = faturamentoAno !== 0 ? (t / faturamentoAno) * 100 : 0;
+        const baseTotal = parentId ? (drePorMes.total.get(parentId) || 0) : faturamentoAno;
         return (
           <>
             <div className={`text-right font-mono font-semibold ${t < 0 ? "text-red-600" : ""} ${destaque}`}>{fmtCompacto(t)}</div>
-            <div className={`text-right font-mono text-muted-foreground ${destaque}`}>{pct.toFixed(1)}%</div>
+            <div className={`text-right font-mono text-[10px] text-muted-foreground font-normal ${destaque}`}>{pctStr(t, baseTotal)}</div>
           </>
         );
       })()}
@@ -417,7 +427,7 @@ export const ContRedeTab = ({ storeId }: Props) => {
               onClick={() => child.tipo && child.subtipo && handleChildClick(child.tipo, child.subtipo)}
             >
               <div className={`pl-8 text-foreground/75 sticky left-0 bg-card/95 ${hover}`}>{child.name}</div>
-              {celulas(child.id, hover)}
+              {celulas(child.id, hover, node.id)}
             </div>
           );
         })}
@@ -430,7 +440,7 @@ export const ContRedeTab = ({ storeId }: Props) => {
       <div>
         <h2 className="text-lg sm:text-xl font-bold text-foreground">Cont Rede</h2>
         <p className="text-sm text-muted-foreground">
-          DRE do ano, mês a mês — lançamentos classificados pelo tipo de pagamento
+          DRE do ano, mês a mês — lançamentos classificados pelo tipo de pagamento · percentual de cada mês em relação ao faturamento do mês (subcontas em relação ao próprio grupo)
         </p>
       </div>
 
