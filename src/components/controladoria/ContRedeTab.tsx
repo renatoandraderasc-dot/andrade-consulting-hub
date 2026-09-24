@@ -541,22 +541,30 @@ export const ContRedeTab = ({ storeId }: Props) => {
           </Button>
           <span className="text-xs text-muted-foreground">Busca no sistema os lançamentos dos últimos 12 meses</span>
 
-          <div className="flex gap-1 ml-auto">
+          <Button variant="outline" size="sm" onClick={exportarExcel} className="gap-2">
+            <Download className="h-4 w-4" /> Excel
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportarPdf} className="gap-2">
+            <FileText className="h-4 w-4" /> PDF
+          </Button>
+
+          <div className="flex gap-1 ml-auto rounded-lg bg-secondary/20 p-1">
             <Button
               size="sm"
-              variant={modo === "comercial" ? "default" : "outline"}
+              variant={modo === "comercial" ? "default" : "ghost"}
               onClick={() => setModo("comercial")}
             >
               Comercial
             </Button>
             <Button
               size="sm"
-              variant={modo === "financeiro" ? "default" : "outline"}
+              variant={modo === "financeiro" ? "default" : "ghost"}
               onClick={() => setModo("financeiro")}
             >
               Financeiro
             </Button>
           </div>
+
         </CardContent>
       </Card>
 
