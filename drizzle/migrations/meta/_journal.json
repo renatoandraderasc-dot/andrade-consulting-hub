@@ -113,6 +113,13 @@
       "when": 1790254174061,
       "tag": "0015_fn_classificar_lancamento_completo",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1790256258436,
+      "tag": "0016_fn_classificar_pendentes",
+      "breakpoints": true
     }
   ]
 }
