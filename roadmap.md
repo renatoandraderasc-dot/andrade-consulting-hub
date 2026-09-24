@@ -13,8 +13,9 @@
 - [x] Corrigir resposta sem tabela do Estoque Dinâmico no WebSac Nascimento
 
 # Controladoria — layout e fornecedores
-- [ ] Ajustar layout da Controladoria (DRE anual por mês).
-- [ ] Botão exportar PDF e Excel na Controladoria.
-- [ ] Linha "Pagamento de Fornecedores" (valor pago) e "Entrada de NF para revenda" (compras do mês).
-- [ ] Comercial calcula pelo CMV; Financeiro calcula pelo Pagamento de Fornecedores.
-- [ ] Todos os lançamentos com destino (Tipo e Subconta) + botão Classificar.
+- [x] Ajustar layout da Controladoria (DRE anual por mês).
+- [x] Botão exportar PDF e Excel na Controladoria.
+- [x] Linha "Pagamento de Fornecedores" (valor pago) e "Entrada de NF para revenda" (compras do mês).
+- [x] Comercial calcula pelo CMV; Financeiro calcula pelo Pagamento de Fornecedores.
+- [x] Todos os lançamentos com destino (Tipo e Subconta) + botão Classificar.
+
