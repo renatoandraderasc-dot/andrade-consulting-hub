@@ -212,6 +212,35 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
     fetchLancamentos();
   };
 
+  // Classificar: garante Tipo + Subconta em todos os lancamentos da loja.
+  // Lancamentos corrigidos a mao (classificacao_manual) nunca sao tocados.
+  const [classificando, setClassificando] = useState(false);
+  const classificarTodos = async () => {
+    if (!storeId) return;
+    setClassificando(true);
+    let total = 0;
+    try {
+      for (let volta = 0; volta < 20; volta++) {
+        const { data, error } = await (supabase as any).rpc("fn_classificar_lancamentos", {
+          p_store_id: storeId,
+          p_limite: 3000,
+        });
+        if (error) throw error;
+        const n = Number(data ?? 0);
+        total += n;
+        if (n === 0) break;
+      }
+      toast.success(total ? `${total} lançamento(s) classificados` : "Todos os lançamentos já têm destino");
+      fetchLancamentos();
+    } catch {
+      toast.error("Não foi possível classificar os lançamentos");
+    } finally {
+      setClassificando(false);
+    }
+  };
+
+
+
   // Consulta ao vivo (nada é gravado)
   const [consultando, setConsultando] = useState(false);
   const [consulta, setConsulta] = useState<any[] | null>(null);
