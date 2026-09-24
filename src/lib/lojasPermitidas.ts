@@ -13,24 +13,14 @@ export interface LojaSimples {
  */
 export async function carregarLojasPermitidas(
   userId: string | null | undefined,
-  isGlobalAdmin: boolean,
+  _isGlobalAdmin: boolean,
 ): Promise<LojaSimples[]> {
-  if (isGlobalAdmin) {
-    const { data } = await supabase.from("stores").select("id, name").order("name");
-    return (data as LojaSimples[]) || [];
-  }
   if (!userId) return [];
-  const { data: access } = await supabase
-    .from("user_store_access")
-    .select("store_id")
-    .eq("user_id", userId)
-    .eq("approved", true);
-  const ids = (access || []).map((a) => a.store_id);
-  if (!ids.length) return [];
+  // O banco já aplica a regra correta por usuário: administrador recebe a
+  // rede inteira; os demais recebem apenas as lojas aprovadas.
   const { data } = await supabase
     .from("stores")
     .select("id, name")
-    .in("id", ids)
     .order("name");
   return (data as LojaSimples[]) || [];
 }
