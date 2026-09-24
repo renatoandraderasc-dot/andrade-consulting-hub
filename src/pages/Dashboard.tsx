@@ -177,24 +177,32 @@ const Dashboard = () => {
   };
 
   const fetchDailyData = async () => {
+    const porDepto = !!selectedDept && chaveDept(selectedDept) !== "LOJA";
     let q = supabase
       .from("store_daily_metrics")
       .select("date, tipo_dia, meta_vendas, meta_lucro, meta_margem_pct, meta_volume, projecao_vendas, projecao_lucro, projecao_margem_pct, projecao_volume, department")
       .eq("store_id", storeId);
-    q = selectedDept ? q.eq("department", selectedDept) : q;
+    // Departamento: busca todas as linhas e agrupa pela mesma chave usada no PIC
+    q = selectedDept && !porDepto ? q.eq("department", selectedDept) : q;
     const { data } = await q
       .gte("date", periodStart)
       .lte("date", periodEnd)
       .order("date");
 
     let linhas = data || [];
+    if (porDepto) {
+      const alvo = canonDept(selectedDept);
+      linhas = linhas.filter((l: any) => canonDept(String(l.department || "")) === alvo);
+    }
     if (restrito) {
       const porDept = linhas.filter((l: any) => permiteDept(String(l.department || "")));
       // Loja que só tem meta lançada no total ("LOJA"): usa esse total como referência.
       linhas = porDept.length
         ? porDept
         : linhas.filter((l: any) => chaveDept(String(l.department || "")) === "LOJA");
-      if (!selectedDept) {
+    }
+    if ((restrito && !selectedDept) || porDepto) {
+      {
         // soma as metas dos departamentos liberados, por dia
         const porDia = new Map<string, any>();
         for (const l of linhas as any[]) {
