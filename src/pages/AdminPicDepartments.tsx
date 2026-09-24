@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { LayoutGrid, Plus, Save, RotateCcw } from "lucide-react";
+import { LayoutGrid, Sliders, Plus, Save, RotateCcw } from "lucide-react";
 import ClientLayout from "@/components/ClientLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,11 @@ import {
   PicDepartmentsMap,
   fetchPicDepartmentsMap,
   savePicDepartmentsMap,
+  ALL_PIC_KPIS,
+  PIC_KPI_LABELS,
+  PicKpisMap,
+  fetchPicKpisMap,
+  savePicKpisMap,
 } from "@/hooks/usePicDepartments";
 import { DEPARTAMENTOS_PADRAO, carregarDepartamentosLoja } from "@/lib/departamentosLoja";
 
@@ -37,6 +42,7 @@ const AdminPicDepartments = () => {
   const [stores, setStores] = useState<StoreItem[]>([]);
   const [storeId, setStoreId] = useState("");
   const [map, setMap] = useState<PicDepartmentsMap>({});
+  const [kpiMap, setKpiMap] = useState<PicKpisMap>({});
   const [options, setOptions] = useState<string[]>(BASE_DEPARTMENTS);
   const [novo, setNovo] = useState("");
   const [saving, setSaving] = useState(false);
@@ -52,6 +58,7 @@ const AdminPicDepartments = () => {
       setStores(data || []);
       if (data?.length) setStoreId((s) => s || data[0].id);
       setMap(await fetchPicDepartmentsMap());
+      setKpiMap(await fetchPicKpisMap());
     })();
   }, [isAdmin]);
 
@@ -64,6 +71,23 @@ const AdminPicDepartments = () => {
       setOptions([...BASE_DEPARTMENTS, ...extras]);
     })();
   }, [storeId]);
+
+  // Índices ativos no PIC da loja: sem registro, todos começam ativos.
+  useEffect(() => {
+    if (!storeId) return;
+    setKpiMap((m) => (m[storeId] ? m : { ...m, [storeId]: [...ALL_PIC_KPIS] }));
+  }, [storeId]);
+
+  const kpisAtivos = kpiMap[storeId] || [...ALL_PIC_KPIS];
+  const todosKpis = kpisAtivos.length === ALL_PIC_KPIS.length;
+
+  const toggleKpi = (kpi: string) => {
+    const atual = kpiMap[storeId] || [...ALL_PIC_KPIS];
+    const next = atual.includes(kpi) ? atual.filter((k) => k !== kpi) : [...atual, kpi];
+    setKpiMap({ ...kpiMap, [storeId]: next });
+  };
+
+  const limparKpis = () => setKpiMap({ ...kpiMap, [storeId]: [...ALL_PIC_KPIS] });
 
   const selecionados = map[storeId] || [];
   const automatico = selecionados.length === 0;
@@ -87,10 +111,14 @@ const AdminPicDepartments = () => {
 
   const salvar = async () => {
     setSaving(true);
-    const { error } = await savePicDepartmentsMap(map);
+    const [{ error: errDept }, { error: errKpi }] = await Promise.all([
+      savePicDepartmentsMap(map),
+      savePicKpisMap(kpiMap),
+    ]);
     setSaving(false);
+    const error = errDept || errKpi;
     if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
-    else toast({ title: "Configuração salva!", description: "O PIC já reflete os departamentos." });
+    else toast({ title: "Configuração salva!", description: "O PIC já reflete os departamentos e os índices." });
   };
 
   return (
@@ -141,6 +169,33 @@ const AdminPicDepartments = () => {
                     disabled={!storeId}
                   />
                   <span className="font-body text-sm">{dept}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-border">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Sliders className="w-4 h-4 text-primary" />
+                <span className="text-sm font-body font-semibold">Índices do PIC</span>
+              </div>
+              {todosKpis && (
+                <span className="text-xs font-body text-muted-foreground">Todos os índices ativos</span>
+              )}
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {ALL_PIC_KPIS.map((kpi) => (
+                <label
+                  key={kpi}
+                  className="flex items-center gap-2 border border-border rounded-lg px-3 py-2 cursor-pointer"
+                >
+                  <Checkbox
+                    checked={kpisAtivos.includes(kpi)}
+                    onCheckedChange={() => toggleKpi(kpi)}
+                    disabled={!storeId}
+                  />
+                  <span className="font-body text-sm">{PIC_KPI_LABELS[kpi]}</span>
                 </label>
               ))}
             </div>
