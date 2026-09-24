@@ -262,17 +262,17 @@ export const ContRedeTab = ({ storeId }: Props) => {
       if (modo === "comercial" && v) {
         overrides.faturamento = v.venda;
         overrides.venda_bruta = v.venda;
+        // Comercial apura o resultado pelo CMV do periodo
+        overrides.cmv = v.cmv;
+        overrides.cmv_merc = v.cmv;
       }
+      // Entrada de NF para revenda (compras do mes) — informativa nas duas visoes
       const nf = comprasNf[m] ?? 0;
-      if (modo === "comercial") {
-        // Comercial apura pela Compra do Mês (entrada de NF para revenda)
-        overrides.cmv = nf;
-        overrides.compra_fornec = nf;
-      } else {
-        // Financeiro apura pelo Pagamento de Fornecedores; a Compra do Mês fica só para confronto
-        overrides.compra_mes = nf;
-        overrides.compra_fornec = nf;
-      }
+      overrides.compra_mes = nf;
+      overrides.compra_fornec = nf;
+      // No Financeiro o resultado e apurado pelo Pagamento de Fornecedores (nó "cmv"),
+      // que vem dos proprios lancamentos de pagamento — sem override.
+
 
       const doMes = lancamentosUnicos.filter(l => Number(l.competencia_mes) === m);
       porMes.set(m, calcularDRE(structure, doMes.map(l => ({
