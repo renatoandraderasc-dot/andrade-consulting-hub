@@ -93,6 +93,13 @@ export const ContRedeTab = ({ storeId }: Props) => {
   const { user } = useAuth();
   const [ano, setAno] = useState(getStoredAno);
   const [modo, setModo] = useState<"comercial" | "financeiro">("comercial");
+  const [storeName, setStoreName] = useState("");
+  useEffect(() => {
+    if (!storeId) { setStoreName(""); return; }
+    supabase.from("stores").select("name").eq("id", storeId).maybeSingle()
+      .then(({ data }) => setStoreName((data as any)?.name || ""));
+  }, [storeId]);
+
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [mapaVr, setMapaVr] = useState<Map<number, { tipo: string; subtipo: string }>>(new Map());
   const [loading, setLoading] = useState(false);
