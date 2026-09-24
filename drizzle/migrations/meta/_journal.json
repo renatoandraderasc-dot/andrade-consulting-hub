@@ -92,6 +92,13 @@
       "when": 1790182444651,
       "tag": "0012_tighten_permissive_read_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1790250634611,
+      "tag": "0013_optimize_role_and_store_access_checks",
+      "breakpoints": true
     }
   ]
 }
