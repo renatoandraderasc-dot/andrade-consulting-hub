@@ -14,7 +14,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronRight, ChevronDown, Pencil, X, RefreshCw, Loader2 } from "lucide-react";
+import { ChevronRight, ChevronDown, Pencil, X, RefreshCw, Loader2, Download, FileText } from "lucide-react";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { salvarWorkbook } from "@/lib/exportBranding";
+
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
