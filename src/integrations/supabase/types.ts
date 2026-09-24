@@ -3634,6 +3634,32 @@ export type Database = {
           total_meta: number
         }[]
       }
+      fn_classificar_conta: {
+        Args: { p_nome: string }
+        Returns: {
+          subtipo: string
+          tipo: string
+        }[]
+      }
+      fn_classificar_lancamento: {
+        Args: {
+          p_descricao: string
+          p_observacao?: string
+          p_tipo_entrada: string
+        }
+        Returns: {
+          subtipo: string
+          tipo: string
+        }[]
+      }
+      fn_classificar_lancamentos: {
+        Args: { p_limite?: number; p_store_id?: string }
+        Returns: number
+      }
+      fn_classificar_pendentes: {
+        Args: { p_limite?: number; p_store_id?: string }
+        Returns: number
+      }
       fn_diagnostico_sistema: { Args: never; Returns: Json }
       fn_grupo_recalc_all: { Args: { p_group: string }; Returns: undefined }
       fn_grupo_recalc_daily: {

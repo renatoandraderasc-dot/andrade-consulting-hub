@@ -166,35 +166,45 @@ export const DRE_STRUCTURE_COMERCIAL: DRENode[] = [
     formula: "faturamento - impostos_caixa",
   },
 
-  // ===== 3 | CMV LOJA =====
+  // ===== 3 | CMV — base do resultado COMERCIAL =====
   {
-    id: "cmv", name: "3 | CMV LOJA", level: 0, isGroup: true, isResult: false, tipo: "CMV",
+    id: "cmv", name: "3 | CMV (CUSTO DA MERCADORIA VENDIDA)", level: 0, isGroup: true, isResult: false, tipo: "CMV",
     children: [
-      { id: "cmv_merc", name: "CUSTO DA MERCADORIA VENDIDA", level: 1, isGroup: false, isResult: false, tipo: "CMV", subtipo: "CUSTO DA MERCADORIA VENDIDA", catchAll: true },
+      { id: "cmv_merc", name: "CMV MERCADORIA", level: 1, isGroup: false, isResult: false, tipo: "CMV", subtipo: "CMV MERCADORIA", catchAll: true },
       { id: "cmv_acougue", name: "MATERIAL PARA INSUMO AÇOUGUE", level: 1, isGroup: false, isResult: false, tipo: "CMV", subtipo: "MATERIAL PARA INSUMO AÇOUGUE" },
       { id: "cmv_padaria", name: "MATERIAL PARA INSUMO PADARIA", level: 1, isGroup: false, isResult: false, tipo: "CMV", subtipo: "MATERIAL PARA INSUMO PADARIA" },
     ],
   },
 
-  // ===== COMPRA DO MÊS (entrada de NF para revenda, vinda do histórico de compras) =====
+  // ===== ENTRADA DE NF PARA REVENDA (compras do mês — informativo) =====
   {
-    id: "compra_mes", name: "COMPRA DO MÊS (ENTRADA DE NF)", level: 0, isGroup: true, isResult: false, tipo: "Compra do Mês",
+    id: "compra_mes", name: "ENTRADA DE NF PARA REVENDA (COMPRA DO MÊS)", level: 0, isGroup: true, isResult: false,
     children: [
-      { id: "compra_fornec", name: "Entrada de NF para revenda", level: 1, isGroup: false, isResult: false, tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS", catchAll: true },
+      { id: "compra_fornec", name: "Entrada de NF para revenda", level: 1, isGroup: false, isResult: false },
     ],
   },
 
-  // ===== RESULTADO OPERACIONAL CMV =====
+  // ===== PAGAMENTO DE FORNECEDORES DO MÊS (saída de caixa — informativo) =====
+  {
+    id: "pag_fornec", name: "PAGAMENTO DE FORNECEDORES DO MÊS", level: 0, isGroup: true, isResult: false, tipo: "Compra do Mês",
+    children: [
+      { id: "pag_fornec_mes", name: "Pagamentos a fornecedores (caixa)", level: 1, isGroup: false, isResult: false, tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS", catchAll: true },
+    ],
+  },
+
+  // ===== RESULTADO OPERACIONAL (apurado pelo CMV) =====
   {
     id: "resultado_op_cmv", name: "RESULTADO OPERACIONAL LIQUIDO (CMV)", level: 0, isGroup: false, isResult: true,
     formula: "receita_liquida - cmv",
   },
 
-  // ===== RESULTADO OPERACIONAL COMPRA MÊS = CMV LOJA - Pagamento Fornecedores =====
+  // ===== DIFERENÇA ENTRE COMPRA E PAGAMENTO =====
   {
-    id: "resultado_op_compra", name: "RESULTADO OPERACIONAL LIQUIDO (COMPRA MÊS)", level: 0, isGroup: false, isResult: true,
-    formula: "cmv - compra_mes",
+    id: "resultado_op_compra", name: "DIFERENÇA COMPRA x PAGAMENTO FORNECEDORES", level: 0, isGroup: false, isResult: true,
+    formula: "compra_mes - pag_fornec",
   },
+
+
 
   // ===== 4.1 | DESPESAS PESSOAL =====
   {
@@ -531,33 +541,35 @@ export const DRE_STRUCTURE_FINANCEIRO: DRENode[] = [
     formula: "faturamento - impostos_caixa",
   },
 
-  // ===== 3 | PAGAMENTO DE FORNECEDORES (= CMV na visão financeira) =====
+  // ===== 3 | PAGAMENTO DE FORNECEDORES DO MÊS — base do resultado FINANCEIRO =====
   {
-    id: "cmv", name: "3 | PAGAMENTO DE FORNECEDORES", level: 0, isGroup: true, isResult: false, tipo: "Compra do Mês",
+    id: "cmv", name: "3 | PAGAMENTO DE FORNECEDORES DO MÊS", level: 0, isGroup: true, isResult: false, tipo: "Compra do Mês",
     children: [
-      { id: "pag_fornec_fin", name: "COMPRA DO MÊS", level: 1, isGroup: false, isResult: false, tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS", catchAll: true },
+      { id: "pag_fornec_fin", name: "Pagamentos a fornecedores (caixa)", level: 1, isGroup: false, isResult: false, tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS", catchAll: true },
     ],
   },
 
-  // ===== COMPRA DO MÊS (entrada de NF para revenda, vinda do histórico de compras) =====
+  // ===== ENTRADA DE NF PARA REVENDA (compras do mês — informativo) =====
   {
-    id: "compra_mes", name: "COMPRA DO MÊS (ENTRADA DE NF)", level: 0, isGroup: true, isResult: false, tipo: "Compra do Mês",
+    id: "compra_mes", name: "ENTRADA DE NF PARA REVENDA (COMPRA DO MÊS)", level: 0, isGroup: true, isResult: false,
     children: [
-      { id: "compra_fornec", name: "Entrada de NF para revenda", level: 1, isGroup: false, isResult: false, tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS", catchAll: true },
+      { id: "compra_fornec", name: "Entrada de NF para revenda", level: 1, isGroup: false, isResult: false },
     ],
   },
 
-  // ===== RESULTADO OPERACIONAL CMV =====
+
+  // ===== RESULTADO OPERACIONAL (apurado pelo PAGAMENTO DE FORNECEDORES) =====
   {
-    id: "resultado_op_cmv", name: "RESULTADO OPERACIONAL LIQUIDO (CMV)", level: 0, isGroup: false, isResult: true,
+    id: "resultado_op_cmv", name: "RESULTADO OPERACIONAL LIQUIDO (PAGAMENTO FORNECEDORES)", level: 0, isGroup: false, isResult: true,
     formula: "receita_liquida - cmv",
   },
 
-  // ===== RESULTADO OPERACIONAL COMPRA MÊS =====
+  // ===== DIFERENÇA ENTRE COMPRA E PAGAMENTO =====
   {
-    id: "resultado_op_compra", name: "RESULTADO OPERACIONAL LIQUIDO (COMPRA MÊS)", level: 0, isGroup: false, isResult: true,
-    formula: "cmv - compra_mes",
+    id: "resultado_op_compra", name: "DIFERENÇA COMPRA x PAGAMENTO FORNECEDORES", level: 0, isGroup: false, isResult: true,
+    formula: "compra_mes - cmv",
   },
+
 
   // ===== 4.1 a 4.17 - Despesas (idêntico ao Comercial) =====
   {

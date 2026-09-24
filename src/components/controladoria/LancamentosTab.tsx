@@ -82,7 +82,13 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
     status: "ativo",
   });
 
-  const subcontas = SUBCONTAS_V2[form.tipo] || [];
+  // A lista sempre inclui a conta que ja esta gravada no lancamento, para que o
+  // campo Subconta nunca apareca em branco (contas antigas do ERP inclusive).
+  const subcontas = useMemo(() => {
+    const base = SUBCONTAS_V2[form.tipo] || [];
+    return form.subtipo && !base.includes(form.subtipo) ? [form.subtipo, ...base] : base;
+  }, [form.tipo, form.subtipo]);
+
 
   useEffect(() => {
     if (storeId) fetchLancamentos();
@@ -206,6 +212,35 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
     fetchLancamentos();
   };
 
+  // Classificar: garante Tipo + Subconta em todos os lancamentos da loja.
+  // Lancamentos corrigidos a mao (classificacao_manual) nunca sao tocados.
+  const [classificando, setClassificando] = useState(false);
+  const classificarTodos = async () => {
+    if (!storeId) return;
+    setClassificando(true);
+    let total = 0;
+    try {
+      for (let volta = 0; volta < 20; volta++) {
+        const { data, error } = await (supabase as any).rpc("fn_classificar_lancamentos", {
+          p_store_id: storeId,
+          p_limite: 3000,
+        });
+        if (error) throw error;
+        const n = Number(data ?? 0);
+        total += n;
+        if (n === 0) break;
+      }
+      toast.success(total ? `${total} lançamento(s) classificados` : "Todos os lançamentos já têm destino");
+      fetchLancamentos();
+    } catch {
+      toast.error("Não foi possível classificar os lançamentos");
+    } finally {
+      setClassificando(false);
+    }
+  };
+
+
+
   // Consulta ao vivo (nada é gravado)
   const [consultando, setConsultando] = useState(false);
   const [consulta, setConsulta] = useState<any[] | null>(null);
@@ -285,6 +320,11 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
       toast.error("Informe um valor válido");
       return;
     }
+    if (!form.tipo || !form.subtipo) {
+      toast.error("Todo lançamento precisa de destino: escolha o Tipo e a Subconta");
+      return;
+    }
+
     if (!storeId || !user) return;
 
     const payload = {
@@ -423,7 +463,11 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
               </Button>
             </>
           )}
+          <Button variant="outline" onClick={classificarTodos} disabled={classificando}>
+            {classificando ? "Classificando..." : "Classificar"}
+          </Button>
           <Button variant="outline" onClick={exportarRelatorio} className="gap-2">
+
             <Download className="h-4 w-4" /> Exportar relatório
           </Button>
           <ImportLancamentos storeId={storeId} userId={user?.id || ""} onImportComplete={fetchLancamentos} />

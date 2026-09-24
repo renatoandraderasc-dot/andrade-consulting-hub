@@ -353,11 +353,26 @@ Deno.serve(async (req) => {
     }
 
 
+    // Todo lancamento precisa de destino: aplica a classificacao canonica
+    // (Tipo + Subconta) nas linhas que ficaram sem conta valida.
+    let classificados = 0;
+    for (let volta = 0; volta < 20; volta++) {
+      const { data: n, error: eCls } = await supabase.rpc("fn_classificar_lancamentos", {
+        p_store_id: store_id,
+        p_limite: 3000,
+      });
+      if (eCls) break;
+      const qtd = Number(n ?? 0);
+      classificados += qtd;
+      if (qtd === 0) break;
+    }
+
     const pendentes = [...naoClassificados.entries()]
       .map(([id_tipo, v]) => ({ id_tipo, lancamentos: v.qtd, valor: Math.round(v.valor * 100) / 100, exemplo: v.exemplo }))
       .sort((a, b) => b.valor - a.valor);
 
-    return json({ ok: true, inicio, fim, meses: blocos.length, gravados: gravadosTotal, duplicados_ignorados: duplicadosIgnorados, detalhe, pendentes });
+    return json({ ok: true, inicio, fim, meses: blocos.length, gravados: gravadosTotal, classificados, duplicados_ignorados: duplicadosIgnorados, detalhe, pendentes });
+
   } catch (e) {
     return json({ erro: e instanceof Error ? e.message : String(e) }, 500);
   }

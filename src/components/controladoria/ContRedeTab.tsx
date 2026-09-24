@@ -14,7 +14,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronRight, ChevronDown, Pencil, X, RefreshCw, Loader2 } from "lucide-react";
+import { ChevronRight, ChevronDown, Pencil, X, RefreshCw, Loader2, Download, FileText } from "lucide-react";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { salvarWorkbook } from "@/lib/exportBranding";
+
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -93,6 +98,13 @@ export const ContRedeTab = ({ storeId }: Props) => {
   const { user } = useAuth();
   const [ano, setAno] = useState(getStoredAno);
   const [modo, setModo] = useState<"comercial" | "financeiro">("comercial");
+  const [storeName, setStoreName] = useState("");
+  useEffect(() => {
+    if (!storeId) { setStoreName(""); return; }
+    supabase.from("stores").select("name").eq("id", storeId).maybeSingle()
+      .then(({ data }) => setStoreName((data as any)?.name || ""));
+  }, [storeId]);
+
   const [lancamentos, setLancamentos] = useState<Lancamento[]>([]);
   const [mapaVr, setMapaVr] = useState<Map<number, { tipo: string; subtipo: string }>>(new Map());
   const [loading, setLoading] = useState(false);
@@ -262,11 +274,18 @@ export const ContRedeTab = ({ storeId }: Props) => {
       if (modo === "comercial" && v) {
         overrides.faturamento = v.venda;
         overrides.venda_bruta = v.venda;
+        // Comercial apura o resultado pelo CMV do periodo
         overrides.cmv = v.cmv;
         overrides.cmv_merc = v.cmv;
       }
-      overrides.compra_mes = comprasNf[m] ?? 0;
-      overrides.compra_fornec = comprasNf[m] ?? 0;
+      // Entrada de NF para revenda (compras do mes) — informativa nas duas visoes
+      const nf = comprasNf[m] ?? 0;
+      overrides.compra_mes = nf;
+      overrides.compra_fornec = nf;
+      // No Financeiro o resultado e apurado pelo Pagamento de Fornecedores (nó "cmv"),
+      // que vem dos proprios lancamentos de pagamento — sem override.
+
+
       const doMes = lancamentosUnicos.filter(l => Number(l.competencia_mes) === m);
       porMes.set(m, calcularDRE(structure, doMes.map(l => ({
         tipo: l.tipo, subtipo: l.subtipo, valor: Number(l.valor),
@@ -352,7 +371,69 @@ export const ContRedeTab = ({ storeId }: Props) => {
 
   const isSectionHeader = (name: string) => /^\d/.test(name);
 
+  // ===== Exportação (Excel e PDF) =====
+  // Monta as mesmas linhas da tela: conta, valor de cada mês e total do ano.
+  const linhasExport = useCallback(() => {
+    const linhas: { conta: string; valores: number[]; total: number; nivel: number }[] = [];
+    for (const node of structure) {
+      linhas.push({
+        conta: node.name,
+        valores: mesesAno.map(m => drePorMes.porMes.get(m)?.get(node.id) || 0),
+        total: drePorMes.total.get(node.id) || 0,
+        nivel: 0,
+      });
+      if (node.isGroup && node.children) {
+        for (const child of node.children) {
+          linhas.push({
+            conta: `   ${child.name}`,
+            valores: mesesAno.map(m => drePorMes.porMes.get(m)?.get(child.id) || 0),
+            total: drePorMes.total.get(child.id) || 0,
+            nivel: 1,
+          });
+        }
+      }
+    }
+    return linhas;
+  }, [structure, mesesAno, drePorMes]);
+
+  const tituloExport = `DRE ${modo === "comercial" ? "Comercial" : "Financeiro"} ${ano}`;
+
+  const exportarExcel = () => {
+    const linhas = linhasExport().map(l => {
+      const linha: Record<string, string | number> = { Conta: l.conta };
+      mesesAno.forEach((m, i) => { linha[MESES_CURTOS[m - 1]] = Math.round(l.valores[i] * 100) / 100; });
+      linha["Total"] = Math.round(l.total * 100) / 100;
+      return linha;
+    });
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(linhas), "DRE");
+    salvarWorkbook(wb, tituloExport, [["Loja", storeName || "—"], ["Ano", String(ano)]]);
+  };
+
+  const exportarPdf = () => {
+    const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+    doc.setFontSize(14);
+    doc.text(tituloExport, 40, 40);
+    doc.setFontSize(9);
+    doc.text(`${storeName || ""} · exportado em ${new Date().toLocaleString("pt-BR")}`, 40, 56);
+    const head = [["Conta", ...mesesAno.map(m => MESES_CURTOS[m - 1]), "Total"]];
+    const body = linhasExport().map(l => [
+      l.conta,
+      ...l.valores.map(v => fmtCompacto(v)),
+      fmtCompacto(l.total),
+    ]);
+    autoTable(doc, {
+      head, body, startY: 70, styles: { fontSize: 7, cellPadding: 2 },
+      headStyles: { fillColor: [23, 37, 84] },
+      columnStyles: { 0: { cellWidth: 150, halign: "left" } },
+      bodyStyles: { halign: "right" },
+      didParseCell: (d: any) => { if (d.column.index === 0) d.cell.styles.halign = "left"; },
+    });
+    doc.save(`${tituloExport.replace(/\s+/g, "-")}.pdf`);
+  };
+
   const colunas = `minmax(220px,1fr) repeat(${mesesAno.length}, 110px) 130px 64px`;
+
 
   const pctStr = (v: number, base: number) =>
     base !== 0 ? `${((v / Math.abs(base)) * 100).toFixed(1)}%` : "—";
@@ -460,22 +541,30 @@ export const ContRedeTab = ({ storeId }: Props) => {
           </Button>
           <span className="text-xs text-muted-foreground">Busca no sistema os lançamentos dos últimos 12 meses</span>
 
-          <div className="flex gap-1 ml-auto">
+          <Button variant="outline" size="sm" onClick={exportarExcel} className="gap-2">
+            <Download className="h-4 w-4" /> Excel
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportarPdf} className="gap-2">
+            <FileText className="h-4 w-4" /> PDF
+          </Button>
+
+          <div className="flex gap-1 ml-auto rounded-lg bg-secondary/20 p-1">
             <Button
               size="sm"
-              variant={modo === "comercial" ? "default" : "outline"}
+              variant={modo === "comercial" ? "default" : "ghost"}
               onClick={() => setModo("comercial")}
             >
               Comercial
             </Button>
             <Button
               size="sm"
-              variant={modo === "financeiro" ? "default" : "outline"}
+              variant={modo === "financeiro" ? "default" : "ghost"}
               onClick={() => setModo("financeiro")}
             >
               Financeiro
             </Button>
           </div>
+
         </CardContent>
       </Card>
 
@@ -516,15 +605,20 @@ export const ContRedeTab = ({ storeId }: Props) => {
           <CardTitle className="text-base font-semibold">
             {modo === "comercial" ? "DRE Comercial" : "DRE Financeiro"} — {ano}
           </CardTitle>
-          <p className="text-xs text-muted-foreground">Clique em uma linha para ver os lançamentos do ano</p>
+          <p className="text-xs text-muted-foreground">
+            {modo === "comercial"
+              ? "Resultado apurado pelo CMV. Entrada de NF para revenda e Pagamento de Fornecedores aparecem como linhas informativas."
+              : "Resultado apurado pelo Pagamento de Fornecedores. Entrada de NF para revenda aparece como linha informativa."}
+            {" "}Clique em uma linha para ver os lançamentos do ano.
+          </p>
         </CardHeader>
-        <CardContent className="p-0 mt-4 overflow-x-auto">
+        <CardContent className="p-0 mt-4 overflow-auto max-h-[70vh]">
           <div className="min-w-max">
             <div
               style={{ gridTemplateColumns: colunas }}
-              className="grid gap-x-2 items-center px-4 py-2.5 bg-secondary/10 border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wide"
+              className="grid gap-x-2 items-center px-4 py-2.5 bg-secondary/30 backdrop-blur border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wide sticky top-0 z-20"
             >
-              <div className="sticky left-0">Conta</div>
+              <div className="sticky left-0 bg-secondary/30 backdrop-blur">Conta</div>
               {mesesAno.map(m => <div key={m} className="text-right">{MESES_CURTOS[m - 1]}</div>)}
               <div className="text-right">Total</div>
               <div className="text-right">% Fat.</div>
@@ -532,6 +626,7 @@ export const ContRedeTab = ({ storeId }: Props) => {
             {structure.map(renderNode)}
           </div>
         </CardContent>
+
       </Card>
 
       {/* Detail Panel */}
