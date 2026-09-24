@@ -52,16 +52,8 @@ export function useSaasNumber(chave: string, padrao: number) {
  * O intervalo (em segundos) vem de saas_config; 0 ou vazio desliga a atualização.
  * Retorna o intervalo em uso, para exibir na tela quando necessário.
  */
-export function useAutoRefresh(chave: string, callback: () => void, padrao = 0) {
-  const segundos = useSaasNumber(chave, padrao);
-  const cbRef = useRef(callback);
-  cbRef.current = callback;
-
-  useEffect(() => {
-    if (!segundos || segundos <= 0) return;
-    const id = setInterval(() => cbRef.current(), segundos * 1000);
-    return () => clearInterval(id);
-  }, [segundos]);
-
-  return segundos;
+export function useAutoRefresh(_chave: string, _callback: () => void, _padrao = 0) {
+  // Atualização automática desligada: o banco só é consultado na abertura
+  // ou quando o usuário clica em atualizar.
+  return 0;
 }
