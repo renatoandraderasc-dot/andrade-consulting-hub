@@ -178,7 +178,7 @@ export const DRE_STRUCTURE_COMERCIAL: DRENode[] = [
 
   // ===== PAGAMENTO DE FORNECEDORES DO MÊS (saída de caixa — exibido para confronto) =====
   {
-    id: "pag_fornec", name: "PAGAMENTO DE FORNECEDORES DO MÊS", level: 0, isGroup: true, isResult: false,
+    id: "pag_fornec", name: "PAGAMENTO DE FORNECEDORES DO MÊS", level: 0, isGroup: true, isResult: false, tipo: "Compra do Mês",
     children: [
       { id: "pag_fornec_mes", name: "Pagamentos a fornecedores (caixa)", level: 1, isGroup: false, isResult: false, tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" },
     ],
@@ -542,7 +542,7 @@ export const DRE_STRUCTURE_FINANCEIRO: DRENode[] = [
 
   // ===== COMPRA DO MÊS (entrada de NF para revenda — exibida para confronto) =====
   {
-    id: "compra_mes", name: "COMPRA DO MÊS (ENTRADA DE NF)", level: 0, isGroup: true, isResult: false,
+    id: "compra_mes", name: "COMPRA DO MÊS (ENTRADA DE NF)", level: 0, isGroup: true, isResult: false, tipo: "Compra do Mês",
     children: [
       { id: "compra_fornec", name: "Entrada de NF para revenda", level: 1, isGroup: false, isResult: false, tipo: "Compra do Mês", subtipo: "COMPRA DO MÊS" },
     ],
