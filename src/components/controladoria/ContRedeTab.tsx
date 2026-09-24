@@ -359,7 +359,69 @@ export const ContRedeTab = ({ storeId }: Props) => {
 
   const isSectionHeader = (name: string) => /^\d/.test(name);
 
+  // ===== Exportação (Excel e PDF) =====
+  // Monta as mesmas linhas da tela: conta, valor de cada mês e total do ano.
+  const linhasExport = useCallback(() => {
+    const linhas: { conta: string; valores: number[]; total: number; nivel: number }[] = [];
+    for (const node of structure) {
+      linhas.push({
+        conta: node.name,
+        valores: mesesAno.map(m => drePorMes.porMes.get(m)?.get(node.id) || 0),
+        total: drePorMes.total.get(node.id) || 0,
+        nivel: 0,
+      });
+      if (node.isGroup && node.children) {
+        for (const child of node.children) {
+          linhas.push({
+            conta: `   ${child.name}`,
+            valores: mesesAno.map(m => drePorMes.porMes.get(m)?.get(child.id) || 0),
+            total: drePorMes.total.get(child.id) || 0,
+            nivel: 1,
+          });
+        }
+      }
+    }
+    return linhas;
+  }, [structure, mesesAno, drePorMes]);
+
+  const tituloExport = `DRE ${modo === "comercial" ? "Comercial" : "Financeiro"} ${ano}`;
+
+  const exportarExcel = () => {
+    const linhas = linhasExport().map(l => {
+      const linha: Record<string, string | number> = { Conta: l.conta };
+      mesesAno.forEach((m, i) => { linha[MESES_CURTOS[m - 1]] = Math.round(l.valores[i] * 100) / 100; });
+      linha["Total"] = Math.round(l.total * 100) / 100;
+      return linha;
+    });
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(linhas), "DRE");
+    salvarWorkbook(wb, tituloExport, [["Loja", storeName || "—"], ["Ano", String(ano)]]);
+  };
+
+  const exportarPdf = () => {
+    const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
+    doc.setFontSize(14);
+    doc.text(tituloExport, 40, 40);
+    doc.setFontSize(9);
+    doc.text(`${storeName || ""} · exportado em ${new Date().toLocaleString("pt-BR")}`, 40, 56);
+    const head = [["Conta", ...mesesAno.map(m => MESES_CURTOS[m - 1]), "Total"]];
+    const body = linhasExport().map(l => [
+      l.conta,
+      ...l.valores.map(v => fmtCompacto(v)),
+      fmtCompacto(l.total),
+    ]);
+    autoTable(doc, {
+      head, body, startY: 70, styles: { fontSize: 7, cellPadding: 2 },
+      headStyles: { fillColor: [23, 37, 84] },
+      columnStyles: { 0: { cellWidth: 150, halign: "left" } },
+      bodyStyles: { halign: "right" },
+      didParseCell: (d: any) => { if (d.column.index === 0) d.cell.styles.halign = "left"; },
+    });
+    doc.save(`${tituloExport.replace(/\s+/g, "-")}.pdf`);
+  };
+
   const colunas = `minmax(220px,1fr) repeat(${mesesAno.length}, 110px) 130px 64px`;
+
 
   const pctStr = (v: number, base: number) =>
     base !== 0 ? `${((v / Math.abs(base)) * 100).toFixed(1)}%` : "—";
