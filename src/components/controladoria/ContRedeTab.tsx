@@ -440,7 +440,7 @@ export const ContRedeTab = ({ storeId }: Props) => {
       <div>
         <h2 className="text-lg sm:text-xl font-bold text-foreground">Cont Rede</h2>
         <p className="text-sm text-muted-foreground">
-          DRE do ano, mês a mês — lançamentos classificados pelo tipo de pagamento
+          DRE do ano, mês a mês — lançamentos classificados pelo tipo de pagamento · percentual de cada mês em relação ao faturamento do mês (subcontas em relação ao próprio grupo)
         </p>
       </div>
 
