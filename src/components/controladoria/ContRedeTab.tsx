@@ -605,15 +605,20 @@ export const ContRedeTab = ({ storeId }: Props) => {
           <CardTitle className="text-base font-semibold">
             {modo === "comercial" ? "DRE Comercial" : "DRE Financeiro"} — {ano}
           </CardTitle>
-          <p className="text-xs text-muted-foreground">Clique em uma linha para ver os lançamentos do ano</p>
+          <p className="text-xs text-muted-foreground">
+            {modo === "comercial"
+              ? "Resultado apurado pelo CMV. Entrada de NF para revenda e Pagamento de Fornecedores aparecem como linhas informativas."
+              : "Resultado apurado pelo Pagamento de Fornecedores. Entrada de NF para revenda aparece como linha informativa."}
+            {" "}Clique em uma linha para ver os lançamentos do ano.
+          </p>
         </CardHeader>
-        <CardContent className="p-0 mt-4 overflow-x-auto">
+        <CardContent className="p-0 mt-4 overflow-auto max-h-[70vh]">
           <div className="min-w-max">
             <div
               style={{ gridTemplateColumns: colunas }}
-              className="grid gap-x-2 items-center px-4 py-2.5 bg-secondary/10 border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wide"
+              className="grid gap-x-2 items-center px-4 py-2.5 bg-secondary/30 backdrop-blur border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wide sticky top-0 z-20"
             >
-              <div className="sticky left-0">Conta</div>
+              <div className="sticky left-0 bg-secondary/30 backdrop-blur">Conta</div>
               {mesesAno.map(m => <div key={m} className="text-right">{MESES_CURTOS[m - 1]}</div>)}
               <div className="text-right">Total</div>
               <div className="text-right">% Fat.</div>
@@ -621,6 +626,7 @@ export const ContRedeTab = ({ storeId }: Props) => {
             {structure.map(renderNode)}
           </div>
         </CardContent>
+
       </Card>
 
       {/* Detail Panel */}
