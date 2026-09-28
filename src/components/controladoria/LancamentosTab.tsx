@@ -343,10 +343,12 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
     };
 
     if (editingId) {
-      const { error } = await supabase.from("lancamentos")
-        .update({ ...payload, classificacao_manual: true } as any).eq("id", editingId);
+      const { user_id: _u, ...edit } = payload;
+      const { data: salvos, error } = await supabase.from("lancamentos")
+        .update({ ...edit, classificacao_manual: true } as any).eq("id", editingId).select("id");
 
-      if (error) { toast.error("Erro ao atualizar"); return; }
+      if (error) { toast.error("Erro ao atualizar: " + error.message); return; }
+      if (!salvos || salvos.length === 0) { toast.error("Sem permissão para alterar este lançamento"); return; }
       toast.success("Lançamento atualizado");
     } else {
       const { error } = await supabase.from("lancamentos").insert(payload as any);
