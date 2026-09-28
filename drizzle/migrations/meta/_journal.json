@@ -120,6 +120,13 @@
       "when": 1790256258436,
       "tag": "0016_fn_classificar_pendentes",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1790602838137,
+      "tag": "0017_lancamentos_update_by_store_access",
+      "breakpoints": true
     }
   ]
 }
