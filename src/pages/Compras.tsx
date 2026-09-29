@@ -963,17 +963,36 @@ const Compras = () => {
                               </span>
                             </td>
                           </tr>
-                          {abertaSec && produtosDaSecao(key, r.departamento, s.secao).map((p) => (
-                            <tr key={`${chave}|${p.codigo}|${p.descricao}`} className="border-b border-border/20 bg-muted/10 text-xs">
-                              <td className="py-1.5 pl-14 text-muted-foreground" colSpan={9}>
-                                {p.codigo ? `${p.codigo} · ` : ""}{p.descricao || "SEM DESCRIÇÃO"}
-                                <span className="ml-3">Venda {fmtBRL(p.venda)} · CMV {fmtBRL(p.cmv)} · Compra {fmtBRL(p.compra)}</span>
-                                <span className={`ml-3 ${Math.max(p.compra - p.cmv, 0) > 0 ? "text-red-500" : ""}`}>
-                                  Excesso {fmtBRL(Math.max(p.compra - p.cmv, 0))}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
+                          {abertaSec && produtosPorSubgrupo(key, r.departamento, s.secao).map(([subgrupo, produtos]) => {
+                            const chaveSub = `${chave}|${subgrupo}`;
+                            const abertoSub = !!painelExp[chaveSub];
+                            return (
+                              <Fragment key={chaveSub}>
+                                <tr
+                                  onClick={() => setPainelExp((p) => ({ ...p, [chaveSub]: !p[chaveSub] }))}
+                                  className="border-b border-border/20 bg-muted/15 cursor-pointer hover:bg-muted/40 text-xs"
+                                >
+                                  <td className="py-1.5 pl-14 text-muted-foreground" colSpan={9}>
+                                    <span className="inline-flex items-center gap-1">
+                                      {abertoSub ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                                      {subgrupo} ({produtos.length})
+                                    </span>
+                                  </td>
+                                </tr>
+                                {abertoSub && produtos.map((p) => (
+                                  <tr key={`${chaveSub}|${p.codigo}|${p.descricao}`} className="border-b border-border/20 bg-muted/10 text-xs">
+                                    <td className="py-1.5 pl-20 text-muted-foreground" colSpan={9}>
+                                      {p.codigo ? `${p.codigo} · ` : ""}{p.descricao || "SEM DESCRIÇÃO"}
+                                      <span className="ml-3">Venda {fmtBRL(p.venda)} · CMV {fmtBRL(p.cmv)} · Compra {fmtBRL(p.compra)}</span>
+                                      <span className={`ml-3 ${Math.max(p.compra - p.cmv, 0) > 0 ? "text-red-500" : ""}`}>
+                                        Excesso {fmtBRL(Math.max(p.compra - p.cmv, 0))}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </Fragment>
+                            );
+                          })}
                         </Fragment>
                       );
                     })}
@@ -1183,13 +1202,37 @@ const Compras = () => {
                                       </td>
                                     </tr>
                                   )}
-                                  {abertoSec && produtos.map((p) => {
+                                   {abertoSec && produtosPorSubgrupo(key, g.departamento, s.secao).map(([subgrupo, itens]) => {
+                                     const chaveSub = `${chave}|${subgrupo}`;
+                                     const abertoSub = !!expandidos[chaveSub];
+                                     const soma = itens.reduce((acc, p) => ({ venda: acc.venda + p.venda, cmv: acc.cmv + p.cmv, compra: acc.compra + p.compra }), { venda: 0, cmv: 0, compra: 0 });
+                                     const margemSub = soma.venda > 0 ? ((soma.venda - soma.cmv) / soma.venda) * 100 : 0;
+                                     const markupSub = soma.cmv > 0 ? ((soma.venda - soma.cmv) / soma.cmv) * 100 : 0;
+                                     const excessoSub = soma.cmv - soma.compra;
+                                     return (
+                                     <Fragment key={chaveSub}>
+                                       <tr
+                                         onClick={() => setExpandidos((p) => ({ ...p, [chaveSub]: !p[chaveSub] }))}
+                                         className="border-b border-border/20 bg-muted/15 cursor-pointer hover:bg-muted/40 text-xs"
+                                       >
+                                         <td className="py-1.5 pl-14 text-muted-foreground"><span className="inline-flex items-center gap-1">{abertoSub ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}{subgrupo} ({itens.length})</span></td>
+                                         <td className="py-1.5 px-2 text-right tabular-nums">{fmtBRL(soma.venda)}</td>
+                                         <td className="py-1.5 px-2 text-right tabular-nums">{fmtBRL(soma.cmv)}</td>
+                                         <td className="py-1.5 px-2 text-right tabular-nums">{fmtPct(margemSub)}</td>
+                                         <td className="py-1.5 px-2 text-right tabular-nums">{fmtPct(markupSub)}</td>
+                                         <td className="py-1.5 px-2 text-right tabular-nums">{fmtBRL(soma.compra)}</td>
+                                         <td className={`py-1.5 px-2 text-right tabular-nums ${excessoSub < 0 ? "text-red-500" : "text-emerald-500"}`}>{fmtBRL(excessoSub)}</td>
+                                         <td className="py-1.5 px-2 text-right tabular-nums">{fmtPct(soma.venda > 0 ? (soma.compra / soma.venda) * 100 : 0)}</td>
+                                         <td className="py-1.5 px-2 text-right tabular-nums">{fmtPct(soma.cmv > 0 ? (soma.compra / soma.cmv) * 100 : 0)}</td>
+                                         <td className="py-1.5 px-2 text-right tabular-nums">{fmtPct(cvTotais.venda > 0 ? (soma.venda / cvTotais.venda) * 100 : 0, 2)}</td>
+                                       </tr>
+                                       {abertoSub && itens.map((p) => {
                                     const margem = p.venda > 0 ? ((p.venda - p.cmv) / p.venda) * 100 : 0;
                                     const markup = p.cmv > 0 ? ((p.venda - p.cmv) / p.cmv) * 100 : 0;
                                     const excessoOuSaldo = p.cmv - p.compra;
                                     return (
-                                      <tr key={`${chave}|${p.codigo}|${p.descricao}`} className="border-b border-border/20 bg-muted/10 text-xs">
-                                        <td className="py-1.5 pl-14 text-muted-foreground">
+                                      <tr key={`${chaveSub}|${p.codigo}|${p.descricao}`} className="border-b border-border/20 bg-muted/10 text-xs">
+                                        <td className="py-1.5 pl-20 text-muted-foreground">
                                           {p.codigo ? `${p.codigo} · ` : ""}{p.descricao || "SEM DESCRIÇÃO"}
                                           {p.ean ? <span className="ml-2 opacity-70">{p.ean}</span> : null}
                                         </td>
@@ -1204,7 +1247,10 @@ const Compras = () => {
                                         <td className="py-1.5 px-2 text-right tabular-nums">{fmtPct(cvTotais.venda > 0 ? (p.venda / cvTotais.venda) * 100 : 0, 2)}</td>
                                       </tr>
                                     );
-                                  })}
+                                     })}
+                                     </Fragment>
+                                     );
+                                   })}
                                 </Fragment>
                               );
                             })}
