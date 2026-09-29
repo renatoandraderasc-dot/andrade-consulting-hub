@@ -40,7 +40,7 @@ export const normalizarCodigo = (valor: unknown) => {
 
 export function mapearLinhaCatalogo(l: any): CatalogoItem {
   return {
-    codigo: String(col(l, "codigo", "cod_produto", "codigo_reduzido", "id_produto", "produto_id") ?? ""),
+    codigo: String(col(l, "codigo", "cod", "cod_produto", "codigo_reduzido", "id_produto", "produto_id") ?? ""),
     descricao: String(col(l, "descricao", "produto", "nome") ?? ""),
     ean: String(col(l, ...ALIAS_EAN) ?? ""),
     custo: numOrNull(col(l, "custo", "preco_custo")),
@@ -52,6 +52,7 @@ export function mapearLinhaCatalogo(l: any): CatalogoItem {
       "m1_departamento",
       "mercadologico1",
       "mercadologico_1",
+      "n1",
       "departamento",
       "nivel1",
       "secao",
@@ -61,8 +62,8 @@ export function mapearLinhaCatalogo(l: any): CatalogoItem {
       "dept",
       "grupo_1",
     ) ?? ""),
-    n2: String(col(l, "m2_grupo", "grupo", "nivel2", "categoria") ?? ""),
-    n3: String(col(l, "m3_subgrupo", "subgrupo", "nivel3") ?? ""),
+    n2: String(col(l, "m2_grupo", "n2", "grupo", "nivel2", "categoria") ?? ""),
+    n3: String(col(l, "m3_subgrupo", "n3", "subgrupo", "nivel3") ?? ""),
     n4: String(col(l, "m4_familia", "familia", "nivel4") ?? ""),
   };
 }
@@ -222,7 +223,7 @@ export async function carregarProdutosAtivos12m(storeId: string) {
   }
 
   const itens: ProdutoAtivo12m[] = (r.dados || []).map((l: any) => ({
-    codigo: String(col(l, "codigo", "cod_produto", "id_produto") ?? ""),
+    codigo: String(col(l, "codigo", "cod", "cod_produto", "id_produto") ?? ""),
     ean: String(col(l, ...ALIAS_EAN) ?? ""),
     descricao: String(col(l, "produto", "descricao", "nome") ?? ""),
     secao: String(col(l, "secao", "departamento") ?? ""),
