@@ -14,7 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
 import { supabase } from "@/integrations/supabase/client";
 import { ALIAS_EAN, chamarRelatorio, avisoRelatorio, pick as col, num } from "@/lib/vrReport";
-import { mercadologicoNivel1, mercadologicoNivel2 } from "@/lib/mercadologico";
+import { mercadologicoNivel1, mercadologicoNivel2, mercadologicoNivel3 } from "@/lib/mercadologico";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -63,8 +63,10 @@ interface Linha {
   codigo: string;
   descricao: string;
   barras: string;
+  unidade: string;
   departamento: string;
   grupo: string;
+  subgrupo: string;
   ultimaCompra: string;
   ultimaVenda: string;
   diasSemCompra: number;
@@ -97,7 +99,7 @@ const corProgresso = (p: number) => {
 };
 
 type SortKey =
-  | "codigo" | "descricao" | "departamento" | "abc" | "ultimaCompra" | "ultimaVenda"
+  | "codigo" | "descricao" | "departamento" | "grupo" | "subgrupo" | "abc" | "ultimaCompra" | "ultimaVenda"
   | "qtdCompra" | "valorCompra" | "qtdVenda" | "valorVenda" | "progresso" | "estoqueDinamico";
 
 const PAGE_SIZE = 50;
@@ -185,34 +187,64 @@ const EstoqueDinamico = () => {
     if (!storeId || !range?.from || !range?.to) return;
     setLoading(true); setAviso(null); setPage(1);
     try {
-      const r = await limitarEspera(chamarRelatorio(storeId, "estoque_dinamico", {
-        inicio: iso(range.from),
-        fim: iso(range.to),
-      }));
+      const [r, cadastro, estoqueAtual] = await limitarEspera(Promise.all([
+        chamarRelatorio(storeId, "estoque_dinamico", {
+          inicio: iso(range.from),
+          fim: iso(range.to),
+        }),
+        chamarRelatorio(storeId, "produtos", {}).catch(() => null),
+        chamarRelatorio(storeId, "estoque_atual", {}).catch(() => null),
+      ]));
       const msg = avisoRelatorio(r);
       if (msg) { setAviso(msg); return; }
 
+      const porCodigo = new Map<string, any>();
+      for (const l of cadastro?.dados || []) {
+        const codigo = String(col(l, "codigo", "cod", "cod_produto", "id_produto") ?? "");
+        if (codigo) porCodigo.set(codigo, l);
+      }
+      const estoquePorCodigo = new Map<string, any>();
+      for (const l of estoqueAtual?.dados || []) {
+        const codigo = String(col(l, "codigo", "cod", "cod_produto", "id_produto") ?? "");
+        if (codigo) estoquePorCodigo.set(codigo, l);
+      }
+
     const base: Linha[] = (r.dados || []).map((l: any) => {
-      const qtdCompra = num(col(l, "qtd_compra", "quantidade_compra", "qtd_ultima_entrada"));
-      const qtdVenda = num(col(l, "qtd_venda", "quantidade_venda"));
-      const progRaw = col(l, "progresso_venda");
+      const codigo = String(col(l, "codigo", "cod", "cod_produto", "id_produto") ?? "");
+      const produto = porCodigo.get(codigo);
+      const estoque = estoquePorCodigo.get(codigo);
+      const qtdCompra = num(col(l, "qtd_compra", "qtd_comprada", "quantidade_compra", "qtd_ultima_entrada"));
+      const qtdVenda = num(col(l, "qtd_venda", "qtd_vendida", "quantidade_venda"));
+      const progRaw = col(l, "progresso_venda", "progresso_pct");
       const estRaw = col(l, "estoque_dinamico");
       return {
-        codigo: String(col(l, "codigo", "cod_produto", "id_produto") ?? ""),
-        descricao: String(col(l, "descricao", "produto") ?? ""),
-        barras: String(col(l, ...ALIAS_EAN) ?? ""),
-        departamento: mercadologicoNivel1(l),
-        grupo: mercadologicoNivel2(l),
+        codigo,
+        descricao: String(col(l, "descricao", "produto") ?? col(produto, "descricao", "produto") ?? ""),
+        barras: String(col(l, ...ALIAS_EAN) ?? col(produto, ...ALIAS_EAN) ?? ""),
+        unidade: String(col(l, "unidade", "un") ?? col(estoque, "unidade", "un") ?? col(produto, "unidade", "un") ?? ""),
+        departamento: mercadologicoNivel1(l) || mercadologicoNivel1(produto) || "SEM DEPARTAMENTO",
+        grupo: mercadologicoNivel2(l) || mercadologicoNivel2(produto) || "SEM GRUPO",
+        subgrupo: mercadologicoNivel3(l) || mercadologicoNivel3(produto) || "SEM SUBGRUPO",
         ultimaCompra: String(
-          col(l, "ultima_compra", "data_ultima_compra", "dt_ultima_compra", "ultima_entrada", "primeira_compra") ?? "",
+          col(l, "ultima_compra", "data_ultima_compra", "dt_ultima_compra", "ultima_entrada", "primeira_compra") ??
+          col(estoque, "ultima_compra", "data_ultima_compra", "dt_ultima_compra") ?? "",
         ),
-        ultimaVenda: String(col(l, "ultima_venda", "data_ultima_venda", "dt_ultima_venda") ?? ""),
-        diasSemCompra: num(col(l, "dias_desde_ultima_compra", "dias_desde_primeira_compra")),
+        ultimaVenda: String(
+          col(l, "ultima_venda", "data_ultima_venda", "dt_ultima_venda") ??
+          col(estoque, "ultima_venda", "data_ultima_venda", "dt_ultima_venda") ?? "",
+        ),
+        diasSemCompra: (() => {
+          const informado = col(l, "dias_desde_ultima_compra", "dias_desde_primeira_compra");
+          if (informado !== undefined && String(informado).trim() !== "") return num(informado);
+          const data = col(estoque, "ultima_compra", "data_ultima_compra", "dt_ultima_compra");
+          const d = data ? new Date(String(data)) : null;
+          return d && !isNaN(d.getTime()) ? Math.max(0, Math.floor((Date.now() - d.getTime()) / 86400000)) : 0;
+        })(),
         qtdCompra,
-        valorCompra: num(col(l, "valor_compra", "total_compra")) ||
+        valorCompra: num(col(l, "valor_compra", "valor_comprado", "total_compra")) ||
           qtdCompra * num(col(l, "custo", "custo_medio")),
         qtdVenda,
-        valorVenda: num(col(l, "valor_venda", "total_venda")),
+        valorVenda: num(col(l, "valor_venda", "valor_vendido", "total_venda")),
         progresso:
           progRaw !== undefined && String(progRaw).trim() !== ""
             ? num(progRaw)
@@ -221,8 +253,10 @@ const EstoqueDinamico = () => {
           estRaw !== undefined && String(estRaw).trim() !== ""
             ? num(estRaw)
             : qtdCompra - qtdVenda,
-        valorEstoqueDinamico: num(col(l, "valor_estoque_dinamico", "valor_estoque")),
-        estoqueSistema: num(col(l, "estoque_sistema", "estoque", "estoque_atual")),
+        valorEstoqueDinamico: num(col(l, "valor_estoque_dinamico", "valor_estoque")) ||
+          num(col(estoque, "valor_estoque")),
+        estoqueSistema: num(col(l, "estoque_sistema", "estoque", "estoque_atual")) ||
+          num(col(estoque, "estoque", "estoque_atual")),
         abc: "D4",
       };
     });
@@ -236,18 +270,18 @@ const EstoqueDinamico = () => {
           fim: iso(range.to),
           limite: 50000,
         }), 30000).catch(() => null);
-      const porCodigo = new Map<string, { qtd: number; valor: number }>();
+       const vendasPorCodigo = new Map<string, { qtd: number; valor: number }>();
       for (const l of (rv?.dados as any[]) || []) {
-        const cod = String(col(l, "codigo", "cod_produto", "id_produto") ?? "");
+         const cod = String(col(l, "codigo", "cod", "cod_produto", "id_produto") ?? "");
         if (!cod) continue;
-        const cur = porCodigo.get(cod) ?? { qtd: 0, valor: 0 };
+         const cur = vendasPorCodigo.get(cod) ?? { qtd: 0, valor: 0 };
         cur.qtd += num(col(l, "volume", "qtd", "quantidade"));
         cur.valor += num(col(l, "vendas", "valor", "venda", "total_venda"));
-        porCodigo.set(cod, cur);
+         vendasPorCodigo.set(cod, cur);
       }
-      if (porCodigo.size) {
+       if (vendasPorCodigo.size) {
         for (const l of base) {
-          const v = porCodigo.get(l.codigo);
+           const v = vendasPorCodigo.get(l.codigo);
           if (!v) continue;
           l.qtdVenda = v.qtd;
           l.valorVenda = v.valor;
@@ -331,8 +365,9 @@ const EstoqueDinamico = () => {
         valorVenda: s.valorVenda + l.valorVenda,
         estoqueDinamico: s.estoqueDinamico + l.estoqueDinamico,
         valorEstoqueDinamico: s.valorEstoqueDinamico + l.valorEstoqueDinamico,
+        estoqueSistema: s.estoqueSistema + l.estoqueSistema,
       }),
-      { qtdCompra: 0, valorCompra: 0, qtdVenda: 0, valorVenda: 0, estoqueDinamico: 0, valorEstoqueDinamico: 0 },
+      { qtdCompra: 0, valorCompra: 0, qtdVenda: 0, valorVenda: 0, estoqueDinamico: 0, valorEstoqueDinamico: 0, estoqueSistema: 0 },
     );
     return { ...t, progresso: t.qtdCompra > 0 ? (t.qtdVenda / t.qtdCompra) * 100 : 0 };
   }, [filtradas]);
@@ -342,8 +377,10 @@ const EstoqueDinamico = () => {
       "Cód.": l.codigo,
       "Descrição": l.descricao,
       "Barras": l.barras,
+      "Unidade": l.unidade,
       "Departamento": l.departamento,
       "Grupo": l.grupo,
+      "Subgrupo": l.subgrupo,
       "ABC": l.abc,
       "Última compra": fmtDate(l.ultimaCompra),
       "Última venda": fmtDate(l.ultimaVenda),
@@ -528,12 +565,13 @@ const EstoqueDinamico = () => {
           </Card>
         )}
 
-        <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-5">
           {[
             { label: "Valor comprado", valor: fmtBRL(totais.valorCompra) },
             { label: "Valor vendido", valor: fmtBRL(totais.valorVenda) },
             { label: "Progresso geral", valor: fmtPct(totais.progresso) },
             { label: "Estoque dinâmico (R$)", valor: fmtBRL(totais.valorEstoqueDinamico) },
+            { label: "Estoque atual (qtd.)", valor: fmtQtd(totais.estoqueSistema) },
           ].map((c) => (
             <Card key={c.label} className="p-4">
               <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{c.label}</div>
@@ -563,7 +601,10 @@ const EstoqueDinamico = () => {
                     {th("codigo", "Cód.")}
                     {th("descricao", "Descrição")}
                     <th className="px-3 py-2 font-medium whitespace-nowrap text-left">Barras</th>
+                    <th className="px-3 py-2 font-medium whitespace-nowrap text-left">Un.</th>
                     {th("departamento", "Departamento")}
+                    {th("grupo", "Grupo")}
+                    {th("subgrupo", "Subgrupo")}
                     {th("abc", "ABC")}
                     {th("ultimaCompra", "Última compra")}
                     {th("ultimaVenda", "Última venda")}
@@ -573,6 +614,7 @@ const EstoqueDinamico = () => {
                     {th("valorVenda", "Valor venda", "right")}
                     {th("progresso", "Progresso")}
                     {th("estoqueDinamico", "Estoque dinâmico", "right")}
+                    <th className="px-3 py-2 font-medium whitespace-nowrap text-right">Estoque atual</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -583,7 +625,10 @@ const EstoqueDinamico = () => {
                         <td className="px-3 py-2 whitespace-nowrap">{l.codigo}</td>
                         <td className="px-3 py-2 min-w-[220px]">{l.descricao}</td>
                         <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">{l.barras}</td>
+                        <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">{l.unidade}</td>
                         <td className="px-3 py-2 whitespace-nowrap">{l.departamento}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">{l.grupo}</td>
+                        <td className="px-3 py-2 whitespace-nowrap">{l.subgrupo}</td>
                         <td className="px-3 py-2">
                           <Badge variant="outline" className={badgeAbc(l.abc)}>{l.abc}</Badge>
                         </td>
@@ -607,19 +652,21 @@ const EstoqueDinamico = () => {
                         }`}>
                           {l.estoqueDinamico < 0 ? "-" : ""}{fmtQtd(Math.abs(l.estoqueDinamico))}
                         </td>
+                        <td className="px-3 py-2 text-right whitespace-nowrap">{fmtQtd(l.estoqueSistema)}</td>
                       </tr>
                     );
                   })}
                 </tbody>
                 <tfoot className="sticky bottom-0 bg-card border-t-2 border-border font-semibold">
                   <tr>
-                    <td className="px-3 py-2" colSpan={7}>Totais ({filtradas.length} produtos)</td>
+                    <td className="px-3 py-2" colSpan={10}>Totais ({filtradas.length} produtos)</td>
                     <td className="px-3 py-2 text-right">{fmtQtd(totais.qtdCompra)}</td>
                     <td className="px-3 py-2 text-right">{fmtBRL(totais.valorCompra)}</td>
                     <td className="px-3 py-2 text-right">{fmtQtd(totais.qtdVenda)}</td>
                     <td className="px-3 py-2 text-right">{fmtBRL(totais.valorVenda)}</td>
                     <td className="px-3 py-2">{fmtPct(totais.progresso)}</td>
                     <td className="px-3 py-2 text-right">{fmtQtd(totais.estoqueDinamico)}</td>
+                    <td className="px-3 py-2 text-right">{fmtQtd(totais.estoqueSistema)}</td>
                   </tr>
                 </tfoot>
               </table>
