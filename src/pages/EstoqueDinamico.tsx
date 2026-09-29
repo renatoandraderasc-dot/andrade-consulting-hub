@@ -63,6 +63,7 @@ interface Linha {
   codigo: string;
   descricao: string;
   barras: string;
+  unidade: string;
   departamento: string;
   grupo: string;
   subgrupo: string;
@@ -220,6 +221,7 @@ const EstoqueDinamico = () => {
         codigo,
         descricao: String(col(l, "descricao", "produto") ?? col(produto, "descricao", "produto") ?? ""),
         barras: String(col(l, ...ALIAS_EAN) ?? col(produto, ...ALIAS_EAN) ?? ""),
+        unidade: String(col(l, "unidade", "un") ?? col(estoque, "unidade", "un") ?? col(produto, "unidade", "un") ?? ""),
         departamento: mercadologicoNivel1(l) || mercadologicoNivel1(produto),
         grupo: mercadologicoNivel2(l) || mercadologicoNivel2(produto),
         subgrupo: mercadologicoNivel3(l) || mercadologicoNivel3(produto),
@@ -231,7 +233,13 @@ const EstoqueDinamico = () => {
           col(l, "ultima_venda", "data_ultima_venda", "dt_ultima_venda") ??
           col(estoque, "ultima_venda", "data_ultima_venda", "dt_ultima_venda") ?? "",
         ),
-        diasSemCompra: num(col(l, "dias_desde_ultima_compra", "dias_desde_primeira_compra")),
+        diasSemCompra: (() => {
+          const informado = col(l, "dias_desde_ultima_compra", "dias_desde_primeira_compra");
+          if (informado !== undefined && String(informado).trim() !== "") return num(informado);
+          const data = col(estoque, "ultima_compra", "data_ultima_compra", "dt_ultima_compra");
+          const d = data ? new Date(String(data)) : null;
+          return d && !isNaN(d.getTime()) ? Math.max(0, Math.floor((Date.now() - d.getTime()) / 86400000)) : 0;
+        })(),
         qtdCompra,
         valorCompra: num(col(l, "valor_compra", "valor_comprado", "total_compra")) ||
           qtdCompra * num(col(l, "custo", "custo_medio")),
@@ -357,8 +365,9 @@ const EstoqueDinamico = () => {
         valorVenda: s.valorVenda + l.valorVenda,
         estoqueDinamico: s.estoqueDinamico + l.estoqueDinamico,
         valorEstoqueDinamico: s.valorEstoqueDinamico + l.valorEstoqueDinamico,
+        estoqueSistema: s.estoqueSistema + l.estoqueSistema,
       }),
-      { qtdCompra: 0, valorCompra: 0, qtdVenda: 0, valorVenda: 0, estoqueDinamico: 0, valorEstoqueDinamico: 0 },
+      { qtdCompra: 0, valorCompra: 0, qtdVenda: 0, valorVenda: 0, estoqueDinamico: 0, valorEstoqueDinamico: 0, estoqueSistema: 0 },
     );
     return { ...t, progresso: t.qtdCompra > 0 ? (t.qtdVenda / t.qtdCompra) * 100 : 0 };
   }, [filtradas]);
@@ -368,6 +377,7 @@ const EstoqueDinamico = () => {
       "Cód.": l.codigo,
       "Descrição": l.descricao,
       "Barras": l.barras,
+      "Unidade": l.unidade,
       "Departamento": l.departamento,
       "Grupo": l.grupo,
       "Subgrupo": l.subgrupo,
@@ -560,7 +570,7 @@ const EstoqueDinamico = () => {
             { label: "Valor comprado", valor: fmtBRL(totais.valorCompra) },
             { label: "Valor vendido", valor: fmtBRL(totais.valorVenda) },
             { label: "Progresso geral", valor: fmtPct(totais.progresso) },
-            { label: "Estoque dinâmico (R$)", valor: fmtBRL(totais.valorEstoqueDinamico) },
+            { label: "Estoque atual (qtd.)", valor: fmtQtd(totais.estoqueSistema) },
           ].map((c) => (
             <Card key={c.label} className="p-4">
               <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{c.label}</div>
@@ -590,6 +600,7 @@ const EstoqueDinamico = () => {
                     {th("codigo", "Cód.")}
                     {th("descricao", "Descrição")}
                     <th className="px-3 py-2 font-medium whitespace-nowrap text-left">Barras</th>
+                    <th className="px-3 py-2 font-medium whitespace-nowrap text-left">Un.</th>
                     {th("departamento", "Departamento")}
                     {th("grupo", "Grupo")}
                     {th("subgrupo", "Subgrupo")}
@@ -602,6 +613,7 @@ const EstoqueDinamico = () => {
                     {th("valorVenda", "Valor venda", "right")}
                     {th("progresso", "Progresso")}
                     {th("estoqueDinamico", "Estoque dinâmico", "right")}
+                    <th className="px-3 py-2 font-medium whitespace-nowrap text-right">Estoque atual</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -612,6 +624,7 @@ const EstoqueDinamico = () => {
                         <td className="px-3 py-2 whitespace-nowrap">{l.codigo}</td>
                         <td className="px-3 py-2 min-w-[220px]">{l.descricao}</td>
                         <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">{l.barras}</td>
+                        <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">{l.unidade}</td>
                         <td className="px-3 py-2 whitespace-nowrap">{l.departamento}</td>
                         <td className="px-3 py-2 whitespace-nowrap">{l.grupo}</td>
                         <td className="px-3 py-2 whitespace-nowrap">{l.subgrupo}</td>
@@ -638,19 +651,21 @@ const EstoqueDinamico = () => {
                         }`}>
                           {l.estoqueDinamico < 0 ? "-" : ""}{fmtQtd(Math.abs(l.estoqueDinamico))}
                         </td>
+                        <td className="px-3 py-2 text-right whitespace-nowrap">{fmtQtd(l.estoqueSistema)}</td>
                       </tr>
                     );
                   })}
                 </tbody>
                 <tfoot className="sticky bottom-0 bg-card border-t-2 border-border font-semibold">
                   <tr>
-                    <td className="px-3 py-2" colSpan={9}>Totais ({filtradas.length} produtos)</td>
+                    <td className="px-3 py-2" colSpan={10}>Totais ({filtradas.length} produtos)</td>
                     <td className="px-3 py-2 text-right">{fmtQtd(totais.qtdCompra)}</td>
                     <td className="px-3 py-2 text-right">{fmtBRL(totais.valorCompra)}</td>
                     <td className="px-3 py-2 text-right">{fmtQtd(totais.qtdVenda)}</td>
                     <td className="px-3 py-2 text-right">{fmtBRL(totais.valorVenda)}</td>
                     <td className="px-3 py-2">{fmtPct(totais.progresso)}</td>
                     <td className="px-3 py-2 text-right">{fmtQtd(totais.estoqueDinamico)}</td>
+                    <td className="px-3 py-2 text-right">{fmtQtd(totais.estoqueSistema)}</td>
                   </tr>
                 </tfoot>
               </table>
