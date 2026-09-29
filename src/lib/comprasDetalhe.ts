@@ -10,6 +10,7 @@
 // Nada e gravado; tudo roda sob acao do usuario.
 // ============================================================
 import { chamarRelatorio, pick as col, num } from "@/lib/vrReport";
+import { mercadologicoNivel1 } from "@/lib/mercadologico";
 
 export interface LinhaComprasVendas {
   departamento: string;
@@ -25,7 +26,7 @@ const dep = (v: unknown) => String(v ?? "").trim().toUpperCase();
 /** true quando a ponte devolveu tudo colapsado num balde "OUTROS" */
 export function comprasAgrupadas(linhas: any[]): boolean {
   const nomes = new Set(
-    linhas.map((l) => dep(col(l, "departamento", "nivel1", "secao"))),
+    linhas.map((l) => mercadologicoNivel1(l)),
   );
   return nomes.has("OUTROS");
 }
@@ -53,13 +54,13 @@ export async function detalharComprasVendas(
   };
 
   for (const l of compras.dados ?? []) {
-    const cur = get(dep(col(l, "departamento", "secao", "nivel1")));
+    const cur = get(mercadologicoNivel1(l));
     cur.compra += num(col(l, "valor_comprado", "total_compra", "compra", "compras"));
     cur.qtde_compra += num(col(l, "qtd_comprada", "qtde_compra"));
   }
 
   for (const l of vendas.dados ?? []) {
-    const cur = get(dep(col(l, "secao", "departamento", "nivel1")));
+    const cur = get(mercadologicoNivel1(l));
     cur.venda += num(col(l, "valor", "venda", "vendas", "total_vendido", "total_venda"));
     cur.cmv += num(col(l, "custo", "cmv"));
     cur.volume += num(col(l, "qtd", "quantidade", "volume"));

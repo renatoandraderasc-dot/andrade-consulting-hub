@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
 import { supabase } from "@/integrations/supabase/client";
 import { chamarRelatorio, avisoRelatorio, pick, num, lucroDaLinha } from "@/lib/vrReport";
+import { mercadologicoNivel1, mercadologicoNivel2 } from "@/lib/mercadologico";
 import ClientLayout from "@/components/ClientLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -165,7 +166,7 @@ const AnaliseAnual = () => {
         .map((l) => {
           const ref = String(pick(l, "mes", "competencia", "data") ?? "");
           const [a, m] = ref.split("-");
-          const dep = String(pick(l, "departamento", "department", "secao", "nivel1") ?? "TOTAL").toUpperCase();
+          const dep = mercadologicoNivel1(l) || String(pick(l, "department") ?? "TOTAL").toUpperCase();
           return {
             ano: Number(a),
             mes: Number(m),
@@ -174,8 +175,8 @@ const AnaliseAnual = () => {
             volume: num(pick(l, "volume", "quantidade", "qtde", "qtd")),
 
             departamento: dep,
-            secao: String(pick(l, "secao", "nivel1") ?? dep).toUpperCase(),
-            categoria: String(pick(l, "categoria", "nivel2") ?? dep).toUpperCase(),
+            secao: mercadologicoNivel1(l) || dep,
+            categoria: mercadologicoNivel2(l) || dep,
             turno: extrairTurno(l),
           };
         })
@@ -202,9 +203,9 @@ const AnaliseAnual = () => {
             const ano = Number(dia.slice(0, 4));
             const mes = Number(dia.slice(5, 7));
             if (!ano || !mes) continue;
-            const secao = String(pick(l, "secao", "departamento", "nivel1") ?? "TOTAL").toUpperCase();
-            const departamento = String(pick(l, "categoria", "departamento", "nivel1") ?? secao).toUpperCase();
-            const categoria = String(pick(l, "grupo", "nivel2", "categoria") ?? secao).toUpperCase();
+            const secao = mercadologicoNivel1(l) || "TOTAL";
+            const departamento = secao;
+            const categoria = mercadologicoNivel2(l) || secao;
             const turno = extrairTurno(l);
             const k = `${ano}-${mes}-${departamento}-${categoria}-${turno}`;
             const cur = acc.get(k) ?? {
@@ -304,9 +305,9 @@ const AnaliseAnual = () => {
           const ano = Number(dia.slice(0, 4));
           const mes = Number(dia.slice(5, 7));
           if (!ano || !mes) continue;
-          const secao = String(pick(l, "secao", "departamento", "nivel1") ?? "TOTAL").toUpperCase();
-          const departamento = String(pick(l, "categoria", "departamento", "nivel1") ?? secao).toUpperCase();
-          const categoria = String(pick(l, "grupo", "nivel2", "categoria") ?? secao).toUpperCase();
+          const secao = mercadologicoNivel1(l) || "TOTAL";
+          const departamento = secao;
+          const categoria = mercadologicoNivel2(l) || secao;
           const turnoL = extrairTurno(l);
           const k = `${ano}-${mes}-${departamento}-${categoria}-${turnoL}`;
           const cur = acc.get(k) ?? {
@@ -343,8 +344,8 @@ const AnaliseAnual = () => {
         const k = chave(pick(p, "codigo", "cod_produto", "id_produto", "cod"));
         if (!k) continue;
         mapa.set(k, {
-          n1: String(pick(p, "secao", "nivel1", "departamento") ?? "SEM DEPARTAMENTO").toUpperCase(),
-          n2: String(pick(p, "grupo", "nivel2", "categoria") ?? "SEM GRUPO").toUpperCase(),
+          n1: mercadologicoNivel1(p) || "SEM DEPARTAMENTO",
+          n2: mercadologicoNivel2(p) || "SEM GRUPO",
         });
       }
       if (!mapa.size) return;

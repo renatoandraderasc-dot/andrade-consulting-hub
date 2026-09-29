@@ -12,6 +12,7 @@ import { chamarRelatorio, avisoRelatorio, pick, num, txt } from "@/lib/vrReport"
 import { lerPeriodoCache, gravarPeriodoCache } from "@/lib/relatorioCache";
 import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
 import { chaveDept } from "@/lib/departamentosPermitidos";
+import { mercadologicoNivel1 } from "@/lib/mercadologico";
 import { exportarPdf, exportarPptx, type BlocoExport } from "@/lib/exportComparativo";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -315,10 +316,10 @@ export default function PainelComparativo() {
       await gravarPeriodoCache(sid, "diagnostico_mensal", chaveDeptCache, de, ate, linhas);
     }
 
-    const temDept = linhas.some((l: any) => pick(l, "departamento", "secao", "setor") !== undefined);
+    const temDept = linhas.some((l: any) => !!mercadologicoNivel1(l) || pick(l, "setor") !== undefined);
     const row = vazio(ano, mes);
     for (const l of linhas) {
-      const d = txt(pick(l, "departamento", "secao", "setor"));
+      const d = mercadologicoNivel1(l) || txt(pick(l, "setor"));
       if (dept !== TODOS && temDept && chaveDept(d) !== chaveDept(dept)) continue;
       if (dept === TODOS && temDept && permitidos && !permiteDept(d)) continue;
       acumular(row, l);
