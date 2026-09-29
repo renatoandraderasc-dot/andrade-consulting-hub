@@ -187,13 +187,14 @@ const EstoqueDinamico = () => {
     if (!storeId || !range?.from || !range?.to) return;
     setLoading(true); setAviso(null); setPage(1);
     try {
-      const [r, cadastro, estoqueAtual] = await limitarEspera(Promise.all([
+      const [r, cadastro, estoqueAtual, produtosAtivos] = await limitarEspera(Promise.all([
         chamarRelatorio(storeId, "estoque_dinamico", {
           inicio: iso(range.from),
           fim: iso(range.to),
         }),
         chamarRelatorio(storeId, "produtos", {}).catch(() => null),
         chamarRelatorio(storeId, "estoque_atual", {}).catch(() => null),
+        chamarRelatorio(storeId, "produtos_ativos_12m", {}).catch(() => null),
       ]));
       const msg = avisoRelatorio(r);
       if (msg) { setAviso(msg); return; }
@@ -208,6 +209,11 @@ const EstoqueDinamico = () => {
         const codigo = String(col(l, "codigo", "cod", "cod_produto", "id_produto") ?? "");
         if (codigo) estoquePorCodigo.set(codigo, l);
       }
+      const codigosAtivos = new Set(
+        (produtosAtivos?.dados || [])
+          .map((l: any) => String(col(l, "codigo", "cod", "cod_produto", "id_produto") ?? ""))
+          .filter(Boolean),
+      );
 
     const base: Linha[] = (r.dados || []).map((l: any) => {
       const codigo = String(col(l, "codigo", "cod", "cod_produto", "id_produto") ?? "");
@@ -222,9 +228,9 @@ const EstoqueDinamico = () => {
         descricao: String(col(l, "descricao", "produto") ?? col(produto, "descricao", "produto") ?? ""),
         barras: String(col(l, ...ALIAS_EAN) ?? col(produto, ...ALIAS_EAN) ?? ""),
         unidade: String(col(l, "unidade", "un") ?? col(estoque, "unidade", "un") ?? col(produto, "unidade", "un") ?? ""),
-        departamento: mercadologicoNivel1(l) || mercadologicoNivel1(produto) || "SEM DEPARTAMENTO",
-        grupo: mercadologicoNivel2(l) || mercadologicoNivel2(produto) || "SEM GRUPO",
-        subgrupo: mercadologicoNivel3(l) || mercadologicoNivel3(produto) || "SEM SUBGRUPO",
+        departamento: mercadologicoNivel1(l) || mercadologicoNivel1(produto),
+        grupo: mercadologicoNivel2(l) || mercadologicoNivel2(produto),
+        subgrupo: mercadologicoNivel3(l) || mercadologicoNivel3(produto),
         ultimaCompra: String(
           col(l, "ultima_compra", "data_ultima_compra", "dt_ultima_compra", "ultima_entrada", "primeira_compra") ??
           col(estoque, "ultima_compra", "data_ultima_compra", "dt_ultima_compra") ?? "",
@@ -259,7 +265,9 @@ const EstoqueDinamico = () => {
           num(col(estoque, "estoque", "estoque_atual")),
         abc: "D4",
       };
-    });
+    }).filter((l) =>
+      l.codigo && l.departamento && (codigosAtivos.size === 0 || codigosAtivos.has(l.codigo)),
+    );
 
     // Pontes que so publicam o estoque atual (sem venda do periodo):
     // complementa com o ranking de produtos para preencher venda e progresso.

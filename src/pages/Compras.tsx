@@ -18,7 +18,7 @@ import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
 import ClientLayout from "@/components/ClientLayout";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { carregarBaseCatalogo } from "@/lib/catalogoProdutos";
+import { carregarBaseCatalogo, carregarProdutosAtivos12m } from "@/lib/catalogoProdutos";
 import { CartProgressOverlay } from "@/components/CartProgress";
 import { useAutoRefresh } from "@/hooks/useSaasConfig";
 import { mercadologicoNivel1, mercadologicoNivel2, mercadologicoNivel3 } from "@/lib/mercadologico";
@@ -209,8 +209,8 @@ const Compras = () => {
   const fetchMercadologicos1 = async () => {
     setMercadologicos1([]);
     try {
-      const base = await carregarBaseCatalogo(storeId);
-      const nomes = [...new Set(base.map((produto) => produto.n1.trim().toUpperCase()).filter(Boolean))]
+      const { itens } = await carregarProdutosAtivos12m(storeId);
+      const nomes = [...new Set(itens.map((produto) => produto.secao.trim().toUpperCase()).filter(Boolean))]
         .sort((a, b) => a.localeCompare(b, "pt-BR"));
       setMercadologicos1(nomes);
       await semearDepartamentos(nomes);
@@ -483,13 +483,6 @@ const Compras = () => {
     for (const nome of mercadologicos1) {
       if (permiteDept(nome) && !deptosInativos.has(chaveDep(nome))) departamentos.set(chaveDep(nome), nome);
     }
-    for (const meta of metas) {
-      if (permiteDept(meta.departamento) && !deptosInativos.has(chaveDep(meta.departamento))) departamentos.set(chaveDep(meta.departamento), meta.departamento);
-    }
-    for (const nome of Object.keys(realizadoDep)) {
-      if (permiteDept(nome) && !deptosInativos.has(chaveDep(nome))) departamentos.set(chaveDep(nome), nome);
-    }
-
     return [...departamentos.entries()].map(([chave, departamento]) => {
       const m = metasPorDep.get(chave) ?? {};
       const real = indice.get(chave) || { compra: 0, venda: 0, cmv: 0 };
@@ -529,6 +522,7 @@ const Compras = () => {
   // ============ Derived (Aba 2) ============
   // Uma linha por departamento + secao vinda do relatorio compras_vendas_periodo
   const cvItens = useMemo(() => {
+    const ativos = new Set(mercadologicos1.map(chaveDep));
     return cvLinhas
       .map((l: any) => ({
       // Mercadológico 1: WebSac/Oracle mandam "nivel1"/"departamento";
@@ -548,8 +542,8 @@ const Compras = () => {
       compra: num(col(l, "total_compra", "compra", "compras")),
       }))
       // Usuario restrito a departamentos
-      .filter((i) => permiteDept(i.departamento));
-  }, [cvLinhas, restrito]);
+      .filter((i) => permiteDept(i.departamento) && ativos.has(chaveDep(i.departamento)));
+  }, [cvLinhas, restrito, mercadologicos1]);
 
 
   // percentuais SEMPRE recalculados sobre os totais somados
@@ -647,6 +641,8 @@ const Compras = () => {
       }
       setProdutosAviso(avisoRelatorio(r));
       const catalogo = await carregarBaseCatalogo(storeId).catch(() => []);
+      const ativos12m = await carregarProdutosAtivos12m(storeId).catch(() => ({ itens: [] }));
+      const codigosAtivos = new Set(ativos12m.itens.map((produto) => produto.codigo.replace(/^0+/, "")));
       const cadastro = new Map<string, (typeof catalogo)[number]>();
       for (const produto of catalogo) {
         cadastro.set(String(produto.codigo).replace(/^0+/, ""), produto);
@@ -670,7 +666,11 @@ const Compras = () => {
           compra: num(col(l, "total_compra", "compra", "compras")),
           };
         })
-        .filter((p: ProdLinha) => permiteDept(p.departamento));
+        .filter((p: ProdLinha) =>
+          permiteDept(p.departamento) &&
+          mercadologicos1.some((nome) => chaveDep(nome) === chaveDep(p.departamento)) &&
+          (codigosAtivos.size === 0 || codigosAtivos.has(p.codigo.replace(/^0+/, ""))),
+        );
 
       // Algumas pontes DIRECTOR publicam vendas por produto, mas compras apenas
       // no nível 1. Nesse caso, preserva o total oficial de compra do departamento

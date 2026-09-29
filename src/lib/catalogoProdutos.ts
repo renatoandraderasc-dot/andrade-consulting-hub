@@ -222,7 +222,7 @@ export async function carregarProdutosAtivos12m(storeId: string) {
   }
 
   const itens: ProdutoAtivo12m[] = (r.dados || []).map((l: any) => ({
-    codigo: String(col(l, "codigo", "cod_produto", "id_produto") ?? ""),
+    codigo: String(col(l, "codigo", "cod", "cod_produto", "id_produto") ?? ""),
     ean: String(col(l, ...ALIAS_EAN) ?? ""),
     descricao: String(col(l, "produto", "descricao", "nome") ?? ""),
     secao: String(col(l, "secao", "departamento") ?? ""),
