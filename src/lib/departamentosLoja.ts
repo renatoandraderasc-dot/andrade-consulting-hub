@@ -33,7 +33,7 @@ export async function carregarDepartamentosLoja(storeId: string): Promise<string
   const add = (d: string | null | undefined) => {
     const nome = rotulo(String(d ?? ""));
     const chave = semAcento(nome);
-    if (!chave || chave === "LOJA" || chave === "TOTAL" || chave === "GERAL") return;
+    if (!chave || ["LOJA", "TOTAL", "GERAL", "OUTROS", "SEM DEPARTAMENTO", "SEM SECAO"].includes(chave)) return;
     if (!vistos.has(chave)) vistos.set(chave, nome);
   };
 

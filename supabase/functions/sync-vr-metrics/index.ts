@@ -43,7 +43,8 @@ function inferirDepartamento(secaoNormalizada: string, mapaLoja: Map<string, str
     return "PADARIA";
   }
 
-  return "OUTROS";
+  // Usa o próprio mercadológico da loja em vez de agrupar em "OUTROS"
+  return secaoNormalizada || "SEM DEPARTAMENTO";
 }
 
 // Datas de hoje e ontem no fuso de Brasilia
