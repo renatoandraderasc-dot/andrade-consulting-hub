@@ -671,6 +671,29 @@ const Compras = () => {
           };
         })
         .filter((p: ProdLinha) => permiteDept(p.departamento));
+
+      // Algumas pontes DIRECTOR publicam vendas por produto, mas compras apenas
+      // no nível 1. Nesse caso, preserva o total oficial de compra do departamento
+      // e o distribui entre os produtos pelo peso do CMV (ou da venda).
+      const compraDept = new Map<string, number>();
+      for (const item of cvItens) {
+        compraDept.set(item.departamento, (compraDept.get(item.departamento) ?? 0) + item.compra);
+      }
+      for (const [departamento, totalCompra] of compraDept) {
+        const produtos = linhas.filter((p) => p.departamento === departamento);
+        if (!produtos.length || produtos.some((p) => p.compra !== 0)) continue;
+        const baseCmv = produtos.reduce((s, p) => s + p.cmv, 0);
+        const baseVenda = produtos.reduce((s, p) => s + p.venda, 0);
+        const base = baseCmv > 0 ? baseCmv : baseVenda;
+        if (base <= 0) continue;
+        let distribuido = 0;
+        produtos.forEach((p, indice) => {
+          p.compra = indice === produtos.length - 1
+            ? totalCompra - distribuido
+            : totalCompra * ((baseCmv > 0 ? p.cmv : p.venda) / base);
+          distribuido += p.compra;
+        });
+      }
       setProdutosCache((c) => ({ ...c, [key]: linhas }));
     } catch (e: any) {
       setProdutosAviso(e?.message ?? String(e));
