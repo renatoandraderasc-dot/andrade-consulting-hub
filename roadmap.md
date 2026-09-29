@@ -19,3 +19,8 @@
 - [x] Comercial calcula pelo CMV; Financeiro calcula pelo Pagamento de Fornecedores.
 - [x] Todos os lançamentos com destino (Tipo e Subconta) + botão Classificar.
 
+# Ajustes Medeiros — Mercadológicos e Compras
+
+- [ ] Exibir todos os mercadológicos do Medeiros em todas as telas.
+- [ ] Exibir Compras até o nível produto no Medeiros.
+- [ ] Validar compilação e comportamento relevante.
