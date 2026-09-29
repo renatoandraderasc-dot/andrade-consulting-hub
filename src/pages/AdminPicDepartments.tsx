@@ -78,12 +78,16 @@ const AdminPicDepartments = () => {
     setKpiMap((m) => (m[storeId] ? m : { ...m, [storeId]: [...ALL_PIC_KPIS] }));
   }, [storeId]);
 
-  const kpisAtivos = kpiMap[storeId] || [...ALL_PIC_KPIS];
+  const kpisAtivos = kpiMap[storeId]?.length ? kpiMap[storeId] : [...ALL_PIC_KPIS];
   const todosKpis = kpisAtivos.length === ALL_PIC_KPIS.length;
 
   const toggleKpi = (kpi: string) => {
-    const atual = kpiMap[storeId] || [...ALL_PIC_KPIS];
+    const atual = kpisAtivos;
     const next = atual.includes(kpi) ? atual.filter((k) => k !== kpi) : [...atual, kpi];
+    if (next.length === 0) {
+      toast({ title: "Mantenha ao menos um índice", description: "O PIC precisa exibir pelo menos um índice." });
+      return;
+    }
     setKpiMap({ ...kpiMap, [storeId]: next });
   };
 

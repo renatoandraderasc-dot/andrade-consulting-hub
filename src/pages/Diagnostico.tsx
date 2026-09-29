@@ -76,6 +76,8 @@ const AtualizarTodas = () => {
         if (!error) ok++;
       } catch { /* segue para a próxima loja */ }
     }
+    // Invalida o selo de sync guardado no navegador para refletir a nova atualização.
+    for (const l of lista) localStorage.removeItem(`sync_status_${l.store_id}`);
     setProgresso(`Concluído: ${ok} de ${lista.length} lojas atualizadas às ${new Date().toLocaleTimeString("pt-BR")}.`);
     setRodando(false);
   };

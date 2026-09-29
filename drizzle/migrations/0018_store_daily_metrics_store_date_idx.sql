@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS idx_store_daily_metrics_store_date ON public.store_daily_metrics (store_id, date);

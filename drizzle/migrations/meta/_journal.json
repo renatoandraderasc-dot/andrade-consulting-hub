@@ -127,6 +127,13 @@
       "when": 1790602838137,
       "tag": "0017_lancamentos_update_by_store_access",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1790702981226,
+      "tag": "0018_store_daily_metrics_store_date_idx",
+      "breakpoints": true
     }
   ]
 }
