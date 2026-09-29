@@ -20,6 +20,7 @@ import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
 import { chamarRelatorio, num, pick } from "@/lib/vrReport";
 import MascotPersona from "@/components/poster/MascotPersona";
 import CouponDivider from "@/components/poster/CouponDivider";
+import { carregarDepartamentosLoja } from "@/lib/departamentosLoja";
 
 const MONTHS = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
@@ -154,26 +155,8 @@ const Dashboard = () => {
   };
 
   const fetchDepartments = async () => {
-    const { data } = await supabase
-      .from("store_daily_metrics")
-      .select("department")
-      .eq("store_id", storeId);
-    if (data) {
-      const unique = filtrarDepts([...new Set(data.map((d) => d.department))].sort());
-      setDepartments(unique);
-    }
-
-    // Also check store_department_metrics for departments
-    if (!data || data.length === 0) {
-      const { data: deptData } = await supabase
-        .from("store_department_metrics")
-        .select("department")
-        .eq("store_id", storeId);
-      if (deptData) {
-        const unique = filtrarDepts([...new Set(deptData.map((d) => d.department))].sort());
-        setDepartments(unique);
-      }
-    }
+    const lista = await carregarDepartamentosLoja(storeId);
+    setDepartments(filtrarDepts(["LOJA", ...lista]));
   };
 
   const fetchDailyData = async () => {
@@ -263,9 +246,11 @@ const Dashboard = () => {
   // Loja sem metas por departamento no banco: usa os departamentos do proprio VR
   useEffect(() => {
     if (!vr) return;
-    if (departments.length > 0) return;
-    const deps = filtrarDepts(Object.keys(vr).filter((d) => d !== "LOJA")).sort();
-    if (deps.length > 0) setDepartments(deps);
+    const atuais = new Map(departments.map((d) => [canonDept(d), d]));
+    for (const dep of filtrarDepts(Object.keys(vr).filter((d) => d !== "LOJA"))) {
+      if (!atuais.has(canonDept(dep))) atuais.set(canonDept(dep), dep);
+    }
+    setDepartments([...atuais.values()].sort((a, b) => a === "LOJA" ? -1 : b === "LOJA" ? 1 : a.localeCompare(b, "pt-BR")));
   }, [vr, departments.length]);
 
 

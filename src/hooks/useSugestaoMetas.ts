@@ -4,6 +4,7 @@ import { chamarRelatorio, avisoRelatorio, pick, num, lucroDaLinha } from "@/lib/
 import {
   DiaVenda, MesSerie, serieMensal, ontemSP, ym,
 } from "@/lib/metasSugestao";
+import { mercadologicoNivel1 } from "@/lib/mercadologico";
 
 export const LOJA = "LOJA";
 export const OUTROS = "OUTROS";
@@ -95,8 +96,8 @@ async function carregar(storeId: string, anoAlvo: number): Promise<SugestaoMetas
       volume: num(pick(linha, "volume", "qtde", "quantidade")),
       mix: 0,
     };
-    const secao = String(pick(linha, "secao", "departamento") ?? "");
-    const categoria = String(pick(linha, "categoria") ?? secao).trim() || OUTROS;
+    const secao = mercadologicoNivel1(linha);
+    const categoria = secao || OUTROS;
     const dep = mapa.get(norm(secao)) ?? inferirDepartamento(secao, categoria) ?? (norm(secao) || OUTROS);
     add(LOJA, item);
     if (dep !== LOJA) add(dep, item);
@@ -112,8 +113,8 @@ async function carregar(storeId: string, anoAlvo: number): Promise<SugestaoMetas
       mix: num(pick(linha, "mix", "produtos", "itens")),
     };
     if (!item.mix) continue;
-    const secao = String(pick(linha, "secao", "departamento", "categoria") ?? "");
-    const categoria = String(pick(linha, "categoria") ?? secao).trim() || OUTROS;
+    const secao = mercadologicoNivel1(linha);
+    const categoria = secao || OUTROS;
     const dep = mapa.get(norm(secao)) ?? inferirDepartamento(secao, categoria) ?? (norm(secao) || OUTROS);
     add(LOJA, item);
     if (dep !== LOJA) add(dep, item);

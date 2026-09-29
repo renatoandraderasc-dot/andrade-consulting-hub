@@ -16,6 +16,7 @@ import { usePicDisplayMode } from "@/hooks/usePicDisplay";
 import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
 import ProdutosSemGiro from "@/components/pic/ProdutosSemGiro";
 import { CartProgressOverlay } from "@/components/CartProgress";
+import { carregarDepartamentosLoja } from "@/lib/departamentosLoja";
 
 
 
@@ -78,6 +79,7 @@ const PIC = () => {
   const [metasData, setMetasData] = useState<Record<string, any[]>>({});
   const [metaMix, setMetaMix] = useState<Record<string, number>>({});
   const [metasMes, setMetasMes] = useState<Record<string, { vendas: number; lucro: number; volume: number; mix: number }>>({});
+  const [deptsLoja, setDeptsLoja] = useState<string[]>([]);
   const picMode = usePicDisplayMode(storeId);
   const soPct = picMode === "percentual";
 
@@ -111,18 +113,17 @@ const PIC = () => {
     return ALL_PIC_KPIS.filter((k) => kpisConfig.includes(k));
   }, [kpisConfig]);
   const DEPARTMENTS = useMemo(() => {
+    const detectados = [...deptsLoja, ...Object.keys(vr ?? {})];
     // Usuario restrito: so os departamentos liberados (sem o total da loja)
     if (restrito) {
-      const base = deptsConfig?.length ? deptsConfig : Object.keys(vr ?? {});
+      const base = detectados;
       const libs = filtrarDepts(base.filter((k) => k !== LOJA));
       return libs.length ? libs : [];
     }
-    if (deptsConfig?.length) return deptsConfig;
-
     // Mostra TODOS os departamentos que vierem do sistema da loja.
     // Os padroes (Padaria/Acougue/Hortifruti) vem primeiro, depois os demais em
     // ordem alfabetica.
-    const todas = Object.keys(vr ?? {});
+    const todas = [...new Set([LOJA, ...detectados])];
     const keys = todas.filter((k) => k !== LOJA);
     const temLoja = todas.includes(LOJA);
     const presentes = DEFAULT_DEPARTMENTS.filter((d) => keys.includes(d));
@@ -132,7 +133,7 @@ const PIC = () => {
     const lista = [...presentes, ...outros];
     if (lista.length) return temLoja ? [LOJA, ...lista] : lista;
     return [LOJA];
-  }, [vr, deptsConfig, restrito]);
+  }, [vr, deptsLoja, restrito]);
 
 
   useEffect(() => {
@@ -143,6 +144,11 @@ const PIC = () => {
   useEffect(() => {
     if (storeId) fetchMetas();
   }, [storeId, selectedMonth, selectedYear, diaIniEfetivo, diaFimEfetivo]);
+
+  useEffect(() => {
+    if (!storeId) return;
+    carregarDepartamentosLoja(storeId).then(setDeptsLoja);
+  }, [storeId]);
 
   // Atualização automática desativada: os dados só são recarregados no botão Atualizar.
 

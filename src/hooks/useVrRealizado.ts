@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lucroDaLinha } from "@/lib/vrReport";
 import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
+import { mercadologicoNivel1, mercadologicoNivel2 } from "@/lib/mercadologico";
 
 // ============================================================
 // Leitura AO VIVO do realizado do VR (nada e gravado no banco).
@@ -172,11 +173,11 @@ async function loadRaw(storeId: string, inicio: string, fim: string): Promise<Ra
     if (!date) continue;
     linhas.push({
       date,
-      secao: String(pick(l, "secao", "departamento") ?? ""),
+      secao: mercadologicoNivel1(l),
       // Pontes que so publicam "departamento" (padrao DIRECTOR) tambem
       // precisam alimentar o filtro de categoria do Dashboard.
-      categoria: String(pick(l, "categoria", "secao", "departamento") ?? "").trim(),
-      grupo: String(pick(l, "grupo") ?? ""),
+      categoria: mercadologicoNivel1(l),
+      grupo: mercadologicoNivel2(l),
       vendas: numOf(pick(l, "total_vendido", "venda", "vendas")),
       // Margem = (Venda - Custo com imposto) / Venda.
       lucro: lucroDaLinha(l, numOf(pick(l, "total_vendido", "venda", "vendas"))),
@@ -192,8 +193,8 @@ async function loadRaw(storeId: string, inicio: string, fim: string): Promise<Ra
     const date = String(pick(l, "data", "dia") ?? "").slice(0, 10) || inicio;
     mixLinhas.push({
       date,
-      secao: String(pick(l, "secao", "departamento", "categoria") ?? ""),
-      categoria: String(pick(l, "categoria", "departamento") ?? "").trim(),
+      secao: mercadologicoNivel1(l),
+      categoria: mercadologicoNivel1(l),
       grupo: "",
       vendas: 0,
       lucro: 0,
