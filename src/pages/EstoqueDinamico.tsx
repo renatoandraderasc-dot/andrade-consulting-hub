@@ -222,9 +222,9 @@ const EstoqueDinamico = () => {
         descricao: String(col(l, "descricao", "produto") ?? col(produto, "descricao", "produto") ?? ""),
         barras: String(col(l, ...ALIAS_EAN) ?? col(produto, ...ALIAS_EAN) ?? ""),
         unidade: String(col(l, "unidade", "un") ?? col(estoque, "unidade", "un") ?? col(produto, "unidade", "un") ?? ""),
-        departamento: mercadologicoNivel1(l) || mercadologicoNivel1(produto),
-        grupo: mercadologicoNivel2(l) || mercadologicoNivel2(produto),
-        subgrupo: mercadologicoNivel3(l) || mercadologicoNivel3(produto),
+        departamento: mercadologicoNivel1(l) || mercadologicoNivel1(produto) || "SEM DEPARTAMENTO",
+        grupo: mercadologicoNivel2(l) || mercadologicoNivel2(produto) || "SEM GRUPO",
+        subgrupo: mercadologicoNivel3(l) || mercadologicoNivel3(produto) || "SEM SUBGRUPO",
         ultimaCompra: String(
           col(l, "ultima_compra", "data_ultima_compra", "dt_ultima_compra", "ultima_entrada", "primeira_compra") ??
           col(estoque, "ultima_compra", "data_ultima_compra", "dt_ultima_compra") ?? "",
@@ -565,11 +565,12 @@ const EstoqueDinamico = () => {
           </Card>
         )}
 
-        <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-5">
           {[
             { label: "Valor comprado", valor: fmtBRL(totais.valorCompra) },
             { label: "Valor vendido", valor: fmtBRL(totais.valorVenda) },
             { label: "Progresso geral", valor: fmtPct(totais.progresso) },
+            { label: "Estoque dinâmico (R$)", valor: fmtBRL(totais.valorEstoqueDinamico) },
             { label: "Estoque atual (qtd.)", valor: fmtQtd(totais.estoqueSistema) },
           ].map((c) => (
             <Card key={c.label} className="p-4">
