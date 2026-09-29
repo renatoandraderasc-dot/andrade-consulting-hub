@@ -8,18 +8,18 @@ export const normalizarMercadologico = (valor: unknown) =>
 export const mercadologicoNivel1 = (linha: unknown) => normalizarMercadologico(pick(
   linha,
   "m1_departamento", "mercadologico1", "mercadologico_1", "merc1",
-  "nivel1", "departamento", "secao", "desc_secao", "descricao_secao",
+  "n1", "nivel1", "departamento", "secao", "desc_secao", "descricao_secao",
   "sec", "dept", "grupo_1",
 ));
 
 export const mercadologicoNivel2 = (linha: unknown) => normalizarMercadologico(pick(
   linha,
   "m2_grupo", "mercadologico2", "mercadologico_2", "merc2",
-  "nivel2", "grupo", "categoria", "grupo_2",
+  "n2", "nivel2", "grupo", "categoria", "grupo_2",
 ));
 
 export const mercadologicoNivel3 = (linha: unknown) => normalizarMercadologico(pick(
   linha,
   "m3_subgrupo", "mercadologico3", "mercadologico_3", "merc3",
-  "nivel3", "subgrupo", "subcategoria", "grupo_3",
+  "n3", "nivel3", "subgrupo", "subcategoria", "grupo_3",
 ));
