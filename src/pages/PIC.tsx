@@ -113,7 +113,7 @@ const PIC = () => {
     return ALL_PIC_KPIS.filter((k) => kpisConfig.includes(k));
   }, [kpisConfig]);
   const DEPARTMENTS = useMemo(() => {
-    const detectados = [...deptsLoja, ...Object.keys(vr ?? {})];
+    const detectados = [...(deptsConfig ?? []), ...deptsLoja, ...Object.keys(vr ?? {})];
     // Usuario restrito: so os departamentos liberados (sem o total da loja)
     if (restrito) {
       const base = detectados;
@@ -133,7 +133,7 @@ const PIC = () => {
     const lista = [...presentes, ...outros];
     if (lista.length) return temLoja ? [LOJA, ...lista] : lista;
     return [LOJA];
-  }, [vr, deptsLoja, restrito]);
+  }, [vr, deptsConfig, deptsLoja, restrito]);
 
 
   useEffect(() => {

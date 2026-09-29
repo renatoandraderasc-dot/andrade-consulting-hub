@@ -21,6 +21,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { carregarBaseCatalogo } from "@/lib/catalogoProdutos";
 import { CartProgressOverlay } from "@/components/CartProgress";
 import { useAutoRefresh } from "@/hooks/useSaasConfig";
+import { mercadologicoNivel1, mercadologicoNivel2, mercadologicoNivel3 } from "@/lib/mercadologico";
 
 
 interface Store { id: string; name: string }
@@ -29,6 +30,7 @@ interface Store { id: string; name: string }
 interface ProdLinha {
   departamento: string;
   secao: string;
+  subgrupo: string;
   codigo: string;
   descricao: string;
   ean: string;
@@ -50,21 +52,7 @@ const fmtBRL = (v: number) => (Number(v) || 0).toLocaleString("pt-BR", { style: 
 const fmtPct = (v: number, d = 1) => `${(Number(v) || 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d })}%`;
 const fmtNum = (v: number, d = 0) => (Number(v) || 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
 
-const mercadologico1 = (linha: any) => String(col(
-  linha,
-  "m1_departamento",
-  "mercadologico1",
-  "mercadologico_1",
-  "merc1",
-  "nivel1",
-  "departamento",
-  "secao",
-  "desc_secao",
-  "descricao_secao",
-  "sec",
-  "dept",
-  "grupo_1",
-) ?? "").trim().toUpperCase();
+const mercadologico1 = mercadologicoNivel1;
 
 // Chave de comparacao de departamento: sem acento, sem caixa e sem espacos duplos.
 // O ERP devolve "Acougue"/"Pereciveis" e as metas podem estar como "AÇOUGUE".
@@ -653,19 +641,32 @@ const Compras = () => {
     if (!storeId || !inicio || !fim || produtosCache[key] || produtosLoading === key) return;
     setProdutosLoading(key);
     try {
-      const r = await chamarRelatorio(storeId, "compras_vendas_produto", { inicio, fim });
+      let r = await chamarRelatorio(storeId, "compras_vendas_produto", { inicio, fim, limite: 200000 });
+      if (!r.dados.length && (r.indisponivel || !r.erro)) {
+        r = await chamarRelatorio(storeId, "vendas_hierarquia_periodo", { inicio, fim, limite: 200000 });
+      }
       setProdutosAviso(avisoRelatorio(r));
+      const catalogo = await carregarBaseCatalogo(storeId).catch(() => []);
+      const cadastro = new Map(catalogo.map((p) => [String(p.codigo).replace(/^0+/, ""), p]));
       const linhas: ProdLinha[] = (r.dados || [])
         .map((l: any) => ({
-          departamento: mercadologico1(l) || "SEM DEPARTAMENTO",
-          secao: String(col(l, "secao", "nivel2", "grupo", "categoria") ?? "").trim().toUpperCase() || "SEM SEÇÃO",
-          codigo: String(col(l, "codigo", "cod_produto", "id_produto") ?? ""),
-          descricao: String(col(l, "descricao", "produto") ?? "").trim(),
-          ean: String(col(l, "barras", "ean", "codigo_barras") ?? ""),
+          codigo: String(col(l, "codigo", "cod_produto", "id_produto", "codigo_reduzido") ?? ""),
+          linha: l,
+        }))
+        .map(({ codigo, linha: l }) => {
+          const cadastrado = cadastro.get(codigo.replace(/^0+/, ""));
+          return {
+          departamento: mercadologicoNivel1(l) || cadastrado?.n1.toUpperCase() || "SEM DEPARTAMENTO",
+          secao: mercadologicoNivel2(l) || cadastrado?.n2.toUpperCase() || "SEM GRUPO",
+          subgrupo: mercadologicoNivel3(l) || cadastrado?.n3.toUpperCase() || "SEM SUBGRUPO",
+          codigo,
+          descricao: String(col(l, "descricao", "produto", "nome") ?? cadastrado?.descricao ?? "").trim(),
+          ean: String(col(l, "barras", "ean", "codigo_barras") ?? cadastrado?.ean ?? ""),
           venda: num(col(l, "total_venda", "venda", "vendas", "total_vendido")),
           cmv: num(col(l, "custo_com_imposto", "custo_c_imposto", "cmv", "custo")),
           compra: num(col(l, "total_compra", "compra", "compras")),
-        }))
+          };
+        })
         .filter((p: ProdLinha) => permiteDept(p.departamento));
       setProdutosCache((c) => ({ ...c, [key]: linhas }));
     } catch (e: any) {
@@ -680,6 +681,16 @@ const Compras = () => {
     (produtosCache[key] || [])
       .filter((p) => chaveDep(p.departamento) === chaveDep(dep) && chaveDep(p.secao) === chaveDep(secao))
       .sort((a, b) => b.venda - a.venda);
+
+  const produtosPorSubgrupo = (key: string, dep: string, secao: string) => {
+    const grupos = new Map<string, ProdLinha[]>();
+    for (const produto of produtosDaSecao(key, dep, secao)) {
+      const lista = grupos.get(produto.subgrupo) ?? [];
+      lista.push(produto);
+      grupos.set(produto.subgrupo, lista);
+    }
+    return [...grupos.entries()].sort((a, b) => a[0].localeCompare(b[0], "pt-BR"));
+  };
 
   const secoesDoDep = (key: string, dep: string) => {
     const acc = new Map<string, { secao: string; venda: number; cmv: number; compra: number }>();
@@ -715,7 +726,7 @@ const Compras = () => {
     const produtos = (produtosCache[chaveProdutos(cvInicio, cvFim)] || [])
       .filter((p) => !cvExcluir.includes(chaveDep(p.departamento)))
       .map((p) => ({
-      Departamento: p.departamento, Seção: p.secao, Código: p.codigo,
+      Departamento: p.departamento, Grupo: p.secao, Subgrupo: p.subgrupo, Código: p.codigo,
       Descrição: p.descricao, EAN: p.ean,
       Venda: p.venda, CMV: p.cmv, Compra: p.compra,
       "Excesso ou Saldo": p.cmv - p.compra,
