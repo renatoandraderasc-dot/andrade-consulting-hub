@@ -647,7 +647,10 @@ const Compras = () => {
       }
       setProdutosAviso(avisoRelatorio(r));
       const catalogo = await carregarBaseCatalogo(storeId).catch(() => []);
-      const cadastro = new Map(catalogo.map((p) => [String(p.codigo).replace(/^0+/, ""), p]));
+      const cadastro = new Map<string, (typeof catalogo)[number]>();
+      for (const produto of catalogo) {
+        cadastro.set(String(produto.codigo).replace(/^0+/, ""), produto);
+      }
       const linhas: ProdLinha[] = (r.dados || [])
         .map((l: any) => ({
           codigo: String(col(l, "codigo", "cod_produto", "id_produto", "codigo_reduzido") ?? ""),
