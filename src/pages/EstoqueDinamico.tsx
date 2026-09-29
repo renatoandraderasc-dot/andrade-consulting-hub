@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
 import { supabase } from "@/integrations/supabase/client";
 import { ALIAS_EAN, chamarRelatorio, avisoRelatorio, pick as col, num } from "@/lib/vrReport";
+import { mercadologicoNivel1, mercadologicoNivel2 } from "@/lib/mercadologico";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -200,8 +201,8 @@ const EstoqueDinamico = () => {
         codigo: String(col(l, "codigo", "cod_produto", "id_produto") ?? ""),
         descricao: String(col(l, "descricao", "produto") ?? ""),
         barras: String(col(l, ...ALIAS_EAN) ?? ""),
-        departamento: String(col(l, "departamento", "m1_departamento", "secao") ?? "").trim(),
-        grupo: String(col(l, "grupo", "m2_grupo") ?? "").trim(),
+        departamento: mercadologicoNivel1(l),
+        grupo: mercadologicoNivel2(l),
         ultimaCompra: String(
           col(l, "ultima_compra", "data_ultima_compra", "dt_ultima_compra", "ultima_entrada", "primeira_compra") ?? "",
         ),

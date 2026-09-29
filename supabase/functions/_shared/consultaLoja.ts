@@ -109,6 +109,7 @@ export async function consultarRelatorioLoja(opts: {
       vendas_departamento_periodo: ["vendas_departamento_dia", "vendas_secao_dia"],
       vendas_departamento_dia: ["vendas_departamento_dia", "vendas_secao_dia"],
       vendas_hierarquia_periodo: ["vendas_produto_periodo"],
+      compras_vendas_produto: ["compras_vendas_produto", "compras_produto_periodo", "compras_vendas_por_produto", "vendas_produto_periodo"],
     };
     const candidatos = ALIAS_DIRECTOR[relatorio] ?? [relatorio];
     const base = cfg.api_url.replace(/\/+$/, "");

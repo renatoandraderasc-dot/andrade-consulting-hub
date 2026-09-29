@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ALIAS_EAN, chamarRelatorio, num, pick, lucroDaLinha } from "@/lib/vrReport";
+import { mercadologicoNivel1, mercadologicoNivel2, mercadologicoNivel3 } from "@/lib/mercadologico";
 
 // ============================================================
 // Hierarquia mercadologica de vendas AO VIVO (nada e gravado).
@@ -109,8 +110,8 @@ async function carregar(storeId: string, inicio: string, fim: string): Promise<L
     const dados = await chamar(storeId, "vendas_secao_periodo", { inicio, fim });
     const acc = new Map<string, LinhaHierarquia>();
     for (const l of dados) {
-      const n1 = txt(pick(l, "secao", "departamento"), "SEM DEPARTAMENTO").toUpperCase();
-      const n2 = txt(pick(l, "categoria", "grupo"), "SEM GRUPO").toUpperCase();
+      const n1 = mercadologicoNivel1(l) || "SEM DEPARTAMENTO";
+      const n2 = mercadologicoNivel2(l) || "SEM GRUPO";
       const k = `${n1}|${n2}`;
       const cur = acc.get(k) ?? { n1, n2, n3: "SEM SUBGRUPO", produto: n2, codigo: "", ean: "", vendas: 0, lucro: 0, volume: 0 };
       cur.vendas += num(pick(l, "total_vendido", "venda", "vendas"));
@@ -136,9 +137,9 @@ async function carregar(storeId: string, inicio: string, fim: string): Promise<L
     const chave = chaveCod(pick(p, "codigo", "cod_produto", "id_produto", "cod"));
     if (!chave) continue;
     cat.set(chave, {
-      n1: txt(pick(p, "secao", "n1", "nivel1", "departamento"), "SEM DEPARTAMENTO").toUpperCase(),
-      n2: txt(pick(p, "grupo", "n2", "nivel2", "categoria"), "SEM GRUPO").toUpperCase(),
-      n3: txt(pick(p, "subgrupo", "n3", "nivel3", "subcategoria"), "SEM SUBGRUPO").toUpperCase(),
+      n1: mercadologicoNivel1(p) || "SEM DEPARTAMENTO",
+      n2: mercadologicoNivel2(p) || "SEM GRUPO",
+      n3: mercadologicoNivel3(p) || "SEM SUBGRUPO",
       descricao: txt(pick(p, "descricao", "produto"), "SEM DESCRIÇÃO").toUpperCase(),
       ean: String(pick(p, ...ALIAS_EAN) ?? ""),
     });
@@ -150,9 +151,9 @@ async function carregar(storeId: string, inicio: string, fim: string): Promise<L
     const vendas = num(pick(l, "total_vendido", "venda", "vendas", "valor_venda", "valor", "total"));
     const desc = txt(pick(l, "produto", "descricao", "descricao_produto"), "");
     return {
-      n1: (c?.n1 ?? txt(pick(l, "nivel1", "secao", "departamento"), "SEM DEPARTAMENTO")).toUpperCase(),
-      n2: (c?.n2 ?? txt(pick(l, "nivel2", "categoria", "grupo"), "SEM GRUPO")).toUpperCase(),
-      n3: (c?.n3 ?? txt(pick(l, "nivel3", "subcategoria", "subgrupo"), "SEM SUBGRUPO")).toUpperCase(),
+      n1: c?.n1 || mercadologicoNivel1(l) || "SEM DEPARTAMENTO",
+      n2: c?.n2 || mercadologicoNivel2(l) || "SEM GRUPO",
+      n3: c?.n3 || mercadologicoNivel3(l) || "SEM SUBGRUPO",
       produto: (c?.descricao || desc || codigo || "SEM DESCRIÇÃO").toUpperCase(),
       codigo,
       ean: String(pick(l, ...ALIAS_EAN) ?? c?.ean ?? ""),

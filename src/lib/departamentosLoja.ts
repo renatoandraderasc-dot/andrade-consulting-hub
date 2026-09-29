@@ -1,11 +1,13 @@
 import { supabase } from "@/integrations/supabase/client";
+import { carregarBaseCatalogo } from "@/lib/catalogoProdutos";
+import { MERCADOLOGICOS_INICIAIS } from "@/lib/mercadologico";
 
 /**
  * Departamentos disponiveis para uma loja.
  * Une o que esta mapeado no sistema da loja (vr_secao_departamento) com o que
  * ja existe nas metas (store_daily_metrics) e com os departamentos padrao.
  */
-export const DEPARTAMENTOS_PADRAO = ["PADARIA", "AÇOUGUE", "HORTIFRUTI"];
+export const DEPARTAMENTOS_PADRAO = MERCADOLOGICOS_INICIAIS;
 
 const semAcento = (s: string) =>
   (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
@@ -19,11 +21,12 @@ const rotulo = (s: string) => {
 
 export async function carregarDepartamentosLoja(storeId: string): Promise<string[]> {
   if (!storeId) return [...DEPARTAMENTOS_PADRAO];
-  const [{ data: mapas }, { data: metas }, { data: compras }, { data: historico }] = await Promise.all([
+  const [{ data: mapas }, { data: metas }, { data: compras }, { data: historico }, catalogo] = await Promise.all([
     supabase.from("vr_secao_departamento").select("department").eq("store_id", storeId),
     supabase.from("store_daily_metrics").select("department").eq("store_id", storeId).limit(5000),
     supabase.from("compras_departamento").select("departamento").eq("store_id", storeId).eq("ativo", true),
     supabase.from("compras_historico").select("departamento").eq("store_id", storeId).limit(5000),
+    carregarBaseCatalogo(storeId).catch(() => []),
   ]);
 
   const vistos = new Map<string, string>();
@@ -39,6 +42,7 @@ export async function carregarDepartamentosLoja(storeId: string): Promise<string
   for (const m of metas ?? []) add(m.department as string);
   for (const m of compras ?? []) add(m.departamento as string);
   for (const m of historico ?? []) add(m.departamento as string);
+  for (const produto of catalogo) add(produto.n1);
 
   const lista = [...vistos.values()];
   const padrao = lista.filter((d) => DEPARTAMENTOS_PADRAO.includes(d));
