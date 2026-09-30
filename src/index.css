@@ -254,7 +254,7 @@
 .pic-tv .tv-num { font-family: "Barlow Condensed", sans-serif; font-weight: 700; font-variant-numeric: tabular-nums; }
 .pic-tv .tv-title { font-family: "Barlow Condensed", sans-serif; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: hsl(var(--muted-foreground)); font-size: clamp(14px, 1.1vw, 26px); margin-bottom: .4vw; }
 .pic-tv .tv-card { background: hsl(var(--card)); border: 1px solid hsl(var(--border)); border-radius: .6rem; padding: 1vw; }
-.pic-tv .tv-matrix { display: grid; grid-template-columns: minmax(110px, 1fr) repeat(4, minmax(0, 1.6fr)); gap: .6vw; }
+.pic-tv .tv-matrix { display: grid; grid-template-columns: minmax(110px, 1fr) repeat(var(--tv-cols, 4), minmax(0, 1.6fr)); gap: .6vw; }
 .pic-tv .tv-row { display: contents; }
 .pic-tv .tv-cell { background: hsl(var(--card)); border: 1px solid hsl(var(--border)); border-left-width: 5px; border-radius: .5rem; padding: .6vw .8vw; min-width: 0; }
 .pic-tv .tv-row-loja > .tv-cell { border-color: hsl(var(--primary)); border-width: 2px; border-left-width: 5px; }

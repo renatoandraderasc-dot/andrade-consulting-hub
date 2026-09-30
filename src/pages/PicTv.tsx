@@ -298,7 +298,7 @@ export default function PicTv() {
       <main className="flex-1 grid gap-[1vw] lg:grid-cols-3">
         {/* Matriz */}
         <section className="lg:col-span-2" ref={cellRef}>
-          <div className="tv-matrix">
+          <div className="tv-matrix" style={{ ["--tv-cols" as any]: KPIS_ATIVOS.length }}>
             <div className="tv-head hidden md:contents">
               <div />
               {KPIS_ATIVOS.map((k) => (
