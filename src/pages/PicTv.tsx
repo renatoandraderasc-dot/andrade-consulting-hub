@@ -196,7 +196,11 @@ export default function PicTv() {
 
   // Mesma ordem de departamentos do PIC (Loja inteira fica por último aqui)
   const departamentos = useMemo(() => {
-    const detectados = [...(deptsConfig ?? []), ...deptsLoja, ...Object.keys(vr ?? {})].filter((k) => k !== LOJA);
+    if (deptsConfig && deptsConfig.length) {
+      const cfg = [...new Set(deptsConfig)].filter((k) => k !== LOJA);
+      return restrito ? filtrarDepts(cfg) : cfg;
+    }
+    const detectados = [...deptsLoja, ...Object.keys(vr ?? {})].filter((k) => k !== LOJA);
     if (restrito) return filtrarDepts(detectados);
     const keys = [...new Set(detectados)];
     const presentes = DEFAULT_DEPARTMENTS.filter((d) => keys.includes(d));

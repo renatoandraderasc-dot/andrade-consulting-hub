@@ -113,7 +113,13 @@ const PIC = () => {
     return ALL_PIC_KPIS.filter((k) => kpisConfig.includes(k));
   }, [kpisConfig]);
   const DEPARTMENTS = useMemo(() => {
-    const detectados = [...(deptsConfig ?? []), ...deptsLoja, ...Object.keys(vr ?? {})];
+    // Parametrização por cliente: quando existir, mostra SOMENTE os escolhidos
+    if (deptsConfig && deptsConfig.length) {
+      const cfg = [...new Set(deptsConfig)];
+      if (restrito) return filtrarDepts(cfg.filter((k) => k !== LOJA));
+      return cfg.includes(LOJA) ? [LOJA, ...cfg.filter((k) => k !== LOJA)] : cfg;
+    }
+    const detectados = [...deptsLoja, ...Object.keys(vr ?? {})];
     // Usuario restrito: so os departamentos liberados (sem o total da loja)
     if (restrito) {
       const base = detectados;
