@@ -146,7 +146,8 @@ const BasesAutoPanel = ({
     if (!storeId) return toast.error("Selecione a loja para carregar o cadastro");
     setLoadingP(true);
     try {
-      // Custo da mercadoria = custo unitário da compra mais recente.
+      // Custo da mercadoria: o custo unitário do cadastro do ERP tem
+      // prioridade; a última compra é só complemento para quem não tem custo.
       const compras = await carregarCustoUltimaCompra(storeId);
       const soDig = (v: unknown) => String(v ?? "").replace(/\D/g, "").replace(/^0+/, "");
       const normCod = (v: unknown) => String(v ?? "").trim().replace(/^0+/, "");
@@ -154,6 +155,11 @@ const BasesAutoPanel = ({
         compras.porCodigo.get(normCod(codigo))?.custo ??
         compras.porEan.get(soDig(ean))?.custo ??
         null;
+      // Custo final do item: cadastro primeiro, compra depois.
+      const custoFinal = (custoCadastro: number | null | undefined, codigo: unknown, ean: unknown) => {
+        const cad = typeof custoCadastro === "number" && custoCadastro > 0 ? custoCadastro : null;
+        return cad ?? custoCompra(codigo, ean) ?? 0;
+      };
 
       if (modo === "ativos12m") {
         const r = await carregarProdutosAtivos12m(storeId);
