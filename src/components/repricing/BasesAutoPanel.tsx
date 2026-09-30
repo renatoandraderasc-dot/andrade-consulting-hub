@@ -202,9 +202,9 @@ const BasesAutoPanel = ({
         emitProdutos(rows);
         setModoCarregado("ativos12m");
         const comEan = rows.filter((x) => String(x.ean).replace(/\D/g, "").length >= 8).length;
-        const comCusto = rows.filter((x) => (x.custo ?? 0) > 0).length;
+        const comCusto = rows.filter((x) => Number(x.custo ?? 0) > 0).length;
         toast.success(
-          `${rows.length} produtos ativos com movimento em 12 meses (${comEan} com código de barras · ${comCusto} com custo da última compra)`,
+          `${rows.length} produtos ativos com movimento em 12 meses (${comEan} com código de barras · ${comCusto} com custo)`,
         );
 
       } else {
