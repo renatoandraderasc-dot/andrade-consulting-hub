@@ -17,8 +17,14 @@ export function useLancamentosData(storeId: string, mes: number, ano: number) {
       .eq("competencia_mes", mes)
       .eq("competencia_ano", ano)
       .eq("status", "ativo")
-      .then(({ data }) => {
-        setLancamentos((data as any[]) || []);
+      .order("id")
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("lancamentos", error);
+          import("sonner").then(({ toast }) => toast.error("Não foi possível carregar os lançamentos. Tente novamente."));
+        } else {
+          setLancamentos((data as any[]) || []);
+        }
         setLoading(false);
       });
   }, [storeId, mes, ano]);

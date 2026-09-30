@@ -53,7 +53,7 @@ export async function consultarRelatorioLoja(opts: {
   cfg?: ConfigLoja | null;
   timeoutMs?: number;
 }): Promise<ResultadoConsulta> {
-  const { supabaseUrl, serviceKey, storeId, relatorio, params, timeoutMs = 120000 } = opts;
+  const { supabaseUrl, serviceKey, storeId, relatorio, params, timeoutMs = 25000 } = opts;
 
   const cfg = opts.cfg !== undefined
     ? opts.cfg
