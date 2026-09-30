@@ -271,10 +271,22 @@ export async function carregarCustoUltimaCompra(storeId: string) {
       fim: iso(hoje),
     });
     for (const l of r.dados || []) {
+      // 1) Quando a ponte publica o custo unitario do ERP, ele e a verdade.
+      const unitario = numOrNull(
+        col(l, "custo_unitario", "custo_medio", "custo", "preco_custo", "custo_com_imposto"),
+      );
+      // 2) Caso contrario, rateia a nota: valor / quantidade, convertendo a
+      // embalagem (caixa/fardo) para a unidade de venda, senao o custo sai
+      // multiplicado pelo numero de unidades da embalagem.
       const qtd = numOrNull(col(l, "qtd_compra", "quantidade_compra")) ?? 0;
       const valor = numOrNull(col(l, "valor_compra", "total_compra")) ?? 0;
-      if (qtd <= 0 || valor <= 0) continue;
-      const custo = Math.round((valor / qtd) * 100) / 100;
+      const fator =
+        numOrNull(col(l, "fator_conversao", "conversao", "qtd_embalagem", "unidades_embalagem", "fator")) ?? 1;
+      const qtdUnidades = qtd * (fator > 0 ? fator : 1);
+      const calculado = qtdUnidades > 0 && valor > 0 ? valor / qtdUnidades : null;
+      const bruto = unitario && unitario > 0 ? unitario : calculado;
+      if (!bruto || bruto <= 0) continue;
+      const custo = Math.round(bruto * 100) / 100;
       const data = String(col(l, "ultima_compra") ?? "");
       const cod = normalizarCodigo(col(l, "codigo", "cod_produto", "id_produto"));
       const ean = soDigitos(String(col(l, ...ALIAS_EAN) ?? ""));
