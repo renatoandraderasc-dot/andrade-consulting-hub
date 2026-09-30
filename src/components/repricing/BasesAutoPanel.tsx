@@ -146,7 +146,8 @@ const BasesAutoPanel = ({
     if (!storeId) return toast.error("Selecione a loja para carregar o cadastro");
     setLoadingP(true);
     try {
-      // Custo da mercadoria = custo unitário da compra mais recente.
+      // Custo da mercadoria: o custo unitário do cadastro do ERP tem
+      // prioridade; a última compra é só complemento para quem não tem custo.
       const compras = await carregarCustoUltimaCompra(storeId);
       const soDig = (v: unknown) => String(v ?? "").replace(/\D/g, "").replace(/^0+/, "");
       const normCod = (v: unknown) => String(v ?? "").trim().replace(/^0+/, "");
@@ -154,6 +155,11 @@ const BasesAutoPanel = ({
         compras.porCodigo.get(normCod(codigo))?.custo ??
         compras.porEan.get(soDig(ean))?.custo ??
         null;
+      // Custo final do item: cadastro primeiro, compra depois.
+      const custoFinal = (custoCadastro: number | null | undefined, codigo: unknown, ean: unknown) => {
+        const cad = typeof custoCadastro === "number" && custoCadastro > 0 ? custoCadastro : null;
+        return cad ?? custoCompra(codigo, ean) ?? 0;
+      };
 
       if (modo === "ativos12m") {
         const r = await carregarProdutosAtivos12m(storeId);
@@ -165,7 +171,7 @@ const BasesAutoPanel = ({
             ean: String(p.ean ?? "").trim(),
             codigo_reduzido: p.codigo ?? "",
             descricao: p.descricao,
-            custo: custoCompra(p.codigo, p.ean) ?? p.custo ?? 0,
+            custo: custoFinal(p.custo, p.codigo, p.ean),
             preco: p.precoOferta || p.preco || 0,
             mercadologico: p.n1 || "Outros",
           }));
@@ -184,7 +190,7 @@ const BasesAutoPanel = ({
           ean: String(p.ean ?? "").trim(),
           codigo_reduzido: p.codigo ?? "",
           descricao: p.descricao,
-          custo: custoCompra(p.codigo, p.ean) ?? p.custo ?? 0,
+          custo: custoFinal(p.custo, p.codigo, p.ean),
           preco: p.preco ?? 0,
           mercadologico: p.secao || "Outros",
           estoque: p.estoque,
@@ -196,9 +202,9 @@ const BasesAutoPanel = ({
         emitProdutos(rows);
         setModoCarregado("ativos12m");
         const comEan = rows.filter((x) => String(x.ean).replace(/\D/g, "").length >= 8).length;
-        const comCusto = rows.filter((x) => custoCompra(x.codigo_reduzido, x.ean) != null).length;
+        const comCusto = rows.filter((x) => Number(x.custo ?? 0) > 0).length;
         toast.success(
-          `${rows.length} produtos ativos com movimento em 12 meses (${comEan} com código de barras · ${comCusto} com custo da última compra)`,
+          `${rows.length} produtos ativos com movimento em 12 meses (${comEan} com código de barras · ${comCusto} com custo)`,
         );
 
       } else {
@@ -207,7 +213,7 @@ const BasesAutoPanel = ({
           ean: String(p.ean ?? "").trim(),
           codigo_reduzido: p.codigo ?? "",
           descricao: p.descricao,
-          custo: custoCompra(p.codigo, p.ean) ?? p.custo ?? 0,
+          custo: custoFinal(p.custo, p.codigo, p.ean),
           preco: p.precoOferta || p.preco || 0,
           mercadologico: p.n1 || "Outros",
         }));
