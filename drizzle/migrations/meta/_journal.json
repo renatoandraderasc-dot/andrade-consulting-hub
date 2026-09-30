@@ -134,6 +134,13 @@
       "when": 1790702981226,
       "tag": "0018_store_daily_metrics_store_date_idx",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1790773298975,
+      "tag": "0019_lancamentos_competencia_idx",
+      "breakpoints": true
     }
   ]
 }

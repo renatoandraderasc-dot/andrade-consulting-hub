@@ -126,7 +126,7 @@ Deno.serve(async (req) => {
     await comLimite([...alvos.values()], 2, async (a) => {
       const r = await consultarComCache({
         supabaseUrl, serviceKey, storeId, relatorio: a.relatorio, params: a.params,
-        cfg, forcar: true, origem: "job", timeoutMs: 180000,
+        cfg, forcar: true, origem: "job", timeoutMs: 60000,
       });
       if (r.ok) ok++;
       else if (/nao encontrado|nao existe|404/i.test(r.erro ?? "")) semRelatorio++;

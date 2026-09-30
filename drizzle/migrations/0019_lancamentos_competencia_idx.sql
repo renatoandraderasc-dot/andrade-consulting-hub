@@ -1,0 +1,2 @@
+CREATE INDEX IF NOT EXISTS lancamentos_store_comp_idx ON public.lancamentos (store_id, competencia_ano, competencia_mes, status);
+CREATE INDEX IF NOT EXISTS lancamentos_status_comp_idx ON public.lancamentos (status, competencia_ano, competencia_mes);

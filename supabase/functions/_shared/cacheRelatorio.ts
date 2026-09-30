@@ -117,7 +117,7 @@ export async function consultarComCache(opts: {
 
   const r = await consultarRelatorioLoja({
     supabaseUrl, serviceKey, storeId, relatorio,
-    params: rec.params, cfg, timeoutMs: opts.timeoutMs ?? 120000,
+    params: rec.params, cfg, timeoutMs: opts.timeoutMs ?? 25000,
   });
   if (!r.ok) return { ...r, origem: "ponte", recortado_d1: rec.recortado };
 
