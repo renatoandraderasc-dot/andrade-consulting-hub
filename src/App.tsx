@@ -34,6 +34,7 @@ import Pricing from "./pages/Pricing";
 import VtexCollector from "./pages/VtexCollector";
 import WebSacSync from "./pages/WebSacSync";
 import PIC from "./pages/PIC";
+import PicTv from "./pages/PicTv";
 import DashboardPadaria from "./pages/DashboardPadaria";
 import AdminPadariaImport from "./pages/AdminPadariaImport";
 import AdminStores from "./pages/AdminStores";
@@ -113,6 +114,7 @@ const App = () => (
             <Route path="/websac-sync" element={g("websac_sync", <WebSacSync />)} />
             <Route path="/pic" element={g("pic", <PIC />)} />
             <Route path="/pic/padaria" element={g("pic_padaria", <DashboardPadaria />)} />
+            <Route path="/pic/tv" element={g("pic", <PicTv />)} />
             <Route path="/admin/padaria-import" element={g("admin_padaria_import", <AdminPadariaImport />)} />
             <Route path="/admin/pic-departamentos" element={g("admin_pic_departamentos", <AdminPicDepartments />)} />
             <Route path="/admin/stores" element={g("admin_stores", <AdminStores />)} />
