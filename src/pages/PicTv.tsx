@@ -4,7 +4,7 @@ import { Maximize, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useVrRealizado, LOJA, canonDept } from "@/hooks/useVrRealizado";
-import { usePicDepartments } from "@/hooks/usePicDepartments";
+import { usePicDepartments, usePicKpis } from "@/hooks/usePicDepartments";
 import { usePicDisplayMode } from "@/hooks/usePicDisplay";
 import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
 import { carregarDepartamentosLoja } from "@/lib/departamentosLoja";
@@ -59,12 +59,14 @@ const deptLabel = (d: string) =>
   d === LOJA ? "Loja inteira" : d.charAt(0) + d.slice(1).toLowerCase();
 
 export default function PicTv() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isGlobalAdmin } = useAuth();
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const { restrito, filtrarDepts } = useDepartamentosPermitidos();
 
-  const lojaFixa = params.get("loja");
+  const lojaLogin = sessionStorage.getItem("selectedStoreId");
+  // Cliente: fica preso à loja escolhida no login. Só o admin global troca de loja.
+  const lojaFixa = params.get("loja") || (!isGlobalAdmin ? lojaLogin : null);
   const [stores, setStores] = useState<{ id: string; name: string }[]>([]);
   const [storeId, setStoreId] = useState<string>(lojaFixa || sessionStorage.getItem("selectedStoreId") || "");
   const [rotacao, setRotacao] = useState<boolean>(() =>
@@ -103,15 +105,26 @@ export default function PicTv() {
     if (!user) return;
     supabase.from("stores").select("id, name").order("name").then(({ data }) => {
       const list = (data || []) as { id: string; name: string }[];
-      setStores(list);
+      const visiveis = lojaFixa ? list.filter((s) => s.id === lojaFixa) : list;
+      setStores(visiveis.length ? visiveis : list);
+      if (lojaFixa && visiveis.length) { setStoreId(lojaFixa); return; }
       if (!list.some((s) => s.id === storeId) && list.length) setStoreId(list[0].id);
     });
-  }, [user]);
+  }, [user, lojaFixa]);
 
   const storeName = stores.find((s) => s.id === storeId)?.name || "";
 
   const { data: vr, loading: loadingVr, refresh } = useVrRealizado(storeId, ref.ini, ref.ontem);
   const deptsConfig = usePicDepartments(storeId);
+  // Índices ativos na Parametrização do PIC (vazio = todos)
+  const kpisConfig = usePicKpis(storeId);
+  const KPIS_ATIVOS = useMemo(() => {
+    const mapa: Record<string, KpiKey> = { faturamento: "fat", arrecadacao: "arr", quantidade: "vol", volume: "mix" };
+    if (!kpisConfig || !kpisConfig.length) return KPIS;
+    const ativos = new Set(kpisConfig.map((k) => mapa[k]).filter(Boolean));
+    const f = KPIS.filter((k) => ativos.has(k.key));
+    return f.length ? f : KPIS;
+  }, [kpisConfig]);
   const [deptsLoja, setDeptsLoja] = useState<string[]>([]);
   useEffect(() => {
     if (storeId) carregarDepartamentosLoja(storeId).then(setDeptsLoja);
@@ -234,7 +247,7 @@ export default function PicTv() {
 
   const metasLista = matriz
     .filter((l) => l.dept !== LOJA)
-    .flatMap((l) => KPIS.map((k) => ({ dept: l.dept, kpi: k.label, cell: l.cells[k.key] })))
+    .flatMap((l) => KPIS_ATIVOS.map((k) => ({ dept: l.dept, kpi: k.label, cell: l.cells[k.key] })))
     .filter((m) => m.cell.hasMeta);
   const noRitmo = metasLista.filter((m) => m.cell.pctAcum >= 100).length;
   const atencao = [...metasLista].sort((a, b) => a.cell.pctAcum - b.cell.pctAcum).slice(0, 3);
@@ -285,10 +298,10 @@ export default function PicTv() {
       <main className="flex-1 grid gap-[1vw] lg:grid-cols-3">
         {/* Matriz */}
         <section className="lg:col-span-2" ref={cellRef}>
-          <div className="tv-matrix">
+          <div className="tv-matrix" style={{ ["--tv-cols" as any]: KPIS_ATIVOS.length }}>
             <div className="tv-head hidden md:contents">
               <div />
-              {KPIS.map((k) => (
+              {KPIS_ATIVOS.map((k) => (
                 <div key={k.key} className="px-2">
                   <div className="tv-num" style={{ fontSize: "clamp(16px,1.5vw,34px)" }}>{k.label}</div>
                   <div className="text-muted-foreground" style={{ fontSize: "clamp(10px,0.8vw,18px)" }}>{k.unit}</div>
@@ -300,7 +313,7 @@ export default function PicTv() {
                 <div className="tv-num flex items-center" style={{ fontSize: "clamp(16px,1.5vw,34px)" }} translate="no">
                   {deptLabel(l.dept)}
                 </div>
-                {KPIS.map((k) => (
+                {KPIS_ATIVOS.map((k) => (
                   <TvCell key={k.key} kpi={k.key} label={k.label} cell={l.cells[k.key]} soPct={soPct} />
                 ))}
               </div>
@@ -318,9 +331,9 @@ export default function PicTv() {
             <div className="tv-num" style={{ fontSize: "clamp(36px,4.5vw,110px)", lineHeight: 1 }}>
               {noRitmo} <span className="text-muted-foreground" style={{ fontSize: "0.5em" }}>de {metasLista.length}</span>
             </div>
-            <div className="mt-2 grid gap-1" style={{ gridTemplateColumns: "repeat(4, minmax(0,1fr))" }}>
+            <div className="mt-2 grid gap-1" style={{ gridTemplateColumns: `repeat(${KPIS_ATIVOS.length}, minmax(0,1fr))` }}>
               {matriz.filter((l) => l.dept !== LOJA).flatMap((l) =>
-                KPIS.map((k) => (
+                KPIS_ATIVOS.map((k) => (
                   <span key={l.dept + k.key} title={`${deptLabel(l.dept)} · ${k.label}`} className="h-[1.2vw] min-h-[10px] rounded-sm"
                     style={{ background: faixa(l.cells[k.key].pctAcum, l.cells[k.key].hasMeta).color, opacity: l.cells[k.key].hasMeta ? 1 : 0.25 }} />
                 )),
