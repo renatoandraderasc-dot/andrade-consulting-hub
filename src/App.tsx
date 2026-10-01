@@ -20,6 +20,7 @@ import MetasSugestao from "./pages/MetasSugestao";
 import MetasRealizado from "./pages/MetasRealizado";
 import MetasPremiacao from "./pages/MetasPremiacao";
 import MetasPremiacaoConfig from "./pages/MetasPremiacaoConfig";
+import MetasCadastradas from "./pages/MetasCadastradas";
 import Controladoria from "./pages/Controladoria";
 import DashboardFinanceiro from "./pages/DashboardFinanceiro";
 import AnaliseAnual from "./pages/AnaliseAnual";
@@ -97,6 +98,7 @@ const App = () => (
             <Route path="/metas/premiacao" element={g("admin_metas", <MetasPremiacao />)} />
             <Route path="/metas/premiacao/config" element={g("admin_metas", <MetasPremiacaoConfig />)} />
             <Route path="/metas/realizado" element={g("admin_metas", <MetasRealizado />)} />
+            <Route path="/metas/cadastradas" element={g("metas_cadastradas", <MetasCadastradas />)} />
             <Route path="/metas-gerador" element={g("metas_gerador", <MetasGerador />)} />
             <Route path="/dashboard-financeiro" element={g("dashboard_financeiro", <DashboardFinanceiro />)} />
             <Route path="/controladoria" element={g("controladoria", <Controladoria />)} />
