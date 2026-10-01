@@ -523,7 +523,11 @@ const Compras = () => {
   // ============ Derived (Aba 2) ============
   // Uma linha por departamento + secao vinda do relatorio compras_vendas_periodo
   const cvItens = useMemo(() => {
-    const ativos = new Set(mercadologicos1.map(chaveDep));
+    // Ativos = setores cadastrados e ativos da loja + mercadológico 1 do cadastro.
+    const ativos = new Set([
+      ...mercadologicos1.map(chaveDep),
+      ...deptos.filter((d) => d.ativo !== false).map((d) => chaveDep(d.departamento)),
+    ]);
     return cvLinhas
       .map((l: any) => ({
       // Mercadológico 1: WebSac/Oracle mandam "nivel1"/"departamento";
@@ -533,6 +537,8 @@ const Compras = () => {
         "SEM DEPARTAMENTO",
       secao:
         String(col(l, "nivel2", "grupo", "categoria") ?? "").trim().toUpperCase() ||
+        // Relatório diário (VR): a "seção" repete o departamento; mostra o dia.
+        (col(l, "data") ? String(col(l, "data")).slice(0, 10).split("-").reverse().join("/") : "") ||
         String(col(l, "secao") ?? "").trim().toUpperCase() ||
         "SEM SEÇÃO",
       qtde_venda: num(col(l, "qtde_venda", "quantidade", "volume")),
@@ -546,7 +552,7 @@ const Compras = () => {
       // Sem lista de ativos (ponte sem o relatório), não descarta nada além de sem departamento.
       .filter((i) => permiteDept(i.departamento) && i.departamento !== "SEM DEPARTAMENTO" &&
         (ativos.size === 0 || ativos.has(chaveDep(i.departamento))));
-  }, [cvLinhas, restrito, mercadologicos1]);
+  }, [cvLinhas, restrito, mercadologicos1, deptos]);
 
 
   // percentuais SEMPRE recalculados sobre os totais somados
