@@ -677,7 +677,8 @@ const Compras = () => {
         })
         .filter((p: ProdLinha) =>
           permiteDept(p.departamento) &&
-          mercadologicos1.some((nome) => chaveDep(nome) === chaveDep(p.departamento)) &&
+          (mercadologicos1.some((nome) => chaveDep(nome) === chaveDep(p.departamento)) ||
+            deptos.some((d) => d.ativo !== false && chaveDep(d.departamento) === chaveDep(p.departamento))) &&
           (codigosAtivos.size === 0 || codigosAtivos.has(p.codigo.replace(/^0+/, ""))),
         );
 
