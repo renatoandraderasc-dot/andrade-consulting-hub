@@ -6,7 +6,7 @@ import {
 import { Sparkles, ChevronLeft, ChevronRight, Lock, LockOpen, RefreshCw, Save, AlertTriangle, Wand2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { carregarLojasPermitidas } from "@/lib/lojasPermitidas";
+import { carregarLojaLogin } from "@/lib/lojasPermitidas";
 import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
 import ClientLayout from "@/components/ClientLayout";
 import { useToast } from "@/hooks/use-toast";
@@ -59,7 +59,7 @@ const MetasSugestao = () => {
   useEffect(() => {
     if (!authLoading && (!user || !isAdmin)) navigate("/login");
     if (user && isAdmin) {
-      carregarLojasPermitidas(user.id, isGlobalAdmin).then((data) => {
+      carregarLojaLogin(user.id, isGlobalAdmin).then((data) => {
         if (!data?.length) return;
         setStores(data);
         const sid = sessionStorage.getItem("selectedStoreId");

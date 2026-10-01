@@ -5,7 +5,7 @@ import { Award, RefreshCw, Settings2, CheckCircle2, XCircle, Gift, Share2 } from
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { carregarLojasPermitidas } from "@/lib/lojasPermitidas";
+import { carregarLojaLogin } from "@/lib/lojasPermitidas";
 import ClientLayout from "@/components/ClientLayout";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -57,7 +57,7 @@ const MetasPremiacao = () => {
   useEffect(() => {
     if (!authLoading && (!user || !isAdmin)) navigate("/login");
     if (user && isAdmin) {
-      carregarLojasPermitidas(user.id, isGlobalAdmin).then((data) => {
+      carregarLojaLogin(user.id, isGlobalAdmin).then((data) => {
         if (!data?.length) return;
         setStores(data);
         const sid = sessionStorage.getItem("selectedStoreId");

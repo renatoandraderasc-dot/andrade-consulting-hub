@@ -7,7 +7,7 @@ import {
 import { Target, Download, RefreshCw, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { carregarLojasPermitidas } from "@/lib/lojasPermitidas";
+import { carregarLojaLogin } from "@/lib/lojasPermitidas";
 import ClientLayout from "@/components/ClientLayout";
 import { Button } from "@/components/ui/button";
 import {
@@ -63,7 +63,7 @@ const MetasRealizado = () => {
   useEffect(() => {
     if (!authLoading && (!user || !isAdmin)) navigate("/login");
     if (user && isAdmin) {
-      carregarLojasPermitidas(user.id, isGlobalAdmin).then((data) => {
+      carregarLojaLogin(user.id, isGlobalAdmin).then((data) => {
         if (!data?.length) return;
         setStores(data);
         const sid = sessionStorage.getItem("selectedStoreId");

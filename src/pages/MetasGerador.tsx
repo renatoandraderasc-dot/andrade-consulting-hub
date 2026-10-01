@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Target, Wand2, Download, Sprout, RotateCcw, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { carregarLojasPermitidas } from "@/lib/lojasPermitidas";
+import { carregarLojaLogin } from "@/lib/lojasPermitidas";
 import ClientLayout from "@/components/ClientLayout";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -123,7 +123,7 @@ const MetasGerador = () => {
   }, [storeId, department, year, month]);
 
   const fetchStores = async () => {
-    const data = await carregarLojasPermitidas(user?.id, isGlobalAdmin);
+    const data = await carregarLojaLogin(user?.id, isGlobalAdmin);
     if (data) {
       setStores(data);
       if (data.length && !storeId) {
