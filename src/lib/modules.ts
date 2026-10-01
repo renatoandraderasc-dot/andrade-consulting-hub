@@ -34,6 +34,7 @@ export const APP_MODULES = [
   { key: "admin_pic_departamentos", label: "Admin: Departamentos do PIC", path: "/admin/pic-departamentos" },
   { key: "admin_metas", label: "Admin: Metas", path: "/admin/metas" },
   { key: "metas_gerador", label: "Gerador de Metas", path: "/metas-gerador" },
+  { key: "metas_cadastradas", label: "Metas Cadastradas", path: "/metas/cadastradas" },
   { key: "admin_questions", label: "Admin: Perguntas", path: "/admin/questions" },
   { key: "admin_users", label: "Admin: Usuários", path: "/admin/users" },
   { key: "admin_conexoes", label: "Admin: Gestão de Conexão", path: "/admin/conexoes" },
