@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { carregarLojaLogin } from "@/lib/lojasPermitidas";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Target, Save, Upload, FileSpreadsheet, Wand2 } from "lucide-react";
@@ -73,7 +74,7 @@ const AdminMetas = () => {
   }, [selectedStore, selectedMonth, selectedYear]);
 
   const fetchStores = async () => {
-    const { data } = await supabase.from("stores").select("id, name").order("name");
+    const data = await carregarLojaLogin(user?.id);
     if (data) {
       setStores(data);
       if (data.length > 0 && !selectedStore) {
@@ -334,15 +335,7 @@ const AdminMetas = () => {
         <div className="flex flex-wrap gap-4 mb-8">
           <div className="flex-1 min-w-[200px]">
             <label className="font-body text-xs text-muted-foreground mb-1 block">Loja</label>
-            <select
-              value={selectedStore}
-              onChange={(e) => handleStoreChange(e.target.value)}
-              className="w-full bg-card border border-border rounded-lg px-3 py-2.5 font-body text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-            >
-              {stores.map((s) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
+            <div className="w-full bg-card border border-border rounded-lg px-3 py-2.5 font-body text-sm font-medium text-foreground">{storeName}</div>
           </div>
           <div className="min-w-[150px]">
             <label className="font-body text-xs text-muted-foreground mb-1 block">Mês</label>

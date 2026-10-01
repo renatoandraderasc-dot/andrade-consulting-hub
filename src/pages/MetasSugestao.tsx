@@ -6,7 +6,7 @@ import {
 import { Sparkles, ChevronLeft, ChevronRight, Lock, LockOpen, RefreshCw, Save, AlertTriangle, Wand2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { carregarLojasPermitidas } from "@/lib/lojasPermitidas";
+import { carregarLojaLogin } from "@/lib/lojasPermitidas";
 import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
 import ClientLayout from "@/components/ClientLayout";
 import { useToast } from "@/hooks/use-toast";
@@ -59,7 +59,7 @@ const MetasSugestao = () => {
   useEffect(() => {
     if (!authLoading && (!user || !isAdmin)) navigate("/login");
     if (user && isAdmin) {
-      carregarLojasPermitidas(user.id, isGlobalAdmin).then((data) => {
+      carregarLojaLogin(user.id, isGlobalAdmin).then((data) => {
         if (!data?.length) return;
         setStores(data);
         const sid = sessionStorage.getItem("selectedStoreId");
@@ -324,17 +324,7 @@ const MetasSugestao = () => {
         <div className={`${card} grid gap-3 md:grid-cols-4`}>
           <label className="text-xs">
             Loja
-            <select
-              className={inputCls}
-              value={storeId}
-              onChange={(e) => {
-                setStoreId(e.target.value);
-                setStoreName(stores.find((s) => s.id === e.target.value)?.name ?? "");
-                setMetas({}); setAjustes({});
-              }}
-            >
-              {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
+            <div className={`${inputCls} flex items-center font-medium`}>{storeName}</div>
           </label>
           <label className="text-xs">
             Mês-alvo

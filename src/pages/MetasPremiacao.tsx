@@ -5,7 +5,7 @@ import { Award, RefreshCw, Settings2, CheckCircle2, XCircle, Gift, Share2 } from
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { carregarLojasPermitidas } from "@/lib/lojasPermitidas";
+import { carregarLojaLogin } from "@/lib/lojasPermitidas";
 import ClientLayout from "@/components/ClientLayout";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -57,7 +57,7 @@ const MetasPremiacao = () => {
   useEffect(() => {
     if (!authLoading && (!user || !isAdmin)) navigate("/login");
     if (user && isAdmin) {
-      carregarLojasPermitidas(user.id, isGlobalAdmin).then((data) => {
+      carregarLojaLogin(user.id, isGlobalAdmin).then((data) => {
         if (!data?.length) return;
         setStores(data);
         const sid = sessionStorage.getItem("selectedStoreId");
@@ -224,14 +224,7 @@ const MetasPremiacao = () => {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Select value={storeId} onValueChange={(v) => {
-              setStoreId(v); setStoreName(stores.find((s) => s.id === v)?.name ?? "");
-            }}>
-              <SelectTrigger className="w-56"><SelectValue placeholder="Loja" /></SelectTrigger>
-              <SelectContent>
-                {stores.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <div className="flex h-10 items-center rounded-md border border-border bg-secondary px-3 text-sm font-medium">{storeName}</div>
             <Select value={String(mes)} onValueChange={(v) => setMes(Number(v))}>
               <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
               <SelectContent>

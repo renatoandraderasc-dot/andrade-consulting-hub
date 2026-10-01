@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Target, Wand2, Download, Sprout, RotateCcw, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { carregarLojasPermitidas } from "@/lib/lojasPermitidas";
+import { carregarLojaLogin } from "@/lib/lojasPermitidas";
 import ClientLayout from "@/components/ClientLayout";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -123,7 +123,7 @@ const MetasGerador = () => {
   }, [storeId, department, year, month]);
 
   const fetchStores = async () => {
-    const data = await carregarLojasPermitidas(user?.id, isGlobalAdmin);
+    const data = await carregarLojaLogin(user?.id, isGlobalAdmin);
     if (data) {
       setStores(data);
       if (data.length && !storeId) {
@@ -481,9 +481,7 @@ const MetasGerador = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <div>
             <label className="font-body text-xs text-muted-foreground mb-1 block">Loja</label>
-            <select value={storeId} onChange={(e) => { if (!confirmDiscardIfDirty()) return; setStoreId(e.target.value); setStoreName(stores.find(s => s.id === e.target.value)?.name || ""); }} className={selectCls}>
-              {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
+            <div className={`${selectCls} flex items-center font-medium`}>{storeName}</div>
           </div>
           <div>
             <label className="font-body text-xs text-muted-foreground mb-1 block">Departamento</label>
