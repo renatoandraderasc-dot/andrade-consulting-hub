@@ -148,11 +148,11 @@ const Compras = () => {
   }, [storeId, year, month]);
 
   useEffect(() => {
-    if (!cvInicio) {
-      const { inicio, fim } = monthRange(year, month);
-      setCvInicio(inicio);
-      setCvFim(fim);
-    }
+    // Período de Compras x Vendas acompanha o mês escolhido no topo.
+    const { inicio, fim } = monthRange(year, month);
+    setCvInicio(inicio);
+    setCvFim(fim);
+    setCvLinhas([]);
   }, [year, month]);
 
   const fetchStores = async () => {
@@ -349,7 +349,8 @@ const Compras = () => {
   const fracaoDoPct = (texto: any, padrao: number) => {
     if (texto === undefined || texto === null || String(texto).trim() === "") return padrao;
     const n = Number(String(texto).replace(",", "."));
-    return Number.isFinite(n) ? n / 100 : padrao;
+    // Taxas limitadas a 0–100 %.
+    return Number.isFinite(n) ? Math.min(Math.max(n, 0), 100) / 100 : padrao;
   };
 
   const pctInput = (d: any, campo: "tx_perdas" | "tx_recuperacao", padrao: number) => {
@@ -542,7 +543,9 @@ const Compras = () => {
       compra: num(col(l, "total_compra", "compra", "compras")),
       }))
       // Usuario restrito a departamentos
-      .filter((i) => permiteDept(i.departamento) && ativos.has(chaveDep(i.departamento)));
+      // Sem lista de ativos (ponte sem o relatório), não descarta nada além de sem departamento.
+      .filter((i) => permiteDept(i.departamento) && i.departamento !== "SEM DEPARTAMENTO" &&
+        (ativos.size === 0 || ativos.has(chaveDep(i.departamento))));
   }, [cvLinhas, restrito, mercadologicos1]);
 
 

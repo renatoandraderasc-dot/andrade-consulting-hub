@@ -218,8 +218,16 @@ export async function carregarProdutosAtivos12m(storeId: string) {
   for (const nome of nomes) {
     const tentativa = await chamarRelatorio(storeId, nome, {});
     if (tentativa.dados.length) { r = tentativa; break; }
-    if (tentativa.offline || tentativa.erro) { r = tentativa; break; }
+    const naoExiste = /nao existe|não existe|not found|404/i.test(String(tentativa.erro || ""));
+    if (tentativa.offline || (tentativa.erro && !naoExiste)) { r = tentativa; break; }
     r = tentativa;
+  }
+  // Ponte sem relatório de ativos: usa o cadastro de produtos marcados como ativos.
+  if (!r.dados.length && !r.offline) {
+    const cad = await chamarRelatorio(storeId, "produtos", {});
+    if (cad.dados.length) {
+      r = { ...cad, dados: cad.dados.filter((l: any) => l.ativo !== false && l.ativo !== "N") };
+    }
   }
 
   const itens: ProdutoAtivo12m[] = (r.dados || []).map((l: any) => ({
