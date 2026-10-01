@@ -324,17 +324,7 @@ const MetasSugestao = () => {
         <div className={`${card} grid gap-3 md:grid-cols-4`}>
           <label className="text-xs">
             Loja
-            <select
-              className={inputCls}
-              value={storeId}
-              onChange={(e) => {
-                setStoreId(e.target.value);
-                setStoreName(stores.find((s) => s.id === e.target.value)?.name ?? "");
-                setMetas({}); setAjustes({});
-              }}
-            >
-              {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
+            <div className={`${inputCls} flex items-center font-medium`}>{storeName}</div>
           </label>
           <label className="text-xs">
             Mês-alvo

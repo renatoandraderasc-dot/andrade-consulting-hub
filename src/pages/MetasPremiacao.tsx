@@ -224,14 +224,7 @@ const MetasPremiacao = () => {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Select value={storeId} onValueChange={(v) => {
-              setStoreId(v); setStoreName(stores.find((s) => s.id === v)?.name ?? "");
-            }}>
-              <SelectTrigger className="w-56"><SelectValue placeholder="Loja" /></SelectTrigger>
-              <SelectContent>
-                {stores.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <div className="flex h-10 items-center rounded-md border border-border bg-secondary px-3 text-sm font-medium">{storeName}</div>
             <Select value={String(mes)} onValueChange={(v) => setMes(Number(v))}>
               <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
               <SelectContent>
