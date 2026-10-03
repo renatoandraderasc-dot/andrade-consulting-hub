@@ -228,14 +228,9 @@ const TabelaItensEncarte = ({ itens, onChange, onRemove, cargaTributariaPct }: P
                       <td className="py-1.5 pr-2 text-right">
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Input
-                              className="h-8 w-24 text-right"
-                              inputMode="decimal"
-                              value={i.preco_encarte ?? ""}
-                              onChange={(e) => {
-                                const v = e.target.value.replace(",", ".");
-                                onChange(i.uid, { preco_encarte: v === "" ? null : Number(v) });
-                              }}
+                            <PrecoEncarteInput
+                              valor={i.preco_encarte}
+                              onCommit={(v) => onChange(i.uid, { preco_encarte: v })}
                             />
                           </TooltipTrigger>
                           <TooltipContent>
