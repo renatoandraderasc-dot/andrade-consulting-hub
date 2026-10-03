@@ -110,7 +110,7 @@ const TabelaItensEncarte = ({ itens, onChange, onRemove, cargaTributariaPct }: P
   }, [itens]);
 
   const Th = ({ campo, children, right }: { campo: Ordem["campo"]; children: React.ReactNode; right?: boolean }) => (
-    <th className={`py-2 pr-2 ${right ? "text-right" : "text-left"}`}>
+    <th className={`px-1 py-2 leading-tight ${right ? "text-right" : "text-left"}`}>
       <button className="inline-flex items-center gap-1 hover:text-foreground" onClick={() => ordenar(campo)}>
         {children}
         <ArrowUpDown className="w-3 h-3 opacity-50" />
@@ -130,8 +130,25 @@ const TabelaItensEncarte = ({ itens, onChange, onRemove, cargaTributariaPct }: P
         />
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+      <div className="w-full overflow-x-auto">
+        <table className="w-full min-w-[1380px] table-fixed text-[11px]">
+          <colgroup>
+            <col className="w-[60px]" />
+            <col className="w-[92px]" />
+            <col className="w-[190px]" />
+            <col className="w-[82px]" />
+            <col className="w-[76px]" />
+            <col className="w-[72px]" />
+            <col className="w-[68px]" />
+            <col className="w-[96px]" />
+            {[1, 2, 3, 4].map((n) => <col key={n} className="w-[48px]" />)}
+            <col className="w-[64px]" />
+            <col className="w-[64px]" />
+            <col className="w-[88px]" />
+            <col className="w-[76px]" />
+            <col className="w-[76px]" />
+            <col className="w-[44px]" />
+          </colgroup>
           <thead>
             <tr className="text-left text-xs uppercase text-muted-foreground border-b border-border">
               <Th campo="codigo">Código</Th>
@@ -141,16 +158,16 @@ const TabelaItensEncarte = ({ itens, onChange, onRemove, cargaTributariaPct }: P
               <Th campo="custo" right>Último custo</Th>
               <Th campo="preco_venda" right>Preço atual</Th>
               <Th campo="margem_pct" right>Margem atual</Th>
-              <th className="py-2 pr-2 text-right">Última promoção</th>
+                <th className="px-1 py-2 text-right leading-tight">Última promoção</th>
               {[1, 2, 3, 4].map((n) => (
-                <th key={n} className="py-2 pr-2 text-right">S-{n}</th>
+                  <th key={n} className="px-1 py-2 text-right">S-{n}</th>
               ))}
               <Th campo="qtd_4sem" right>Total 4 sem</Th>
               <Th campo="media_semanal_qtd" right>Média/sem</Th>
-              <th className="py-2 pr-2 text-right">Preço do encarte</th>
+                <th className="px-1 py-2 text-right leading-tight">Preço do encarte</th>
               <Th campo="margem_encarte" right>Margem no encarte</Th>
-              <th className="py-2 pr-2">Posição</th>
-              <th className="py-2 pr-2 text-right">Ações</th>
+                <th className="px-1 py-2">Posição</th>
+                <th className="px-1 py-2 text-right">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -179,7 +196,7 @@ const TabelaItensEncarte = ({ itens, onChange, onRemove, cargaTributariaPct }: P
                     <>
                       <td className="py-1.5 pr-2 font-mono text-xs">{i.codigo}</td>
                       <td className="py-1.5 pr-2 font-mono text-xs">{i.ean || "—"}</td>
-                      <td className="py-1.5 pr-2 min-w-[220px]">
+                      <td className="px-1 py-1.5">
                         <div className="flex items-center gap-1.5">
                           {i.ja_saiu_recente && (
                             <Tooltip>
@@ -190,7 +207,7 @@ const TabelaItensEncarte = ({ itens, onChange, onRemove, cargaTributariaPct }: P
                             </Tooltip>
                           )}
                           <Input
-                            className="h-8"
+                            className="h-8 px-2 text-xs"
                             value={i.descricao_encarte}
                             onChange={(e) => onChange(i.uid, { descricao_encarte: e.target.value })}
                           />
@@ -227,7 +244,7 @@ const TabelaItensEncarte = ({ itens, onChange, onRemove, cargaTributariaPct }: P
                       </td>
                       <td className="py-1.5 pr-2 text-right">
                         <Tooltip>
-                          <TooltipTrigger asChild>
+                         <TooltipTrigger asChild>
                             <PrecoEncarteInput
                               valor={i.preco_encarte}
                               onCommit={(v) => onChange(i.uid, { preco_encarte: v })}
@@ -244,7 +261,7 @@ const TabelaItensEncarte = ({ itens, onChange, onRemove, cargaTributariaPct }: P
                           value={i.posicao}
                           onValueChange={(v) => onChange(i.uid, { posicao: v as PosicaoManual })}
                         >
-                          <SelectTrigger className="h-8 w-24"><SelectValue /></SelectTrigger>
+                           <SelectTrigger className="h-8 w-full px-2 text-xs"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="capa">Capa</SelectItem>
                             <SelectItem value="verso">Verso</SelectItem>
