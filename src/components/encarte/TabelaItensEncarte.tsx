@@ -23,6 +23,51 @@ interface Props {
 
 type Ordem = { campo: keyof LinhaManual | "margem_encarte"; asc: boolean };
 
+/** Campo de preço que aceita vírgula (19,99): guarda o texto digitado e converte ao sair do campo. */
+const PrecoEncarteInput = ({
+  valor,
+  onCommit,
+}: {
+  valor: number | null;
+  onCommit: (v: number | null) => void;
+}) => {
+  const [texto, setTexto] = useState(valor != null ? String(valor).replace(".", ",") : "");
+  const [focado, setFocado] = useState(false);
+
+  // sincroniza quando o valor externo muda e o campo não está em edição
+  if (!focado) {
+    const esperado = valor != null ? String(valor).replace(".", ",") : "";
+    if (texto !== esperado && texto !== "" && Number(texto.replace(",", ".")) !== valor) {
+      setTexto(esperado);
+    }
+  }
+
+  const commit = () => {
+    setFocado(false);
+    const limpo = texto.trim().replace(/\./g, "").replace(",", ".");
+    if (limpo === "") { onCommit(null); setTexto(""); return; }
+    const n = Number(limpo);
+    if (isNaN(n)) { setTexto(valor != null ? String(valor).replace(".", ",") : ""); return; }
+    onCommit(n);
+    setTexto(String(n).replace(".", ","));
+  };
+
+  return (
+    <Input
+      className="h-8 w-24 text-right"
+      inputMode="decimal"
+      value={texto}
+      onFocus={() => setFocado(true)}
+      onChange={(e) => {
+        const v = e.target.value;
+        if (/^[0-9]*[.,]?[0-9]*$/.test(v)) setTexto(v);
+      }}
+      onBlur={commit}
+      onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+    />
+  );
+};
+
 const TabelaItensEncarte = ({ itens, onChange, onRemove, cargaTributariaPct }: Props) => {
   const [busca, setBusca] = useState("");
   const [ordem, setOrdem] = useState<Ordem>({ campo: "ordem", asc: true });
