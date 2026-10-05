@@ -68,7 +68,9 @@ const valoresGerais = (c: PremiacaoConfig): ValoresPremiacao => ({
 export const valoresDe = (c: PremiacaoConfig, dep: string): ValoresPremiacao => {
   const geral = valoresGerais(c);
   if (!dep || dep.toUpperCase() === LOJA_KEY) return geral;
-  const d = c.valores_departamentos?.[dep.toUpperCase()];
+  const normalizar = (nome: string) => nome.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  const chave = Object.keys(c.valores_departamentos ?? {}).find((nome) => normalizar(nome) === normalizar(dep));
+  const d = chave ? c.valores_departamentos[chave] : undefined;
   return d ? { ...geral, ...d } : geral;
 };
 
@@ -285,15 +287,20 @@ const MetasPremiacaoConfig = () => {
                   const soma = v.peso_faturamento + v.peso_arrecadacao + v.peso_volume + v.peso_mix;
                   return (
                     <tr key={dep} className="border-t border-border">
-                      <td className="py-2 pr-2 font-medium text-xs">{dep === LOJA_KEY ? "LOJA (geral)" : dep}</td>
+                      <td className="py-2 pr-2 font-medium text-xs whitespace-normal break-words">{dep === LOJA_KEY ? "LOJA (geral)" : dep}</td>
                       {CAMPOS_VALORES.map((f) => (
                         <td key={f.k} className="py-1 px-1">
-                          <Input
-                            type="number"
-                            className="h-8"
-                            value={v[f.k]}
-                            onChange={(e) => setCfg(alterarValor(cfg, dep, f.k, Number(e.target.value)))}
-                          />
+                          <div className="flex items-center gap-1">
+                            {f.k === "valor_premiacao" && <span className="shrink-0 text-xs text-muted-foreground">R$</span>}
+                            <Input
+                              type="number"
+                              step={f.k === "valor_premiacao" ? "0.01" : "1"}
+                              aria-label={`${f.label} — ${dep}`}
+                              className="h-8 min-w-0"
+                              value={v[f.k]}
+                              onChange={(e) => setCfg(alterarValor(cfg, dep, f.k, Number(e.target.value)))}
+                            />
+                          </div>
                         </td>
                       ))}
                       <td className={`px-1 text-xs ${soma === 100 ? "text-muted-foreground" : "text-amber-500"}`}>{fmtPct(soma)}</td>
