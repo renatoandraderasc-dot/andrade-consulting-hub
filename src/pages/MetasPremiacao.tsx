@@ -417,7 +417,9 @@ const MetasPremiacao = () => {
                 <p className="text-sm font-extrabold">
                   <span className="text-[#b3141c]">REGRA DO PROGRAMA:</span> MENOS DE {val.atingimento_minimo || 99}% É NÃO ATINGIDO!
                 </p>
-                <p className="text-[11px] font-semibold">TODAS AS METAS SÃO AVALIADAS INDIVIDUALMENTE.</p>
+                <p className="text-[11px] font-semibold">
+                  GATILHO: MIX E VOLUME SÓ VALEM SE FATURAMENTO E/OU MARGEM (ARRECADAÇÃO) FOREM ATINGIDOS.
+                </p>
               </div>
             </div>
 
