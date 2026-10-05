@@ -1,7 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import html2canvas from "html2canvas";
-import { Award, RefreshCw, Settings2, CheckCircle2, XCircle, Gift, Share2 } from "lucide-react";
+import { Award, RefreshCw, Settings2, CheckCircle2, XCircle, Gift, Share2, Copy, Download, ShoppingCart, CircleDollarSign, Package, LayoutGrid, ShieldAlert, Trophy } from "lucide-react";
+import logoAndrade from "@/assets/andrade-logo.png";
+
+const ICONES = {
+  faturamento: { Icon: ShoppingCart, bg: "bg-[#1f5fbf]", txt: "text-[#1f5fbf]" },
+  arrecadacao: { Icon: CircleDollarSign, bg: "bg-[#0f6b2f]", txt: "text-[#0f6b2f]" },
+  volume: { Icon: Package, bg: "bg-[#f26a1b]", txt: "text-[#e05a10]" },
+  mix: { Icon: LayoutGrid, bg: "bg-[#5b3aa8]", txt: "text-[#5b3aa8]" },
+} as const;
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -180,33 +188,68 @@ const MetasPremiacao = () => {
   const cartazRef = useRef<HTMLDivElement>(null);
   const [compartilhando, setCompartilhando] = useState(false);
 
-  const compartilhar = async () => {
+  const nomeArquivo = () =>
+    `Premiacao-${titulo}-${MESES[mes]}-${ano} - Andrade Consultoria Ltda.png`.replace(/[\\/:*?"<>|]/g, "-");
+
+  // Converte imagens externas em data URL antes da captura (evita canvas "tainted" por CORS)
+  const gerarBlob = async (): Promise<Blob> => {
+    const el = cartazRef.current!;
+    const imgs = Array.from(el.querySelectorAll("img"));
+    const originais = new Map<HTMLImageElement, string>();
+    await Promise.all(imgs.map(async (img) => {
+      if (!img.src || img.src.startsWith("data:") || img.src.startsWith(window.location.origin)) return;
+      try {
+        const r = await fetch(img.src, { mode: "cors" });
+        const b = await r.blob();
+        const data: string = await new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(fr.result as string); fr.readAsDataURL(b); });
+        originais.set(img, img.src);
+        img.src = data;
+        await img.decode().catch(() => {});
+      } catch { /* mantém original */ }
+    }));
+    try {
+      const canvas = await html2canvas(el, { backgroundColor: "#ffffff", scale: 2, useCORS: true, allowTaint: false });
+      return await new Promise((res, rej) => canvas.toBlob((b) => (b ? res(b) : rej(new Error("Falha ao gerar imagem"))), "image/png"));
+    } finally {
+      originais.forEach((src, img) => { img.src = src; });
+    }
+  };
+
+  const baixar = (blob: Blob) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = nomeArquivo(); document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  };
+
+  const executar = async (acao: "share" | "copy" | "download") => {
     if (!cartazRef.current) return;
     setCompartilhando(true);
     try {
-      const canvas = await html2canvas(cartazRef.current, {
-        backgroundColor: "#ffffff", scale: 2, useCORS: true,
-      });
-      const blob: Blob = await new Promise((res) =>
-        canvas.toBlob((b) => res(b as Blob), "image/png"),
-      );
-      const nome = `Premiacao-${titulo}-${MESES[mes]}-${ano} - Andrade Consultoria Ltda.png`
-        .replace(/[\\/:*?"<>|]/g, "-");
-      const file = new File([blob], nome, { type: "image/png" });
-      const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
-      if (nav.canShare?.({ files: [file] })) {
-        await nav.share({ files: [file], title: nome });
+      const blob = await gerarBlob();
+      if (acao === "download") {
+        baixar(blob);
+        toast({ title: "Imagem baixada" });
+      } else if (acao === "copy") {
+        if (!("ClipboardItem" in window) || !navigator.clipboard?.write) throw new Error("Seu navegador não permite copiar imagem. Use Baixar.");
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+        toast({ title: "Imagem copiada", description: "Cole no WhatsApp com Ctrl+V." });
       } else {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url; a.download = nome; a.click();
-        URL.revokeObjectURL(url);
-        toast({ title: "Imagem gerada", description: "O print do demonstrativo foi baixado." });
+        const file = new File([blob], nomeArquivo(), { type: "image/png" });
+        const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
+        try {
+          if (nav.canShare?.({ files: [file] })) {
+            await nav.share({ files: [file], title: nomeArquivo() });
+            return;
+          }
+        } catch (e: any) {
+          if (e?.name === "AbortError") return;
+        }
+        baixar(blob);
+        toast({ title: "Imagem baixada", description: "Compartilhamento direto indisponível neste navegador; envie o arquivo baixado." });
       }
     } catch (e: any) {
-      if (e?.name !== "AbortError") {
-        toast({ title: "Erro ao compartilhar", description: e?.message, variant: "destructive" });
-      }
+      toast({ title: "Erro ao gerar imagem", description: e?.message, variant: "destructive" });
     } finally {
       setCompartilhando(false);
     }
@@ -267,128 +310,161 @@ const MetasPremiacao = () => {
             <Button variant="outline" size="sm" onClick={() => navigate("/metas/premiacao/config")}>
               <Settings2 className="h-4 w-4 mr-1" /> Parametrização
             </Button>
-            <Button size="sm" onClick={compartilhar} disabled={compartilhando}>
+            <Button variant="outline" size="sm" onClick={() => executar("copy")} disabled={compartilhando}>
+              <Copy className="h-4 w-4 mr-1" /> Copiar
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => executar("download")} disabled={compartilhando}>
+              <Download className="h-4 w-4 mr-1" /> Baixar
+            </Button>
+            <Button size="sm" onClick={() => executar("share")} disabled={compartilhando}>
               <Share2 className="h-4 w-4 mr-1" /> {compartilhando ? "Gerando..." : "Compartilhar"}
             </Button>
           </div>
         </div>
 
-        {/* Demonstrativo — layout de cartaz */}
-        <div ref={cartazRef} className="mx-auto w-full max-w-3xl overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
-          <div className="relative overflow-hidden">
-            {fotoTopo ? (
-              <img src={fotoTopo} alt="Cabeçalho" className="h-48 w-full object-cover" />
-            ) : (
-              <div className="h-48 w-full bg-gradient-to-br from-primary/30 via-primary/10 to-transparent" />
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-foreground via-foreground/70 to-foreground/20" />
-            <div className="absolute inset-0 flex flex-col justify-between p-5">
-              <div className="flex items-start justify-end gap-4">
-                <div className="rounded-xl bg-background/90 px-3 py-2 text-right shadow">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Competência</p>
-                  <p className="text-sm font-bold">{MESES[mes]}/{ano}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg">
-                  <Award className="h-6 w-6" />
-                </span>
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-primary">
-                    Demonstrativo de premiação
-                  </p>
-                  <p className="text-2xl font-extrabold uppercase leading-tight tracking-wide text-background sm:text-3xl">
-                    {titulo}
-                  </p>
-                </div>
+        {/* Demonstrativo — cartaz */}
+        <div ref={cartazRef} className="mx-auto w-full max-w-3xl overflow-hidden rounded-2xl border border-border bg-[#f4f4f4] text-[#111] shadow-xl">
+          {/* Cabeçalho */}
+          <div className="relative grid h-52 grid-cols-[38%_62%] bg-[#111]">
+            <div className="relative z-10 flex flex-col items-center justify-center bg-white px-4 [clip-path:polygon(0_0,100%_0,82%_100%,0_100%)]">
+              <img src={logoAndrade} alt="Andrade" className="h-20 w-auto object-contain" />
+              <p className="mt-1 text-2xl font-black tracking-tight">ANDRADE</p>
+              <p className="text-[10px] font-bold tracking-wide">ASSESSORIA COMERCIAL</p>
+            </div>
+            <div className="relative -ml-12 overflow-hidden">
+              {fotoTopo ? (
+                <img src={fotoTopo} alt="Setor" crossOrigin="anonymous" className="h-full w-full object-cover" />
+              ) : (
+                <div className="h-full w-full bg-gradient-to-br from-[#2f6b2f] to-[#1b3d1b]" />
+              )}
+              <div className="absolute right-6 top-4 rounded-md border-2 border-[#d9c27a] bg-[#1f5a2b] px-4 py-1 text-lg font-extrabold uppercase text-white shadow-lg">
+                {titulo}
               </div>
             </div>
           </div>
 
+          {/* Tarja do setor */}
+          <div className="bg-[#111] px-5 pb-4">
+            <div className="flex items-center gap-4 rounded-2xl border-2 border-[#f26a1b] bg-[#1a1a1a] px-5 py-3">
+              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#f26a1b]">
+                <ShoppingCart className="h-7 w-7 text-white" />
+              </span>
+              <span className="h-10 w-px bg-white/40" />
+              <p className="flex-1 truncate text-center text-4xl font-black uppercase tracking-wide text-white sm:text-5xl">{titulo}</p>
+            </div>
+          </div>
 
-          <div className="grid gap-4 p-5 sm:grid-cols-2">
-            {kpis.map((k) => {
-              const foto = cfg[`foto_${k.key}` as FotoKey];
-              const money = k.key === "faturamento" || k.key === "arrecadacao";
-              const f = (n: number) => (money ? fmtBRL(n) : Math.round(n).toLocaleString("pt-BR"));
-              return (
-                <div
-                  key={k.key}
-                  className={`overflow-hidden rounded-2xl border-2 bg-card text-center shadow-sm transition ${
-                    k.pago ? "border-emerald-600/60" : "border-border"
-                  }`}
-                >
-                  <div className="relative h-24 w-full">
-                    {foto ? (
-                      <img src={foto} alt={k.label} className="h-full w-full object-cover" />
-                    ) : (
-                      <div className="h-full w-full bg-gradient-to-br from-muted to-muted/40" />
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-foreground/85 to-foreground/20" />
-                    <div className="absolute inset-x-0 bottom-2">
-                      <p className="text-base font-extrabold uppercase text-background">{k.label}</p>
-                      {k.sub && <p className="text-[10px] font-bold uppercase text-background/70">{k.sub}</p>}
+          <div className="space-y-4 p-5">
+            {/* KPIs 2x2 */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              {kpis.map((k) => {
+                const ic = ICONES[k.key];
+                const cor = k.pago ? "text-[#0f6b2f]" : "text-[#b3141c]";
+                const barra = k.pago ? "bg-[#0f6b2f]" : "bg-[#d61e26]";
+                const money = k.key === "faturamento" || k.key === "arrecadacao";
+                const f = (n: number) => (money ? fmtBRL(n) : Math.round(n).toLocaleString("pt-BR"));
+                return (
+                  <div key={k.key} className="rounded-2xl bg-white p-4 shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${ic.bg}`}>
+                        <ic.Icon className="h-6 w-6 text-white" />
+                      </span>
+                      <div className="flex-1 text-center">
+                        <p className="text-lg font-extrabold uppercase">{k.label}</p>
+                        {k.sub && <p className="text-xs font-bold uppercase">{k.sub}</p>}
+                      </div>
                     </div>
-                  </div>
-                  <div className="p-4">
-                    <p className={`text-4xl font-extrabold ${k.pago ? "text-emerald-600" : "text-red-600"}`}>
-                      {k.meta > 0 ? fmtPct(k.atingimento, 2) : "—"}
+                    <div className="my-3 h-px bg-[#d61e26]" />
+                    <p className={`text-center text-5xl font-black ${cor}`}>
+                      {k.meta > 0 ? k.atingimento.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—"}
+                      <span className="text-2xl">%</span>
                     </p>
-                    {mostrarValores && (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {k.meta > 0 ? `${f(k.real)} de ${f(k.meta)}` : "Meta não cadastrada"}
-                      </p>
-                    )}
-                    <p className={`mt-2 flex items-center justify-center gap-2 text-sm font-bold uppercase ${k.pago ? "text-emerald-600" : "text-red-600"}`}>
-                      {k.pago ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                    <p className={`mt-1 flex items-center justify-center gap-2 text-base font-extrabold uppercase ${cor}`}>
+                      {k.pago ? <CheckCircle2 className="h-5 w-5" /> : <XCircle className="h-5 w-5" />}
                       {k.pago ? "Atingido" : k.bloqueado ? "Sem gatilho" : "Não atingido"}
                     </p>
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      Peso {fmtPct(k.peso)}
-                      {mostrarValores
-                        ? ` · ${fmtBRL(k.pago ? (val.valor_premiacao * (k.peso || 0)) / 100 : 0)}`
-                        : ""}
-                    </p>
+                    {mostrarValores && k.meta > 0 && (
+                      <p className="mt-1 text-center text-[11px] text-[#555]">{f(k.real)} de {f(k.meta)}</p>
+                    )}
+                    <div className="mt-3 flex items-center gap-2 rounded-lg border border-[#ddd] px-3 py-1.5 text-[11px] font-bold">
+                      <span>ACUMULADO</span>
+                      <div className="h-1.5 flex-1 rounded-full bg-[#ddd]">
+                        <div className={`h-full rounded-full ${barra}`} style={{ width: `${Math.min(100, k.atingimento)}%` }} />
+                      </div>
+                      <span>{fmtPct(k.atingimento, 2)}</span>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="px-5">
-            <div className={`rounded-xl border-2 p-3 text-center ${todas ? "border-emerald-600 text-emerald-600" : "border-border text-muted-foreground"}`}>
-              <p className="text-base font-extrabold uppercase">
-                {todas ? "Todas as metas atingidas!" : `${fmtPct(pctPago)} da premiação liberada`}
-              </p>
-              <p className="text-xs font-semibold uppercase">
-                {todas ? "Parabéns à equipe pelo excelente resultado!" : "Volume e Mix só são pagos com Faturamento e/ou Arrecadação atingidos"}
-              </p>
+                );
+              })}
             </div>
-          </div>
 
+            {/* Regra */}
+            <div className="flex items-center gap-3 rounded-xl border-2 border-[#d61e26] bg-white px-4 py-2">
+              <ShieldAlert className="h-8 w-8 shrink-0 text-[#d61e26]" />
+              <div>
+                <p className="text-sm font-extrabold">
+                  <span className="text-[#b3141c]">REGRA DO PROGRAMA:</span> MENOS DE {val.atingimento_minimo || 99}% É NÃO ATINGIDO!
+                </p>
+                <p className="text-[11px] font-semibold">TODAS AS METAS SÃO AVALIADAS INDIVIDUALMENTE.</p>
+              </div>
+            </div>
 
+            {/* Tabelas */}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="overflow-hidden rounded-xl bg-white shadow-sm">
+                <p className="bg-[#0e1a33] py-1.5 text-center text-sm font-bold text-white">PESO DOS KPIs (PREMIAÇÃO)</p>
+                {[...kpis].sort((a, b) => (b.peso || 0) - (a.peso || 0)).map((k) => {
+                  const ic = ICONES[k.key];
+                  return (
+                    <div key={k.key} className="flex items-center border-b border-[#eee] text-sm">
+                      <span className={`m-1 flex h-7 w-7 items-center justify-center rounded ${ic.bg}`}><ic.Icon className="h-4 w-4 text-white" /></span>
+                      <span className={`flex-1 px-2 font-semibold ${ic.txt}`}>{k.label}{k.sub ? " (ARRECADAÇÃO)" : ""}</span>
+                      <span className={`w-16 border-l border-[#eee] text-center text-base font-extrabold ${ic.txt}`}>{fmtPct(k.peso || 0)}</span>
+                    </div>
+                  );
+                })}
+                <div className="flex bg-[#0e1a33] py-1.5 text-sm font-bold text-white">
+                  <span className="flex-1 text-center">TOTAL</span>
+                  <span className="w-16 text-center">{fmtPct(kpis.reduce((s, k) => s + (k.peso || 0), 0))}</span>
+                </div>
+              </div>
+              <div className="overflow-hidden rounded-xl bg-white shadow-sm">
+                <p className="bg-[#0e1a33] py-1.5 text-center text-sm font-bold text-white">CÁLCULO DA PREMIAÇÃO</p>
+                {[...kpis].sort((a, b) => (b.peso || 0) - (a.peso || 0)).map((k) => (
+                  <div key={k.key} className={`flex border-b border-[#eee] py-1.5 text-sm font-semibold ${k.pago ? "text-[#0f6b2f]" : "text-[#b3141c]"}`}>
+                    <span className="flex-1 px-3">{k.label} ({fmtPct(k.atingimento, 2)})</span>
+                    <span className="w-16 border-l border-[#eee] text-center font-extrabold">{fmtPct(k.pago ? k.peso || 0 : 0)}</span>
+                  </div>
+                ))}
+                <div className="flex bg-[#0f5a2a] py-2 font-bold text-white">
+                  <span className="flex-1 px-3 text-sm">PERCENTUAL ATINGIDO</span>
+                  <span className="w-16 text-center text-xl font-black">{fmtPct(pctPago)}</span>
+                </div>
+              </div>
+            </div>
 
+            {/* Premiação */}
+            <div className="grid grid-cols-[80px_1fr_1fr] items-center rounded-2xl border-2 border-[#f26a1b] bg-[#111] px-4 py-3 text-center text-white">
+              <Gift className="h-12 w-12 justify-self-center" />
+              <div className="border-x border-white/30 px-2">
+                <p className="text-xs font-bold uppercase">Percentual atingido</p>
+                <p className="text-4xl font-black text-[#f26a1b]">{fmtPct(pctPago)}</p>
+                <p className="text-[10px] font-bold uppercase">do valor da premiação</p>
+              </div>
+              <div className="px-2">
+                <p className="text-xs font-bold uppercase">Valor da premiação</p>
+                <p className="text-3xl font-black text-[#f26a1b] sm:text-4xl">{mostrarValores ? fmtBRL(valorPago) : fmtPct(pctPago)}</p>
+                {mostrarValores && <p className="text-[10px] font-bold uppercase">de {fmtBRL(val.valor_premiacao)}</p>}
+              </div>
+            </div>
 
-          <div className="relative m-5 overflow-hidden rounded-2xl">
-            {cfg.foto_rodape ? (
-              <img src={cfg.foto_rodape} alt="Rodapé" className="h-40 w-full object-cover" />
-            ) : (
-              <div className="h-40 w-full bg-gradient-to-br from-primary/30 via-primary/10 to-transparent" />
-            )}
-            <div className="absolute inset-0 bg-foreground/80" />
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-5 text-center">
-              <Gift className="h-8 w-8 text-primary" />
-              <p className="text-xs font-bold uppercase tracking-[0.25em] text-background/80">Valor premiação</p>
-              <p className="text-4xl font-extrabold text-primary">{fmtBRL(valorPago)}</p>
-              {valorPago < val.valor_premiacao && (
-                <p className="text-xs text-background/70">de {fmtBRL(val.valor_premiacao)}</p>
-              )}
-              {!mostrarValores && (
-                <p className="text-sm font-semibold text-background/80">{fmtPct(pctPago)} liberado</p>
-              )}
-              <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-background/60">
-                Andrade Assessoria Comercial
-              </p>
+            {/* Rodapé */}
+            <div className="flex items-center justify-center gap-3 rounded-xl bg-[#0e1a33] px-4 py-2 text-white">
+              <Trophy className="h-7 w-7 shrink-0" />
+              <div className="text-center">
+                <p className="text-sm font-extrabold uppercase">{todas ? "Todas as metas atingidas! Parabéns à equipe!" : "Parabéns à equipe pelo esforço!"}</p>
+                <p className="text-[10px] font-semibold uppercase">Vamos continuar evoluindo e superando nossas metas!</p>
+              </div>
             </div>
           </div>
         </div>
