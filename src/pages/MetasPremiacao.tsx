@@ -338,16 +338,16 @@ const MetasPremiacao = () => {
         <div ref={cartazRef} className="mx-auto w-full max-w-3xl overflow-hidden rounded-2xl border border-border bg-[#f4f4f4] text-[#111] shadow-xl">
           {/* Cabeçalho */}
           <div className="relative grid h-52 grid-cols-[38%_62%] bg-[#111]">
-            <div className="relative z-10 flex flex-col items-center justify-center bg-white px-4 [clip-path:polygon(0_0,100%_0,82%_100%,0_100%)]">
+            <div className="relative z-10 flex flex-col items-center justify-center bg-white px-4">
               <img src={logoAndrade} alt="Andrade" className="h-20 w-auto object-contain" />
-              <p className="mt-1 text-2xl font-black tracking-tight">ANDRADE</p>
-              <p className="text-[10px] font-bold tracking-wide">ASSESSORIA COMERCIAL</p>
+              <p className="mt-1 text-2xl font-black leading-tight tracking-tight">ANDRADE</p>
+              <p className="text-[10px] font-bold leading-tight tracking-wide">ASSESSORIA COMERCIAL</p>
             </div>
-            <div className="relative -ml-12 overflow-hidden">
+            <div className="relative overflow-hidden">
               {fotoTopo ? (
                 <img src={fotoTopo} alt="Setor" crossOrigin="anonymous" className="h-full w-full object-cover" />
               ) : (
-                <div className="h-full w-full bg-gradient-to-br from-[#2f6b2f] to-[#1b3d1b]" />
+                <div className="h-full w-full" style={{ background: "linear-gradient(135deg,#2f6b2f,#1b3d1b)" }} />
               )}
               <div className="absolute left-12 right-4 top-4 rounded-md border-2 border-[#d9c27a] bg-[#1f5a2b] px-3 py-1 text-center text-base font-extrabold uppercase text-white shadow-lg whitespace-normal [overflow-wrap:anywhere]">
                 {titulo}
