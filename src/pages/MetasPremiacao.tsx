@@ -1,7 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import html2canvas from "html2canvas";
-import { Award, RefreshCw, Settings2, CheckCircle2, XCircle, Gift, Share2 } from "lucide-react";
+import { Award, RefreshCw, Settings2, CheckCircle2, XCircle, Gift, Share2, Copy, Download, ShoppingCart, CircleDollarSign, Package, LayoutGrid, ShieldAlert, Trophy } from "lucide-react";
+import logoAndrade from "@/assets/andrade-logo.png";
+
+const ICONES = {
+  faturamento: { Icon: ShoppingCart, bg: "bg-[#1f5fbf]", txt: "text-[#1f5fbf]" },
+  arrecadacao: { Icon: CircleDollarSign, bg: "bg-[#0f6b2f]", txt: "text-[#0f6b2f]" },
+  volume: { Icon: Package, bg: "bg-[#f26a1b]", txt: "text-[#e05a10]" },
+  mix: { Icon: LayoutGrid, bg: "bg-[#5b3aa8]", txt: "text-[#5b3aa8]" },
+} as const;
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
