@@ -460,12 +460,12 @@ const MetasPremiacao = () => {
               <Gift className="h-12 w-12 justify-self-center" />
               <div className="border-x border-white/30 px-2">
                 <p className="text-xs font-bold uppercase">Percentual atingido</p>
-                <p className="text-4xl font-black text-[#f26a1b]">{fmtPct(pctPago)}</p>
+                <p className="py-1 text-4xl font-black leading-[1.1] text-[#f26a1b]">{fmtPct(pctPago)}</p>
                 <p className="text-[10px] font-bold uppercase">do valor da premiação</p>
               </div>
               <div className="px-2">
                 <p className="text-xs font-bold uppercase">Valor da premiação</p>
-                <p className="break-words text-2xl font-black text-[#f26a1b] sm:text-3xl">{fmtBRL(valorPago)}</p>
+                <p className="break-words py-1 text-3xl font-black leading-[1.1] text-[#f26a1b]">{fmtBRL(valorPago)}</p>
                 <p className="text-[10px] font-bold uppercase">de {fmtBRL(val.valor_premiacao)}</p>
               </div>
             </div>
