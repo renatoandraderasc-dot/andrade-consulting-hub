@@ -32,7 +32,56 @@ export interface PremiacaoConfig {
   foto_mix: string | null;
   mostrar_valores: boolean;
   fotos_departamentos: Record<string, string>;
+  valores_departamentos: Record<string, ValoresPremiacao>;
 }
+
+export interface ValoresPremiacao {
+  valor_premiacao: number;
+  peso_faturamento: number;
+  peso_arrecadacao: number;
+  peso_volume: number;
+  peso_mix: number;
+  atingimento_minimo: number;
+}
+
+export const LOJA_KEY = "LOJA";
+
+export const CAMPOS_VALORES: { k: keyof ValoresPremiacao; label: string }[] = [
+  { k: "valor_premiacao", label: "Valor da premiação (R$)" },
+  { k: "peso_faturamento", label: "Faturamento (%)" },
+  { k: "peso_arrecadacao", label: "Arrecadação (%)" },
+  { k: "peso_volume", label: "Volume (%)" },
+  { k: "peso_mix", label: "Mix (%)" },
+  { k: "atingimento_minimo", label: "Ating. mínimo (%)" },
+];
+
+const valoresGerais = (c: PremiacaoConfig): ValoresPremiacao => ({
+  valor_premiacao: c.valor_premiacao,
+  peso_faturamento: c.peso_faturamento,
+  peso_arrecadacao: c.peso_arrecadacao,
+  peso_volume: c.peso_volume,
+  peso_mix: c.peso_mix,
+  atingimento_minimo: c.atingimento_minimo,
+});
+
+/** Valores e ponderações do departamento (cai nos valores gerais da loja se não houver) */
+export const valoresDe = (c: PremiacaoConfig, dep: string): ValoresPremiacao => {
+  const geral = valoresGerais(c);
+  if (!dep || dep.toUpperCase() === LOJA_KEY) return geral;
+  const d = c.valores_departamentos?.[dep.toUpperCase()];
+  return d ? { ...geral, ...d } : geral;
+};
+
+export const alterarValor = (
+  c: PremiacaoConfig, dep: string, k: keyof ValoresPremiacao, v: number,
+): PremiacaoConfig => {
+  if (dep === LOJA_KEY) return { ...c, [k]: v };
+  const chave = dep.toUpperCase();
+  return {
+    ...c,
+    valores_departamentos: { ...c.valores_departamentos, [chave]: { ...valoresDe(c, chave), [k]: v } },
+  };
+};
 
 export const PREMIACAO_PADRAO: PremiacaoConfig = {
   valor_premiacao: 0,
@@ -49,6 +98,7 @@ export const PREMIACAO_PADRAO: PremiacaoConfig = {
   foto_mix: null,
   mostrar_valores: true,
   fotos_departamentos: {},
+  valores_departamentos: {},
 };
 
 export type FotoKey =
@@ -74,6 +124,7 @@ export const carregarPremiacaoConfig = async (storeId: string): Promise<Premiaca
     foto_mix: (data as any).foto_mix ?? null,
     mostrar_valores: (data as any).mostrar_valores ?? true,
     fotos_departamentos: ((data as any).fotos_departamentos ?? {}) as Record<string, string>,
+    valores_departamentos: ((data as any).valores_departamentos ?? {}) as Record<string, ValoresPremiacao>,
   };
 };
 
@@ -181,7 +232,6 @@ const MetasPremiacaoConfig = () => {
     await gravar(atualizado, true);
   };
 
-  const pesoTotal = cfg.peso_faturamento + cfg.peso_arrecadacao + cfg.peso_volume + cfg.peso_mix;
 
   return (
     <ClientLayout>
@@ -219,25 +269,39 @@ const MetasPremiacaoConfig = () => {
         </div>
 
         <div className="rounded-xl border border-border bg-card p-4 space-y-5">
-          <h2 className="text-sm font-semibold">Valores e ponderações — {storeName}</h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
-            {[
-              { k: "valor_premiacao" as const, label: "Valor da premiação (R$)" },
-              { k: "peso_faturamento" as const, label: "Faturamento (%)" },
-              { k: "peso_arrecadacao" as const, label: "Arrecadação (%)" },
-              { k: "peso_volume" as const, label: "Volume (%)" },
-              { k: "peso_mix" as const, label: "Mix (%)" },
-              { k: "atingimento_minimo" as const, label: "Atingimento mínimo (%)" },
-            ].map((f) => (
-              <div key={f.k} className="space-y-1">
-                <Label className="text-xs">{f.label}</Label>
-                <Input
-                  type="number"
-                  value={cfg[f.k]}
-                  onChange={(e) => setCfg({ ...cfg, [f.k]: Number(e.target.value) })}
-                />
-              </div>
-            ))}
+          <h2 className="text-sm font-semibold">Valores e ponderações por departamento — {storeName}</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[900px] text-sm">
+              <thead>
+                <tr className="text-xs text-muted-foreground">
+                  <th className="text-left py-2 pr-2">Departamento</th>
+                  {CAMPOS_VALORES.map((f) => <th key={f.k} className="text-left py-2 px-1">{f.label}</th>)}
+                  <th className="text-left py-2 px-1">Soma</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[LOJA_KEY, ...departamentos].map((dep) => {
+                  const v = valoresDe(cfg, dep);
+                  const soma = v.peso_faturamento + v.peso_arrecadacao + v.peso_volume + v.peso_mix;
+                  return (
+                    <tr key={dep} className="border-t border-border">
+                      <td className="py-2 pr-2 font-medium text-xs">{dep === LOJA_KEY ? "LOJA (geral)" : dep}</td>
+                      {CAMPOS_VALORES.map((f) => (
+                        <td key={f.k} className="py-1 px-1">
+                          <Input
+                            type="number"
+                            className="h-8"
+                            value={v[f.k]}
+                            onChange={(e) => setCfg(alterarValor(cfg, dep, f.k, Number(e.target.value)))}
+                          />
+                        </td>
+                      ))}
+                      <td className={`px-1 text-xs ${soma === 100 ? "text-muted-foreground" : "text-amber-500"}`}>{fmtPct(soma)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
 
           <div className="flex items-center gap-2">
@@ -255,9 +319,6 @@ const MetasPremiacaoConfig = () => {
             <Button size="sm" onClick={async () => { setSalvando(true); await gravar(cfg); setSalvando(false); }} disabled={salvando}>
               <Save className="h-4 w-4 mr-1" /> Salvar
             </Button>
-            <span className={`text-xs ${pesoTotal === 100 ? "text-muted-foreground" : "text-amber-500"}`}>
-              Soma das ponderações: {fmtPct(pesoTotal)}
-            </span>
           </div>
         </div>
 
