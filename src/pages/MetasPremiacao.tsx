@@ -387,11 +387,11 @@ const MetasPremiacao = () => {
                       </div>
                     </div>
                     <div className="my-3 h-px bg-[#d61e26]" />
-                    <p className={`text-center text-5xl font-black ${cor}`}>
+                    <p className={`py-1 text-center text-5xl font-black leading-[1.1] ${cor}`}>
                       {k.meta > 0 ? k.atingimento.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—"}
                       <span className="text-2xl">%</span>
                     </p>
-                    <p className={`mt-1 flex items-center justify-center gap-2 text-base font-extrabold uppercase ${cor}`}>
+                    <p className={`mt-2 flex items-center justify-center gap-2 text-base font-extrabold uppercase leading-tight ${cor}`}>
                       {k.pago ? <CheckCircle2 className="h-5 w-5" /> : <XCircle className="h-5 w-5" />}
                       {k.pago ? "Atingido" : k.bloqueado ? "Sem gatilho" : "Não atingido"}
                     </p>
