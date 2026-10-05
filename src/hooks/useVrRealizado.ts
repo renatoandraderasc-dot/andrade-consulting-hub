@@ -103,30 +103,30 @@ export function canonDept(s: string): string {
   return t;
 }
 
-async function loadRaw(storeId: string, inicio: string, fim: string): Promise<RawResult> {
+async function loadRaw(storeId: string, inicio: string, fim: string, forcar = false): Promise<RawResult> {
   const [{ data: mapas }, { data: proxy, error }, posv, kpi, ranking] = await Promise.all([
     supabase.from("vr_secao_departamento").select("secao_vr, department").eq("store_id", storeId),
     supabase.functions.invoke("vr-proxy", {
-      body: { store_id: storeId, relatorio: "vendas_secao_periodo", params: { inicio, fim } },
+      body: { store_id: storeId, relatorio: "vendas_secao_periodo", params: { inicio, fim }, forcar },
     }),
     // Positivacao de mix: produtos distintos vendidos pela primeira vez no dia.
     // Somados no mes dao a quantidade de produtos diferentes vendidos (mix continuo).
     supabase.functions
       .invoke("vr-proxy", {
-        body: { store_id: storeId, relatorio: "mix_positivacao_periodo", params: { inicio, fim } },
+        body: { store_id: storeId, relatorio: "mix_positivacao_periodo", params: { inicio, fim }, forcar },
       })
       .catch(() => ({ data: null, error: null })),
     // Totais oficiais do periodo, usados para reconciliar o faturamento da loja.
     supabase.functions
       .invoke("vr-proxy", {
-        body: { store_id: storeId, relatorio: "kpis_periodo", params: { inicio, fim } },
+        body: { store_id: storeId, relatorio: "kpis_periodo", params: { inicio, fim }, forcar },
       })
       .catch(() => ({ data: null, error: null })),
     // O ranking por produto representa a venda real no Maninho. Diferente do
     // relatório por seção, ele também inclui itens sem seção mercadológica.
     supabase.functions
       .invoke("vr-proxy", {
-        body: { store_id: storeId, relatorio: "ranking_produtos", params: { inicio, fim, limite: 200000 } },
+        body: { store_id: storeId, relatorio: "ranking_produtos", params: { inicio, fim, limite: 200000 }, forcar },
       })
       .catch(() => ({ data: null, error: null })),
   ] as const);
@@ -350,7 +350,7 @@ export function useVrRealizado(
       const fresh = cached && Date.now() - cached.at < TTL_MS && !force;
       const entry: CacheEntry = fresh
         ? cached!
-        : { at: Date.now(), promise: loadRaw(storeId, inicio, fim) };
+        : { at: Date.now(), promise: loadRaw(storeId, inicio, fim, force) };
       cache.set(key, entry);
 
       const id = ++reqRef.current;
