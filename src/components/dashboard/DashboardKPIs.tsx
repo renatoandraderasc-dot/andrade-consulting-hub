@@ -39,7 +39,7 @@ const DashboardKPIs = ({ vendas, lucro, margem, volume }: DashboardKPIsProps) =>
           label="Vendas"
           icon={<DollarSign className="w-4 h-4" />}
           value={fmtBRL(vendas.realizado)}
-          sub={<>Meta {fmtBRL(vendas.metaAcumulada || vendas.metaMensal)}</>}
+          sub={<>Meta {fmtBRL(vendas.metaMensal)}</>}
           badge={{ text: pct(vendas.realizadoPct), tone: toneFromPct(vendas.realizadoPct) }}
           progressPct={vendas.realizadoPct}
         />
@@ -48,7 +48,7 @@ const DashboardKPIs = ({ vendas, lucro, margem, volume }: DashboardKPIsProps) =>
           label="Lucro"
           icon={<TrendingUp className="w-4 h-4" />}
           value={fmtBRL(lucro.realizado)}
-          sub={<>Meta {fmtBRL(lucro.metaAcumulada)}</>}
+          sub={<>Meta {fmtBRL(lucro.metaMensal)}</>}
           badge={{ text: pct(lucro.realizadoPct), tone: toneFromPct(lucro.realizadoPct) }}
           progressPct={lucro.realizadoPct}
         />
@@ -66,7 +66,7 @@ const DashboardKPIs = ({ vendas, lucro, margem, volume }: DashboardKPIsProps) =>
           label="Volume"
           icon={<BarChart3 className="w-4 h-4" />}
           value={fmtNum(volume.realizado)}
-          sub={<>Meta {fmtNum(volume.metaAcumulada)}</>}
+          sub={<>Meta {fmtNum(volume.metaMensal)}</>}
           badge={{ text: pct(volume.realizadoPct), tone: toneFromPct(volume.realizadoPct) }}
           progressPct={volume.realizadoPct}
         />
