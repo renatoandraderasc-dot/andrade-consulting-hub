@@ -248,38 +248,24 @@ export default function VendasLojaSection({ storeId, startDate, endDate, categor
 
   const cards = [
     {
-      label: "Faturamento do mês",
-      value: fmtBRL(totals.realVendas),
-      sub: `Meta ${fmtBRL(totals.metaVendas)}`,
+      label: "Meta — Faturamento do mês",
+      value: fmtBRL(totals.metaVendas),
       icon: DollarSign,
-      pct: totals.pctMeta,
-      pctAcum: totals.pctAcumVendas,
-      metaAcum: totals.metaAcumVendas,
     },
     {
-      label: "Lucro do mês",
-      value: fmtBRL(totals.realLucro),
-      sub: `Meta ${fmtBRL(totals.metaLucro)}`,
+      label: "Meta — Lucro do mês",
+      value: fmtBRL(totals.metaLucro),
       icon: TrendingUp,
-      pct: totals.metaLucro > 0 ? (totals.realLucro / totals.metaLucro) * 100 : 0,
-      pctAcum: totals.pctAcumLucro,
-      metaAcum: totals.metaAcumLucro,
     },
     {
-      label: "Margem %",
-      value: fmtPct(totals.margemReal),
-      sub: `Meta ${fmtPct(totals.margemMeta)}`,
+      label: "Meta — Margem %",
+      value: fmtPct(totals.margemMeta),
       icon: Percent,
-      pct: totals.margemMeta > 0 ? (totals.margemReal / totals.margemMeta) * 100 : 0,
-      pctAcum: totals.margemMeta > 0 ? (totals.margemReal / totals.margemMeta) * 100 : 0,
-      metaAcum: 0,
     },
     {
-      label: "Volume",
-      value: fmtNum(totals.realVolume),
-      sub: `Meta ${fmtNum(totals.metaVolume)}`,
+      label: "Meta — Volume do mês",
+      value: fmtNum(totals.metaVolume),
       icon: BarChart3,
-      pct: totals.metaVolume > 0 ? (totals.realVolume / totals.metaVolume) * 100 : 0,
     },
   ];
 
@@ -328,7 +314,7 @@ export default function VendasLojaSection({ storeId, startDate, endDate, categor
         <div className="flex items-center gap-3">
           <Store className="w-4 h-4 text-muted-foreground" />
           <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">
-            Vendas da loja
+            Metas totais do mês
           </h2>
           {!offline && (
             <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
@@ -368,9 +354,7 @@ export default function VendasLojaSection({ storeId, startDate, endDate, categor
                 label={c.label}
                 icon={<c.icon className="w-4 h-4" />}
                 value={c.value}
-                sub={c.sub}
-                badge={{ text: `${c.pct.toFixed(0)}%`, tone: toneFromPct(c.pct) }}
-                progressPct={c.pct}
+                sub="Meta total do mês"
               />
             ))}
           </div>
