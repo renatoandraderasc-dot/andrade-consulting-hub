@@ -285,7 +285,7 @@ const MetasPremiacao = () => {
               </SelectContent>
             </Select>
             <Select value={dep} onValueChange={setDep}>
-              <SelectTrigger className="w-52"><SelectValue placeholder="Departamento" /></SelectTrigger>
+              <SelectTrigger className="h-auto min-h-10 w-full sm:w-64 [&>span]:whitespace-normal [&>span]:break-words [&>span]:text-left"><SelectValue placeholder="Departamento" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value={LOJA}>Loja (geral)</SelectItem>
                 {departamentosDisponiveis.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
@@ -337,7 +337,7 @@ const MetasPremiacao = () => {
               ) : (
                 <div className="h-full w-full bg-gradient-to-br from-[#2f6b2f] to-[#1b3d1b]" />
               )}
-              <div className="absolute right-6 top-4 rounded-md border-2 border-[#d9c27a] bg-[#1f5a2b] px-4 py-1 text-lg font-extrabold uppercase text-white shadow-lg">
+              <div className="absolute left-12 right-4 top-4 rounded-md border-2 border-[#d9c27a] bg-[#1f5a2b] px-3 py-1 text-center text-base font-extrabold uppercase text-white shadow-lg whitespace-normal [overflow-wrap:anywhere]">
                 {titulo}
               </div>
             </div>
@@ -350,7 +350,7 @@ const MetasPremiacao = () => {
                 <ShoppingCart className="h-7 w-7 text-white" />
               </span>
               <span className="h-10 w-px bg-white/40" />
-              <p className="flex-1 truncate text-center text-4xl font-black uppercase tracking-wide text-white sm:text-5xl">{titulo}</p>
+              <p className="min-w-0 flex-1 whitespace-normal [overflow-wrap:anywhere] text-center text-2xl font-black uppercase text-white sm:text-3xl">{titulo}</p>
             </div>
           </div>
 
@@ -453,8 +453,8 @@ const MetasPremiacao = () => {
               </div>
               <div className="px-2">
                 <p className="text-xs font-bold uppercase">Valor da premiação</p>
-                <p className="text-3xl font-black text-[#f26a1b] sm:text-4xl">{mostrarValores ? fmtBRL(valorPago) : fmtPct(pctPago)}</p>
-                {mostrarValores && <p className="text-[10px] font-bold uppercase">de {fmtBRL(val.valor_premiacao)}</p>}
+                <p className="break-words text-2xl font-black text-[#f26a1b] sm:text-3xl">{fmtBRL(valorPago)}</p>
+                <p className="text-[10px] font-bold uppercase">de {fmtBRL(val.valor_premiacao)}</p>
               </div>
             </div>
 
