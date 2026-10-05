@@ -208,7 +208,19 @@ const MetasPremiacao = () => {
       } catch { /* mantém original */ }
     }));
     try {
-      const canvas = await html2canvas(el, { backgroundColor: "#ffffff", scale: 2, useCORS: true, allowTaint: false });
+      const canvas = await html2canvas(el, {
+        backgroundColor: "#f4f4f4", scale: 2, useCORS: true, allowTaint: false,
+        width: 768, windowWidth: 1280,
+        onclone: (doc, clone) => {
+          // Corrige deslocamento de texto do html2canvas com img display:block (Tailwind)
+          const st = doc.createElement("style");
+          st.innerHTML = "img{display:inline-block !important}";
+          doc.head.appendChild(st);
+          clone.style.width = "768px";
+          clone.style.maxWidth = "768px";
+          clone.style.borderRadius = "0";
+        },
+      });
       return await new Promise((res, rej) => canvas.toBlob((b) => (b ? res(b) : rej(new Error("Falha ao gerar imagem"))), "image/png"));
     } finally {
       originais.forEach((src, img) => { img.src = src; });
