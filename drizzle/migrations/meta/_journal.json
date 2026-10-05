@@ -148,6 +148,13 @@
       "when": 1790861711416,
       "tag": "0020_gerar_metas_compra_protecao_taxas",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791208793814,
+      "tag": "0021_premiacao_valores_departamento",
+      "breakpoints": true
     }
   ]
 }

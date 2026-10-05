@@ -2186,6 +2186,7 @@ export type Database = {
           store_id: string
           updated_at: string
           valor_premiacao: number
+          valores_departamentos: Json
         }
         Insert: {
           atingimento_minimo?: number
@@ -2206,6 +2207,7 @@ export type Database = {
           store_id: string
           updated_at?: string
           valor_premiacao?: number
+          valores_departamentos?: Json
         }
         Update: {
           atingimento_minimo?: number
@@ -2226,6 +2228,7 @@ export type Database = {
           store_id?: string
           updated_at?: string
           valor_premiacao?: number
+          valores_departamentos?: Json
         }
         Relationships: [
           {
