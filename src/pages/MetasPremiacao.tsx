@@ -180,33 +180,68 @@ const MetasPremiacao = () => {
   const cartazRef = useRef<HTMLDivElement>(null);
   const [compartilhando, setCompartilhando] = useState(false);
 
-  const compartilhar = async () => {
+  const nomeArquivo = () =>
+    `Premiacao-${titulo}-${MESES[mes]}-${ano} - Andrade Consultoria Ltda.png`.replace(/[\\/:*?"<>|]/g, "-");
+
+  // Converte imagens externas em data URL antes da captura (evita canvas "tainted" por CORS)
+  const gerarBlob = async (): Promise<Blob> => {
+    const el = cartazRef.current!;
+    const imgs = Array.from(el.querySelectorAll("img"));
+    const originais = new Map<HTMLImageElement, string>();
+    await Promise.all(imgs.map(async (img) => {
+      if (!img.src || img.src.startsWith("data:") || img.src.startsWith(window.location.origin)) return;
+      try {
+        const r = await fetch(img.src, { mode: "cors" });
+        const b = await r.blob();
+        const data: string = await new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(fr.result as string); fr.readAsDataURL(b); });
+        originais.set(img, img.src);
+        img.src = data;
+        await img.decode().catch(() => {});
+      } catch { /* mantém original */ }
+    }));
+    try {
+      const canvas = await html2canvas(el, { backgroundColor: "#ffffff", scale: 2, useCORS: true, allowTaint: false });
+      return await new Promise((res, rej) => canvas.toBlob((b) => (b ? res(b) : rej(new Error("Falha ao gerar imagem"))), "image/png"));
+    } finally {
+      originais.forEach((src, img) => { img.src = src; });
+    }
+  };
+
+  const baixar = (blob: Blob) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = nomeArquivo(); document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  };
+
+  const executar = async (acao: "share" | "copy" | "download") => {
     if (!cartazRef.current) return;
     setCompartilhando(true);
     try {
-      const canvas = await html2canvas(cartazRef.current, {
-        backgroundColor: "#ffffff", scale: 2, useCORS: true,
-      });
-      const blob: Blob = await new Promise((res) =>
-        canvas.toBlob((b) => res(b as Blob), "image/png"),
-      );
-      const nome = `Premiacao-${titulo}-${MESES[mes]}-${ano} - Andrade Consultoria Ltda.png`
-        .replace(/[\\/:*?"<>|]/g, "-");
-      const file = new File([blob], nome, { type: "image/png" });
-      const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
-      if (nav.canShare?.({ files: [file] })) {
-        await nav.share({ files: [file], title: nome });
+      const blob = await gerarBlob();
+      if (acao === "download") {
+        baixar(blob);
+        toast({ title: "Imagem baixada" });
+      } else if (acao === "copy") {
+        if (!("ClipboardItem" in window) || !navigator.clipboard?.write) throw new Error("Seu navegador não permite copiar imagem. Use Baixar.");
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+        toast({ title: "Imagem copiada", description: "Cole no WhatsApp com Ctrl+V." });
       } else {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url; a.download = nome; a.click();
-        URL.revokeObjectURL(url);
-        toast({ title: "Imagem gerada", description: "O print do demonstrativo foi baixado." });
+        const file = new File([blob], nomeArquivo(), { type: "image/png" });
+        const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
+        try {
+          if (nav.canShare?.({ files: [file] })) {
+            await nav.share({ files: [file], title: nomeArquivo() });
+            return;
+          }
+        } catch (e: any) {
+          if (e?.name === "AbortError") return;
+        }
+        baixar(blob);
+        toast({ title: "Imagem baixada", description: "Compartilhamento direto indisponível neste navegador; envie o arquivo baixado." });
       }
     } catch (e: any) {
-      if (e?.name !== "AbortError") {
-        toast({ title: "Erro ao compartilhar", description: e?.message, variant: "destructive" });
-      }
+      toast({ title: "Erro ao gerar imagem", description: e?.message, variant: "destructive" });
     } finally {
       setCompartilhando(false);
     }
