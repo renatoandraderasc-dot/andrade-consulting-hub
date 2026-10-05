@@ -208,7 +208,19 @@ const MetasPremiacao = () => {
       } catch { /* mantém original */ }
     }));
     try {
-      const canvas = await html2canvas(el, { backgroundColor: "#ffffff", scale: 2, useCORS: true, allowTaint: false });
+      const canvas = await html2canvas(el, {
+        backgroundColor: "#f4f4f4", scale: 2, useCORS: true, allowTaint: false,
+        width: 768, windowWidth: 1280,
+        onclone: (doc, clone) => {
+          // Corrige deslocamento de texto do html2canvas com img display:block (Tailwind)
+          const st = doc.createElement("style");
+          st.innerHTML = "img{display:inline-block !important}";
+          doc.head.appendChild(st);
+          clone.style.width = "768px";
+          clone.style.maxWidth = "768px";
+          clone.style.borderRadius = "0";
+        },
+      });
       return await new Promise((res, rej) => canvas.toBlob((b) => (b ? res(b) : rej(new Error("Falha ao gerar imagem"))), "image/png"));
     } finally {
       originais.forEach((src, img) => { img.src = src; });
@@ -326,16 +338,16 @@ const MetasPremiacao = () => {
         <div ref={cartazRef} className="mx-auto w-full max-w-3xl overflow-hidden rounded-2xl border border-border bg-[#f4f4f4] text-[#111] shadow-xl">
           {/* Cabeçalho */}
           <div className="relative grid h-52 grid-cols-[38%_62%] bg-[#111]">
-            <div className="relative z-10 flex flex-col items-center justify-center bg-white px-4 [clip-path:polygon(0_0,100%_0,82%_100%,0_100%)]">
+            <div className="relative z-10 flex flex-col items-center justify-center bg-white px-4">
               <img src={logoAndrade} alt="Andrade" className="h-20 w-auto object-contain" />
-              <p className="mt-1 text-2xl font-black tracking-tight">ANDRADE</p>
-              <p className="text-[10px] font-bold tracking-wide">ASSESSORIA COMERCIAL</p>
+              <p className="mt-1 text-2xl font-black leading-tight tracking-tight">ANDRADE</p>
+              <p className="text-[10px] font-bold leading-tight tracking-wide">ASSESSORIA COMERCIAL</p>
             </div>
-            <div className="relative -ml-12 overflow-hidden">
+            <div className="relative overflow-hidden">
               {fotoTopo ? (
                 <img src={fotoTopo} alt="Setor" crossOrigin="anonymous" className="h-full w-full object-cover" />
               ) : (
-                <div className="h-full w-full bg-gradient-to-br from-[#2f6b2f] to-[#1b3d1b]" />
+                <div className="h-full w-full" style={{ background: "linear-gradient(135deg,#2f6b2f,#1b3d1b)" }} />
               )}
               <div className="absolute left-12 right-4 top-4 rounded-md border-2 border-[#d9c27a] bg-[#1f5a2b] px-3 py-1 text-center text-base font-extrabold uppercase text-white shadow-lg whitespace-normal [overflow-wrap:anywhere]">
                 {titulo}
@@ -375,11 +387,11 @@ const MetasPremiacao = () => {
                       </div>
                     </div>
                     <div className="my-3 h-px bg-[#d61e26]" />
-                    <p className={`text-center text-5xl font-black ${cor}`}>
+                    <p className={`py-1 text-center text-5xl font-black leading-[1.1] ${cor}`}>
                       {k.meta > 0 ? k.atingimento.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—"}
                       <span className="text-2xl">%</span>
                     </p>
-                    <p className={`mt-1 flex items-center justify-center gap-2 text-base font-extrabold uppercase ${cor}`}>
+                    <p className={`mt-2 flex items-center justify-center gap-2 text-base font-extrabold uppercase leading-tight ${cor}`}>
                       {k.pago ? <CheckCircle2 className="h-5 w-5" /> : <XCircle className="h-5 w-5" />}
                       {k.pago ? "Atingido" : k.bloqueado ? "Sem gatilho" : "Não atingido"}
                     </p>
@@ -448,12 +460,12 @@ const MetasPremiacao = () => {
               <Gift className="h-12 w-12 justify-self-center" />
               <div className="border-x border-white/30 px-2">
                 <p className="text-xs font-bold uppercase">Percentual atingido</p>
-                <p className="text-4xl font-black text-[#f26a1b]">{fmtPct(pctPago)}</p>
+                <p className="py-1 text-4xl font-black leading-[1.1] text-[#f26a1b]">{fmtPct(pctPago)}</p>
                 <p className="text-[10px] font-bold uppercase">do valor da premiação</p>
               </div>
               <div className="px-2">
                 <p className="text-xs font-bold uppercase">Valor da premiação</p>
-                <p className="break-words text-2xl font-black text-[#f26a1b] sm:text-3xl">{fmtBRL(valorPago)}</p>
+                <p className="break-words py-1 text-3xl font-black leading-[1.1] text-[#f26a1b]">{fmtBRL(valorPago)}</p>
                 <p className="text-[10px] font-bold uppercase">de {fmtBRL(val.valor_premiacao)}</p>
               </div>
             </div>
