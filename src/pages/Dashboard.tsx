@@ -360,6 +360,9 @@ const Dashboard = () => {
     // Dias ainda sem realizado (hoje em diante): entram na projecao pela meta.
     const deHoje = dailyData.filter((d) => d.iso && d.iso >= hojeStr);
 
+    const metaMesVendas = dailyData.reduce((s, d) => s + d.metaVendas, 0);
+    const metaMesLucro = dailyData.reduce((s, d) => s + d.metaLucro, 0);
+    const metaMesVol = dailyData.reduce((s, d) => s + d.metaVolume, 0);
     const metaAcumVendas = ateD1.reduce((s, d) => s + d.metaVendas, 0);
     const realVendas = ateD1.reduce((s, d) => s + d.realizadoVendas, 0);
     const metaAcumLucro = ateD1.reduce((s, d) => s + d.metaLucro, 0);
@@ -379,20 +382,20 @@ const Dashboard = () => {
 
     return {
       vendas: {
-        metaMensal: metaFat || metaAcumVendas,
-        metaAcumulada: metaAcumVendas || fat,
-        realizado: realVendas || fat,
-        realizadoPct: metaAcumVendas > 0 ? (realVendas / metaAcumVendas) * 100 : metaFat > 0 ? (fat / metaFat) * 100 : 0,
+        metaMensal: metaMesVendas,
+        metaAcumulada: metaAcumVendas,
+        realizado: realVendas,
+        realizadoPct: metaMesVendas > 0 ? (realVendas / metaMesVendas) * 100 : 0,
         projecao: projVendas,
-        projecaoPct: metaFat > 0 ? (projVendas / metaFat) * 100 : 0,
+        projecaoPct: metaMesVendas > 0 ? (projVendas / metaMesVendas) * 100 : 0,
       },
       lucro: {
-        metaMensal: metaAcumLucro,
+        metaMensal: metaMesLucro,
         metaAcumulada: metaAcumLucro,
         realizado: realLucro,
-        realizadoPct: metaAcumLucro > 0 ? (realLucro / metaAcumLucro) * 100 : 0,
+        realizadoPct: metaMesLucro > 0 ? (realLucro / metaMesLucro) * 100 : 0,
         projecao: projLucro,
-        projecaoPct: metaAcumLucro > 0 ? (projLucro / metaAcumLucro) * 100 : 0,
+        projecaoPct: metaMesLucro > 0 ? (projLucro / metaMesLucro) * 100 : 0,
       },
       margem: {
         metaPct: metaMargemPct,
@@ -400,12 +403,12 @@ const Dashboard = () => {
         projecaoPct: projMargemPct,
       },
       volume: {
-        metaMensal: metaAcumVol,
+        metaMensal: metaMesVol,
         metaAcumulada: metaAcumVol,
         realizado: realVol,
-        realizadoPct: metaAcumVol > 0 ? (realVol / metaAcumVol) * 100 : 0,
+        realizadoPct: metaMesVol > 0 ? (realVol / metaMesVol) * 100 : 0,
         projecao: projVol,
-        projecaoPct: metaAcumVol > 0 ? (projVol / metaAcumVol) * 100 : 0,
+        projecaoPct: metaMesVol > 0 ? (projVol / metaMesVol) * 100 : 0,
       },
     };
   }, [dailyData, storeMetrics]);
@@ -488,6 +491,7 @@ const Dashboard = () => {
             startDate={periodStart}
             endDate={periodEnd}
             categoria={catFiltro}
+            departamento={selectedDept}
           />
         )}
 
