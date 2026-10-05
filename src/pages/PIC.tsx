@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Trophy, TrendingUp, TrendingDown, Calendar, Filter, Sparkles, Flag, ChevronDown, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import ClientLayout from "@/components/ClientLayout";
 import SyncStatusBadge from "@/components/SyncStatusBadge";
@@ -494,8 +495,14 @@ const PIC = () => {
               </TabsList>
             </Tabs>
             <button
-              onClick={refresh}
-              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 text-xs text-foreground hover:bg-muted/40"
+              onClick={async () => {
+                await refresh();
+                if (storeId) fetchMetas();
+                toast.success("PIC atualizado direto no sistema da loja");
+              }}
+              disabled={loadingVr}
+              title="Busca os números mais recentes direto no sistema da loja"
+              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 text-xs disabled:opacity-60 text-foreground hover:bg-muted/40"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loadingVr ? "animate-spin" : ""}`} /> Atualizar
             </button>
