@@ -1,0 +1,1 @@
+ALTER TABLE public.premiacao_config ADD COLUMN IF NOT EXISTS valores_departamentos jsonb NOT NULL DEFAULT '{}'::jsonb;

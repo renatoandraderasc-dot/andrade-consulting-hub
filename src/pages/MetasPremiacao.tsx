@@ -18,7 +18,7 @@ import { useVrRealizado, LOJA, canonDept } from "@/hooks/useVrRealizado";
 import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
 import { fmtBRL, fmtPct, MESES, diasNoMes } from "@/lib/metasSugestao";
 import {
-  carregarPremiacaoConfig, PREMIACAO_PADRAO, type PremiacaoConfig, type FotoKey,
+  carregarPremiacaoConfig, PREMIACAO_PADRAO, valoresDe, type PremiacaoConfig, type FotoKey,
 } from "@/pages/MetasPremiacaoConfig";
 
 
@@ -149,13 +149,15 @@ const MetasPremiacao = () => {
   const metasSel = dep === LOJA ? metas : (metasDep[dep] ?? { vendas: 0, lucro: 0, volume: 0, mix: 0 });
   const realizado = realizadoDep[dep] ?? { vendas: 0, lucro: 0, volume: 0, mix: 0 };
 
+  const val = useMemo(() => valoresDe(cfg, dep === LOJA ? "LOJA" : dep), [cfg, dep]);
+
   const kpis = useMemo(() => {
-    const min = cfg.atingimento_minimo || 99;
+    const min = val.atingimento_minimo || 99;
     const base: { key: KpiKey; label: string; sub?: string; meta: number; real: number; peso: number }[] = [
-      { key: "faturamento", label: "FATURAMENTO", meta: metasSel.vendas, real: realizado.vendas, peso: cfg.peso_faturamento },
-      { key: "arrecadacao", label: "MARGEM", sub: "(ARRECADAÇÃO)", meta: metasSel.lucro, real: realizado.lucro, peso: cfg.peso_arrecadacao },
-      { key: "volume", label: "VOLUME", meta: metasSel.volume, real: realizado.volume, peso: cfg.peso_volume },
-      { key: "mix", label: "MIX", meta: metasSel.mix, real: realizado.mix, peso: cfg.peso_mix },
+      { key: "faturamento", label: "FATURAMENTO", meta: metasSel.vendas, real: realizado.vendas, peso: val.peso_faturamento },
+      { key: "arrecadacao", label: "MARGEM", sub: "(ARRECADAÇÃO)", meta: metasSel.lucro, real: realizado.lucro, peso: val.peso_arrecadacao },
+      { key: "volume", label: "VOLUME", meta: metasSel.volume, real: realizado.volume, peso: val.peso_volume },
+      { key: "mix", label: "MIX", meta: metasSel.mix, real: realizado.mix, peso: val.peso_mix },
     ];
     const calc = base.map((k) => ({ ...k, atingimento: pct(k.real, k.meta), atingiu: k.meta > 0 && pct(k.real, k.meta) >= min }));
     const gatilho = calc.some((k) => (k.key === "faturamento" || k.key === "arrecadacao") && k.atingiu);
@@ -164,14 +166,14 @@ const MetasPremiacao = () => {
       pago: k.key === "volume" || k.key === "mix" ? k.atingiu && gatilho : k.atingiu,
       bloqueado: (k.key === "volume" || k.key === "mix") && k.atingiu && !gatilho,
     }));
-  }, [metasSel, realizado, cfg]);
+  }, [metasSel, realizado, val]);
 
   const fotoTopo = dep === LOJA ? cfg.foto_cabecalho : (cfg.fotos_departamentos?.[dep] || cfg.foto_cabecalho);
   const titulo = dep === LOJA ? (storeName || "LOJA") : dep;
 
 
   const pctPago = kpis.reduce((s, k) => s + (k.pago ? k.peso || 0 : 0), 0);
-  const valorPago = (cfg.valor_premiacao * pctPago) / 100;
+  const valorPago = (val.valor_premiacao * pctPago) / 100;
   const todas = kpis.length > 0 && kpis.every((k) => k.pago);
   const carregando = atual.loading || carregandoMetas;
 
@@ -344,7 +346,7 @@ const MetasPremiacao = () => {
                     <p className="mt-2 text-xs text-muted-foreground">
                       Peso {fmtPct(k.peso)}
                       {mostrarValores
-                        ? ` · ${fmtBRL(k.pago ? (cfg.valor_premiacao * (k.peso || 0)) / 100 : 0)}`
+                        ? ` · ${fmtBRL(k.pago ? (val.valor_premiacao * (k.peso || 0)) / 100 : 0)}`
                         : ""}
                     </p>
                   </div>
@@ -378,8 +380,8 @@ const MetasPremiacao = () => {
               <Gift className="h-8 w-8 text-primary" />
               <p className="text-xs font-bold uppercase tracking-[0.25em] text-background/80">Valor premiação</p>
               <p className="text-4xl font-extrabold text-primary">{fmtBRL(valorPago)}</p>
-              {valorPago < cfg.valor_premiacao && (
-                <p className="text-xs text-background/70">de {fmtBRL(cfg.valor_premiacao)}</p>
+              {valorPago < val.valor_premiacao && (
+                <p className="text-xs text-background/70">de {fmtBRL(val.valor_premiacao)}</p>
               )}
               {!mostrarValores && (
                 <p className="text-sm font-semibold text-background/80">{fmtPct(pctPago)} liberado</p>
