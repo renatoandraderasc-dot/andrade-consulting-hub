@@ -80,11 +80,15 @@ export const alterarValor = (
   c: PremiacaoConfig, dep: string, k: keyof ValoresPremiacao, v: number,
 ): PremiacaoConfig => {
   if (dep === LOJA_KEY) return { ...c, [k]: v };
-  const chave = dep.toUpperCase();
-  return {
-    ...c,
-    valores_departamentos: { ...c.valores_departamentos, [chave]: { ...valoresDe(c, chave), [k]: v } },
-  };
+  const chave = (canonDept(dep) || dep).toUpperCase();
+  const atual = valoresDe(c, chave);
+  // remove chaves antigas (nome bruto do ERP) que caem no mesmo departamento
+  const resto = Object.fromEntries(
+    Object.entries(c.valores_departamentos ?? {}).filter(
+      ([nome]) => (canonDept(nome) || nome).toUpperCase() !== chave,
+    ),
+  );
+  return { ...c, valores_departamentos: { ...resto, [chave]: { ...atual, [k]: v } } };
 };
 
 export const PREMIACAO_PADRAO: PremiacaoConfig = {
