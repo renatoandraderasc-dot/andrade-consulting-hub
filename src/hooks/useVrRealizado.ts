@@ -45,6 +45,9 @@ interface RawResult {
   // Positivacao: produtos distintos vendidos pela 1a vez no dia (mix continuo)
   mixLinhas: VrLinha[];
   mapa: Record<string, string>;
+  /** true quando a loja não respondeu e o proxy devolveu a última leitura salva */
+  deCache?: boolean;
+  cacheEm?: string | null;
   /**
    * Totais oficiais do periodo (ranking_produtos/kpis_periodo). Alguns conectores montam o
    * relatorio por secao com join no cadastro mercadologico e perdem as vendas
@@ -237,7 +240,8 @@ async function loadRaw(storeId: string, inicio: string, fim: string, forcar = fa
     ? { vendas: rankingVendas, lucro: rankingLucro, volume: rankingVolume }
     : totaisKpi;
 
-  return { linhas, mixLinhas, mapa, totais };
+  const deCache = (proxy as any)?.origem === "cache" && !!(proxy as any)?.aviso;
+  return { linhas, mixLinhas, mapa, totais, deCache, cacheEm: (proxy as any)?.cache_em ?? null };
 }
 
 function agregar(
