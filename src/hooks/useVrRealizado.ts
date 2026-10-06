@@ -348,7 +348,7 @@ export function useVrRealizado(
 
   const run = useCallback(
     async (force: boolean) => {
-      if (!storeId || !inicio || !fim) return;
+      if (!storeId || !inicio || !fim) return "ignorado" as const;
       const key = `${storeId}|${inicio}|${fim}`;
       const cached = cache.get(key);
       const fresh = cached && Date.now() - cached.at < TTL_MS && !force;
@@ -361,17 +361,20 @@ export function useVrRealizado(
       setLoading(true);
       try {
         const result = await entry.promise;
-        if (id !== reqRef.current) return;
+        if (id !== reqRef.current) return "ignorado" as const;
         setRaw(result);
         setOffline(false);
         setErrorMsg(null);
-        setUpdatedAt(new Date(entry.at));
+        const quando = result.deCache && result.cacheEm ? new Date(result.cacheEm) : new Date(entry.at);
+        setUpdatedAt(isNaN(quando.getTime()) ? new Date(entry.at) : quando);
+        return result.deCache ? ("cache" as const) : ("ok" as const);
       } catch (e) {
         cache.delete(key);
-        if (id !== reqRef.current) return;
+        if (id !== reqRef.current) return "ignorado" as const;
         setRaw(null);
         setOffline(true);
         setErrorMsg(e instanceof Error ? e.message : String(e));
+        return "erro" as const;
       } finally {
         if (id === reqRef.current) setLoading(false);
       }
