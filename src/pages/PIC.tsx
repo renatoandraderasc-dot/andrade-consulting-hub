@@ -510,7 +510,7 @@ const PIC = () => {
             </button>
             {!offline && updatedAt && (
               <span className="text-[11px] text-muted-foreground">
-                VR ao vivo · {updatedAt.toLocaleTimeString("pt-BR")}
+                Dados de · {updatedAt.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
               </span>
             )}
           </div>

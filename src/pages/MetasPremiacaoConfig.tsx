@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { carregarLojaLogin } from "@/lib/lojasPermitidas";
+import { canonDept } from "@/hooks/useVrRealizado";
 import { useNavigate } from "react-router-dom";
 import { Settings2, Save, Image as ImageIcon, Award } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -68,7 +69,8 @@ const valoresGerais = (c: PremiacaoConfig): ValoresPremiacao => ({
 export const valoresDe = (c: PremiacaoConfig, dep: string): ValoresPremiacao => {
   const geral = valoresGerais(c);
   if (!dep || dep.toUpperCase() === LOJA_KEY) return geral;
-  const normalizar = (nome: string) => nome.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  const normalizar = (nome: string) =>
+    (canonDept(nome) || nome).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
   const chave = Object.keys(c.valores_departamentos ?? {}).find((nome) => normalizar(nome) === normalizar(dep));
   const d = chave ? c.valores_departamentos[chave] : undefined;
   return d ? { ...geral, ...d } : geral;
@@ -181,7 +183,10 @@ const MetasPremiacaoConfig = () => {
       .lte("date", fim)
       .then(({ data }) => {
         const set = new Set<string>();
-        (data || []).forEach((r) => set.add((r.department || "OUTROS").toUpperCase()));
+        (data || []).forEach((r) => {
+          const nome = canonDept(r.department || "") || "";
+          if (nome && nome !== LOJA_KEY && nome !== "OUTROS") set.add(nome);
+        });
         setDepartamentos(Array.from(set).sort());
       });
   }, [storeId, ano, mes]);
