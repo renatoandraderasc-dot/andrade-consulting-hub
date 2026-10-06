@@ -496,9 +496,11 @@ const PIC = () => {
             </Tabs>
             <button
               onClick={async () => {
-                await refresh();
+                const status = await refresh();
                 if (storeId) fetchMetas();
-                toast.success("PIC atualizado direto no sistema da loja");
+                if (status === "ok") toast.success("PIC atualizado direto no sistema da loja");
+                else if (status === "cache") toast.warning("A loja não respondeu — mostrando a última leitura salva");
+                else if (status === "erro") toast.error("Não foi possível falar com o sistema da loja");
               }}
               disabled={loadingVr}
               title="Busca os números mais recentes direto no sistema da loja"
@@ -508,7 +510,7 @@ const PIC = () => {
             </button>
             {!offline && updatedAt && (
               <span className="text-[11px] text-muted-foreground">
-                VR ao vivo · {updatedAt.toLocaleTimeString("pt-BR")}
+                Dados de · {updatedAt.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
               </span>
             )}
           </div>

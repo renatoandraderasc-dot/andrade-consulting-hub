@@ -45,6 +45,9 @@ interface RawResult {
   // Positivacao: produtos distintos vendidos pela 1a vez no dia (mix continuo)
   mixLinhas: VrLinha[];
   mapa: Record<string, string>;
+  /** true quando a loja não respondeu e o proxy devolveu a última leitura salva */
+  deCache?: boolean;
+  cacheEm?: string | null;
   /**
    * Totais oficiais do periodo (ranking_produtos/kpis_periodo). Alguns conectores montam o
    * relatorio por secao com join no cadastro mercadologico e perdem as vendas
@@ -237,7 +240,8 @@ async function loadRaw(storeId: string, inicio: string, fim: string, forcar = fa
     ? { vendas: rankingVendas, lucro: rankingLucro, volume: rankingVolume }
     : totaisKpi;
 
-  return { linhas, mixLinhas, mapa, totais };
+  const deCache = (proxy as any)?.origem === "cache" && !!(proxy as any)?.aviso;
+  return { linhas, mixLinhas, mapa, totais, deCache, cacheEm: (proxy as any)?.cache_em ?? null };
 }
 
 function agregar(
@@ -344,7 +348,7 @@ export function useVrRealizado(
 
   const run = useCallback(
     async (force: boolean) => {
-      if (!storeId || !inicio || !fim) return;
+      if (!storeId || !inicio || !fim) return "ignorado" as const;
       const key = `${storeId}|${inicio}|${fim}`;
       const cached = cache.get(key);
       const fresh = cached && Date.now() - cached.at < TTL_MS && !force;
@@ -357,17 +361,20 @@ export function useVrRealizado(
       setLoading(true);
       try {
         const result = await entry.promise;
-        if (id !== reqRef.current) return;
+        if (id !== reqRef.current) return "ignorado" as const;
         setRaw(result);
         setOffline(false);
         setErrorMsg(null);
-        setUpdatedAt(new Date(entry.at));
+        const quando = result.deCache && result.cacheEm ? new Date(result.cacheEm) : new Date(entry.at);
+        setUpdatedAt(isNaN(quando.getTime()) ? new Date(entry.at) : quando);
+        return result.deCache ? ("cache" as const) : ("ok" as const);
       } catch (e) {
         cache.delete(key);
-        if (id !== reqRef.current) return;
+        if (id !== reqRef.current) return "ignorado" as const;
         setRaw(null);
         setOffline(true);
         setErrorMsg(e instanceof Error ? e.message : String(e));
+        return "erro" as const;
       } finally {
         if (id === reqRef.current) setLoading(false);
       }

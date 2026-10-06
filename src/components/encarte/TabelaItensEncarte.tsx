@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { forwardRef, useEffect, useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,50 +23,64 @@ interface Props {
 
 type Ordem = { campo: keyof LinhaManual | "margem_encarte"; asc: boolean };
 
-/** Campo de preço que aceita vírgula (19,99): guarda o texto digitado e converte ao sair do campo. */
-const PrecoEncarteInput = ({
-  valor,
-  onCommit,
-}: {
+const fmtTexto = (v: number | null) => (v != null ? String(v).replace(".", ",") : "");
+
+/** Converte "19,99", "19.99" ou "1.234,56" em número. Ponto só é milhar quando há vírgula. */
+const parsePreco = (t: string): number | null => {
+  const s = t.trim();
+  if (s === "") return null;
+  const limpo = s.includes(",") ? s.replace(/\./g, "").replace(",", ".") : s;
+  const n = Number(limpo);
+  return isNaN(n) ? NaN : n;
+};
+
+type PrecoProps = Omit<React.ComponentProps<typeof Input>, "value" | "onChange"> & {
   valor: number | null;
   onCommit: (v: number | null) => void;
-}) => {
-  const [texto, setTexto] = useState(valor != null ? String(valor).replace(".", ",") : "");
-  const [focado, setFocado] = useState(false);
-
-  // sincroniza quando o valor externo muda e o campo não está em edição
-  if (!focado) {
-    const esperado = valor != null ? String(valor).replace(".", ",") : "";
-    if (texto !== esperado && texto !== "" && Number(texto.replace(",", ".")) !== valor) {
-      setTexto(esperado);
-    }
-  }
-
-  const commit = () => {
-    setFocado(false);
-    const limpo = texto.trim().replace(/\./g, "").replace(",", ".");
-    if (limpo === "") { onCommit(null); setTexto(""); return; }
-    const n = Number(limpo);
-    if (isNaN(n)) { setTexto(valor != null ? String(valor).replace(".", ",") : ""); return; }
-    onCommit(n);
-    setTexto(String(n).replace(".", ","));
-  };
-
-  return (
-    <Input
-      className="h-8 w-24 text-right"
-      inputMode="decimal"
-      value={texto}
-      onFocus={() => setFocado(true)}
-      onChange={(e) => {
-        const v = e.target.value;
-        if (/^[0-9]*[.,]?[0-9]*$/.test(v)) setTexto(v);
-      }}
-      onBlur={commit}
-      onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
-    />
-  );
 };
+
+/** Campo de preço que aceita vírgula (19,99): guarda o texto digitado e converte ao sair do campo. */
+const PrecoEncarteInput = forwardRef<HTMLInputElement, PrecoProps>(
+  ({ valor, onCommit, onFocus, onBlur, onKeyDown, ...rest }, ref) => {
+    const [texto, setTexto] = useState(fmtTexto(valor));
+    const [focado, setFocado] = useState(false);
+
+    // sincroniza com o valor externo quando o campo não está em edição
+    useEffect(() => {
+      if (!focado) setTexto(fmtTexto(valor));
+    }, [valor, focado]);
+
+    const commit = () => {
+      setFocado(false);
+      const n = parsePreco(texto);
+      if (n === null) { onCommit(null); setTexto(""); return; }
+      if (isNaN(n)) { setTexto(fmtTexto(valor)); return; }
+      onCommit(n);
+      setTexto(fmtTexto(n));
+    };
+
+    return (
+      <Input
+        {...rest}
+        ref={ref}
+        className="h-8 w-24 text-right"
+        inputMode="decimal"
+        value={texto}
+        onFocus={(e) => { setFocado(true); onFocus?.(e); }}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (/^[0-9.,]*$/.test(v)) setTexto(v);
+        }}
+        onBlur={(e) => { commit(); onBlur?.(e); }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+          onKeyDown?.(e);
+        }}
+      />
+    );
+  },
+);
+PrecoEncarteInput.displayName = "PrecoEncarteInput";
 
 const TabelaItensEncarte = ({ itens, onChange, onRemove, cargaTributariaPct }: Props) => {
   const [busca, setBusca] = useState("");

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { carregarLojaLogin } from "@/lib/lojasPermitidas";
+import { canonDept } from "@/hooks/useVrRealizado";
 import { useNavigate } from "react-router-dom";
 import { Settings2, Save, Image as ImageIcon, Award } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -68,7 +69,8 @@ const valoresGerais = (c: PremiacaoConfig): ValoresPremiacao => ({
 export const valoresDe = (c: PremiacaoConfig, dep: string): ValoresPremiacao => {
   const geral = valoresGerais(c);
   if (!dep || dep.toUpperCase() === LOJA_KEY) return geral;
-  const normalizar = (nome: string) => nome.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  const normalizar = (nome: string) =>
+    (canonDept(nome) || nome).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
   const chave = Object.keys(c.valores_departamentos ?? {}).find((nome) => normalizar(nome) === normalizar(dep));
   const d = chave ? c.valores_departamentos[chave] : undefined;
   return d ? { ...geral, ...d } : geral;
@@ -78,11 +80,15 @@ export const alterarValor = (
   c: PremiacaoConfig, dep: string, k: keyof ValoresPremiacao, v: number,
 ): PremiacaoConfig => {
   if (dep === LOJA_KEY) return { ...c, [k]: v };
-  const chave = dep.toUpperCase();
-  return {
-    ...c,
-    valores_departamentos: { ...c.valores_departamentos, [chave]: { ...valoresDe(c, chave), [k]: v } },
-  };
+  const chave = (canonDept(dep) || dep).toUpperCase();
+  const atual = valoresDe(c, chave);
+  // remove chaves antigas (nome bruto do ERP) que caem no mesmo departamento
+  const resto = Object.fromEntries(
+    Object.entries(c.valores_departamentos ?? {}).filter(
+      ([nome]) => (canonDept(nome) || nome).toUpperCase() !== chave,
+    ),
+  );
+  return { ...c, valores_departamentos: { ...resto, [chave]: { ...atual, [k]: v } } };
 };
 
 export const PREMIACAO_PADRAO: PremiacaoConfig = {
@@ -181,7 +187,10 @@ const MetasPremiacaoConfig = () => {
       .lte("date", fim)
       .then(({ data }) => {
         const set = new Set<string>();
-        (data || []).forEach((r) => set.add((r.department || "OUTROS").toUpperCase()));
+        (data || []).forEach((r) => {
+          const nome = canonDept(r.department || "") || "";
+          if (nome && nome !== LOJA_KEY && nome !== "OUTROS") set.add(nome);
+        });
         setDepartamentos(Array.from(set).sort());
       });
   }, [storeId, ano, mes]);
