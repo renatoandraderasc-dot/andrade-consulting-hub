@@ -133,6 +133,7 @@ const DailyMetricsTable = ({ data }: { data: DailyRow[] }) => {
               const lucroOk = row.realizadoLucro >= row.metaLucro && row.metaLucro > 0;
               const margemOk = row.realizadoMargemPct >= row.metaMargemPct && row.metaMargemPct > 0;
               const volumeOk = row.realizadoVolume >= row.metaVolume && row.metaVolume > 0;
+              const dia = diaSemana(row);
               return (
                 <tr key={i} className="border-b border-border/60 hover:bg-secondary/40 transition-colors">
                   <td className="px-3 py-2">{row.date}</td>
