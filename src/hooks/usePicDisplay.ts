@@ -40,13 +40,13 @@ async function isPicViewer(): Promise<boolean> {
 }
 
 /** Modo de exibicao do PIC para uma loja (padrao: valores + %) */
-export function usePicDisplayMode(storeId: string | undefined) {
-  const [mode, setMode] = useState<PicDisplayMode>("valores");
-  const [forcePct, setForcePct] = useState(false);
+export function usePicDisplayMode(storeId: string | undefined, hideUntilReady = false) {
+  const [mode, setMode] = useState<PicDisplayMode>(hideUntilReady ? "percentual" : "valores");
+  const [forcePct, setForcePct] = useState(hideUntilReady);
 
   useEffect(() => {
     let mounted = true;
-    isPicViewer().then((v) => mounted && setForcePct(v));
+    isPicViewer().then((v) => mounted && setForcePct(v)).catch(() => {});
     return () => {
       mounted = false;
     };
