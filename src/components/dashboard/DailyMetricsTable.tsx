@@ -1,4 +1,5 @@
 import { CheckCircle2, XCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export interface DailyRow {
   date: string;
@@ -22,6 +23,31 @@ const num = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 });
 const fmt = (v: number) => num.format(v || 0);
 const pct = (v: number) => `${(v || 0).toFixed(2)}%`;
 const pctAting = (real: number, meta: number) => (meta > 0 ? (real / meta) * 100 : 0);
+
+// Dia da semana por extenso (Segunda, Terça, ...) a partir da data da linha.
+const DIAS_SEMANA = [
+  "Domingo",
+  "Segunda",
+  "Terça",
+  "Quarta",
+  "Quinta",
+  "Sexta",
+  "Sábado",
+];
+
+const FIM_DE_SEMANA = new Set(["Sábado", "Domingo"]);
+
+const diaSemana = (row: DailyRow) => {
+  let d: Date | null = null;
+  if (row.iso) {
+    d = new Date(`${row.iso}T12:00:00`);
+  } else if (row.date) {
+    const [dd, mm, yyyy] = row.date.split("/");
+    if (dd && mm && yyyy) d = new Date(Number(yyyy), Number(mm) - 1, Number(dd), 12);
+  }
+  if (!d || isNaN(d.getTime())) return "";
+  return DIAS_SEMANA[d.getDay()];
+};
 
 const StatusIcon = ({ ok }: { ok: boolean }) =>
   ok ? (
@@ -110,7 +136,14 @@ const DailyMetricsTable = ({ data }: { data: DailyRow[] }) => {
               return (
                 <tr key={i} className="border-b border-border/60 hover:bg-secondary/40 transition-colors">
                   <td className="px-3 py-2">{row.date}</td>
-                  <td className="px-3 py-2 text-muted-foreground text-[11px] uppercase tracking-wider">{row.tipoDia}</td>
+                  <td
+                    className={cn(
+                      "px-3 py-2 text-[11px] uppercase tracking-wider",
+                      FIM_DE_SEMANA.has(dia) ? "text-primary font-semibold" : "text-muted-foreground",
+                    )}
+                  >
+                    {dia}
+                  </td>
                   <td className="px-3 py-2 text-right border-l border-border/60">{fmt(row.metaVendas)}</td>
                   <td className="px-3 py-2 text-right"><StatusIcon ok={vendasOk} /> {fmt(row.realizadoVendas)}</td>
                   <PctCell real={row.realizadoVendas} meta={row.metaVendas} money />
