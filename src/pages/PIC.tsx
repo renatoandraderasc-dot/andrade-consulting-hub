@@ -299,8 +299,19 @@ const PIC = () => {
 
 
 
+  // Último dia com venda registrada (loja toda) — evita acumular metas de dias ainda não sincronizados
+  const ultimoDiaVenda = useMemo(() => {
+    let max = 0;
+    for (const d of Object.keys(rawData)) for (const r of rawData[d] || [])
+      if (r.day <= cutoffDay && (Number(r.realizado_vendas) || 0) > 0 && r.day > max) max = r.day;
+    return max;
+  }, [rawData, cutoffDay]);
+  const corteAcum = isCurrentMonth && ultimoDiaVenda > 0 ? Math.min(cutoffDay, ultimoDiaVenda) : cutoffDay;
+  const atrasado = corteAcum < cutoffDay;
+
   // Build KPI data per department
   const deptKpis = useMemo(() => {
+    const cutoffDay = corteAcum;
     const result: Record<string, Record<string, KpiData>> = {};
     for (const dept of DEPARTMENTS) {
       // Ignora dias sem operação (meta e realizado zerados em todos os indicadores)
@@ -354,7 +365,7 @@ const PIC = () => {
         // Mês já encerrado: não há mais o que projetar → projeção = realizado.
         const metaHojeEmDiante =
           metaRestante + (rows.find((r) => r.day === cutoffDay) ? Number(rows.find((r) => r.day === cutoffDay)![metaKey]) || 0 : 0);
-        const projecao = isCurrentMonth ? realizadoOntem + metaHojeEmDiante : realizado;
+        const projecao = !isCurrentMonth ? realizado : atrasado ? realizado + metaRestante : realizadoOntem + metaHojeEmDiante;
         const metaMensal = Number(metaMesTotal) > 0 ? Number(metaMesTotal) : metaPeriodo;
         const pctTotal = metaMensal > 0 ? (realizado / metaMensal) * 100 : 0;
         const pctAcumulado = metaAcumulada > 0 ? (realizado / metaAcumulada) * 100 : 0;
@@ -416,7 +427,7 @@ const PIC = () => {
 
     }
     return result;
-  }, [rawData, cutoffDay, metaMix, metasMes, diasNoMesSel, isCurrentMonth]);
+  }, [rawData, corteAcum, atrasado, metaMix, metasMes, diasNoMesSel, isCurrentMonth]);
 
 
   // AI Analysis
