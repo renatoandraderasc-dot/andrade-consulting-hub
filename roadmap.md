@@ -1,9 +1,9 @@
 # Ajustes do Painel de Compras
 
 # PIC TV — loja e visibilidade
-- [ ] Fixar loja do login e modo de exibição pelo perfil, sem controles de troca.
-- [ ] Mostrar logo, Mix final e previsão do tempo compacta; melhorar leitura.
-- [ ] Verificar tela e compilação.
+- [x] Fixar loja do login e modo de exibição pelo perfil, sem controles de troca.
+- [x] Mostrar logo, Mix final e previsão do tempo compacta; melhorar leitura.
+- [x] Verificar tela e compilação.
 
 - [x] Aplicar a configuração de departamento ativo no Painel.
 - [x] Aplicar a configuração de departamento ativo em Compras × Vendas.
