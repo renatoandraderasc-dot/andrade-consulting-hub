@@ -239,7 +239,7 @@ export default function PicTvCanal() {
         </div>
       </header>
 
-      <main key={idx} className="flex-1 min-h-0 animate-fade-in">
+      <main key={idx} className="flex-1 min-h-0">
         {cena.tipo === "noticias" && <CenaNoticias noticia={noticia} loja={loja} soPct={soPct} />}
         {cena.tipo === "dept" && <CenaDept r={resultados.find((r) => r.dept === cena.dept) ?? calc(cena.dept)} soPct={soPct} />}
         {cena.tipo === "semvenda" && <CenaSemVenda itens={semVenda} soPct={soPct} />}
