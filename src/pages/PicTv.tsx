@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Maximize, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -8,6 +8,9 @@ import { usePicDepartments, usePicKpis } from "@/hooks/usePicDepartments";
 import { usePicDisplayMode } from "@/hooks/usePicDisplay";
 import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
 import { carregarDepartamentosLoja } from "@/lib/departamentosLoja";
+import { Button } from "@/components/ui/button";
+import TvWeather from "@/components/pic/TvWeather";
+import andradeLogo from "@/assets/andrade-logo.png";
 
 /**
  * PIC em modo monitor/TV. Mesmas fontes do PIC (metas em store_daily_metrics /
@@ -24,7 +27,6 @@ const KPIS: { key: KpiKey; label: string; unit: string }[] = [
 ];
 const DEFAULT_DEPARTMENTS = ["PADARIA", "AÇOUGUE", "HORTIFRUTI"];
 const REFRESH_MS = 30 * 60 * 1000;
-const ROTATE_MS = 20 * 1000;
 
 interface Cell {
   realizado: number;
@@ -59,24 +61,13 @@ const deptLabel = (d: string) =>
   d === LOJA ? "Loja inteira" : d.charAt(0) + d.slice(1).toLowerCase();
 
 export default function PicTv() {
-  const { user, loading: authLoading, isGlobalAdmin } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [params] = useSearchParams();
   const { restrito, filtrarDepts } = useDepartamentosPermitidos();
 
-  const lojaLogin = sessionStorage.getItem("selectedStoreId");
-  // Cliente: fica preso à loja escolhida no login. Só o admin global troca de loja.
-  const lojaFixa = params.get("loja") || (!isGlobalAdmin ? lojaLogin : null);
-  const [stores, setStores] = useState<{ id: string; name: string }[]>([]);
-  const [storeId, setStoreId] = useState<string>(lojaFixa || sessionStorage.getItem("selectedStoreId") || "");
-  const [rotacao, setRotacao] = useState<boolean>(() =>
-    params.get("rotacao") === "0" || lojaFixa ? false : localStorage.getItem("pic_tv_rotacao") === "1",
-  );
-  const [modo, setModo] = useState<"valores" | "pct">(() =>
-    params.get("modo") === "pct" ? "pct" : (localStorage.getItem("pic_tv_modo") as any) === "pct" ? "pct" : "valores",
-  );
-  const forcadoPct = usePicDisplayMode(storeId) === "percentual";
-  const soPct = forcadoPct || modo === "pct";
+  const [store, setStore] = useState<{ id: string; name: string } | null>(null);
+  const storeId = store?.id || "";
+  const soPct = usePicDisplayMode(storeId, true) === "percentual";
 
   const [now, setNow] = useState(new Date());
   useEffect(() => {
@@ -100,19 +91,25 @@ export default function PicTv() {
     if (!authLoading && !user) navigate("/login");
   }, [authLoading, user]);
 
-  // Lojas: RLS já devolve apenas as aprovadas em user_store_access (admin: todas)
+  // Validate the login selection against store access. Never rotate or use URL overrides.
   useEffect(() => {
-    if (!user) return;
-    supabase.from("stores").select("id, name").order("name").then(({ data }) => {
-      const list = (data || []) as { id: string; name: string }[];
-      const visiveis = lojaFixa ? list.filter((s) => s.id === lojaFixa) : list;
-      setStores(visiveis.length ? visiveis : list);
-      if (lojaFixa && visiveis.length) { setStoreId(lojaFixa); return; }
-      if (!list.some((s) => s.id === storeId) && list.length) setStoreId(list[0].id);
-    });
-  }, [user, lojaFixa]);
+    if (!user) { setStore(null); return; }
+    let active = true;
+    const load = async () => {
+      const saved = sessionStorage.getItem("selectedStoreId");
+      const { data, error } = await supabase.from("stores").select("id, name").order("name");
+      if (!active) return;
+      if (error) { setStore(null); return; }
+      const list = data || [];
+      const selected = saved ? list.find((s) => s.id === saved) : list[0];
+      setStore(selected || null);
+      if (selected && !saved) sessionStorage.setItem("selectedStoreId", selected.id);
+    };
+    void load();
+    return () => { active = false; };
+  }, [user]);
 
-  const storeName = stores.find((s) => s.id === storeId)?.name || "";
+  const storeName = store?.name || "";
 
   const { data: vr, loading: loadingVr, refresh } = useVrRealizado(storeId, ref.ini, ref.ontem);
   const deptsConfig = usePicDepartments(storeId);
@@ -162,18 +159,6 @@ export default function PicTv() {
     }, REFRESH_MS);
     return () => clearInterval(t);
   }, [fetchMetas, refresh]);
-
-  // Rotação de lojas
-  useEffect(() => {
-    if (!rotacao || stores.length < 2) return;
-    const t = setInterval(() => {
-      setStoreId((cur) => {
-        const i = stores.findIndex((s) => s.id === cur);
-        return stores[(i + 1) % stores.length].id;
-      });
-    }, ROTATE_MS);
-    return () => clearInterval(t);
-  }, [rotacao, stores]);
 
   // Wake Lock
   useEffect(() => {
@@ -257,30 +242,20 @@ export default function PicTv() {
   const atencao = [...metasLista].sort((a, b) => a.cell.pctAcum - b.cell.pctAcum).slice(0, 3);
   const destaques = metasLista.filter((m) => m.cell.pctAcum > 100).sort((a, b) => b.cell.pctAcum - a.cell.pctAcum).slice(0, 3);
 
-  const toggleModo = (m: "valores" | "pct") => {
-    setModo(m);
-    localStorage.setItem("pic_tv_modo", m);
-  };
-  const toggleRot = () => {
-    setRotacao((r) => {
-      localStorage.setItem("pic_tv_rotacao", r ? "0" : "1");
-      return !r;
-    });
-  };
   const fullscreen = () => {
     if (document.fullscreenElement) document.exitFullscreen();
     else document.documentElement.requestFullscreen?.().catch(() => {});
   };
 
-  const cellRef = useRef<HTMLDivElement>(null);
   const diasRestantes = ref.dias - ref.diaCorte;
 
   return (
-    <div className="dark pic-tv min-h-screen bg-background text-foreground p-[1.2vw] flex flex-col gap-[1vw]">
+    <div className="dark pic-tv min-h-screen bg-background text-foreground flex flex-col">
       {/* Topo */}
-      <header className="flex flex-wrap items-center gap-[1.5vw]">
-        <span className="tv-num rounded-md bg-primary px-[0.8vw] py-[0.2vw] text-primary-foreground" style={{ fontSize: "clamp(20px,2.2vw,48px)" }}>PIC</span>
-        <h1 className="tv-num truncate" style={{ fontSize: "clamp(22px,2.6vw,56px)" }} translate="no">{storeName || "—"}</h1>
+      <header className="tv-header">
+        <img src={andradeLogo} alt="Andrade Consultoria" className="tv-logo" />
+        <span className="tv-num rounded-md bg-primary px-3 py-1 text-primary-foreground text-2xl">PIC</span>
+        <h1 className="tv-num tv-store" translate="no">{storeName || "—"}</h1>
         <div className="flex-1 min-w-[200px]">
           <div className="h-[0.6vw] min-h-[6px] rounded-full bg-secondary overflow-hidden">
             <div className="h-full bg-primary" style={{ width: `${(ref.diaCorte / ref.dias) * 100}%` }} />
@@ -289,7 +264,7 @@ export default function PicTv() {
             Dia {ref.diaCorte} de {ref.dias} · {diasRestantes} dias restantes · vendas até ontem
           </p>
         </div>
-        <div className="text-right">
+        <div className="text-right tv-clock">
           <div className="tv-num" style={{ fontSize: "clamp(22px,2.6vw,56px)" }}>
             {now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" })}
           </div>
@@ -299,22 +274,22 @@ export default function PicTv() {
         </div>
       </header>
 
-      <main className="flex-1 grid gap-[1vw] lg:grid-cols-3">
+      <main className="tv-main">
         {/* Matriz */}
-        <section className="lg:col-span-2" ref={cellRef}>
+        <section className="min-w-0">
           <div className="tv-matrix" style={{ ["--tv-cols" as any]: KPIS_ATIVOS.length }}>
             <div className="tv-head hidden md:contents">
               <div />
               {KPIS_ATIVOS.map((k) => (
                 <div key={k.key} className="px-2">
-                  <div className="tv-num" style={{ fontSize: "clamp(16px,1.5vw,34px)" }}>{k.label}</div>
-                  <div className="text-muted-foreground" style={{ fontSize: "clamp(10px,0.8vw,18px)" }}>{k.unit}</div>
+                  <div className="tv-num tv-heading">{k.label}</div>
+                  <div className="text-muted-foreground text-sm">{k.unit}</div>
                 </div>
               ))}
             </div>
             {matriz.map((l) => (
               <div key={l.dept} className={`tv-row ${l.dept === LOJA ? "tv-row-loja" : ""}`}>
-                <div className="tv-num flex items-center" style={{ fontSize: "clamp(16px,1.5vw,34px)" }} translate="no">
+                <div className="tv-num tv-dept flex items-center" translate="no">
                   {deptLabel(l.dept)}
                 </div>
                 {KPIS_ATIVOS.map((k) => (
@@ -329,7 +304,7 @@ export default function PicTv() {
         </section>
 
         {/* Coluna direita */}
-        <aside className="flex flex-col gap-[1vw]">
+        <aside className="tv-aside">
           <div className="tv-card">
             <h2 className="tv-title">Metas no ritmo</h2>
             <div className="tv-num" style={{ fontSize: "clamp(36px,4.5vw,110px)", lineHeight: 1 }}>
@@ -364,28 +339,10 @@ export default function PicTv() {
           </span>
         ))}
         <span className="flex-1" />
-        {!lojaFixa && stores.length > 1 && (
-          <select value={storeId} onChange={(e) => setStoreId(e.target.value)} className="rounded-md border border-border bg-secondary px-2 py-1 text-foreground" aria-label="Loja">
-            {stores.map((s) => <option key={s.id} value={s.id} translate="no">{s.name}</option>)}
-          </select>
-        )}
-        {!forcadoPct && (
-          <div className="inline-flex rounded-md border border-border overflow-hidden">
-            {(["valores", "pct"] as const).map((m) => (
-              <button key={m} onClick={() => toggleModo(m)} className={`px-3 py-1 ${modo === m ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"}`}>
-                {m === "valores" ? "Com valores" : "Só %"}
-              </button>
-            ))}
-          </div>
-        )}
-        {!lojaFixa && stores.length > 1 && (
-          <button onClick={toggleRot} className={`rounded-md border border-border px-3 py-1 ${rotacao ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"}`}>
-            Trocar loja a cada 20 s
-          </button>
-        )}
-        <button onClick={fullscreen} className="inline-flex items-center gap-1 rounded-md border border-border bg-secondary px-3 py-1 text-foreground">
+        <TvWeather />
+        <Button variant="secondary" onClick={fullscreen} title="Tela cheia" className="inline-flex items-center gap-2">
           <Maximize className="w-4 h-4" /> Tela cheia
-        </button>
+        </Button>
         <span className="inline-flex items-center gap-1">
           <RefreshCw className={`w-3.5 h-3.5 ${loadingVr ? "animate-spin" : ""}`} />
           Atualizado às {updatedAt ? updatedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Sao_Paulo" }) : "--:--"}
@@ -396,24 +353,26 @@ export default function PicTv() {
 }
 
 function TvCell({ kpi, label, cell, soPct }: { kpi: KpiKey; label: string; cell: Cell; soPct: boolean }) {
-  const f = faixa(cell.pctAcum, cell.hasMeta);
+  const atingimento = kpi === "mix" ? cell.pctMes : cell.pctAcum;
+  const f = faixa(atingimento, cell.hasMeta);
   const money = kpi === "fat" || kpi === "arr";
-  const bar = Math.min(Math.max(cell.pctAcum, 0), 125) / 125 * 100;
-  const diff = Math.round(cell.pctAcum - 100);
+  const bar = Math.min(Math.max(atingimento, 0), 125) / 125 * 100;
+  const diff = Math.round(atingimento - 100);
   let detalhe: string;
   if (!cell.hasMeta) detalhe = "Sem meta cadastrada";
+  else if (kpi === "mix" && soPct) detalhe = `Meta do mês ${pctTxt(cell.pctMes)}`;
   else if (soPct) detalhe = `Mês ${pctTxt(cell.pctMes)} · ${diff >= 0 ? `+${diff} pts` : `faltam ${Math.abs(diff)} pts`}`;
-  else if (kpi === "mix") detalhe = `${Math.round(cell.realizado).toLocaleString("pt-BR")} de ${Math.round(cell.metaMes).toLocaleString("pt-BR")} itens · Mês ${pctTxt(cell.pctMes)}`;
+  else if (kpi === "mix") detalhe = `Meta: ${Math.round(cell.metaMes).toLocaleString("pt-BR")} produtos distintos`;
   else detalhe = `${fmtCompact(cell.realizado, money)} de ${fmtCompact(cell.metaAcum, money)} até ontem · Mês ${pctTxt(cell.pctMes)}`;
 
   return (
     <div className="tv-cell" style={{ borderLeftColor: f.color }}>
       <div className="md:hidden text-muted-foreground text-xs">{label}</div>
-      <div className="flex items-center justify-between gap-2">
-        <span className="tv-num" style={{ color: f.color, fontSize: "clamp(26px,2.8vw,64px)", lineHeight: 1 }}>
-          {cell.hasMeta ? pctTxt(cell.pctAcum) : "—"}
+      <div className="tv-cell-top">
+        <span className={`tv-num tv-value ${kpi === "mix" && !soPct ? "tv-value-mix" : ""}`} style={{ color: f.color }}>
+          {kpi === "mix" && !soPct ? Math.round(cell.realizado).toLocaleString("pt-BR") : cell.hasMeta ? pctTxt(atingimento) : "—"}
         </span>
-        <span className="rounded px-1.5 py-0.5 font-medium uppercase" style={{ color: f.color, border: `1px solid ${f.color}`, fontSize: "clamp(9px,0.7vw,16px)" }}>
+        <span className="tv-status" style={{ color: f.color, borderColor: f.color }}>
           {f.txt}
         </span>
       </div>
@@ -421,7 +380,7 @@ function TvCell({ kpi, label, cell, soPct }: { kpi: KpiKey; label: string; cell:
         <div className="h-full rounded-full" style={{ width: `${bar}%`, background: f.color }} />
         <span className="absolute top-[-3px] bottom-[-3px] w-[2px] bg-foreground" style={{ left: "80%" }} />
       </div>
-      <div className="mt-1 text-muted-foreground truncate" style={{ fontSize: "clamp(10px,0.8vw,18px)" }}>{detalhe}</div>
+      <div className="tv-detail">{detalhe}</div>
     </div>
   );
 }
@@ -432,8 +391,8 @@ function ListaMetas({ items }: { items: { dept: string; kpi: string; cell: Cell 
       {items.map((m) => {
         const f = faixa(m.cell.pctAcum, true);
         return (
-          <li key={m.dept + m.kpi} className="flex justify-between gap-2" style={{ fontSize: "clamp(14px,1.2vw,28px)" }}>
-            <span className="truncate" translate="no">{deptLabel(m.dept)} · {m.kpi}</span>
+          <li key={m.dept + m.kpi} className="flex justify-between gap-2" >
+            <span className="min-w-0 break-words" translate="no">{deptLabel(m.dept)} · {m.kpi}</span>
             <span className="tv-num" style={{ color: f.color }}>{pctTxt(m.cell.pctAcum)}</span>
           </li>
         );
