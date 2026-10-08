@@ -53,7 +53,7 @@ Deno.serve(async (req) => {
     // config da loja (com modo_sync)
     const { data: cfgRow } = await service
       .from("store_vr_config")
-      .select("api_url, api_key, sistema, codigo_loja, modo_sync")
+      .select("api_url, api_key, sistema, codigo_loja, modo_sync, max_dias_consulta")
       .eq("store_id", store_id)
       .maybeSingle();
     const cfg = (cfgRow as ConfigLojaCache | null) ?? null;
@@ -71,6 +71,18 @@ Deno.serve(async (req) => {
         });
       }
       return json({ ok: true, relatorio, dados: [], aviso: "loja sem conexao VR cadastrada" });
+    }
+
+    // ---------- limite de periodo: pontes lentas caem com consultas longas ----------
+    const maxDias = Number((cfgRow as { max_dias_consulta?: number | null } | null)?.max_dias_consulta ?? 0);
+    const ini = typeof params?.inicio === "string" ? Date.parse(params.inicio) : NaN;
+    const fimP = typeof params?.fim === "string" ? Date.parse(params.fim) : NaN;
+    if (maxDias > 0 && !isNaN(ini) && !isNaN(fimP) && (fimP - ini) / 86400000 + 1 > maxDias) {
+      const u = await ultima();
+      if (u) {
+        return json({ ok: true, relatorio, dados: u.dados, origem: "cache", cache_em: u.atualizado_em, aviso: "dados da ultima atualizacao" });
+      }
+      return json({ erro: `periodo longo demais para o sistema desta loja (maximo ${maxDias} dias)`, dados: [] }, 200);
     }
 
     // ---------- modo diario D-1: cache primeiro ----------
