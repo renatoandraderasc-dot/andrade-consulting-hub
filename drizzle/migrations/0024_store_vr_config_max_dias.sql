@@ -1,0 +1,2 @@
+ALTER TABLE public.store_vr_config ADD COLUMN IF NOT EXISTS max_dias_consulta integer;
+COMMENT ON COLUMN public.store_vr_config.max_dias_consulta IS 'Maior periodo (dias) que a ponte aguenta numa consulta; nulo = sem limite';

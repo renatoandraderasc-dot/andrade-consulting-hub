@@ -2925,6 +2925,7 @@ export type Database = {
           last_error: string | null
           last_sync_at: string | null
           latency_ms: number | null
+          max_dias_consulta: number | null
           modo_sync: string
           online: boolean | null
           sistema: string
@@ -2942,6 +2943,7 @@ export type Database = {
           last_error?: string | null
           last_sync_at?: string | null
           latency_ms?: number | null
+          max_dias_consulta?: number | null
           modo_sync?: string
           online?: boolean | null
           sistema?: string
@@ -2959,6 +2961,7 @@ export type Database = {
           last_error?: string | null
           last_sync_at?: string | null
           latency_ms?: number | null
+          max_dias_consulta?: number | null
           modo_sync?: string
           online?: boolean | null
           sistema?: string

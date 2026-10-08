@@ -169,6 +169,13 @@
       "when": 1791465227707,
       "tag": "0023_tv_gerenciador",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1791486922471,
+      "tag": "0024_store_vr_config_max_dias",
+      "breakpoints": true
     }
   ]
 }
