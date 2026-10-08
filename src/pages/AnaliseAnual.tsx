@@ -228,6 +228,14 @@ const AnaliseAnual = () => {
     try {
       // 1) DRE mensal (quando o conector publica)
       const r = await chamarRelatorio(sid, "dre_periodo", { inicio: `${ANOS[0]}-01-01`, fim });
+      // Se a função do Hub recusar o período por limite de dias, a loja é de
+      // ponte lenta: passa direto para a leitura mês a mês.
+      if (/periodo longo/i.test(String(r.erro ?? ""))) {
+        setRows([]);
+        setLoading(false);
+        await carregarMensal(sid, mesesAteHoje(), forcar);
+        return;
+      }
       const aviso = avisoRelatorio(r);
       if (aviso) throw new Error(aviso);
       // Se o DRE não traz quebra por departamento/categoria, usa a base analítica (fallback ao vivo)
