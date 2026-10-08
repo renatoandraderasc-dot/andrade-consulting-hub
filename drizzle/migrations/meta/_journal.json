@@ -162,6 +162,13 @@
       "when": 1791463209114,
       "tag": "0022_jornada_tarefa_pessoal",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1791465227707,
+      "tag": "0023_tv_gerenciador",
+      "breakpoints": true
     }
   ]
 }
