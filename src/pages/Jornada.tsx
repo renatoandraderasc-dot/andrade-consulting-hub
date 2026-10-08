@@ -63,6 +63,12 @@ const Jornada = () => {
   const [obs, setObs] = useState("");
   const [avulsaOpen, setAvulsaOpen] = useState(false);
   const [avulsaTpl, setAvulsaTpl] = useState("");
+  const [novaOpen, setNovaOpen] = useState(false);
+  const [novaTitulo, setNovaTitulo] = useState("");
+  const [novaCad, setNovaCad] = useState<Cadencia>("diaria");
+  const [novaPerfil, setNovaPerfil] = useState("");
+  const [novaItens, setNovaItens] = useState("");
+  const [novaSalvando, setNovaSalvando] = useState(false);
   const [confirmar, setConfirmar] = useState<null | { titulo: string; texto: string; acao: () => void }>(null);
 
   const refsPeriodo = useMemo(
@@ -281,6 +287,27 @@ const Jornada = () => {
     toast.success("Tarefa avulsa criada");
   };
 
+  const criarTarefa = async () => {
+    const perfilId = novaPerfil || perfil || perfisVisiveis[0]?.id;
+    if (!novaTitulo.trim() || !loja) return;
+    if (!perfilId) return toast.error("Nenhum perfil da Jornada disponível nesta loja.");
+    setNovaSalvando(true);
+    const { data: tplId, error } = await supabase.rpc("jornada_criar_tarefa_pessoal", {
+      p_store: loja, p_perfil: perfilId, p_titulo: novaTitulo, p_descricao: "",
+      p_cadencia: novaCad, p_checklist: novaItens.split("\n").map((l) => l.trim()).filter(Boolean),
+      p_periodo: periodoRef(novaCad, hojeSP()),
+    });
+    setNovaSalvando(false);
+    if (error || !tplId) return toast.error("Não foi possível criar a tarefa.");
+    const { data: tpl } = await supabase.from("jornada_templates")
+      .select("id,titulo,descricao,cadencia,rota_hub,ordem,perfil_id,ativo").eq("id", tplId as string).maybeSingle();
+    if (tpl) setTemplates((l) => [...l, tpl as Template]);
+    setNovaOpen(false); setNovaTitulo(""); setNovaItens(""); setNovaCad("diaria");
+    setAncora(hojeSP());
+    setTick((t) => t + 1);
+    toast.success("Tarefa criada só para você nesta loja");
+  };
+
   const templatesDoFiltro = templates
     .filter((t) => perfisVisiveis.some((p) => p.id === t.perfil_id))
     .filter((t) => (perfil ? t.perfil_id === perfil : true));
@@ -436,7 +463,10 @@ const Jornada = () => {
           <Button size="sm" variant="outline" onClick={() => setTick((t) => t + 1)}>
             <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Atualizar
           </Button>
-          <Button size="sm" onClick={() => setAvulsaOpen(true)}>
+          <Button size="sm" onClick={() => { setNovaPerfil(perfil || perfisVisiveis[0]?.id || ""); setNovaOpen(true); }}>
+            <Plus className="w-3.5 h-3.5 mr-1.5" /> Nova tarefa
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setAvulsaOpen(true)}>
             <Plus className="w-3.5 h-3.5 mr-1.5" /> Rodar avulsa
           </Button>
         </div>
@@ -553,6 +583,51 @@ const Jornada = () => {
           })()}
         </SheetContent>
       </Sheet>
+
+      {/* Nova tarefa pessoal */}
+      <Dialog open={novaOpen} onOpenChange={setNovaOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Nova tarefa</DialogTitle></DialogHeader>
+          <p className="text-xs text-muted-foreground -mt-2">Fica só no seu login e nesta loja.</p>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-medium">O que precisa ser feito?</label>
+              <input autoFocus value={novaTitulo} onChange={(e) => setNovaTitulo(e.target.value)}
+                placeholder="Ex.: Conferir validade dos frios"
+                className="mt-1 w-full rounded-md border border-border bg-secondary px-2 py-2 text-sm" />
+            </div>
+            <div>
+              <label className="text-xs font-medium">Repetir</label>
+              <div className="mt-1 flex gap-2">
+                {(["diaria", "semanal", "mensal"] as Cadencia[]).map((c) => (
+                  <Button key={c} type="button" size="sm" variant={novaCad === c ? "default" : "outline"}
+                    onClick={() => setNovaCad(c)}>{CADENCIA_LABEL[c]}</Button>
+                ))}
+              </div>
+            </div>
+            {perfisVisiveis.length > 1 && (
+              <div>
+                <label className="text-xs font-medium">Perfil</label>
+                <select value={novaPerfil} onChange={(e) => setNovaPerfil(e.target.value)}
+                  className="mt-1 w-full rounded-md border border-border bg-secondary px-2 py-2 text-sm">
+                  {perfisVisiveis.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                </select>
+              </div>
+            )}
+            <div>
+              <label className="text-xs font-medium">Passos (opcional, um por linha)</label>
+              <Textarea value={novaItens} onChange={(e) => setNovaItens(e.target.value)} rows={4}
+                placeholder={"Separar produtos vencendo\nAnotar quantidades"} className="mt-1" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNovaOpen(false)}>Cancelar</Button>
+            <Button onClick={criarTarefa} disabled={!novaTitulo.trim() || novaSalvando}>
+              {novaSalvando ? "Salvando…" : "Criar tarefa"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Modal avulsa */}
       <Dialog open={avulsaOpen} onOpenChange={setAvulsaOpen}>

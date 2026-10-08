@@ -1672,6 +1672,7 @@ export type Database = {
           cadencia: Database["public"]["Enums"]["jornada_cadencia"]
           checklist_padrao: Json
           created_at: string
+          criado_por: string | null
           descricao: string | null
           id: string
           ordem: number
@@ -1685,6 +1686,7 @@ export type Database = {
           cadencia: Database["public"]["Enums"]["jornada_cadencia"]
           checklist_padrao?: Json
           created_at?: string
+          criado_por?: string | null
           descricao?: string | null
           id?: string
           ordem?: number
@@ -1698,6 +1700,7 @@ export type Database = {
           cadencia?: Database["public"]["Enums"]["jornada_cadencia"]
           checklist_padrao?: Json
           created_at?: string
+          criado_por?: string | null
           descricao?: string | null
           id?: string
           ordem?: number
@@ -3742,6 +3745,18 @@ export type Database = {
       }
       importar_lancamentos_vr_auto: { Args: never; Returns: number }
       is_supervisor: { Args: { _user_id?: string }; Returns: boolean }
+      jornada_criar_tarefa_pessoal: {
+        Args: {
+          p_cadencia: Database["public"]["Enums"]["jornada_cadencia"]
+          p_checklist: string[]
+          p_descricao: string
+          p_perfil: string
+          p_periodo: string
+          p_store: string
+          p_titulo: string
+        }
+        Returns: string
+      }
       jornada_ressincronizar_checklist: {
         Args: { p_template_id: string }
         Returns: number
