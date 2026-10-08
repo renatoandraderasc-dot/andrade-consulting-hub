@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
 import { supabase } from "@/integrations/supabase/client";
-import { chamarRelatorio, avisoRelatorio, pick, num, lucroDaLinha } from "@/lib/vrReport";
+import { chamarRelatorio, avisoRelatorio, pick, num, lucroDaLinha, maxDiasConsulta } from "@/lib/vrReport";
 import { mercadologicoNivel1, mercadologicoNivel2 } from "@/lib/mercadologico";
 import ClientLayout from "@/components/ClientLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -146,7 +146,80 @@ const AnaliseAnual = () => {
     setRows(ajustadas);
   };
 
-  const carregar = async (sid: string) => {
+  // ------------------------------------------------------------------
+  // Pontes lentas (max_dias_consulta): dre_periodo UM mes por vez, do mais
+  // recente ao mais antigo. Meses fechados ficam guardados para sempre e
+  // voltam do historico sem tocar na loja; `forcar` (admin) relê na loja.
+  // ------------------------------------------------------------------
+  const mapearDre = (dados: any[]): Row[] =>
+    dados
+      .map((l) => {
+        const ref = String(pick(l, "mes", "competencia", "data") ?? "");
+        const [a, m] = ref.split("-");
+        const dep = mercadologicoNivel1(l) || String(pick(l, "department") ?? "TOTAL").toUpperCase();
+        const vendas = num(pick(l, "receita_bruta", "faturamento", "total_vendido", "vendas"));
+        return {
+          ano: Number(a), mes: Number(m),
+          faturamento: vendas,
+          lucro: lucroDaLinha(l, vendas, num(pick(l, "lucro_bruto", "lucro"))),
+          volume: num(pick(l, "volume", "quantidade", "qtde", "qtd")),
+          departamento: dep,
+          secao: mercadologicoNivel1(l) || dep,
+          categoria: mercadologicoNivel2(l) || dep,
+          turno: extrairTurno(l),
+        } as Row;
+      })
+      .filter((x) => x.ano && x.mes);
+
+  const [progressoMes, setProgressoMes] = useState("");
+  const [faltando, setFaltando] = useState<{ ano: number; mes: number }[]>([]);
+  const [lendoMeses, setLendoMeses] = useState(false);
+  const pararRef = useRef(false);
+
+  const mesesAteHoje = () => {
+    const ontem = new Date(); ontem.setDate(ontem.getDate() - 1);
+    const lista: { ano: number; mes: number }[] = [];
+    for (let a = ontem.getFullYear(), m = ontem.getMonth() + 1; a > ANOS[0] || (a === ANOS[0] && m >= 1); ) {
+      lista.push({ ano: a, mes: m });
+      if (--m === 0) { m = 12; a--; }
+    }
+    return lista;
+  };
+
+  const carregarMensal = async (sid: string, alvo: { ano: number; mes: number }[], forcar = false, base: Row[] = []) => {
+    pararRef.current = false;
+    setLendoMeses(true);
+    setLoading(false);
+    setErro("");
+    let acumulado = base;
+    const falhas: { ano: number; mes: number }[] = [];
+    const ontem = new Date(); ontem.setDate(ontem.getDate() - 1);
+    const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    for (let i = 0; i < alvo.length; i++) {
+      const t = alvo[i];
+      if (pararRef.current) { falhas.push(...alvo.slice(i)); break; }
+      setProgressoMes(`Lendo ${MESES[t.mes - 1].toLowerCase()}/${t.ano}… (${i + 1} de ${alvo.length})`);
+      const mm = String(t.mes).padStart(2, "0");
+      const ultimo = new Date(t.ano, t.mes, 0);
+      const fim = ultimo > ontem ? iso(ontem) : iso(ultimo);
+      const r = await chamarRelatorio(sid, "dre_periodo", { inicio: `${t.ano}-${mm}-01`, fim }, { forcar }).catch(() => null);
+      if (!r || r.offline || r.erro || r.indisponivel) { falhas.push(t); continue; }
+      const linhas = mapearDre(r.dados);
+      acumulado = [...acumulado.filter((x) => !(x.ano === t.ano && x.mes === t.mes)), ...linhas];
+      setRows(acumulado);
+    }
+    setFaltando(falhas);
+    setProgressoMes("");
+    setLendoMeses(false);
+    if (!acumulado.length && falhas.length) setErro("Não foi possível ler os meses na loja. Tente novamente em alguns minutos.");
+  };
+
+  const carregar = async (sid: string, forcar = false) => {
+    if ((await maxDiasConsulta(sid)) > 0) {
+      setRows([]);
+      await carregarMensal(sid, mesesAteHoje(), forcar);
+      return;
+    }
     setLoading(true);
     setErro("");
     const hoje0 = new Date();
@@ -720,9 +793,9 @@ const AnaliseAnual = () => {
               <FileText className="w-4 h-4 mr-2" />
               PDF
             </Button>
-            <Button variant="outline" size="sm" disabled={loading || !storeId} onClick={() => storeId && carregar(storeId)}>
+            <Button variant="outline" size="sm" disabled={loading || lendoMeses || !storeId} onClick={() => storeId && carregar(storeId, isAdmin)}>
 
-              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+              <RefreshCw className={`w-4 h-4 mr-2 ${loading || lendoMeses ? "animate-spin" : ""}`} />
               Atualizar
             </Button>
           </div>
@@ -730,6 +803,33 @@ const AnaliseAnual = () => {
 
         {loading && (
           <CartProgressOverlay label="Carregando análise anual..." />
+        )}
+
+        {(lendoMeses || faltando.length > 0) && (
+          <Card className="mb-4 border-primary/40">
+            <CardContent className="p-3 flex flex-wrap items-center gap-3 text-sm">
+              {lendoMeses ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin text-primary" />
+                  <span>{progressoMes}</span>
+                  <span className="text-muted-foreground text-xs">Os meses já lidos aparecem na tabela e ficam guardados.</span>
+                  <Button size="sm" variant="outline" className="ml-auto" onClick={() => { pararRef.current = true; }}>Interromper</Button>
+                </>
+              ) : (
+                <>
+                  <span>
+                    Faltaram {faltando.length} {faltando.length === 1 ? "mês" : "meses"}:{" "}
+                    <span className="text-muted-foreground">
+                      {faltando.slice(0, 12).map((t) => `${MESES[t.mes - 1].toLowerCase()}/${t.ano}`).join(", ")}{faltando.length > 12 ? "…" : ""}
+                    </span>
+                  </span>
+                  <Button size="sm" className="ml-auto" onClick={() => storeId && carregarMensal(storeId, faltando, false, rows)}>
+                    Tentar de novo os que faltaram
+                  </Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
         )}
 
         <Card className="mb-6">
