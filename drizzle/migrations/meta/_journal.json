@@ -176,6 +176,13 @@
       "when": 1791486922471,
       "tag": "0024_store_vr_config_max_dias",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1791489233910,
+      "tag": "0025_loja_max_dias_consulta",
+      "breakpoints": true
     }
   ]
 }

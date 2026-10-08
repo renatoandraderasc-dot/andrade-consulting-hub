@@ -69,12 +69,13 @@ export async function chamarRelatorio(
   storeId: string,
   relatorio: string,
   params: Record<string, unknown> = {},
+  opts: { forcar?: boolean } = {},
 ): Promise<RelatorioResultado> {
   const vazio = { dados: [] as any[], indisponivel: false, offline: false, erro: null as string | null };
   if (!storeId) return vazio;
 
   const { data, error } = await supabase.functions.invoke("vr-proxy", {
-    body: { store_id: storeId, relatorio, params },
+    body: { store_id: storeId, relatorio, params, ...(opts.forcar ? { forcar: true } : {}) },
   });
 
   let msg = "";
@@ -206,3 +207,24 @@ export function lucroDaLinha(l: any, vendas: number, lucroFallback?: number): nu
   return lucroFallback ?? num(pick(l, "lucro"));
 }
 
+
+// ============================================================
+// Pontes lentas (store_vr_config.max_dias_consulta definido):
+// as telas pedem um mes por vez, sem paralelo.
+// ============================================================
+const limiteLoja = new Map<string, Promise<number>>();
+export function maxDiasConsulta(storeId: string): Promise<number> {
+  if (!storeId) return Promise.resolve(0);
+  let p = limiteLoja.get(storeId);
+  if (!p) {
+    p = (async () => {
+      const { data } = await supabase.rpc("loja_max_dias_consulta" as any, { p_store: storeId });
+      return Number(data ?? 0) || 0;
+    })();
+    limiteLoja.set(storeId, p);
+  }
+  return p;
+}
+
+/** Erro de protecao da ponte: periodo longo, ponte ocupada ou tempo esgotado. */
+export const ERRO_PROTECAO_PONTE = /periodo longo|ponte ocupada|ocupada|tempo esgotado|\b50[34]\b/i;

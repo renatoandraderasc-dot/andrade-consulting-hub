@@ -98,9 +98,17 @@ Deno.serve(async (req) => {
       .from("relatorio_cache")
       .select("relatorio, params, fim")
       .eq("store_id", storeId);
+    const mesAnterior = (() => { const d = new Date(`${ontem.slice(0, 7)}-01T12:00:00Z`); d.setUTCMonth(d.getUTCMonth() - 1); return d.toISOString().slice(0, 7); })();
     for (const e of existentes ?? []) {
       const p = { ...(e.params as Record<string, unknown>) };
       const fim = e.fim as string | null;
+      // dre_periodo mensal: historico permanente. So mes corrente e anterior sao renovados.
+      if (e.relatorio === "dre_periodo" && typeof p.inicio === "string" && String(p.inicio).endsWith("-01")) {
+        const mesIni = String(p.inicio).slice(0, 7);
+        if (mesIni === ontem.slice(0, 7)) { p.fim = ontem; add("dre_periodo", p); }
+        else if (mesIni === mesAnterior) add("dre_periodo", p);
+        continue;
+      }
       if (!fim) { add(e.relatorio as string, p); continue; }           // snapshot
       if (fim < limiteRenovar) continue;                               // periodo antigo, fica como esta
       if (p.data !== undefined) { p.data = ontem; }
@@ -136,6 +144,7 @@ Deno.serve(async (req) => {
     // 4. limpeza de cache velho
     await service.from("relatorio_cache").delete()
       .eq("store_id", storeId)
+      .neq("relatorio", "dre_periodo") // historico mensal nunca expira
       .lt("atualizado_em", new Date(Date.now() - 60 * 86400000).toISOString());
 
     resumo.push({ store_id: storeId, consultas: alvos.size, ok, falhas, sem_relatorio: semRelatorio,
