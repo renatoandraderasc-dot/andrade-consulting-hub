@@ -69,12 +69,13 @@ export async function chamarRelatorio(
   storeId: string,
   relatorio: string,
   params: Record<string, unknown> = {},
+  opts: { forcar?: boolean } = {},
 ): Promise<RelatorioResultado> {
   const vazio = { dados: [] as any[], indisponivel: false, offline: false, erro: null as string | null };
   if (!storeId) return vazio;
 
   const { data, error } = await supabase.functions.invoke("vr-proxy", {
-    body: { store_id: storeId, relatorio, params },
+    body: { store_id: storeId, relatorio, params, ...(opts.forcar ? { forcar: true } : {}) },
   });
 
   let msg = "";
