@@ -48,6 +48,7 @@ export const APP_MODULES = [
   { key: "encarte_sugestao", label: "Sugestão de Encarte", path: "/encarte-sugestao" },
   { key: "jornada", label: "Jornada", path: "/jornada" },
   { key: "jornada_execucoes", label: "Jornada: Execuções", path: "/jornada/execucoes" },
+  { key: "admin_tv", label: "Admin: Gerenciador de TV", path: "/admin/tv" },
   { key: "admin_jornada", label: "Admin: Jornada", path: "/admin/jornada" },
 ] as const;
 

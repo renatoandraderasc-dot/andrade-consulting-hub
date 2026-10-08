@@ -55,6 +55,8 @@ import AdminParametrizacoes from "./pages/AdminParametrizacoes";
 import Jornada from "./pages/Jornada";
 import JornadaExecucoes from "./pages/JornadaExecucoes";
 import AdminJornada from "./pages/AdminJornada";
+import AdminTv from "./pages/AdminTv";
+import TvPlayer from "./pages/TvPlayer";
 import NotFound from "./pages/NotFound";
 import ModuleGuard from "@/components/ModuleGuard";
 
@@ -136,6 +138,8 @@ const App = () => (
             <Route path="/jornada" element={g("jornada", <Jornada />)} />
             <Route path="/jornada/execucoes" element={g("jornada_execucoes", <JornadaExecucoes />)} />
             <Route path="/admin/jornada" element={g("jornada", <AdminJornada />)} />
+            <Route path="/admin/tv" element={g("admin_tv", <AdminTv />)} />
+            <Route path="/tv/:id" element={<TvPlayer />} />
             <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
 
             <Route path="*" element={<NotFound />} />
