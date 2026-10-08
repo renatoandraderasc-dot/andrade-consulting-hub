@@ -207,3 +207,24 @@ export function lucroDaLinha(l: any, vendas: number, lucroFallback?: number): nu
   return lucroFallback ?? num(pick(l, "lucro"));
 }
 
+
+// ============================================================
+// Pontes lentas (store_vr_config.max_dias_consulta definido):
+// as telas pedem um mes por vez, sem paralelo.
+// ============================================================
+const limiteLoja = new Map<string, Promise<number>>();
+export function maxDiasConsulta(storeId: string): Promise<number> {
+  if (!storeId) return Promise.resolve(0);
+  let p = limiteLoja.get(storeId);
+  if (!p) {
+    p = (async () => {
+      const { data } = await supabase.rpc("loja_max_dias_consulta" as any, { p_store: storeId });
+      return Number(data ?? 0) || 0;
+    })();
+    limiteLoja.set(storeId, p);
+  }
+  return p;
+}
+
+/** Erro de protecao da ponte: periodo longo, ponte ocupada ou tempo esgotado. */
+export const ERRO_PROTECAO_PONTE = /periodo longo|ponte ocupada|ocupada|tempo esgotado|\b50[34]\b/i;
