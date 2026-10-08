@@ -3186,6 +3186,85 @@ export type Database = {
           },
         ]
       }
+      tv_itens: {
+        Row: {
+          ativo: boolean
+          config: Json
+          created_at: string
+          duracao_seg: number
+          id: string
+          midia_path: string | null
+          ordem: number
+          tela_id: string
+          tipo: string
+          titulo: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          config?: Json
+          created_at?: string
+          duracao_seg?: number
+          id?: string
+          midia_path?: string | null
+          ordem?: number
+          tela_id: string
+          tipo?: string
+          titulo?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          config?: Json
+          created_at?: string
+          duracao_seg?: number
+          id?: string
+          midia_path?: string | null
+          ordem?: number
+          tela_id?: string
+          tipo?: string
+          titulo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tv_itens_tela_id_fkey"
+            columns: ["tela_id"]
+            isOneToOne: false
+            referencedRelation: "tv_telas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tv_telas: {
+        Row: {
+          ativa: boolean
+          created_at: string
+          id: string
+          nome: string
+          store_id: string
+        }
+        Insert: {
+          ativa?: boolean
+          created_at?: string
+          id?: string
+          nome: string
+          store_id: string
+        }
+        Update: {
+          ativa?: boolean
+          created_at?: string
+          id?: string
+          nome?: string
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tv_telas_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_department_access: {
         Row: {
           created_at: string
