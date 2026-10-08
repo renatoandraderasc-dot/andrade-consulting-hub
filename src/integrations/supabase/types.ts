@@ -3844,6 +3844,7 @@ export type Database = {
         Returns: number
       }
       jornada_tem_acesso_loja: { Args: { p_store: string }; Returns: boolean }
+      loja_max_dias_consulta: { Args: { p_store: string }; Returns: number }
       meta_venda_mes_dashboard: {
         Args: { p_ano: number; p_mes: number; p_store_id: string }
         Returns: number
