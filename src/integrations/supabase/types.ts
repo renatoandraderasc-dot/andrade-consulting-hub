@@ -1793,6 +1793,72 @@ export type Database = {
           },
         ]
       }
+      lancamentos_bkp_sta_izabel_20261006: {
+        Row: {
+          classificacao_manual: boolean | null
+          competencia_ano: number | null
+          competencia_mes: number | null
+          created_at: string | null
+          data: string | null
+          descricao: string | null
+          id: string | null
+          id_tipo: number | null
+          observacao: string | null
+          origem: string | null
+          origem_ref: string | null
+          status: string | null
+          store_id: string | null
+          subtipo: string | null
+          tipo: string | null
+          tipo_entrada: string | null
+          updated_at: string | null
+          user_id: string | null
+          valor: number | null
+        }
+        Insert: {
+          classificacao_manual?: boolean | null
+          competencia_ano?: number | null
+          competencia_mes?: number | null
+          created_at?: string | null
+          data?: string | null
+          descricao?: string | null
+          id?: string | null
+          id_tipo?: number | null
+          observacao?: string | null
+          origem?: string | null
+          origem_ref?: string | null
+          status?: string | null
+          store_id?: string | null
+          subtipo?: string | null
+          tipo?: string | null
+          tipo_entrada?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          valor?: number | null
+        }
+        Update: {
+          classificacao_manual?: boolean | null
+          competencia_ano?: number | null
+          competencia_mes?: number | null
+          created_at?: string | null
+          data?: string | null
+          descricao?: string | null
+          id?: string | null
+          id_tipo?: number | null
+          observacao?: string | null
+          origem?: string | null
+          origem_ref?: string | null
+          status?: string | null
+          store_id?: string | null
+          subtipo?: string | null
+          tipo?: string | null
+          tipo_entrada?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          valor?: number | null
+        }
+        Relationships: []
+      }
       margens_padrao: {
         Row: {
           created_at: string
