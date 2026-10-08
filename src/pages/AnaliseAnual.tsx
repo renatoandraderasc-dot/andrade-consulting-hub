@@ -202,7 +202,7 @@ const AnaliseAnual = () => {
       const mm = String(t.mes).padStart(2, "0");
       const ultimo = new Date(t.ano, t.mes, 0);
       const fim = ultimo > ontem ? iso(ontem) : iso(ultimo);
-      const r = await chamarRelatorio(sid, "dre_periodo", { inicio: `${t.ano}-${mm}-01`, fim }, { forcar }).catch(() => null);
+      const r = await chamarRelatorio(sid, "dre_periodo", { inicio: `${t.ano}-${mm}-01`, fim }, { forcar: forcar && i < 2 }).catch(() => null);
       if (!r || r.offline || r.erro || r.indisponivel) { falhas.push(t); continue; }
       const linhas = mapearDre(r.dados);
       acumulado = [...acumulado.filter((x) => !(x.ano === t.ano && x.mes === t.mes)), ...linhas];

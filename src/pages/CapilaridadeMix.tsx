@@ -9,7 +9,7 @@ import ClientLayout from "@/components/ClientLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
 import { supabase } from "@/integrations/supabase/client";
-import { ALIAS_EAN, chamarRelatorio, avisoRelatorio, pick as col, num } from "@/lib/vrReport";
+import { ALIAS_EAN, chamarRelatorio, avisoRelatorio, pick as col, num, maxDiasConsulta, ERRO_PROTECAO_PONTE } from "@/lib/vrReport";
 import { mercadologicoNivel1, mercadologicoNivel2 } from "@/lib/mercadologico";
 
 import { Card } from "@/components/ui/card";
@@ -199,7 +199,7 @@ const CapilaridadeMix = () => {
     const acc = new Map<string, Linha>();
     let algumOk = false;
     let ultimaFalha: string | null = null;
-    const lote = 3;
+    const lote = (await maxDiasConsulta(sid)) > 0 ? 1 : 3;
     for (let i = 0; i < nMeses; i += lote) {
       const meses = Array.from({ length: Math.min(lote, nMeses - i) }, (_, j) => i + j + 1);
       setProgresso(`Lendo vendas de ${meses.map((m) => MESES[m - 1]).join(", ")}…`);
@@ -258,7 +258,7 @@ const CapilaridadeMix = () => {
     try {
       let base: Linha[] | null = null;
       const r = await chamarRelatorio(storeId, "capilaridade_mix", { inicio, fim });
-      if (r.indisponivel) {
+      if (r.indisponivel || ERRO_PROTECAO_PONTE.test(r.erro ?? "")) {
         base = await deRanking(storeId, ano, nMeses, hojeIso);
       } else {
         const msg = avisoRelatorio(r);

@@ -108,15 +108,28 @@ export const DadosVrTab = ({ storeId }: Props) => {
         chamar("pagar_por_fornecedor"),
       ]);
       setAviso([a, b, c].map((r) => r.aviso).find(Boolean) ?? null);
+      // Algumas pontes trazem varias linhas por mes (departamento x grupo): agrupa por mes.
+      const porMes = new Map<string, { mes: string; receita_bruta: number; cmv: number; lucro_bruto: number; margem_bruta_pct: number; volume: number; linhas: number }>();
+      for (const r of a.linhas) {
+        const mes = String(pick(r, "mes", "competencia", "data") ?? "");
+        const cur = porMes.get(mes) ?? { mes, receita_bruta: 0, cmv: 0, lucro_bruto: 0, margem_bruta_pct: 0, volume: 0, linhas: 0 };
+        cur.receita_bruta += n(pick(r, "receita_bruta", "faturamento", "total_vendido"));
+        cur.cmv += n(pick(r, "cmv", "custo"));
+        cur.lucro_bruto += n(pick(r, "lucro_bruto", "lucro"));
+        cur.volume += n(pick(r, "volume", "quantidade", "qtde"));
+        cur.margem_bruta_pct = n(pick(r, "margem_bruta_pct", "margem_pct", "margem"));
+        cur.linhas++;
+        porMes.set(mes, cur);
+      }
       setDre(
-        a.linhas.map((r) => ({
-          mes: String(pick(r, "mes", "competencia", "data") ?? ""),
-          receita_bruta: n(pick(r, "receita_bruta", "faturamento", "total_vendido")),
-          cmv: n(pick(r, "cmv", "custo")),
-          lucro_bruto: n(pick(r, "lucro_bruto", "lucro")),
-          margem_bruta_pct: n(pick(r, "margem_bruta_pct", "margem_pct", "margem")),
-          volume: n(pick(r, "volume", "quantidade", "qtde")),
-        }))
+        Array.from(porMes.values())
+          .sort((x, y) => x.mes.localeCompare(y.mes))
+          .map(({ linhas, ...m }) => ({
+            ...m,
+            margem_bruta_pct: linhas > 1 || !m.margem_bruta_pct
+              ? (m.receita_bruta ? (m.lucro_bruto / m.receita_bruta) * 100 : 0)
+              : m.margem_bruta_pct,
+          }))
       );
       setFluxo(
         b.linhas.map((r) => ({
