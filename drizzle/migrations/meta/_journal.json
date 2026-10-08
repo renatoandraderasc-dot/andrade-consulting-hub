@@ -183,6 +183,13 @@
       "when": 1791489233910,
       "tag": "0025_loja_max_dias_consulta",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1791500789308,
+      "tag": "0026_backup_lancamentos_santa_izabel",
+      "breakpoints": true
     }
   ]
 }
