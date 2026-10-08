@@ -188,14 +188,16 @@ const AnaliseAnual = () => {
       try {
         const anosBusca: number[] = [];
         for (let a = ANOS[0]; a <= hoje0.getFullYear(); a++) anosBusca.push(a);
-        const partes = await Promise.all(
-          anosBusca.map((a) =>
-            chamarRelatorio(sid, "vendas_secao_periodo", {
-              inicio: `${a}-01-01`,
-              fim: a === hoje0.getFullYear() ? fim : `${a}-12-31`,
-            }),
-          ),
-        );
+        // Um ano por vez: pedir todos juntos trava pontes lentas (ex.: SHI).
+        const partes: Awaited<ReturnType<typeof chamarRelatorio>>[] = [];
+        for (const a of anosBusca.reverse()) {
+          const p = await chamarRelatorio(sid, "vendas_secao_periodo", {
+            inicio: `${a}-01-01`,
+            fim: a === hoje0.getFullYear() ? fim : `${a}-12-31`,
+          });
+          partes.push(p);
+          if (p.offline || p.erro) break;
+        }
         const acc = new Map<string, Row>();
         for (const p of partes) {
           for (const l of p.dados) {
