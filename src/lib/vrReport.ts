@@ -218,12 +218,20 @@ export function maxDiasConsulta(storeId: string): Promise<number> {
   let p = limiteLoja.get(storeId);
   if (!p) {
     p = (async () => {
-      const { data } = await supabase.rpc("loja_max_dias_consulta" as any, { p_store: storeId });
-      return Number(data ?? 0) || 0;
+      // Ate 2 tentativas: logo apos o login a sessao pode ainda nao estar pronta.
+      for (let t = 0; t < 2; t++) {
+        const { data, error } = await supabase.rpc("loja_max_dias_consulta" as any, { p_store: storeId });
+        if (!error && data != null) return Number(data) || 0;
+        if (!error) return 0; // loja sem limite
+        await new Promise((r) => setTimeout(r, 800));
+      }
+      throw new Error("limite indisponivel");
     })();
     limiteLoja.set(storeId, p);
+    // Falha nao fica guardada: a proxima chamada consulta de novo.
+    p.catch(() => limiteLoja.delete(storeId));
   }
-  return p;
+  return p.catch(() => 0);
 }
 
 /** Erro de protecao da ponte: periodo longo, ponte ocupada ou tempo esgotado. */
