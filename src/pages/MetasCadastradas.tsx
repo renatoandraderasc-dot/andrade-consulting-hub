@@ -45,6 +45,7 @@ const MetasCadastradas = () => {
   const [mes, setMes] = useState(Number(hojeSP.slice(5, 7)));
 
   const [linhas, setLinhas] = useState<LinhaMeta[]>([]);
+  const [lojaLinha, setLojaLinha] = useState<LinhaMeta | null>(null);
   const [compras, setCompras] = useState<LinhaCompra[]>([]);
   const [carregando, setCarregando] = useState(false);
 
@@ -94,10 +95,11 @@ const MetasCadastradas = () => {
         if (data.length < 1000) break;
         from += 1000;
       }
-      const ordenado = [...acc.values()]
-        .map((l) => ({ ...l, margemPct: l.vendas > 0 ? (l.lucro / l.vendas) * 100 : 0 }))
-        .sort((a, b) => b.vendas - a.vendas);
-      setLinhas(ordenado);
+      const todas = [...acc.values()]
+        .map((l) => ({ ...l, margemPct: l.vendas > 0 ? (l.lucro / l.vendas) * 100 : 0 }));
+      const ehLoja = (d: string) => ["LOJA", "GERAL", "TOTAL"].includes(d);
+      setLojaLinha(todas.find((l) => ehLoja(l.dept)) ?? null);
+      setLinhas(todas.filter((l) => !ehLoja(l.dept)).sort((a, b) => b.vendas - a.vendas));
 
       const { data: cm } = await supabase
         .from("compras_meta")
@@ -124,8 +126,8 @@ const MetasCadastradas = () => {
 
   useEffect(() => { carregar(); }, [storeId, inicio, fim]);
 
-  const totais = useMemo(
-    () => linhas.reduce(
+  const totais = useMemo(() => {
+    const soma = linhas.reduce(
       (a, l) => ({
         vendas: a.vendas + l.vendas,
         lucro: a.lucro + l.lucro,
@@ -133,9 +135,18 @@ const MetasCadastradas = () => {
         mix: a.mix + l.mix,
       }),
       { vendas: 0, lucro: 0, volume: 0, mix: 0 },
-    ),
-    [linhas],
-  );
+    );
+    // A linha LOJA é a meta oficial da loja inteira; não somar com departamentos.
+    if (lojaLinha && lojaLinha.vendas > 0) {
+      return {
+        vendas: lojaLinha.vendas,
+        lucro: lojaLinha.lucro,
+        volume: lojaLinha.volume || soma.volume,
+        mix: lojaLinha.mix || soma.mix,
+      };
+    }
+    return soma;
+  }, [linhas, lojaLinha]);
 
   const totalCompra = useMemo(
     () => compras.reduce((a, c) => a + c.meta_compra, 0),
@@ -164,9 +175,9 @@ const MetasCadastradas = () => {
             <Select value={String(mes)} onValueChange={(v) => setMes(Number(v))}>
               <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {MESES.map((m, i) => (
-                  <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>
-                ))}
+                {MESES.map((m, i) => (i === 0 ? null : (
+                  <SelectItem key={i} value={String(i)}>{m}</SelectItem>
+                )))}
               </SelectContent>
             </Select>
             <Select value={String(ano)} onValueChange={(v) => setAno(Number(v))}>
@@ -189,7 +200,7 @@ const MetasCadastradas = () => {
 
         <div className="bg-card border border-border rounded-2xl p-6 overflow-x-auto">
           <h2 className="font-display font-bold text-foreground mb-4">Metas de venda por departamento</h2>
-          {linhas.length === 0 ? (
+          {linhas.length === 0 && !lojaLinha ? (
             <p className="font-body text-sm text-muted-foreground">
               {carregando ? "Carregando..." : "Nenhuma meta cadastrada para este mês."}
             </p>
@@ -219,7 +230,7 @@ const MetasCadastradas = () => {
                   </tr>
                 ))}
                 <tr className="font-semibold">
-                  <td className="py-3 pr-2 font-body">Total</td>
+                  <td className="py-3 pr-2 font-body">{lojaLinha ? "Total da loja" : "Total"}</td>
                   <td />
                   <td className="py-3 px-2 text-right font-body">{fmtBRL(totais.vendas)}</td>
                   <td className="py-3 px-2 text-right font-body">{fmtBRL(totais.lucro)}</td>
