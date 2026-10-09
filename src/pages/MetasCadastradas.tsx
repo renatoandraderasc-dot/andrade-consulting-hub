@@ -200,7 +200,7 @@ const MetasCadastradas = () => {
 
         <div className="bg-card border border-border rounded-2xl p-6 overflow-x-auto">
           <h2 className="font-display font-bold text-foreground mb-4">Metas de venda por departamento</h2>
-          {linhas.length === 0 ? (
+          {linhas.length === 0 && !lojaLinha ? (
             <p className="font-body text-sm text-muted-foreground">
               {carregando ? "Carregando..." : "Nenhuma meta cadastrada para este mês."}
             </p>
