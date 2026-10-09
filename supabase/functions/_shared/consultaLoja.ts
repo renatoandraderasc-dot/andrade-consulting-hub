@@ -105,8 +105,8 @@ export async function consultarRelatorioLoja(opts: {
     q.set("chave", cfg.api_key);
     // Nomes equivalentes na ponte DIRECTOR (algumas pontes publicam nomes diferentes)
     const ALIAS_DIRECTOR: Record<string, string[]> = {
-      vendas_secao_periodo: ["vendas_departamento_dia", "vendas_secao_dia"],
-      vendas_departamento_periodo: ["vendas_departamento_dia", "vendas_secao_dia"],
+      vendas_secao_periodo: ["vendas_secao_periodo", "vendas_departamento_dia", "vendas_secao_dia"],
+      vendas_departamento_periodo: ["vendas_departamento_periodo", "vendas_secao_periodo", "vendas_departamento_dia", "vendas_secao_dia"],
       vendas_departamento_dia: ["vendas_departamento_dia", "vendas_secao_dia"],
       vendas_hierarquia_periodo: ["vendas_produto_periodo"],
       compras_vendas_produto: ["compras_vendas_produto", "compras_produto_periodo", "compras_vendas_por_produto", "vendas_produto_periodo"],
