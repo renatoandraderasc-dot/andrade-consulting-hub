@@ -692,7 +692,8 @@ const KpiSection = ({ label, kpi, viewMode, today, soPct }: KpiSectionProps) => 
 
       {kpi.hasMeta ? (
         <>
-          {renderBar(
+          {/* Mix de Produtos não tem linha de Acumulado: a meta de mix é mensal */}
+          {label !== "MIX de Produtos" && renderBar(
             "ACUMUL.",
             kpi.pctAcumulado,
             acumColor,
