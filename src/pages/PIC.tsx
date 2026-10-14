@@ -635,7 +635,6 @@ const DepartmentCard = ({ dept, kpis, viewMode, delay, today, soPct, kpiKeys, st
     if (!cardRef.current) return;
     try {
       const blob = await gerarFotoElemento(cardRef.current);
-      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
       if (!blob) throw new Error("blob");
       try {
         await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
