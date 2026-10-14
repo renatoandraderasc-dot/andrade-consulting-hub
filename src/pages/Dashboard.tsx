@@ -21,6 +21,7 @@ import { chamarRelatorio, num, pick } from "@/lib/vrReport";
 import MascotPersona from "@/components/poster/MascotPersona";
 import CouponDivider from "@/components/poster/CouponDivider";
 import { carregarDepartamentosLoja } from "@/lib/departamentosLoja";
+import BotaoFotoTela from "@/components/BotaoFotoTela";
 
 const MONTHS = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
@@ -436,7 +437,7 @@ const Dashboard = () => {
 
   return (
     <ClientLayout storeName={storeName}>
-      <div className="container mx-auto px-6 py-6 max-w-[1400px]">
+      <div id="print-dashboard" className="container mx-auto px-6 py-6 max-w-[1400px]">
         {/* Barra de filtros global da tela */}
         <DashboardFilterBar
           periodo={periodo}
@@ -470,6 +471,7 @@ const Dashboard = () => {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
+              <BotaoFotoTela alvoId="print-dashboard" nome="dashboard" />
               {!offline && updatedAt && (
                 <span className="text-[11px] text-muted-foreground">
                   VR ao vivo · {updatedAt.toLocaleTimeString("pt-BR")}
