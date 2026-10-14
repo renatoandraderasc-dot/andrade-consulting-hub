@@ -288,6 +288,47 @@ export type Database = {
           },
         ]
       }
+      compras_alcada_config: {
+        Row: {
+          departamento: string
+          id: string
+          limite_dentro_dias: number
+          limite_fora_dias: number
+          limite_variacao_pct: number
+          store_id: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          departamento?: string
+          id?: string
+          limite_dentro_dias?: number
+          limite_fora_dias?: number
+          limite_variacao_pct?: number
+          store_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          departamento?: string
+          id?: string
+          limite_dentro_dias?: number
+          limite_fora_dias?: number
+          limite_variacao_pct?: number
+          store_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compras_alcada_config_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       compras_config: {
         Row: {
           ano: number
