@@ -608,7 +608,7 @@ function textoWhatsapp(dept: string, kpis: Record<string, KpiData>, kpiKeys: str
     const fmt = k === "quantidade" || isMix ? num : brl;
     linhas.push("", `*${KPI_LABELS[k]?.toUpperCase()}*`);
     if (!isMix) linhas.push(`Acumulado: ${pctFmt(d.pctAcumulado)}`);
-    linhas.push(`Total: ${pctFmt(d.pctTotal)}`, `Projeção: ${pctFmt(d.pctProjecao)}`);
+    linhas.push(`Total: ${pctFmt(d.pctTotal)}`);
     if (!soPct) {
       linhas.push(`Realizado: ${fmt(d.realizado)} | Meta: ${fmt(d.metaMensal)}`);
     }
@@ -648,7 +648,8 @@ const DepartmentCard = ({ dept, kpis, viewMode, delay, today, soPct, kpiKeys, st
             {copiado ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
           </button>
           {kpiKeys.map((k) => {
-            const val = kpis[k]?.pctAcumulado || 0;
+            // MIX não tem acumulado: o selo do topo mostra o Total do mês
+            const val = (k === "volume" ? kpis[k]?.pctTotal : kpis[k]?.pctAcumulado) || 0;
             return (
               <span key={k} className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${val >= 100 ? "bg-emerald-500/20 text-emerald-400" : val >= 80 ? "bg-amber-500/20 text-amber-400" : "bg-red-500/20 text-red-400"}`}>
                 {KPI_LABELS[k]?.charAt(0)}: {kpis[k]?.hasMeta ? pctFmt(val) : kpis[k]?.realizado > 0 ? "Real." : "—"}
@@ -687,7 +688,6 @@ const KpiSection = ({ label, kpi, viewMode, today, soPct }: KpiSectionProps) => 
   const totalValido = kpi.metaMensal > 0;
   const acumColor = kpi.pctAcumulado >= 100 ? "bg-emerald-500" : kpi.pctAcumulado >= 80 ? "bg-blue-500" : "bg-red-500";
   const totalColor = kpi.pctTotal >= 100 ? "bg-emerald-500" : kpi.pctTotal >= 80 ? "bg-blue-500" : "bg-amber-500";
-  const projColor = kpi.pctProjecao >= 100 ? "bg-emerald-500" : kpi.pctProjecao >= 80 ? "bg-blue-500" : "bg-red-500";
   const isCurrency = label !== "Volume" && label !== "MIX de Produtos";
   const valueFmt = (value: number) => {
     if (soPct) return "—";
@@ -750,17 +750,11 @@ const KpiSection = ({ label, kpi, viewMode, today, soPct }: KpiSectionProps) => 
             soPct ? "" : `Realizado ${valueFmt(kpi.realizado)} / Meta mensal ${valueFmt(kpi.metaMensal)}`,
             totalValido,
           )}
-          {renderBar(
-            "PROJ.",
-            kpi.pctProjecao,
-            projColor,
-            `Projeção do mês`,
-            soPct ? "" : `Realizado até ontem + metas até o fim do mês: ${valueFmt(kpi.projecao)}`,
-            totalValido,
-          )}
           {!soPct && (
             <p className="ml-[4.5rem] text-[10px] text-muted-foreground font-mono">
-              Meta acum. {valueFmt(kpi.metaAcumulada)} · Meta mês {valueFmt(kpi.metaMensal)} · Realizado {valueFmt(kpi.realizado)} · Projeção {valueFmt(kpi.projecao)}
+              {label === "MIX de Produtos"
+                ? `Meta mês ${valueFmt(kpi.metaMensal)} · Realizado ${valueFmt(kpi.realizado)}`
+                : `Meta acum. ${valueFmt(kpi.metaAcumulada)} · Meta mês ${valueFmt(kpi.metaMensal)} · Realizado ${valueFmt(kpi.realizado)}`}
             </p>
           )}
         </>
