@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import html2canvas from "html2canvas";
+import { gerarFotoElemento } from "@/lib/fotoElemento";
 import { Trophy, TrendingUp, TrendingDown, Calendar, Filter, Sparkles, Flag, ChevronDown, RefreshCw, Copy, Check, Camera } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -634,8 +634,7 @@ const DepartmentCard = ({ dept, kpis, viewMode, delay, today, soPct, kpiKeys, st
   const copiarFoto = async () => {
     if (!cardRef.current) return;
     try {
-      const canvas = await html2canvas(cardRef.current, { scale: 2, useCORS: true, backgroundColor: null });
-      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+      const blob = await gerarFotoElemento(cardRef.current);
       if (!blob) throw new Error("blob");
       try {
         await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
