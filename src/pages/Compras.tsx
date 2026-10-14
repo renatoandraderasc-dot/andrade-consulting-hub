@@ -17,6 +17,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
 import ClientLayout from "@/components/ClientLayout";
 import { useToast } from "@/hooks/use-toast";
+import BotaoFotoTela from "@/components/BotaoFotoTela";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { carregarBaseCatalogo, carregarProdutosAtivos12m } from "@/lib/catalogoProdutos";
 import { CartProgressOverlay } from "@/components/CartProgress";
@@ -885,8 +886,9 @@ const Compras = () => {
           </TabsList>
 
           {/* ================= ABA 1 - PAINEL ================= */}
-          <TabsContent value="painel">
-            <div className="flex justify-end mb-4">
+          <TabsContent value="painel" id="print-painel-compras">
+            <div className="flex justify-end gap-2 mb-4">
+              <BotaoFotoTela alvoId="print-painel-compras" nome="painel-compras" />
               <button onClick={fetchRealizadoMesAtual} disabled={loadingPainel} className={btnGhost}>
                 <RefreshCw className={`w-4 h-4 ${loadingPainel ? "animate-spin" : ""}`} /> Atualizar realizado
               </button>
@@ -1076,7 +1078,10 @@ const Compras = () => {
           </TabsContent>
 
           {/* ================= ABA 2 - COMPRAS x VENDAS ================= */}
-          <TabsContent value="cv">
+          <TabsContent value="cv" id="print-compras-vendas">
+            <div className="flex justify-end mb-4">
+              <BotaoFotoTela alvoId="print-compras-vendas" nome="compras-x-vendas" />
+            </div>
             {cvAviso && (
               <div className="mb-4 rounded-xl border border-border bg-secondary/40 px-4 py-3 text-sm text-muted-foreground">
                 {cvAviso}
