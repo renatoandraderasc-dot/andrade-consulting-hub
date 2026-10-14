@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Trophy, TrendingUp, TrendingDown, Calendar, Filter, Sparkles, Flag, ChevronDown, RefreshCw } from "lucide-react";
+import { Trophy, TrendingUp, TrendingDown, Calendar, Filter, Sparkles, Flag, ChevronDown, RefreshCw, Copy, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -551,7 +551,7 @@ const PIC = () => {
             {/* Department Cards */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {DEPARTMENTS.map((dept, deptIdx) => (
-                <DepartmentCard key={dept} dept={dept} kpis={deptKpis[dept] || {}} viewMode={viewMode} delay={deptIdx * 0.1} today={today} soPct={soPct} kpiKeys={KPIS_ATIVOS} />
+                <DepartmentCard key={dept} dept={dept} kpis={deptKpis[dept] || {}} viewMode={viewMode} delay={deptIdx * 0.1} today={today} soPct={soPct} kpiKeys={KPIS_ATIVOS} storeName={storeName} periodo={`${MONTHS[selectedMonth]}/${selectedYear}`} />
               ))}
             </div>
 
@@ -591,9 +591,43 @@ interface DeptCardProps {
   today: number;
   soPct: boolean;
   kpiKeys: string[];
+  storeName?: string;
+  periodo?: string;
 }
 
-const DepartmentCard = ({ dept, kpis, viewMode, delay, today, soPct, kpiKeys }: DeptCardProps) => {
+const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const num = (v: number) => v.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
+
+function textoWhatsapp(dept: string, kpis: Record<string, KpiData>, kpiKeys: string[], soPct: boolean, storeName?: string, periodo?: string) {
+  const linhas = [`📊 *PIC - ${dept}*`];
+  if (storeName || periodo) linhas.push([storeName, periodo].filter(Boolean).join(" • "));
+  for (const k of kpiKeys) {
+    const d = kpis[k];
+    if (!d) continue;
+    const isMix = k === "volume";
+    const fmt = k === "quantidade" || isMix ? num : brl;
+    linhas.push("", `*${KPI_LABELS[k]?.toUpperCase()}*`);
+    if (!isMix) linhas.push(`Acumulado: ${pctFmt(d.pctAcumulado)}`);
+    linhas.push(`Total: ${pctFmt(d.pctTotal)}`, `Projeção: ${pctFmt(d.pctProjecao)}`);
+    if (!soPct) {
+      linhas.push(`Realizado: ${fmt(d.realizado)} | Meta: ${fmt(d.metaMensal)}`);
+    }
+  }
+  return linhas.join("\n");
+}
+
+const DepartmentCard = ({ dept, kpis, viewMode, delay, today, soPct, kpiKeys, storeName, periodo }: DeptCardProps) => {
+  const [copiado, setCopiado] = useState(false);
+  const copiar = async () => {
+    try {
+      await navigator.clipboard.writeText(textoWhatsapp(dept, kpis, kpiKeys, soPct, storeName, periodo));
+      setCopiado(true);
+      toast.success("Copiado! Cole no WhatsApp.");
+      setTimeout(() => setCopiado(false), 2000);
+    } catch {
+      toast.error("Não foi possível copiar.");
+    }
+  };
 
   return (
     <motion.div
@@ -606,6 +640,13 @@ const DepartmentCard = ({ dept, kpis, viewMode, delay, today, soPct, kpiKeys }: 
       <div className="bg-gradient-to-r from-slate-900 to-slate-800 dark:from-slate-800 dark:to-slate-700 px-5 py-3 flex items-center justify-between">
         <h2 className="text-white font-heading font-bold text-lg tracking-wide" translate="no">{dept}</h2>
         <div className="flex items-center gap-1.5">
+          <button
+            onClick={copiar}
+            title="Copiar para WhatsApp"
+            className="mr-1 p-1.5 rounded bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"
+          >
+            {copiado ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+          </button>
           {kpiKeys.map((k) => {
             const val = kpis[k]?.pctAcumulado || 0;
             return (
