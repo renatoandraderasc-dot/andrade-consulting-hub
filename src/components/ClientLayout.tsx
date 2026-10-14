@@ -69,6 +69,7 @@ const navGroups: NavGroup[] = [
     icon: ShoppingCart,
     items: [
       { key: "compras", path: "/compras", label: "Compras", icon: ShoppingCart },
+      { key: "compras_analise", path: "/compras/analise", label: "Análise de Compras", icon: ShoppingCart },
       { key: "estoque_dinamico", path: "/estoque-dinamico", label: "Estoque Dinâmico", icon: Package },
       { key: "repricing", path: "/repricing", label: "Re-Pricing", icon: DollarSign },
       { key: "pricing", path: "/precificacao/pricing", label: "Pricing", icon: Tags },

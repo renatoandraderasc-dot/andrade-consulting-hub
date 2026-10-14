@@ -14,6 +14,7 @@ export const APP_MODULES = [
   { key: "controladoria_classificacao_vr", label: "Controladoria Supermercado: Classificação VR", path: "/controladoria" },
   { key: "analise_anual", label: "Análise Anual", path: "/analise-anual" },
   { key: "compras", label: "Compras", path: "/compras" },
+  { key: "compras_analise", label: "Análise de Compras", path: "/compras/analise" },
   { key: "estoque_dinamico", label: "Estoque Dinâmico", path: "/estoque-dinamico" },
   { key: "capilaridade_mix", label: "Capilaridade de Mix", path: "/capilaridade-mix" },
   { key: "relatorios", label: "Relatórios", path: "/relatorios" },

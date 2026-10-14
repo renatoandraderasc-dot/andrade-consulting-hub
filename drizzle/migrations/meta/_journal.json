@@ -190,6 +190,13 @@
       "when": 1791500789308,
       "tag": "0026_backup_lancamentos_santa_izabel",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1791994656160,
+      "tag": "0027_migration",
+      "breakpoints": true
     }
   ]
 }
