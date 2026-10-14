@@ -15,7 +15,7 @@ import { THEMES, FORMATOS, ThemeKey, FormatoKey } from "@/lib/encarteThemes";
 import { Encarte, EncarteItem, Produto } from "@/lib/encarteTypes";
 import { EncartePreview } from "@/components/encarte/EncartePreview";
 import { ProdutoAutocomplete } from "@/components/encarte/ProdutoAutocomplete";
-import html2canvas from "html2canvas";
+import { gerarFotoDataUrl } from "@/lib/fotoElemento";
 import jsPDF from "jspdf";
 
 const emptyEncarte = (): Encarte => ({
@@ -132,10 +132,10 @@ const EncarteEditor = () => {
     if (!previewRef.current) return;
     setExporting(true);
     try {
-      const canvas = await html2canvas(previewRef.current, { scale: 2, useCORS: true, backgroundColor: null });
+      const { dataUrl } = await gerarFotoDataUrl(previewRef.current);
       const link = document.createElement("a");
       link.download = `${encarte.nome || "encarte"}.png`;
-      link.href = canvas.toDataURL("image/png");
+      link.href = dataUrl;
       link.click();
     } catch (e: any) { toast.error("Falha ao gerar PNG: " + e.message); }
     finally { setExporting(false); }
@@ -145,13 +145,12 @@ const EncarteEditor = () => {
     if (!previewRef.current) return;
     setExporting(true);
     try {
-      const canvas = await html2canvas(previewRef.current, { scale: 2, useCORS: true, backgroundColor: null });
-      const img = canvas.toDataURL("image/png");
+      const { dataUrl, w, h } = await gerarFotoDataUrl(previewRef.current);
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
       const pw = pdf.internal.pageSize.getWidth();
       const ph = pdf.internal.pageSize.getHeight();
-      const ratio = Math.min(pw / canvas.width, ph / canvas.height);
-      pdf.addImage(img, "PNG", 0, 0, canvas.width * ratio, canvas.height * ratio);
+      const ratio = Math.min(pw / w, ph / h);
+      pdf.addImage(dataUrl, "PNG", 0, 0, w * ratio, h * ratio);
       pdf.save(`${encarte.nome || "encarte"}.pdf`);
     } catch (e: any) { toast.error("Falha ao gerar PDF: " + e.message); }
     finally { setExporting(false); }

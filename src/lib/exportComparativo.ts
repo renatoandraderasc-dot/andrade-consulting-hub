@@ -1,6 +1,6 @@
-import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { cabecalhoPdf, nomeArquivo, EMPRESA, carimboData } from "@/lib/exportBranding";
+import { gerarFotoDataUrl } from "@/lib/fotoElemento";
 
 export interface BlocoExport {
   titulo: string;
@@ -11,13 +11,8 @@ export interface BlocoExport {
 /** Converte um bloco da tela em imagem PNG. */
 async function capturar(el: HTMLElement) {
   const fundo = getComputedStyle(document.body).backgroundColor || "#ffffff";
-  const canvas = await html2canvas(el, {
-    backgroundColor: fundo,
-    scale: 2,
-    useCORS: true,
-    logging: false,
-  });
-  return { dataUrl: canvas.toDataURL("image/png"), w: canvas.width, h: canvas.height };
+  const { dataUrl, w, h } = await gerarFotoDataUrl(el, { backgroundColor: fundo });
+  return { dataUrl, w, h };
 }
 
 /** Um gráfico por página, com o cabeçalho de marca do app. */
