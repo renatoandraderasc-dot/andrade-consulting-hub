@@ -619,6 +619,8 @@ function textoWhatsapp(dept: string, kpis: Record<string, KpiData>, kpiKeys: str
 
 const DepartmentCard = ({ dept, kpis, viewMode, delay, today, soPct, kpiKeys, storeName, periodo }: DeptCardProps) => {
   const [copiado, setCopiado] = useState(false);
+  const [fotoCopiada, setFotoCopiada] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
   const copiar = async () => {
     try {
       await navigator.clipboard.writeText(textoWhatsapp(dept, kpis, kpiKeys, soPct, storeName, periodo));
@@ -629,9 +631,35 @@ const DepartmentCard = ({ dept, kpis, viewMode, delay, today, soPct, kpiKeys, st
       toast.error("Não foi possível copiar.");
     }
   };
+  const copiarFoto = async () => {
+    if (!cardRef.current) return;
+    try {
+      const canvas = await html2canvas(cardRef.current, { scale: 2, useCORS: true, backgroundColor: null });
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+      if (!blob) throw new Error("blob");
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+        toast.success("Foto copiada! Cole no WhatsApp.");
+      } catch {
+        // Navegador sem suporte a imagem na área de transferência: baixa o arquivo
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `pic-${dept.toLowerCase().replace(/\s+/g, "-")}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success("Foto baixada! Envie no WhatsApp.");
+      }
+      setFotoCopiada(true);
+      setTimeout(() => setFotoCopiada(false), 2000);
+    } catch {
+      toast.error("Não foi possível gerar a foto.");
+    }
+  };
 
   return (
     <motion.div
+      ref={cardRef}
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.2 + delay, duration: 0.5 }}
