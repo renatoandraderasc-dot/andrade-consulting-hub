@@ -676,6 +676,13 @@ const DepartmentCard = ({ dept, kpis, viewMode, delay, today, soPct, kpiKeys, st
           >
             {copiado ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
           </button>
+          <button
+            onClick={copiarFoto}
+            title="Copiar foto dos indicadores"
+            className="p-1.5 rounded bg-sky-500/20 text-sky-400 hover:bg-sky-500/30"
+          >
+            {fotoCopiada ? <Check className="w-3.5 h-3.5" /> : <Camera className="w-3.5 h-3.5" />}
+          </button>
           {kpiKeys.map((k) => {
             // MIX não tem acumulado: o selo do topo mostra o Total do mês
             const val = (k === "volume" ? kpis[k]?.pctTotal : kpis[k]?.pctAcumulado) || 0;
