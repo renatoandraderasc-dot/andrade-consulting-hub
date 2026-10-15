@@ -300,9 +300,14 @@ const Dashboard = () => {
   // Vendas por seção: ao vivo no ERP (nada vem gravado do banco).
   const fetchCategoryData = async () => {
     if (!storeId) return;
+    // Regra D-1: no mês corrente vai até ontem; mês anterior e ano anterior
+    // usam o mesmo número de dias para a comparação ser justa.
+    const hoje = new Date();
+    const ehMesCorrente = selectedYear === hoje.getFullYear() && selectedMonth === hoje.getMonth() + 1;
+    const diaLimite = ehMesCorrente ? Math.max(hoje.getDate() - 1, 1) : 31;
     const mesRange = (ano: number, mes: number) => {
       const ini = `${ano}-${String(mes).padStart(2, "0")}-01`;
-      const ultimo = new Date(ano, mes, 0).getDate();
+      const ultimo = Math.min(new Date(ano, mes, 0).getDate(), diaLimite);
       return { inicio: ini, fim: `${ano}-${String(mes).padStart(2, "0")}-${String(ultimo).padStart(2, "0")}` };
     };
 

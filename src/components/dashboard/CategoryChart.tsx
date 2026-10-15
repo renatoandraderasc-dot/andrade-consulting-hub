@@ -19,7 +19,9 @@ export interface CategoryChartData {
 }
 
 const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
-const fmtBRL = (v: number) => brl.format(v || 0);
+const fmtBRL = (v: number) => brl2.format(v || 0);
+const brl2 = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtBRL2 = (v: number) => brl2.format(v || 0);
 const fmtShort = (v: number) =>
   v >= 1_000_000
     ? `${(v / 1_000_000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}M`
@@ -59,7 +61,7 @@ const CategoryChart = ({ data, title }: { data: CategoryChartData[]; title: stri
         <BarChart
           data={sorted}
           layout="vertical"
-          margin={{ top: 8, right: 60, bottom: 8, left: Math.min(140, maxLen * 7) }}
+          margin={{ top: 8, right: 120, bottom: 8, left: Math.min(140, maxLen * 7) }}
           barCategoryGap={12}
           barGap={2}
         >
@@ -90,8 +92,14 @@ const CategoryChart = ({ data, title }: { data: CategoryChartData[]; title: stri
             labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 600 }}
           />
           <Legend wrapperStyle={{ display: "none" }} />
-          <Bar dataKey="anoAnterior" name="Ano anterior" fill="hsl(var(--muted-foreground) / 0.3)" radius={[3, 3, 3, 3]} />
-          <Bar dataKey="mesAnterior" name="Mês anterior" fill="hsl(var(--muted-foreground) / 0.6)" radius={[3, 3, 3, 3]} />
+          <Bar dataKey="anoAnterior" name="Ano anterior" fill="hsl(var(--muted-foreground) / 0.3)" radius={[3, 3, 3, 3]}>
+            <LabelList dataKey="anoAnterior" position="right" formatter={(v: number) => fmtBRL2(Number(v))}
+              style={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} />
+          </Bar>
+          <Bar dataKey="mesAnterior" name="Mês anterior" fill="hsl(var(--muted-foreground) / 0.6)" radius={[3, 3, 3, 3]}>
+            <LabelList dataKey="mesAnterior" position="right" formatter={(v: number) => fmtBRL2(Number(v))}
+              style={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} />
+          </Bar>
           <Bar dataKey="atual" name="Mês atual" radius={[3, 3, 3, 3]}>
             {sorted.map((_, i) => (
               <Cell key={i} fill="hsl(var(--primary))" />
@@ -99,7 +107,7 @@ const CategoryChart = ({ data, title }: { data: CategoryChartData[]; title: stri
             <LabelList
               dataKey="atual"
               position="right"
-              formatter={(v: number) => fmtShort(Number(v))}
+              formatter={(v: number) => fmtBRL2(Number(v))}
               style={{ fill: "hsl(var(--foreground))", fontSize: 11, fontWeight: 600 }}
             />
           </Bar>
