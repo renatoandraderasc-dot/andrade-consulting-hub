@@ -569,6 +569,15 @@ const Jornada = () => {
                   {itens.length === 0 && (
                     <p className="text-xs text-muted-foreground">Esta tarefa não tem checklist.</p>
                   )}
+                  <div className="flex gap-2 pt-1">
+                    <input value={novoItem} onChange={(e) => setNovoItem(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") adicionarItem(); }}
+                      placeholder="Adicionar item ao checklist"
+                      className="flex-1 rounded-md border border-border bg-secondary px-2 py-1.5 text-sm" />
+                    <Button size="sm" variant="outline" onClick={adicionarItem} disabled={!novoItem.trim()}>
+                      <Plus className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="mt-5">
