@@ -28,6 +28,16 @@ const pct = (v: number) => `${(v || 0).toLocaleString("pt-BR", { minimumFraction
 const toneFromPct = (p: number): "success" | "warning" | "danger" =>
   p >= 100 ? "success" : p >= 80 ? "warning" : "danger";
 
+const Dif = ({ v, fmt }: { v: number; fmt: (n: number) => string }) => {
+  const d = v || 0;
+  const cls = d >= 0 ? "text-success" : "text-danger";
+  return (
+    <span className={`block mt-1 font-medium ${cls}`}>
+      Diferença: {d >= 0 ? "+" : "-"}{fmt(Math.abs(d))}
+    </span>
+  );
+};
+
 const DashboardKPIs = ({ vendas, lucro, margem, volume }: DashboardKPIsProps) => {
   const margemAtingidoPct = margem.metaPct > 0 ? (margem.realizadoPct / margem.metaPct) * 100 : 0;
 
@@ -39,7 +49,7 @@ const DashboardKPIs = ({ vendas, lucro, margem, volume }: DashboardKPIsProps) =>
           label="Vendas"
           icon={<DollarSign className="w-4 h-4" />}
           value={fmtBRL(vendas.realizado)}
-          sub={<>Meta acum. {fmtBRL(vendas.metaAcumulada)}</>}
+          sub={<>Meta acum. {fmtBRL(vendas.metaAcumulada)}<Dif v={vendas.realizado - vendas.metaAcumulada} fmt={fmtBRL} /></>}
           badge={{ text: pct(vendas.realizadoPct), tone: toneFromPct(vendas.realizadoPct) }}
           progressPct={vendas.realizadoPct}
         />
@@ -48,7 +58,7 @@ const DashboardKPIs = ({ vendas, lucro, margem, volume }: DashboardKPIsProps) =>
           label="Lucro"
           icon={<TrendingUp className="w-4 h-4" />}
           value={fmtBRL(lucro.realizado)}
-          sub={<>Meta acum. {fmtBRL(lucro.metaAcumulada)}</>}
+          sub={<>Meta acum. {fmtBRL(lucro.metaAcumulada)}<Dif v={lucro.realizado - lucro.metaAcumulada} fmt={fmtBRL} /></>}
           badge={{ text: pct(lucro.realizadoPct), tone: toneFromPct(lucro.realizadoPct) }}
           progressPct={lucro.realizadoPct}
         />
@@ -57,7 +67,7 @@ const DashboardKPIs = ({ vendas, lucro, margem, volume }: DashboardKPIsProps) =>
           label="Margem"
           icon={<Target className="w-4 h-4" />}
           value={pct(margem.realizadoPct)}
-          sub={<>Meta acum. {pct(margem.metaPct)}</>}
+          sub={<>Meta acum. {pct(margem.metaPct)}<Dif v={margem.realizadoPct - margem.metaPct} fmt={pct} /></>}
           badge={{ text: pct(margemAtingidoPct), tone: toneFromPct(margemAtingidoPct) }}
           progressPct={margemAtingidoPct}
         />
@@ -66,7 +76,7 @@ const DashboardKPIs = ({ vendas, lucro, margem, volume }: DashboardKPIsProps) =>
           label="Volume"
           icon={<BarChart3 className="w-4 h-4" />}
           value={fmtNum(volume.realizado)}
-          sub={<>Meta acum. {fmtNum(volume.metaAcumulada)}</>}
+          sub={<>Meta acum. {fmtNum(volume.metaAcumulada)}<Dif v={volume.realizado - volume.metaAcumulada} fmt={fmtNum} /></>}
           badge={{ text: pct(volume.realizadoPct), tone: toneFromPct(volume.realizadoPct) }}
           progressPct={volume.realizadoPct}
         />
