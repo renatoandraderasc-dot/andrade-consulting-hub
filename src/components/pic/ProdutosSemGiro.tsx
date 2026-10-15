@@ -34,7 +34,8 @@ function useEstoqueAtual(storeId: string, inicio: string, fim: string) {
 
       const r = await chamarRelatorio(storeId, "estoque_dinamico", { inicio, fim }).catch(() => null);
       for (const l of (r?.dados ?? []) as Record<string, unknown>[]) {
-        const estRaw = pick(l, ...ALIAS_ESTOQUE);
+        // estoque_dinamico primeiro: algumas pontes devolvem estoque_sistema = 0
+        const estRaw = pick(l, "estoque_dinamico") ?? pick(l, ...ALIAS_ESTOQUE);
         const qtdC = num(pick(l, "qtd_compra", "quantidade_compra"));
         const qtdV = num(pick(l, "qtd_venda", "quantidade_venda"));
         const est =
@@ -118,13 +119,13 @@ const ProdutosSemGiro = ({ storeId, ano, mes }: Props) => {
   const m1 = useHierarquiaVendas(storeId, periodos[1].inicio, periodos[1].fim);
   const m2 = useHierarquiaVendas(storeId, periodos[2].inicio, periodos[2].fim);
   const m3 = useHierarquiaVendas(storeId, periodos[3].inicio, periodos[3].fim);
-  // Estoque atual: usa um ano de janela para o relatorio cobrir tambem os
-  // produtos sem movimento no mes (que sao justamente os "sem giro").
+  // Estoque atual: janela de 90 dias (as pontes aceitam no maximo 93 dias
+  // neste relatorio) para cobrir tambem os produtos sem movimento no mes.
   const inicioEstoque = useMemo(() => {
-    const d = new Date(ano, mes - 1, 1);
-    d.setFullYear(d.getFullYear() - 1);
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-01`;
-  }, [ano, mes]);
+    const d = new Date(`${periodos[0].fim}T12:00:00`);
+    d.setDate(d.getDate() - 89);
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }, [periodos]);
   const baseProduto = useEstoqueAtual(storeId, inicioEstoque, periodos[0].fim);
   const estoqueDe = useCallback(
     (l: { codigo: string; ean: string }): number | null => {
