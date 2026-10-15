@@ -639,19 +639,21 @@ const Jornada = () => {
                 ))}
               </div>
             </div>
-            {perfisVisiveis.length > 1 && (
-              <div>
-                <label className="text-xs font-medium">Perfil</label>
-                <select value={novaPerfil} onChange={(e) => setNovaPerfil(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-border bg-secondary px-2 py-2 text-sm">
-                  {perfisVisiveis.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
-                </select>
-              </div>
-            )}
             <div>
-              <label className="text-xs font-medium">Passos (opcional, um por linha)</label>
+              <label className="text-xs font-medium">Perfil</label>
+              <p className="mt-1 rounded-md border border-border bg-muted px-2 py-2 text-sm">
+                {perfis.find((p) => p.id === perfilDoLogin)?.nome || "—"} <span className="text-xs text-muted-foreground">(seu login)</span>
+              </p>
+            </div>
+            <div>
+              <label className="text-xs font-medium">Checklist (opcional, um item por linha)</label>
               <Textarea value={novaItens} onChange={(e) => setNovaItens(e.target.value)} rows={4}
                 placeholder={"Separar produtos vencendo\nAnotar quantidades"} className="mt-1" />
+            </div>
+            <div>
+              <label className="text-xs font-medium">Observações (opcional)</label>
+              <Textarea value={novaObs} onChange={(e) => setNovaObs(e.target.value)} rows={3}
+                placeholder="Detalhes, lembretes…" className="mt-1" />
             </div>
           </div>
           <DialogFooter>
