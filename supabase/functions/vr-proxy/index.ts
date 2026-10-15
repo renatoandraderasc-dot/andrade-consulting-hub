@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
 
     // ---------- limite de periodo: pontes lentas caem com consultas longas ----------
     // Excecoes por relatorio: alguns aceitam ano inteiro; mix_trimestre nao tem limite.
-    const LIMITE_RELATORIO: Record<string, number> = { capilaridade_mix: 366, rede_mensal: 366, mix_trimestre: 0 };
+    const LIMITE_RELATORIO: Record<string, number> = { capilaridade_mix: 366, rede_mensal: 366, mix_trimestre: 0, estoque_dinamico: 93 };
     const maxLoja = Number((cfgRow as { max_dias_consulta?: number | null } | null)?.max_dias_consulta ?? 0);
     const maxDias = maxLoja > 0 && relatorio in LIMITE_RELATORIO ? LIMITE_RELATORIO[relatorio] : maxLoja;
     const ini = typeof params?.inicio === "string" ? Date.parse(params.inicio) : NaN;
