@@ -47,8 +47,9 @@ interface Item {
   data: string; idNota: string; nota: string; tipo: string; fornecedor: string;
   codigo: string; descricao: string; ean: string; departamento: string; grupo: string;
   qtd: number; custo: number; valor: number; custoAnt: number | null; variacao: number | null;
-  diasUltima: number | null; vendaDia: number; cobCompra: number | null; estoque: number;
+  diasUltima: number | null; vendaDia: number; cobCompra: number | null; estoque: number | null;
   cobEstoque: number | null; preco: number; margem: number | null; curva: string;
+  custoBruto: number | null; quebraPct: number | null;
   sv: StatusVariacao; impacto: number; alcada: StatusAlcada; apos30: boolean;
 }
 
@@ -269,7 +270,15 @@ const AnaliseCompras = () => {
       codigo: txt(pick(l, "codigo")), descricao: txt(pick(l, "descricao")), ean: txt(pick(l, "ean")),
       departamento, grupo: txt(pick(l, "grupo")), qtd, custo, valor: num(pick(l, "valor_compra")) || qtd * custo,
       custoAnt, variacao, diasUltima: numOuNull(pick(l, "dias_desde_ultima_compra")), vendaDia, cobCompra,
-      estoque: num(pick(l, "estoque_atual")), cobEstoque: numOuNull(pick(l, "dias_cobertura_estoque")),
+      ...(() => {
+        const bruto = pick(l, "estoque_atual");
+        const vazio = bruto === undefined || bruto === null || String(bruto).trim() === "";
+        return vazio
+          ? { estoque: null, cobEstoque: null }
+          : { estoque: num(bruto), cobEstoque: numOuNull(pick(l, "dias_cobertura_estoque")) };
+      })(),
+      custoBruto: (() => { const v = numOuNull(pick(l, "custo_bruto_unit")); return v != null && v > 0 ? v : null; })(),
+      quebraPct: numOuNull(pick(l, "quebra_pct")),
       preco: num(pick(l, "preco_venda_atual")), margem: numOuNull(pick(l, "margem_sobre_custo_novo")),
       curva: txt(pick(l, "curva_abcd"), "SEM VENDA").toUpperCase(),
       sv: statusVariacao(custo, custoAnt, variacao, limitePct), impacto: impactoVariacao(custo, custoAnt, qtd),
@@ -345,6 +354,7 @@ const AnaliseCompras = () => {
   }).sort((a, b) => b.total - a.total), [filtrados]);
 
   /* colunas */
+  const temCustoBruto = itens.some((i) => i.custoBruto != null);
   const colsItem: Col<Item>[] = [
     { key: "data", label: "Data", val: (r) => r.data, render: (r) => dt(r.data) },
     { key: "nota", label: "Nota", val: (r) => r.nota },
@@ -357,16 +367,17 @@ const AnaliseCompras = () => {
     { key: "qtd", label: "Qtd", num: true, val: (r) => r.qtd, render: (r) => qt(r.qtd) },
     { key: "cant", label: "Custo ant.", num: true, val: (r) => r.custoAnt, render: (r) => r.custoAnt == null ? "—" : brl(r.custoAnt) },
     { key: "custo", label: "Custo atual", num: true, val: (r) => r.custo, render: (r) => brl(r.custo) },
+    ...(temCustoBruto ? [{ key: "cbruto", label: "Custo bruto", num: true, val: (r: Item) => r.custoBruto, render: (r: Item) => r.custoBruto == null ? "—" : <span title={r.quebraPct != null ? `Quebra ${pct(r.quebraPct)}` : undefined}>{brl(r.custoBruto)}</span> }] : []),
     { key: "var", label: "Variação", num: true, val: (r) => r.variacao, render: (r) => <span className="inline-flex items-center gap-1">{r.variacao != null && pct(r.variacao)} <B cls={VAR_INFO[r.sv].cls}>{VAR_INFO[r.sv].label}</B></span> },
     { key: "imp", label: "Impacto R$", num: true, val: (r) => r.impacto, render: (r) => brl(r.impacto) },
     { key: "dias", label: "Dias s/ compra", num: true, val: (r) => r.diasUltima, render: (r) => <span>{qt(r.diasUltima)}{r.apos30 && <B cls="bg-amber-500 text-white ml-1">+30d</B>}</span> },
     { key: "vdia", label: "Venda/dia", num: true, val: (r) => r.vendaDia, render: (r) => qt(r.vendaDia) },
     { key: "cob", label: "Cobertura (dias)", num: true, val: (r) => r.cobCompra, render: (r) => qt(r.cobCompra) },
     { key: "alc", label: "Alçada", val: (r) => ALCADA_INFO[r.alcada].label, render: (r) => <B cls={ALCADA_INFO[r.alcada].cls}>{ALCADA_INFO[r.alcada].label}</B> },
-    { key: "est", label: "Estoque", num: true, val: (r) => r.estoque, render: (r) => qt(r.estoque) },
-    { key: "cobe", label: "Cob. estoque", num: true, val: (r) => r.cobEstoque, render: (r) => qt(r.cobEstoque) },
+    { key: "est", label: "Estoque", num: true, val: (r) => r.estoque, render: (r) => r.estoque == null ? "—" : qt(r.estoque) },
+    { key: "cobe", label: "Cob. estoque", num: true, val: (r) => r.cobEstoque, render: (r) => r.cobEstoque == null ? "—" : qt(r.cobEstoque) },
     { key: "preco", label: "Preço venda", num: true, val: (r) => r.preco, render: (r) => brl(r.preco) },
-    { key: "marg", label: "Margem c/ custo novo", num: true, val: (r) => r.margem, render: (r) => pct(r.margem) },
+    { key: "marg", label: temCustoBruto ? "Margem bruta" : "Margem c/ custo novo", num: true, val: (r) => r.margem, render: (r) => pct(r.margem) },
   ];
   const miniItens = (l: Item[]) => <Tabela titulo="Itens" linhas={l} cols={colsItem.filter((c) => ["cod", "desc", "qtd", "cant", "custo", "var", "imp", "cob", "alc"].includes(c.key))} chave={(r) => r.idNota + r.codigo + r.qtd} destaque={(r) => r.sv === "alta"} />;
 
