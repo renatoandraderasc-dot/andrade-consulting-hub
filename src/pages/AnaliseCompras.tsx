@@ -354,6 +354,7 @@ const AnaliseCompras = () => {
   }).sort((a, b) => b.total - a.total), [filtrados]);
 
   /* colunas */
+  const temCustoBruto = itens.some((i) => i.custoBruto != null);
   const colsItem: Col<Item>[] = [
     { key: "data", label: "Data", val: (r) => r.data, render: (r) => dt(r.data) },
     { key: "nota", label: "Nota", val: (r) => r.nota },
