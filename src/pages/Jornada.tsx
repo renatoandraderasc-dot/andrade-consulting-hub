@@ -68,6 +68,8 @@ const Jornada = () => {
   const [novaCad, setNovaCad] = useState<Cadencia>("diaria");
   const [novaPerfil, setNovaPerfil] = useState("");
   const [novaItens, setNovaItens] = useState("");
+  const [novaObs, setNovaObs] = useState("");
+  const [novoItem, setNovoItem] = useState("");
   const [novaSalvando, setNovaSalvando] = useState(false);
   const [confirmar, setConfirmar] = useState<null | { titulo: string; texto: string; acao: () => void }>(null);
 
@@ -287,8 +289,14 @@ const Jornada = () => {
     toast.success("Tarefa avulsa criada");
   };
 
+  /** Perfil do usuário logado: o primeiro vínculo dele visível na loja. */
+  const perfilDoLogin = useMemo(
+    () => perfisVisiveis.find((p) => meusPerfis.includes(p.id))?.id || perfisVisiveis[0]?.id || "",
+    [perfisVisiveis, meusPerfis],
+  );
+
   const criarTarefa = async () => {
-    const perfilId = novaPerfil || perfil || perfisVisiveis[0]?.id;
+    const perfilId = perfilDoLogin;
     if (!novaTitulo.trim() || !loja) return;
     if (!perfilId) return toast.error("Nenhum perfil da Jornada disponível nesta loja.");
     setNovaSalvando(true);
@@ -297,15 +305,32 @@ const Jornada = () => {
       p_cadencia: novaCad, p_checklist: novaItens.split("\n").map((l) => l.trim()).filter(Boolean),
       p_periodo: periodoRef(novaCad, hojeSP()),
     });
+    if (error || !tplId) { setNovaSalvando(false); return toast.error("Não foi possível criar a tarefa."); }
+    if (novaObs.trim()) {
+      await supabase.from("jornada_execucoes").update({ observacoes: novaObs.trim() })
+        .eq("template_id", tplId as string).eq("store_id", loja);
+    }
     setNovaSalvando(false);
-    if (error || !tplId) return toast.error("Não foi possível criar a tarefa.");
     const { data: tpl } = await supabase.from("jornada_templates")
       .select("id,titulo,descricao,cadencia,rota_hub,ordem,perfil_id,ativo").eq("id", tplId as string).maybeSingle();
     if (tpl) setTemplates((l) => [...l, tpl as Template]);
-    setNovaOpen(false); setNovaTitulo(""); setNovaItens(""); setNovaCad("diaria");
+    setNovaOpen(false); setNovaTitulo(""); setNovaItens(""); setNovaObs(""); setNovaCad("diaria");
     setAncora(hojeSP());
     setTick((t) => t + 1);
     toast.success("Tarefa criada só para você nesta loja");
+  };
+
+  const adicionarItem = async () => {
+    if (!aberta || !novoItem.trim()) return;
+    const ordem = (itens.reduce((m, i) => Math.max(m, i.ordem), 0) || 0) + 1;
+    const { data, error } = await supabase.from("jornada_checklist_itens")
+      .insert({ execucao_id: aberta.id, texto: novoItem.trim(), ordem })
+      .select("id,texto,ordem,feito").single();
+    if (error || !data) return toast.error("Não foi possível adicionar o item.");
+    const novos = [...itens, data as Item];
+    setItens(novos);
+    atualizarContagem(aberta.id, novos);
+    setNovoItem("");
   };
 
   const templatesDoFiltro = templates
@@ -544,6 +569,15 @@ const Jornada = () => {
                   {itens.length === 0 && (
                     <p className="text-xs text-muted-foreground">Esta tarefa não tem checklist.</p>
                   )}
+                  <div className="flex gap-2 pt-1">
+                    <input value={novoItem} onChange={(e) => setNovoItem(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") adicionarItem(); }}
+                      placeholder="Adicionar item ao checklist"
+                      className="flex-1 rounded-md border border-border bg-secondary px-2 py-1.5 text-sm" />
+                    <Button size="sm" variant="outline" onClick={adicionarItem} disabled={!novoItem.trim()}>
+                      <Plus className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="mt-5">
@@ -605,19 +639,21 @@ const Jornada = () => {
                 ))}
               </div>
             </div>
-            {perfisVisiveis.length > 1 && (
-              <div>
-                <label className="text-xs font-medium">Perfil</label>
-                <select value={novaPerfil} onChange={(e) => setNovaPerfil(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-border bg-secondary px-2 py-2 text-sm">
-                  {perfisVisiveis.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
-                </select>
-              </div>
-            )}
             <div>
-              <label className="text-xs font-medium">Passos (opcional, um por linha)</label>
+              <label className="text-xs font-medium">Perfil</label>
+              <p className="mt-1 rounded-md border border-border bg-muted px-2 py-2 text-sm">
+                {perfis.find((p) => p.id === perfilDoLogin)?.nome || "—"} <span className="text-xs text-muted-foreground">(seu login)</span>
+              </p>
+            </div>
+            <div>
+              <label className="text-xs font-medium">Checklist (opcional, um item por linha)</label>
               <Textarea value={novaItens} onChange={(e) => setNovaItens(e.target.value)} rows={4}
                 placeholder={"Separar produtos vencendo\nAnotar quantidades"} className="mt-1" />
+            </div>
+            <div>
+              <label className="text-xs font-medium">Observações (opcional)</label>
+              <Textarea value={novaObs} onChange={(e) => setNovaObs(e.target.value)} rows={3}
+                placeholder="Detalhes, lembretes…" className="mt-1" />
             </div>
           </div>
           <DialogFooter>
