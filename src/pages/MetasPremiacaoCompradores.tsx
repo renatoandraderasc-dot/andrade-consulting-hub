@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ShoppingBag, RefreshCw, Save, CheckCircle2, XCircle } from "lucide-react";
+import { ShoppingBag, RefreshCw, Save, CheckCircle2, XCircle, Target } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { carregarLojaLogin } from "@/lib/lojasPermitidas";
@@ -18,6 +18,7 @@ import { toast } from "@/hooks/use-toast";
 import {
   calcularComprador, lerComprador, COMPRADOR_PADRAO, type ValoresComprador, type DadosComprador,
 } from "@/lib/premiacaoComprador";
+import { carregarMetasComprador } from "@/pages/MetasCompradoresConfig";
 
 const iso = (a: number, m: number, d: number) => `${a}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
@@ -41,7 +42,7 @@ const MetasPremiacaoCompradores = () => {
   const [cfg, setCfg] = useState<ValoresComprador>(COMPRADOR_PADRAO);
   const [salvando, setSalvando] = useState(false);
   const [carregando, setCarregando] = useState(false);
-  const [extra, setExtra] = useState({ metaVendas: 0, metaLucro: 0, metaCompra: 0, compra: 0, pagamentos: 0 });
+  const [extra, setExtra] = useState({ metaVendas: 0, metaLucro: 0, metaCompra: 0, metaPagamentos: 0, compra: 0, pagamentos: 0 });
 
   useEffect(() => {
     if (!authLoading && (!user || !isAdmin)) navigate("/login");
@@ -94,8 +95,17 @@ const MetasPremiacaoCompradores = () => {
       // Meta de compra do mês
       const { data: cm } = await supabase.from("compras_meta").select("departamento, meta_compra")
         .eq("store_id", storeId).eq("ano", ano).eq("mes", mes);
-      const metaCompra = (cm ?? []).filter((r) => !["LOJA", "GERAL"].includes(String(r.departamento).toUpperCase()))
+      let metaCompra = (cm ?? []).filter((r) => !["LOJA", "GERAL"].includes(String(r.departamento).toUpperCase()))
         .reduce((s, r) => s + (Number(r.meta_compra) || 0), 0);
+
+      // Metas configuradas na tela "Configuração de Metas — Compradores" têm prioridade
+      const cfgMetas = await carregarMetasComprador(storeId, ano, mes);
+      if (cfgMetas) {
+        if (cfgMetas.meta_venda > 0) metaVendas = cfgMetas.meta_venda;
+        if (cfgMetas.meta_lucro > 0) metaLucro = cfgMetas.meta_lucro;
+        if (cfgMetas.meta_compra > 0) metaCompra = cfgMetas.meta_compra;
+      }
+      const metaPagamentos = cfgMetas?.meta_pagamentos ?? 0;
 
       // Compras realizadas
       const r = await chamarRelatorio(storeId, "compras_vendas_periodo", { inicio, fim });
@@ -118,7 +128,7 @@ const MetasPremiacaoCompradores = () => {
         pagamentos += data.reduce((s, x) => s + Math.abs(Number(x.valor) || 0), 0);
         if (data.length < 1000) break;
       }
-      setExtra({ metaVendas, metaLucro, metaCompra, compra, pagamentos });
+      setExtra({ metaVendas, metaLucro, metaCompra, metaPagamentos, compra, pagamentos });
     } finally {
       setCarregando(false);
     }
@@ -132,7 +142,10 @@ const MetasPremiacaoCompradores = () => {
     return { vendas, lucro };
   }, [atual.data]);
 
-  const dados: DadosComprador = { ...extra, ...real, cmv: Math.max(0, real.vendas - real.lucro) };
+  const dados: DadosComprador = {
+    ...extra, ...real,
+    cmv: extra.metaPagamentos > 0 ? extra.metaPagamentos : Math.max(0, real.vendas - real.lucro),
+  };
   const res = calcularComprador(cfg, dados);
   const soma = cfg.peso_faturamento + cfg.peso_arrecadacao + cfg.peso_compras + cfg.peso_pagamentos;
 
@@ -140,7 +153,7 @@ const MetasPremiacaoCompradores = () => {
     faturamento: `${fmtBRL(dados.vendas)} de ${fmtBRL(dados.metaVendas)}`,
     arrecadacao: `${fmtBRL(dados.lucro)} de ${fmtBRL(dados.metaLucro)}`,
     compras: `Comprado ${fmtBRL(dados.compra)} · teto ${fmtBRL(dados.metaCompra)}`,
-    pagamentos: `Pago ${fmtBRL(dados.pagamentos)} · CMV ${fmtBRL(dados.cmv)}`,
+    pagamentos: `Pago ${fmtBRL(dados.pagamentos)} · teto ${fmtBRL(dados.cmv)}`,
   };
 
   const salvar = async () => {
@@ -173,6 +186,9 @@ const MetasPremiacaoCompradores = () => {
               <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
               <SelectContent>{[ano - 2, ano - 1, ano, ano + 1].map((a) => <SelectItem key={a} value={String(a)}>{a}</SelectItem>)}</SelectContent>
             </Select>
+            <Button variant="outline" size="sm" onClick={() => navigate("/metas/compradores/config")}>
+              <Target className="h-4 w-4 mr-1" /> Metas
+            </Button>
             <Button variant="outline" size="sm" onClick={() => { atual.refresh(); carregar(); }}>
               <RefreshCw className="h-4 w-4 mr-1" /> Atualizar
             </Button>

@@ -462,6 +462,8 @@ export type Database = {
           id: string
           mes: number
           meta_compra: number
+          meta_lucro: number | null
+          meta_pagamentos: number | null
           meta_venda: number
           parcela_excesso: number
           participacao: number
@@ -480,6 +482,8 @@ export type Database = {
           id?: string
           mes: number
           meta_compra?: number
+          meta_lucro?: number | null
+          meta_pagamentos?: number | null
           meta_venda?: number
           parcela_excesso?: number
           participacao?: number
@@ -498,6 +502,8 @@ export type Database = {
           id?: string
           mes?: number
           meta_compra?: number
+          meta_lucro?: number | null
+          meta_pagamentos?: number | null
           meta_venda?: number
           parcela_excesso?: number
           participacao?: number
