@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ShoppingBag, RefreshCw, Save, CheckCircle2, XCircle } from "lucide-react";
+import { ShoppingBag, RefreshCw, Save, CheckCircle2, XCircle, Target } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { carregarLojaLogin } from "@/lib/lojasPermitidas";
