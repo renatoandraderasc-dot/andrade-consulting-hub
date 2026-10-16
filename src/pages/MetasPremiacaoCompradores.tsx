@@ -142,7 +142,10 @@ const MetasPremiacaoCompradores = () => {
     return { vendas, lucro };
   }, [atual.data]);
 
-  const dados: DadosComprador = { ...extra, ...real, cmv: Math.max(0, real.vendas - real.lucro) };
+  const dados: DadosComprador = {
+    ...extra, ...real,
+    cmv: extra.metaPagamentos > 0 ? extra.metaPagamentos : Math.max(0, real.vendas - real.lucro),
+  };
   const res = calcularComprador(cfg, dados);
   const soma = cfg.peso_faturamento + cfg.peso_arrecadacao + cfg.peso_compras + cfg.peso_pagamentos;
 
@@ -150,7 +153,7 @@ const MetasPremiacaoCompradores = () => {
     faturamento: `${fmtBRL(dados.vendas)} de ${fmtBRL(dados.metaVendas)}`,
     arrecadacao: `${fmtBRL(dados.lucro)} de ${fmtBRL(dados.metaLucro)}`,
     compras: `Comprado ${fmtBRL(dados.compra)} · teto ${fmtBRL(dados.metaCompra)}`,
-    pagamentos: `Pago ${fmtBRL(dados.pagamentos)} · CMV ${fmtBRL(dados.cmv)}`,
+    pagamentos: `Pago ${fmtBRL(dados.pagamentos)} · teto ${fmtBRL(dados.cmv)}`,
   };
 
   const salvar = async () => {
