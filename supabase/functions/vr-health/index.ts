@@ -55,8 +55,20 @@ Deno.serve(async (req) => {
       const texto = await resp.text();
       const pareceHtml = /^\s*<(!doctype|html)/i.test(texto) || /ngrok/i.test(texto.slice(0, 500));
       const online = resp.ok && !pareceHtml;
+      // lista de relatorios publicados na ponte (leve, sem rodar SQL)
+      let disponiveis: string[] | undefined;
+      if (online) {
+        try {
+          const r2 = await fetch(`${cfg.api_url.replace(/\/+$/, "")}/relatorios?chave=${encodeURIComponent(cfg.api_key)}`, {
+            headers: { "ngrok-skip-browser-warning": "true", "x-api-key": cfg.api_key },
+            signal: AbortSignal.timeout(15000),
+          });
+          const b = await r2.json().catch(() => null) as any;
+          if (Array.isArray(b?.disponiveis)) disponiveis = b.disponiveis.map(String);
+        } catch { /* ponte antiga sem /relatorios */ }
+      }
       return json({
-        online, sistema, latency_ms: Date.now() - t0,
+        online, sistema, latency_ms: Date.now() - t0, disponiveis,
         erro: online ? undefined : (pareceHtml ? "sem conexao VR (tunel fora do ar)" : `HTTP ${resp.status}`),
       });
     } catch (e) {
