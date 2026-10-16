@@ -211,6 +211,13 @@
       "when": 1792160912942,
       "tag": "0029_premiacao_comprador",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1792185129933,
+      "tag": "0030_compras_meta_metas_comprador",
+      "breakpoints": true
     }
   ]
 }
