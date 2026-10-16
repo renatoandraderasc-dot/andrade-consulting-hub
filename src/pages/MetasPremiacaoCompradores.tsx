@@ -107,7 +107,7 @@ const MetasPremiacaoCompradores = () => {
       }
       const metaPagamentos = cfgMetas?.meta_pagamentos ?? 0;
 
-      // Compras realizadas
+      // Compras realizadas — contam apenas os departamentos com meta salva em compras_meta
       const r = await chamarRelatorio(storeId, "compras_vendas_periodo", { inicio, fim });
       // Mesma regra da tela Compras x Vendas: pontes que agrupam em "OUTROS"
       // têm a abertura remontada antes de somar.
@@ -116,7 +116,18 @@ const MetasPremiacaoCompradores = () => {
         const det = await detalharComprasVendas(storeId, inicio, fim);
         if (det) linhasCompra = det as any[];
       }
-      const compra = linhasCompra.reduce((s: number, l: any) => s + num(col(l, "total_compra", "compra", "compras")), 0);
+      const depsComMeta = new Set(
+        (cm ?? [])
+          .filter((x) => !["LOJA", "GERAL"].includes(String(x.departamento).toUpperCase()) && (Number(x.meta_compra) || 0) > 0)
+          .map((x) => canonDept(String(x.departamento)) || String(x.departamento).toUpperCase()),
+      );
+      const compra = linhasCompra
+        .filter((l: any) => {
+          if (depsComMeta.size === 0) return true;
+          const d = canonDept(String(col(l, "departamento", "secao", "setor") ?? "")) || "";
+          return depsComMeta.has(d);
+        })
+        .reduce((s: number, l: any) => s + num(col(l, "total_compra", "compra", "compras")), 0);
 
       // Pagamentos a fornecedores (lançamentos "Compra do Mês")
       let pagamentos = 0;
