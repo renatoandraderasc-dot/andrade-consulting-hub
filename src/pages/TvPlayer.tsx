@@ -32,7 +32,7 @@ const TvPlayer = () => {
       for (const it of lista) if (it.midia_path) u[it.id] = await urlMidia(it.midia_path);
       setUrls(u);
       if (lista.some((i) => i.tipo === "precos")) {
-        try { setCatalogo(await carregarBaseCatalogo(t.store_id)); } catch { /* mantém anterior */ }
+        try { setCatalogo(await carregarBaseCatalogo(t.store_id, { fresco: true })); } catch { /* mantém anterior */ }
       }
     };
     carregar();
