@@ -146,7 +146,18 @@ const AdminConexoes = () => {
     );
     if (!error && data?.online) {
       const loja = rows.find((r) => r.store_id === storeId);
-      await sondarRelatorios(storeId, loja?.sistema);
+      const disp: string[] | undefined = Array.isArray(data?.disponiveis) ? data.disponiveis : undefined;
+      if (disp) {
+        // ponte informa o que esta publicado: nao roda as consultas (evita derrubar a loja)
+        const res = relatoriosDoSistema(loja?.sistema).map((rel) => ({
+          nome: rel.nome,
+          ok: disp.includes(rel.nome),
+          msg: disp.includes(rel.nome) ? undefined : "não publicado na ponte",
+        }));
+        setRows((prev) => prev.map((r) => (r.store_id === storeId ? { ...r, relatorios: res } : r)));
+      } else {
+        await sondarRelatorios(storeId, loja?.sistema);
+      }
     }
   };
 
