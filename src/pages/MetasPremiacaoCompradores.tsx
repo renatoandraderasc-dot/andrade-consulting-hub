@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CartProgressOverlay } from "@/components/CartProgress";
 import { useVrRealizado, LOJA, canonDept } from "@/hooks/useVrRealizado";
+import { mercadologicoNivel1 } from "@/lib/mercadologico";
 import { fmtBRL, fmtPct, MESES, diasNoMes } from "@/lib/metasSugestao";
 import { chamarRelatorio, pick as col, num } from "@/lib/vrReport";
 import { comprasAgrupadas, detalharComprasVendas } from "@/lib/comprasDetalhe";
@@ -121,11 +122,19 @@ const MetasPremiacaoCompradores = () => {
           .filter((x) => !["LOJA", "GERAL"].includes(String(x.departamento).toUpperCase()) && (Number(x.meta_compra) || 0) > 0)
           .map((x) => canonDept(String(x.departamento)) || String(x.departamento).toUpperCase()),
       );
+      // Lê o departamento (mercadológico nível 1) por qualquer alias; seção só como último recurso.
+      const deptDaLinha = (l: any) => {
+        const cands = [
+          mercadologicoNivel1(l),
+          col(l, "departamento", "department", "depto", "dept"),
+          col(l, "secao", "setor"),
+        ];
+        return cands.map((c) => canonDept(String(c ?? "")) || "").filter(Boolean);
+      };
       const compra = linhasCompra
         .filter((l: any) => {
           if (depsComMeta.size === 0) return true;
-          const d = canonDept(String(col(l, "departamento", "secao", "setor") ?? "")) || "";
-          return depsComMeta.has(d);
+          return deptDaLinha(l).some((d) => depsComMeta.has(d));
         })
         .reduce((s: number, l: any) => s + num(col(l, "total_compra", "compra", "compras")), 0);
 
