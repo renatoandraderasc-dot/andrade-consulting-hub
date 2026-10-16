@@ -48,9 +48,9 @@ export interface ResultadoKpi {
 }
 
 const pct = (a: number, b: number) => (b > 0 ? (a / b) * 100 : 0);
-/** Indicador "quanto menor, melhor": teto / realizado. Gastar zero = 100%+ */
-const teto = (limite: number, real: number) =>
-  limite <= 0 ? 0 : real <= 0 ? 100 : (limite / real) * 100;
+/** Indicador "quanto menor, melhor": dentro do teto = 100%; acima cai proporcionalmente. */
+export const teto = (limite: number, real: number) =>
+  limite <= 0 ? 0 : real <= limite ? 100 : (limite / real) * 100;
 
 export function calcularComprador(v: ValoresComprador, d: DadosComprador) {
   const min = v.atingimento_minimo || 99;

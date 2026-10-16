@@ -23,3 +23,9 @@ describe("premiação de compradores", () => {
     expect(calcularComprador(v, { ...base, vendas: 98 }).kpis.find((k) => k.key === "faturamento")!.pago).toBe(false);
   });
 });
+
+import { teto as tetoFn } from "./premiacaoComprador";
+describe("teto de compras/pagamentos", () => {
+  it("dentro do teto é 100%", () => expect(tetoFn(919404.51, 382498.97)).toBe(100));
+  it("acima do teto cai abaixo de 99%", () => expect(tetoFn(919404.51, 1097473.85)).toBeLessThan(99));
+});
