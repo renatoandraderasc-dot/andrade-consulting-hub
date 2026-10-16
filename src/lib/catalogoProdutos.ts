@@ -75,10 +75,11 @@ const cache = new Map<string, CatalogoItem[]>();
  * "produtos_precos" e "estoque_atual". Usado quando a loja nao
  * publica "catalogo_produtos" (ou quando ele volta vazio).
  */
-export async function carregarBaseCatalogo(storeId: string): Promise<CatalogoItem[]> {
+export async function carregarBaseCatalogo(storeId: string, opts: { fresco?: boolean } = {}): Promise<CatalogoItem[]> {
   if (!storeId) return [];
-  const emCache = cache.get(storeId);
+  const emCache = opts.fresco ? null : cache.get(storeId);
   if (emCache) return emCache;
+  const f = { forcar: !!opts.fresco };
 
   // Alguns conectores (ORACLE/Intersolid) so publicam parte do cadastro em
   // cada relatorio: "produtos" traz EAN/descricao de todos os itens, mas o
@@ -90,12 +91,12 @@ export async function carregarBaseCatalogo(storeId: string): Promise<CatalogoIte
   const inicio90 = new Date(hoje.getTime() - 90 * 86400000);
 
   const [rp, rpp, re, rc, rr] = await Promise.all([
-    chamarRelatorio(storeId, "produtos", {}),
-    chamarRelatorio(storeId, "produtos_precos", {}),
-    chamarRelatorio(storeId, "estoque_atual", {}),
+    chamarRelatorio(storeId, "produtos", {}, f),
+    chamarRelatorio(storeId, "produtos_precos", {}, f),
+    chamarRelatorio(storeId, "estoque_atual", {}, f),
     // O WebSac exige busca/limite/offset nesse relatorio (sem eles a ponte
     // devolve "parametro ausente" e a loja fica sem EAN/estoque).
-    chamarRelatorio(storeId, "catalogo_produtos", { busca: "", limite: 200000, offset: 0 }),
+    chamarRelatorio(storeId, "catalogo_produtos", { busca: "", limite: 200000, offset: 0 }, f),
     chamarRelatorio(storeId, "ranking_produtos", { inicio: iso(inicio90), fim: iso(hoje) }),
   ]);
 
