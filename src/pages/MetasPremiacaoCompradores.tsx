@@ -95,8 +95,17 @@ const MetasPremiacaoCompradores = () => {
       // Meta de compra do mês
       const { data: cm } = await supabase.from("compras_meta").select("departamento, meta_compra")
         .eq("store_id", storeId).eq("ano", ano).eq("mes", mes);
-      const metaCompra = (cm ?? []).filter((r) => !["LOJA", "GERAL"].includes(String(r.departamento).toUpperCase()))
+      let metaCompra = (cm ?? []).filter((r) => !["LOJA", "GERAL"].includes(String(r.departamento).toUpperCase()))
         .reduce((s, r) => s + (Number(r.meta_compra) || 0), 0);
+
+      // Metas configuradas na tela "Configuração de Metas — Compradores" têm prioridade
+      const cfgMetas = await carregarMetasComprador(storeId, ano, mes);
+      if (cfgMetas) {
+        if (cfgMetas.meta_venda > 0) metaVendas = cfgMetas.meta_venda;
+        if (cfgMetas.meta_lucro > 0) metaLucro = cfgMetas.meta_lucro;
+        if (cfgMetas.meta_compra > 0) metaCompra = cfgMetas.meta_compra;
+      }
+      const metaPagamentos = cfgMetas?.meta_pagamentos ?? 0;
 
       // Compras realizadas
       const r = await chamarRelatorio(storeId, "compras_vendas_periodo", { inicio, fim });
@@ -119,7 +128,7 @@ const MetasPremiacaoCompradores = () => {
         pagamentos += data.reduce((s, x) => s + Math.abs(Number(x.valor) || 0), 0);
         if (data.length < 1000) break;
       }
-      setExtra({ metaVendas, metaLucro, metaCompra, compra, pagamentos });
+      setExtra({ metaVendas, metaLucro, metaCompra, metaPagamentos, compra, pagamentos });
     } finally {
       setCarregando(false);
     }
