@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CartProgressOverlay } from "@/components/CartProgress";
 import { useVrRealizado, LOJA, canonDept } from "@/hooks/useVrRealizado";
+import { mercadologicoNivel1 } from "@/lib/mercadologico";
 import { fmtBRL, fmtPct, MESES, diasNoMes } from "@/lib/metasSugestao";
 import { chamarRelatorio, pick as col, num } from "@/lib/vrReport";
 import { comprasAgrupadas, detalharComprasVendas } from "@/lib/comprasDetalhe";
