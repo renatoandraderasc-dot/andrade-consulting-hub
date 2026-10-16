@@ -18,6 +18,7 @@ import { toast } from "@/hooks/use-toast";
 import {
   calcularComprador, lerComprador, COMPRADOR_PADRAO, type ValoresComprador, type DadosComprador,
 } from "@/lib/premiacaoComprador";
+import { carregarMetasComprador } from "@/pages/MetasCompradoresConfig";
 
 const iso = (a: number, m: number, d: number) => `${a}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
@@ -41,7 +42,7 @@ const MetasPremiacaoCompradores = () => {
   const [cfg, setCfg] = useState<ValoresComprador>(COMPRADOR_PADRAO);
   const [salvando, setSalvando] = useState(false);
   const [carregando, setCarregando] = useState(false);
-  const [extra, setExtra] = useState({ metaVendas: 0, metaLucro: 0, metaCompra: 0, compra: 0, pagamentos: 0 });
+  const [extra, setExtra] = useState({ metaVendas: 0, metaLucro: 0, metaCompra: 0, metaPagamentos: 0, compra: 0, pagamentos: 0 });
 
   useEffect(() => {
     if (!authLoading && (!user || !isAdmin)) navigate("/login");
