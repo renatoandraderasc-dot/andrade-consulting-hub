@@ -13,6 +13,7 @@ import { CartProgressOverlay } from "@/components/CartProgress";
 import { useVrRealizado, LOJA, canonDept } from "@/hooks/useVrRealizado";
 import { fmtBRL, fmtPct, MESES, diasNoMes } from "@/lib/metasSugestao";
 import { chamarRelatorio, pick as col, num } from "@/lib/vrReport";
+import { comprasAgrupadas, detalharComprasVendas } from "@/lib/comprasDetalhe";
 import { toast } from "@/hooks/use-toast";
 import {
   calcularComprador, lerComprador, COMPRADOR_PADRAO, type ValoresComprador, type DadosComprador,
@@ -98,7 +99,14 @@ const MetasPremiacaoCompradores = () => {
 
       // Compras realizadas
       const r = await chamarRelatorio(storeId, "compras_vendas_periodo", { inicio, fim });
-      const compra = (r.dados ?? []).reduce((s: number, l: any) => s + num(col(l, "compra", "compras", "total_compra", "valor_comprado")), 0);
+      // Mesma regra da tela Compras x Vendas: pontes que agrupam em "OUTROS"
+      // têm a abertura remontada antes de somar.
+      let linhasCompra: any[] = r.dados ?? [];
+      if (comprasAgrupadas(linhasCompra)) {
+        const det = await detalharComprasVendas(storeId, inicio, fim);
+        if (det) linhasCompra = det as any[];
+      }
+      const compra = linhasCompra.reduce((s: number, l: any) => s + num(col(l, "total_compra", "compra", "compras")), 0);
 
       // Pagamentos a fornecedores (lançamentos "Compra do Mês")
       let pagamentos = 0;
