@@ -129,11 +129,12 @@ const MetasPremiacaoCompradores = () => {
         })
         .reduce((s: number, l: any) => s + num(col(l, "total_compra", "compra", "compras")), 0);
 
-      // Pagamentos a fornecedores (lançamentos "Compra do Mês")
+      // Pagamentos a fornecedores: apenas compras para revenda
+      // (tipo "Compra do Mês" com subtipo "COMPRA DO MÊS" — despesas não entram)
       let pagamentos = 0;
       for (let from = 0; ; from += 1000) {
         const { data } = await supabase.from("lancamentos").select("valor")
-          .eq("store_id", storeId).eq("tipo", "Compra do Mês")
+          .eq("store_id", storeId).eq("tipo", "Compra do Mês").eq("subtipo", "COMPRA DO MÊS")
           .gte("data", inicio).lte("data", fim).range(from, from + 999);
         if (!data?.length) break;
         pagamentos += data.reduce((s, x) => s + Math.abs(Number(x.valor) || 0), 0);
