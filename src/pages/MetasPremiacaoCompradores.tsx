@@ -186,6 +186,9 @@ const MetasPremiacaoCompradores = () => {
               <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
               <SelectContent>{[ano - 2, ano - 1, ano, ano + 1].map((a) => <SelectItem key={a} value={String(a)}>{a}</SelectItem>)}</SelectContent>
             </Select>
+            <Button variant="outline" size="sm" onClick={() => navigate("/metas/compradores/config")}>
+              <Target className="h-4 w-4 mr-1" /> Metas
+            </Button>
             <Button variant="outline" size="sm" onClick={() => { atual.refresh(); carregar(); }}>
               <RefreshCw className="h-4 w-4 mr-1" /> Atualizar
             </Button>
