@@ -2279,6 +2279,7 @@ export type Database = {
       premiacao_config: {
         Row: {
           atingimento_minimo: number
+          comprador: Json
           created_at: string
           foto_arrecadacao: string | null
           foto_cabecalho: string | null
@@ -2300,6 +2301,7 @@ export type Database = {
         }
         Insert: {
           atingimento_minimo?: number
+          comprador?: Json
           created_at?: string
           foto_arrecadacao?: string | null
           foto_cabecalho?: string | null
@@ -2321,6 +2323,7 @@ export type Database = {
         }
         Update: {
           atingimento_minimo?: number
+          comprador?: Json
           created_at?: string
           foto_arrecadacao?: string | null
           foto_cabecalho?: string | null

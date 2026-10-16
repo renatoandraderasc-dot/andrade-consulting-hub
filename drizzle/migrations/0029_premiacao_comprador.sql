@@ -1,0 +1,1 @@
+ALTER TABLE public.premiacao_config ADD COLUMN IF NOT EXISTS comprador jsonb NOT NULL DEFAULT '{}'::jsonb;
