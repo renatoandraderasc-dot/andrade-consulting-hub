@@ -119,6 +119,7 @@ const navGroups: NavGroup[] = [
       { key: "metas_cadastradas", path: "/metas/cadastradas", label: "Metas Cadastradas", icon: ClipboardList },
       { key: "admin_metas_premiacao", path: "/metas/premiacao", label: "Pagamento de Metas", icon: Trophy },
       { key: "admin_metas_premiacao", path: "/metas/premiacao/config", label: "Parametrização Pagamento", icon: Settings },
+      { key: "admin_metas_premiacao", path: "/metas/premiacao/compradores", label: "Pagamento Compradores", icon: ShoppingBag },
       { key: "admin_pic_departamentos", path: "/admin/pic-departamentos", label: "Parametrizações Pic", icon: Trophy },
       { key: "admin_questions", path: "/admin/questions", label: "Perguntas", icon: Settings },
       { key: "admin_tv", path: "/admin/tv", label: "Gerenciador de TV", icon: LayoutTemplate, globalAdmin: true },
