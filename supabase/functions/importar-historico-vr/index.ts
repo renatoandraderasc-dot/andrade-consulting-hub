@@ -88,6 +88,21 @@ Deno.serve(async (req) => {
     } catch (e) {
       return json({ erro: e instanceof Error ? e.message : String(e) }, 502);
     }
+    // Pontes (ex.: DIRECTOR) que devolvem o periodo totalizado, sem data:
+    // le dia a dia pelo vendas_secao_dia.
+    if (linhas.length > 0 && !linhas.some((l) => pick(l, "data", "dia"))) {
+      const porDia: Record<string, string>[] = [];
+      for (let d = new Date(`${inicio}T12:00:00Z`); d.toISOString().slice(0, 10) <= fim; d.setUTCDate(d.getUTCDate() + 1)) {
+        const dia = d.toISOString().slice(0, 10);
+        const r = await consultarRelatorioLoja({
+          supabaseUrl, serviceKey, storeId: store_id, relatorio: "vendas_secao_dia",
+          params: { data: dia }, cfg, timeoutMs: 60000,
+        });
+        if (!r.ok) return json({ erro: `${r.erro ?? "falha"} em ${dia}` }, 502);
+        for (const l of r.dados as Record<string, string>[]) porDia.push({ data: dia, ...l });
+      }
+      linhas = porDia;
+    }
     // Positivacao de mix: produtos distintos vendidos pela 1a vez no dia
     mixLinhas = await buscar("mix_positivacao_periodo", false).catch(() => []);
 
