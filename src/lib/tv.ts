@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { TvDimensoes } from "./tvDimensoes";
 
 export type TvTipo = "foto" | "video" | "precos" | "pic" | "texto";
 
@@ -22,7 +23,7 @@ export interface TvItem {
   ativo: boolean;
 }
 
-export interface TvTela {
+export interface TvTela extends TvDimensoes {
   id: string;
   store_id: string;
   nome: string;

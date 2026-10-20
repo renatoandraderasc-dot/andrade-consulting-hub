@@ -1,0 +1,4 @@
+ALTER TABLE public.tv_telas ADD COLUMN largura_m numeric, ADD COLUMN altura_m numeric, ADD COLUMN resolucao_largura integer, ADD COLUMN resolucao_altura integer, ADD COLUMN colunas integer NOT NULL DEFAULT 1, ADD COLUMN linhas integer NOT NULL DEFAULT 1;
+ALTER TABLE public.tv_telas ADD CONSTRAINT tv_dimensoes_validas CHECK ((largura_m IS NULL OR largura_m > 0) AND (altura_m IS NULL OR altura_m > 0) AND ((resolucao_largura IS NULL AND resolucao_altura IS NULL) OR (resolucao_largura > 0 AND resolucao_altura > 0 AND resolucao_largura IS NOT NULL AND resolucao_altura IS NOT NULL)) AND colunas BETWEEN 1 AND 16 AND linhas BETWEEN 1 AND 16);
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.tv_telas TO authenticated;
+GRANT ALL ON public.tv_telas TO service_role;

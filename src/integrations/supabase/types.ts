@@ -3354,24 +3354,42 @@ export type Database = {
       }
       tv_telas: {
         Row: {
+          altura_m: number | null
           ativa: boolean
+          colunas: number
           created_at: string
           id: string
+          largura_m: number | null
+          linhas: number
           nome: string
+          resolucao_altura: number | null
+          resolucao_largura: number | null
           store_id: string
         }
         Insert: {
+          altura_m?: number | null
           ativa?: boolean
+          colunas?: number
           created_at?: string
           id?: string
+          largura_m?: number | null
+          linhas?: number
           nome: string
+          resolucao_altura?: number | null
+          resolucao_largura?: number | null
           store_id: string
         }
         Update: {
+          altura_m?: number | null
           ativa?: boolean
+          colunas?: number
           created_at?: string
           id?: string
+          largura_m?: number | null
+          linhas?: number
           nome?: string
+          resolucao_altura?: number | null
+          resolucao_largura?: number | null
           store_id?: string
         }
         Relationships: [

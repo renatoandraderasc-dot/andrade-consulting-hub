@@ -218,6 +218,13 @@
       "when": 1792185129933,
       "tag": "0030_compras_meta_metas_comprador",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1792540180191,
+      "tag": "0031_tv_dimensoes_resolucao",
+      "breakpoints": true
     }
   ]
 }
