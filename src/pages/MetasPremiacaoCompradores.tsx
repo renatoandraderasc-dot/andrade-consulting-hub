@@ -138,15 +138,18 @@ const MetasPremiacaoCompradores = () => {
         })
         .reduce((s: number, l: any) => s + num(col(l, "total_compra", "compra", "compras")), 0);
 
-      // Pagamentos a fornecedores: apenas compras para revenda
-      // (tipo "Compra do Mês" com subtipo "COMPRA DO MÊS" — despesas não entram)
+      // Pagamentos a fornecedores: apenas compras de mercadoria para revenda
+      // (tipo "Compra do Mês"; quando o ERP informa o tipo de entrada, só "PARA REVENDA" —
+      // serviços e uso/consumo ficam de fora)
       let pagamentos = 0;
       for (let from = 0; ; from += 1000) {
-        const { data } = await supabase.from("lancamentos").select("valor")
-          .eq("store_id", storeId).eq("tipo", "Compra do Mês").eq("subtipo", "COMPRA DO MÊS")
-          .gte("data", inicio).lte("data", fim).range(from, from + 999);
+        const { data } = await supabase.from("lancamentos").select("valor, tipo_entrada")
+          .eq("store_id", storeId).eq("tipo", "Compra do Mês").eq("subtipo", "COMPRA DO MÊS").eq("status", "ativo")
+          .gte("data", inicio).lte("data", fim).order("id").range(from, from + 999);
         if (!data?.length) break;
-        pagamentos += data.reduce((s, x) => s + Math.abs(Number(x.valor) || 0), 0);
+        pagamentos += data
+          .filter((x: any) => !x.tipo_entrada || /REVENDA/i.test(String(x.tipo_entrada)))
+          .reduce((s, x) => s + Math.abs(Number(x.valor) || 0), 0);
         if (data.length < 1000) break;
       }
       setExtra({ metaVendas, metaLucro, metaCompra, metaPagamentos, compra, pagamentos });
