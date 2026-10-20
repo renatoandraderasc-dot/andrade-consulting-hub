@@ -85,6 +85,36 @@ const TvPlayer = () => {
       {atual?.tipo === "precos" && (() => {
         const mapa = new Map(catalogo.map((c) => [normalizarCodigo(c.codigo), c]));
         const linhas = (atual.config.codigos || []).map((c) => mapa.get(normalizarCodigo(c))).filter(Boolean) as CatalogoItem[];
+        const fundo = urls[atual.id];
+        if (fundo) {
+          // Arte 1920x1920: cabeçalho até 335px e 12 faixas de ~132px
+          const TOPO = 335 / 1920, FAIXA = (1920 - 335) / 12 / 1920;
+          return (
+            <div key={atual.id} className="h-full grid place-items-center">
+              <div className="relative h-full aspect-square max-w-full" style={{ containerType: "size" } as any}>
+                <img src={fundo} alt={atual.titulo || ""} className="absolute inset-0 w-full h-full object-cover" />
+                {linhas.length === 0 && (
+                  <p className="absolute inset-x-0 text-center opacity-80" style={{ top: `${TOPO * 100 + 2}%`, fontSize: "3cqh" }}>Buscando preços no sistema da loja...</p>
+                )}
+                {linhas.slice(0, 12).map((p, i) => {
+                  const oferta = p.precoOferta && p.preco && p.precoOferta < p.preco;
+                  return (
+                    <div key={p.codigo} className="absolute inset-x-0 flex items-center"
+                      style={{ top: `${(TOPO + i * FAIXA) * 100}%`, height: `${FAIXA * 100}%`, padding: "1cqh 2cqw", gap: "1.5cqw" }}>
+                      <div className="flex-1 h-full flex items-center rounded-lg bg-white/15 border border-white/30 overflow-hidden" style={{ padding: "0 2cqw" }}>
+                        <span className="font-bold uppercase truncate" style={{ fontSize: "3.6cqh" }}>{p.descricao}</span>
+                      </div>
+                      <div className="h-full flex flex-col items-center justify-center rounded-lg bg-white text-[hsl(222,80%,30%)] shrink-0" style={{ width: "26cqw" }}>
+                        {oferta && <span className="line-through opacity-60 leading-none" style={{ fontSize: "1.8cqh" }}>{fmt(p.preco)}</span>}
+                        <span className="font-extrabold leading-none" style={{ fontSize: "4.6cqh" }}>{fmt(oferta ? p.precoOferta : p.preco)}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        }
         return (
           <div key={atual.id} className="h-full flex flex-col p-10 bg-gradient-to-br from-[hsl(222,60%,18%)] to-[hsl(222,60%,8%)]">
             <h2 className="text-6xl font-bold mb-8 text-[hsl(25,95%,55%)]">{atual.titulo || "Ofertas"}</h2>
