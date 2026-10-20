@@ -566,8 +566,7 @@ const PIC = () => {
               />
             )}
 
-            {/* Finish Line Animation */}
-            <FinishLineAnimation deptKpis={deptKpis} departments={DEPARTMENTS} />
+            {/* Corrida de Metas — Ranking Geral: oculta por enquanto (pedido do Renato) */}
 
             {/* Produtos sem giro / em queda por categoria */}
             {storeId && (
