@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { ArrowDown, ArrowUp, ExternalLink, Plus, Trash2, Tv, Upload } from "lucide-react";
 import { TV_TIPOS, TvItem, TvTela, TvTipo, listarItens, listarTelas, tvDb } from "@/lib/tv";
+import TvDimensoesForm from "@/components/TvDimensoesForm";
 
 const AdminTv = () => {
   const [lojas, setLojas] = useState<{ id: string; name: string }[]>([]);
@@ -150,6 +151,7 @@ const AdminTv = () => {
 
         {tela && (
           <>
+            {telas.find(t => t.id === tela) && <TvDimensoesForm key={tela} tela={telas.find(t => t.id === tela) as TvTela} onSaved={() => carregarTelas()} />}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-base">Adicionar à programação</CardTitle>

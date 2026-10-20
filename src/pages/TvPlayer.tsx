@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import logoAndrade from "@/assets/andrade-logo.png";
 import { TvItem, TvTela, listarItens, tvDb, urlMidia } from "@/lib/tv";
 import { CatalogoItem, carregarBaseCatalogo, normalizarCodigo } from "@/lib/catalogoProdutos";
+import { dimensoesTotais } from "@/lib/tvDimensoes";
 
 const RECARREGAR_MS = 10 * 60 * 1000;
 const fmt = (v: number | null) => (v == null ? "—" : v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }));
@@ -57,6 +58,7 @@ const TvPlayer = () => {
   }, [atual?.id, idx, itens.length]);
 
   const telaCheia = () => document.documentElement.requestFullscreen?.().catch(() => {});
+  const proporcao = tela ? dimensoesTotais(tela).proporcao : null;
 
   if (loading) return null;
   if (!user) {
@@ -64,7 +66,8 @@ const TvPlayer = () => {
   }
 
   return (
-    <div className="fixed inset-0 bg-black text-white overflow-hidden cursor-none" onDoubleClick={telaCheia}>
+    <div className="fixed inset-0 bg-background text-foreground overflow-hidden cursor-none grid place-items-center" style={{ containerType: "size" }} onDoubleClick={telaCheia}>
+      <div className="relative overflow-hidden" data-testid="tv-canvas" style={proporcao ? { width: `min(100cqw, ${100 * proporcao}cqh)`, height: `min(100cqh, ${100 / proporcao}cqw)` } : { width: "100%", height: "100%" }}>
       {erro && <div className="h-full grid place-items-center text-2xl">{erro}</div>}
       {!erro && !atual && <div className="h-full grid place-items-center text-2xl opacity-70">{tela ? "Sem programação ativa nesta TV" : "Carregando..."}</div>}
 
@@ -145,6 +148,7 @@ const TvPlayer = () => {
           style={{ animation: `tvbar ${atual?.tipo === "video" ? 0 : atual?.duracao_seg}s linear forwards`, width: 0 }} />
       )}
       <style>{`@keyframes tvbar{from{width:0}to{width:100%}}`}</style>
+      </div>
     </div>
   );
 };
