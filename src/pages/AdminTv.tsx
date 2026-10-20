@@ -187,9 +187,14 @@ const AdminTv = () => {
                   </div>
                 )}
                 {tipo === "precos" && (
-                  <div className="md:col-span-4">
-                    <label className="text-xs text-muted-foreground">Códigos dos produtos (separados por vírgula ou um por linha). Preço vem do sistema da loja.</label>
+                  <div className="md:col-span-4 space-y-2">
+                    <label className="text-xs text-muted-foreground">Códigos dos produtos (separados por vírgula ou um por linha, até 12 com arte de fundo). Preço vem do sistema da loja.</label>
                     <Textarea rows={3} value={codigos} onChange={(e) => setCodigos(e.target.value)} placeholder="90643, 1234, 5678" />
+                    <label className="flex items-center gap-2 border border-dashed rounded-md p-3 cursor-pointer hover:bg-muted/40">
+                      <Upload className="w-4 h-4" />
+                      <span className="text-sm">{arquivo ? arquivo.name : "Arte de fundo (opcional) — ex.: Bovinos, Suínos, Aves com 12 faixas"}</span>
+                      <input type="file" className="hidden" accept="image/*" onChange={(e) => setArquivo(e.target.files?.[0] || null)} />
+                    </label>
                   </div>
                 )}
                 {tipo === "texto" && (
