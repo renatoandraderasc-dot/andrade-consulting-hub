@@ -67,7 +67,7 @@ const TvPlayer = () => {
 
   return (
     <div className="fixed inset-0 bg-background text-foreground overflow-hidden cursor-none grid place-items-center" style={{ containerType: "size" }} onDoubleClick={telaCheia}>
-      <div className="relative overflow-hidden" data-testid="tv-canvas" style={proporcao ? { width: `min(100cqw, ${100 * proporcao}cqh)`, height: `min(100cqh, ${100 / proporcao}cqw)` } : { width: "100%", height: "100%" }}>
+      <div className="relative overflow-hidden" data-testid="tv-canvas" style={proporcao && atual?.tipo !== "precos" ? { width: `min(100cqw, ${100 * proporcao}cqh)`, height: `min(100cqh, ${100 / proporcao}cqw)` } : { width: "100%", height: "100%" }}>
       {erro && <div className="h-full grid place-items-center text-2xl">{erro}</div>}
       {!erro && !atual && <div className="h-full grid place-items-center text-2xl opacity-70">{tela ? "Sem programação ativa nesta TV" : "Carregando..."}</div>}
 
@@ -94,8 +94,8 @@ const TvPlayer = () => {
           const TOPO = 335 / 1920, FAIXA = (1920 - 335) / 12 / 1920;
           return (
             <div key={atual.id} className="h-full grid place-items-center">
-              <div className="relative h-full aspect-square max-w-full" style={{ containerType: "size" } as any}>
-                <img src={fundo} alt={atual.titulo || ""} className="absolute inset-0 w-full h-full object-cover" />
+              <div className="relative w-full h-full" style={{ containerType: "size" } as any}>
+                <img src={fundo} alt={atual.titulo || ""} className="absolute inset-0 w-full h-full object-fill" />
                 {linhas.length === 0 && (
                   <p className="absolute inset-x-0 text-center opacity-80" style={{ top: `${TOPO * 100 + 2}%`, fontSize: "3cqh" }}>Buscando preços no sistema da loja...</p>
                 )}
