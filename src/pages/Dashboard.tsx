@@ -22,6 +22,7 @@ import MascotPersona from "@/components/poster/MascotPersona";
 import CouponDivider from "@/components/poster/CouponDivider";
 import { carregarDepartamentosLoja } from "@/lib/departamentosLoja";
 import BotaoFotoTela from "@/components/BotaoFotoTela";
+import { mercadologicoNivel1, abrirDepartamentoOutros } from "@/lib/mercadologico";
 
 const MONTHS = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
@@ -317,8 +318,13 @@ const Dashboard = () => {
     const somaPorSecao = async (ano: number, mes: number) => {
       const { inicio, fim } = mesRange(ano, mes);
       const r = await chamarRelatorio(storeId, "vendas_secao_periodo", { inicio, fim });
+      let dados: any[] = r.dados || [];
+      if (dados.some((l) => mercadologicoNivel1(l) === "OUTROS")) {
+        const rk = await chamarRelatorio(storeId, "ranking_produtos", { inicio, fim, limite: 200000 }).catch(() => ({ dados: [] as any[] }));
+        dados = abrirDepartamentoOutros(dados, rk.dados || []);
+      }
       const acc = new Map<string, number>();
-      for (const l of r.dados || []) {
+      for (const l of dados) {
         const dep = canonDept(String(pick(l, "departamento", "secao", "department") ?? "")) || "SEM DEPARTAMENTO";
         if (restrito && !permiteDept(dep)) continue;
         acc.set(dep, (acc.get(dep) || 0) + num(pick(l, "venda", "vendas", "total_vendido", "faturamento")));

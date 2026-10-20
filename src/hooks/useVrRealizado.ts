@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lucroDaLinha } from "@/lib/vrReport";
 import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
-import { mercadologicoNivel1, mercadologicoNivel2 } from "@/lib/mercadologico";
+import { mercadologicoNivel1, mercadologicoNivel2, abrirDepartamentoOutros } from "@/lib/mercadologico";
 
 // ============================================================
 // Leitura AO VIVO do realizado do VR (nada e gravado no banco).
@@ -155,7 +155,11 @@ async function loadRaw(storeId: string, inicio: string, fim: string, forcar = fa
     throw new Error(msg || "Sem resposta do VR");
   }
 
-  const brutas: any[] = Array.isArray((proxy as any).dados) ? (proxy as any).dados : [];
+  const rankingDados: any[] = Array.isArray((ranking as any)?.data?.dados) ? (ranking as any).data.dados : [];
+  const brutas: any[] = abrirDepartamentoOutros(
+    Array.isArray((proxy as any).dados) ? (proxy as any).dados : [],
+    rankingDados,
+  );
 
   // Os conectores retornam as colunas em caixa alta (ORACLE/VR) ou baixa (WebSac).
   const pick = (o: any, ...keys: string[]) => {
