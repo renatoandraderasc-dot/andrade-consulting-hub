@@ -1,5 +1,9 @@
 # Ajustes do Painel de Compras
 
+# Dimensões das TVs
+- [ ] Cadastrar dimensões, resolução e disposição por TV e aplicar a proporção no player.
+- [ ] Configurar União com quatro telas lado a lado sem inventar resolução; verificar gravação e cálculos.
+
 # PIC TV — loja e visibilidade
 - [x] Fixar loja do login e modo de exibição pelo perfil, sem controles de troca.
 - [x] Mostrar logo, Mix final e previsão do tempo compacta; melhorar leitura.
