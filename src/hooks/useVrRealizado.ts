@@ -172,8 +172,8 @@ async function loadRaw(storeId: string, inicio: string, fim: string, forcar = fa
 
   const linhas: VrLinha[] = [];
   for (const l of brutas) {
-    const date = String(pick(l, "data", "dia") ?? "").slice(0, 10);
-    if (!date) continue;
+    // Pontes DIRECTOR (ex.: Medeiros) devolvem o periodo totalizado, sem data.
+    const date = String(pick(l, "data", "dia") ?? "").slice(0, 10) || inicio;
     linhas.push({
       date,
       secao: mercadologicoNivel1(l),
