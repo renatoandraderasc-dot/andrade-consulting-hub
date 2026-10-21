@@ -217,6 +217,7 @@ const AdminTv = () => {
                 {itens.map((it, i) => (
                   <div key={it.id} className={`flex flex-wrap items-center gap-2 border rounded-md p-2 ${it.ativo ? "" : "opacity-50"}`}>
                     <span className="w-6 text-center text-xs text-muted-foreground">{i + 1}</span>
+                    {(() => { const t = telas.find((x) => x.id === tela); const m = (t?.colunas || 1) * (t?.linhas || 1); const ativos = itens.filter((x) => x.ativo); const pos = ativos.findIndex((x) => x.id === it.id); return m > 1 && pos >= 0 ? <span className="text-xs font-semibold px-2 py-1 rounded bg-primary/15 text-primary">Tela {(pos % m) + 1}</span> : null; })()}
                     <span className="text-xs font-semibold px-2 py-1 rounded bg-muted">{TV_TIPOS.find((t) => t.value === it.tipo)?.label}</span>
                     <span className="flex-1 min-w-[160px] text-sm truncate">
                       {it.titulo || (it.tipo === "precos" ? `${it.config.codigos?.length || 0} produtos` : it.tipo === "texto" ? it.config.texto : it.midia_path?.split("/").pop())}
