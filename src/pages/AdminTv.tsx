@@ -254,7 +254,7 @@ const AdminTv = () => {
               </CardHeader>
               <CardContent>
                 {itens.length === 0 && <p className="text-sm text-muted-foreground">Nada programado ainda. Clique em Adicionar.</p>}
-                <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(modulos, 4)}, minmax(0, 1fr))` }}>
+                <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${Math.min(Math.max(modulos, 3), 4)}, minmax(0, 1fr))` }}>
                   {Array.from({ length: modulos }).map((_, m) => {
                     const doModulo = itens.filter((it) => moduloDe(it) === m + 1);
                     return (
@@ -265,7 +265,7 @@ const AdminTv = () => {
                           const i = itens.findIndex((x) => x.id === it.id);
                           return (
                             <div key={it.id} className="rounded-md border bg-card overflow-hidden">
-                              <div className="aspect-video bg-muted grid place-items-center overflow-hidden">
+                              <div className="h-24 bg-muted grid place-items-center overflow-hidden">
                                 {thumbs[it.id] ? <img src={thumbs[it.id]} alt="" className="w-full h-full object-cover" /> : <span className="text-xs text-muted-foreground">{TV_TIPOS.find((t) => t.value === it.tipo)?.label}</span>}
                               </div>
                               <div className="p-2 space-y-1">
