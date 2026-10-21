@@ -42,7 +42,7 @@ const ItemView = ({ atual, url, catalogo, proximo }: { atual: TvItem; url?: stri
           return (
             <div key={p.codigo} className="absolute inset-x-0 flex items-center" style={{ top: `${(TOPO + i * FAIXA) * 100}%`, height: `${FAIXA * 100}%`, padding: "0.8cqh 2cqw", gap: "1.5cqw" }}>
               <div className="flex-1 min-w-0 h-full flex items-center rounded-lg bg-white/15 border border-white/30 overflow-hidden" style={{ padding: "0 2cqw" }}>
-                <span className="font-bold uppercase leading-tight line-clamp-2" style={{ fontSize: "3.3cqh" }}>{p.descricao}</span>
+                <span className="font-bold uppercase leading-none line-clamp-2" style={{ fontSize: p.descricao.length > 26 ? "2.5cqh" : "3.3cqh" }}>{p.descricao}</span>
               </div>
               <div className="h-full flex flex-col items-center justify-center rounded-lg bg-white text-[hsl(222,80%,30%)] shrink-0" style={{ width: "32cqw" }}>
                 {oferta && <span className="line-through opacity-60 leading-none" style={{ fontSize: "1.8cqh" }}>{fmt(p.preco)}</span>}
