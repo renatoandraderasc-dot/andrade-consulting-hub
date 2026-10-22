@@ -26,7 +26,7 @@ export interface RelatorioResultado {
 }
 
 const INDISPONIVEL = /relatorio nao encontrado|nao encontrado|nao existe|nao cadastrado|parametro ausente|parametros obrigatorios|404|ORA-\d+|illegal variable|invalid identifier|not supported/i;
-const OFFLINE = /sem conexao|connection refused|failed to fetch|timeout|ngrok|tunnel|econnrefused/i;
+const OFFLINE = /tls handshake|handshake eof|tunnel instavel|sem conexao|connection refused|failed to fetch|timeout|ngrok|tunnel|econnrefused/i;
 
 /** Le uma coluna sem se importar com a caixa do nome. */
 export function pick(o: any, ...keys: string[]): any {
@@ -235,4 +235,4 @@ export function maxDiasConsulta(storeId: string): Promise<number> {
 }
 
 /** Erro de protecao da ponte: periodo longo, ponte ocupada ou tempo esgotado. */
-export const ERRO_PROTECAO_PONTE = /periodo longo|ponte ocupada|ocupada|tempo esgotado|\b50[34]\b/i;
+export const ERRO_PROTECAO_PONTE = /tls handshake|tunnel instavel|periodo longo|ponte ocupada|ocupada|tempo esgotado|\b50[34]\b/i;

@@ -244,12 +244,27 @@ export async function consultarRelatorioLoja(opts: {
         return { ok: false, dados: [], erro: "resposta VR nao e JSON" };
       }
     } catch (e) {
-      return { ok: false, dados: [], erro: e instanceof Error ? e.message : String(e) };
+      const m = e instanceof Error ? e.message : String(e);
+      const queda = /tls handshake|handshake eof|connection reset|connect\)|broken pipe|unexpected eof/i.test(m);
+      return queda
+        ? { ok: false, dados: [], semConexao: true, erro: `tunnel instavel: sem conexao VR (${m.slice(0, 120)})` }
+        : { ok: false, dados: [], erro: m };
     }
   }
 
+  // Tunel (Tailscale/ngrok) costuma cair por segundos: tenta de novo apos 2s e 5s.
+  async function chamarComRetry(nome: string): Promise<ResultadoConsulta> {
+    let r = await chamar(nome);
+    for (const espera of [2000, 5000]) {
+      if (r.ok || !/tunnel instavel/.test(r.erro ?? "")) break;
+      await new Promise((ok) => setTimeout(ok, espera));
+      r = await chamar(nome);
+    }
+    return r;
+  }
+
   // 1a tentativa: nome pedido
-  const primeira = await chamar(relatorio);
+  const primeira = await chamarComRetry(relatorio);
   const faltando = (msg?: string) =>
     !!msg && /404|relatorio nao encontrado|nao encontrado|nao existe|nao cadastrado/i.test(msg);
   if (primeira.ok || primeira.semConexao || !faltando(primeira.erro)) return primeira;
