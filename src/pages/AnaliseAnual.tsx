@@ -232,15 +232,12 @@ const AnaliseAnual = () => {
       }
       const base = Array.from(salvos.values()).flat();
       setRows(base);
-      const hoje = new Date();
-      const mesAtual = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}`;
       const faltam = mesesAteHoje().filter((t) => {
         const k = `${t.ano}-${String(t.mes).padStart(2, "0")}`;
         return forcar || !salvos.has(k);
       });
       if (!faltam.length) { setLoading(false); return; }
       await carregarMensal(sid, faltam, forcar, base);
-      void mesAtual;
       return;
     }
     setLoading(true);
