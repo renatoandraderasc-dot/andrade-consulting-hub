@@ -182,7 +182,7 @@ const CapilaridadeMix = () => {
     });
 
   // ---------- fonte 2 (fallback): ranking_produtos mes a mes ----------
-  const deRanking = async (sid: string, anoSel: number, nMeses: number, hojeIso: string): Promise<Linha[] | null> => {
+  const deRanking = async (sid: string, anoSel: number, nMeses: number, hojeIso: string, mesAMes = false): Promise<Linha[] | null> => {
     const cad = await chamarRelatorio(sid, "produtos", {});
     const cadastro = new Map<string, { descricao: string; dep: string; grupo: string; barras: string }>();
     for (const p of cad.dados || []) {
@@ -199,7 +199,7 @@ const CapilaridadeMix = () => {
     const acc = new Map<string, Linha>();
     let algumOk = false;
     let ultimaFalha: string | null = null;
-    const lote = (await maxDiasConsulta(sid)) > 0 ? 1 : 3;
+    const lote = mesAMes || (await maxDiasConsulta(sid)) > 0 ? 1 : 3;
     for (let i = 0; i < nMeses; i += lote) {
       const meses = Array.from({ length: Math.min(lote, nMeses - i) }, (_, j) => i + j + 1);
       setProgresso(`Lendo vendas de ${meses.map((m) => MESES[m - 1]).join(", ")}…`);
@@ -258,8 +258,9 @@ const CapilaridadeMix = () => {
     try {
       let base: Linha[] | null = null;
       const r = await chamarRelatorio(storeId, "capilaridade_mix", { inicio, fim });
-      if (r.indisponivel || ERRO_PROTECAO_PONTE.test(r.erro ?? "")) {
-        base = await deRanking(storeId, ano, nMeses, hojeIso);
+      if (r.indisponivel || r.offline || ERRO_PROTECAO_PONTE.test(r.erro ?? "")) {
+        // Ponte sem o relatorio, instavel ou sobrecarregada: le 1 mes por vez.
+        base = await deRanking(storeId, ano, nMeses, hojeIso, r.offline || !!r.erro);
       } else {
         const msg = avisoRelatorio(r);
         if (msg) { setAviso(msg); setLinhas([]); return; }
