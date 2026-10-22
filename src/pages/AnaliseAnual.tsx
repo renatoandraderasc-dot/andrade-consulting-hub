@@ -217,7 +217,27 @@ const AnaliseAnual = () => {
   const carregar = async (sid: string, forcar = false) => {
     if ((await maxDiasConsulta(sid)) > 0) {
       setRows([]);
-      await carregarMensal(sid, mesesAteHoje(), forcar);
+      // Meses já guardados no Hub aparecem na hora, sem consultar a loja.
+      const salvos = new Map<string, Row[]>();
+      if (!forcar) {
+        const { data } = await supabase
+          .from("relatorio_cache").select("params, dados")
+          .eq("store_id", sid).eq("relatorio", "dre_periodo");
+        for (const c of (data as any[]) || []) {
+          const ini = String(c.params?.inicio ?? "");
+          if (!/^\d{4}-\d{2}-01$/.test(ini)) continue;
+          const linhas = mapearDre(c.dados || []);
+          if (linhas.length) salvos.set(ini.slice(0, 7), linhas);
+        }
+      }
+      const base = Array.from(salvos.values()).flat();
+      setRows(base);
+      const faltam = mesesAteHoje().filter((t) => {
+        const k = `${t.ano}-${String(t.mes).padStart(2, "0")}`;
+        return forcar || !salvos.has(k);
+      });
+      if (!faltam.length) { setLoading(false); return; }
+      await carregarMensal(sid, faltam, forcar, base);
       return;
     }
     setLoading(true);
