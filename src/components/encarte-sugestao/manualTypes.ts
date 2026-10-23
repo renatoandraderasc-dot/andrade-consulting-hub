@@ -51,7 +51,12 @@ export const normalizarCodigos = (texto: string): string[] => {
   return saida;
 };
 
-export const linhaDoRetorno = (r: Record<string, unknown>, fallbackCodigo: string, ordem: number): LinhaManual => {
+/** Lojas cujo Encarte Manual usa o Custo Médio (pedido do cliente). */
+export const LOJAS_CUSTO_MEDIO = /uni[aã]o/i;
+
+export const linhaDoRetorno = (
+  r: Record<string, unknown>, fallbackCodigo: string, ordem: number, custoMedio = false,
+): LinhaManual => {
   const semanas = [1, 2, 3, 4].map((n) => ({
     qtd: num(pick(r, `s${n}_qtd`)),
     oferta: boolOf(pick(r, `s${n}_oferta`)),
@@ -70,9 +75,13 @@ export const linhaDoRetorno = (r: Record<string, unknown>, fallbackCodigo: strin
     secao: txt(pick(r, "secao", "departamento")),
     grupo: txt(pick(r, "grupo", "categoria")),
     estoque: num(pick(r, "estoque")),
-    custo: num(pick(r, "custo", "custo_ultima_entrada", "custo_atual_cadastro", "custo_medio")),
+    custo: custoMedio && num(pick(r, "custo_medio")) > 0
+      ? num(pick(r, "custo_medio"))
+      : num(pick(r, "custo", "custo_ultima_entrada", "custo_atual_cadastro", "custo_medio")),
     preco_venda: num(pick(r, "preco_venda")),
-    margem_pct: num(pick(r, "margem_pct")),
+    margem_pct: custoMedio && num(pick(r, "custo_medio")) > 0 && num(pick(r, "preco_venda")) > 0
+      ? ((num(pick(r, "preco_venda")) - num(pick(r, "custo_medio"))) / num(pick(r, "preco_venda"))) * 100
+      : num(pick(r, "margem_pct")),
     em_oferta_hoje: boolOf(pick(r, "em_oferta_hoje")),
     preco_ultima_oferta: precoUlt > 0 ? precoUlt : null,
     data_fim_ultima_oferta: txt(pick(r, "data_fim_ultima_oferta")) || null,
