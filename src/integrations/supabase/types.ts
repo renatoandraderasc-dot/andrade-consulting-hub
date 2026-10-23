@@ -1099,10 +1099,13 @@ export type Database = {
           grupo: string | null
           id: string
           lista_id: string
+          margem_clube_pct: number | null
           margem_encarte_pct: number | null
           margem_pct: number | null
+          observacao: string | null
           ordem: number
           posicao: string
+          preco_clube: number | null
           preco_encarte: number | null
           preco_venda: number | null
           secao: string | null
@@ -1121,10 +1124,13 @@ export type Database = {
           grupo?: string | null
           id?: string
           lista_id: string
+          margem_clube_pct?: number | null
           margem_encarte_pct?: number | null
           margem_pct?: number | null
+          observacao?: string | null
           ordem?: number
           posicao?: string
+          preco_clube?: number | null
           preco_encarte?: number | null
           preco_venda?: number | null
           secao?: string | null
@@ -1143,10 +1149,13 @@ export type Database = {
           grupo?: string | null
           id?: string
           lista_id?: string
+          margem_clube_pct?: number | null
           margem_encarte_pct?: number | null
           margem_pct?: number | null
+          observacao?: string | null
           ordem?: number
           posicao?: string
+          preco_clube?: number | null
           preco_encarte?: number | null
           preco_venda?: number | null
           secao?: string | null

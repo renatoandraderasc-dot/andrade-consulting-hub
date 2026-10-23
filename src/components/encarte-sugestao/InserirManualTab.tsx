@@ -35,6 +35,8 @@ interface Props {
 
 const hojeIso = () => new Date().toISOString().slice(0, 10);
 const LIMITE = 300;
+const chaveRascunho = (storeId: string) => `encarte-manual-rascunho:${storeId}`;
+const normCod = (c: string) => String(c ?? "").trim().replace(/^0+/, "");
 
 const InserirManualTab = ({ stores, storeId, onStoreChange, onEnviarImpressao }: Props) => {
   const [dataRef, setDataRef] = useState(hojeIso());
@@ -48,9 +50,10 @@ const InserirManualTab = ({ stores, storeId, onStoreChange, onEnviarImpressao }:
   const [salvando, setSalvando] = useState(false);
   const [listas, setListas] = useState<{ id: string; nome: string; data_referencia: string; created_at: string }[]>([]);
   const [abrirListas, setAbrirListas] = useState(false);
+  const [rascunhoPronto, setRascunhoPronto] = useState<string | null>(null);
   const [recentes, setRecentes] = useState<Set<string>>(new Set());
 
-  const codigos = useMemo(() => normalizarCodigos(texto), [texto]);
+  const codigosTexto = useMemo(() => normalizarCodigos(texto), [texto]);
 
   useEffect(() => {
     if (!storeId) return;
@@ -63,8 +66,26 @@ const InserirManualTab = ({ stores, storeId, onStoreChange, onEnviarImpressao }:
     supabase.from("encarte_historico_itens").select("codigo")
       .eq("store_id", storeId).gte("data_fim", limite.toISOString().slice(0, 10))
       .then(({ data }) => setRecentes(new Set((data ?? []).map((h: { codigo: string }) => String(h.codigo)))));
-    setItens([]);
+    // restaura o rascunho desta loja (fica salvo mesmo sem clicar em Salvar)
+    try {
+      const raw = localStorage.getItem(chaveRascunho(storeId));
+      if (raw) {
+        const r = JSON.parse(raw);
+        setItens(Array.isArray(r.itens) ? r.itens : []);
+        setTexto(r.texto ?? "");
+        setNomeLista(r.nomeLista ?? "");
+        if (r.dataRef) setDataRef(r.dataRef);
+      } else { setItens([]); }
+    } catch { setItens([]); }
+    setRascunhoPronto(storeId);
   }, [storeId]);
+
+  useEffect(() => {
+    if (!storeId || rascunhoPronto !== storeId) return;
+    try {
+      localStorage.setItem(chaveRascunho(storeId), JSON.stringify({ itens, texto, nomeLista, dataRef }));
+    } catch { /* armazenamento cheio */ }
+  }, [storeId, rascunhoPronto, itens, texto, nomeLista, dataRef]);
 
   const carregarListas = useCallback(async () => {
     if (!storeId) return;
@@ -81,12 +102,16 @@ const InserirManualTab = ({ stores, storeId, onStoreChange, onEnviarImpressao }:
 
   const buscar = async () => {
     if (!storeId) return toast.error("Escolha a loja");
-    if (!codigos.length) return toast.error("Cole os códigos de barras ou reduzidos");
+    if (!codigosTexto.length) return toast.error("Cole os códigos de barras ou reduzidos");
+    const jaNaLista = new Set<string>();
+    for (const i of itens) for (const c of [i.codigo_digitado, i.codigo, i.ean]) if (c) jaNaLista.add(normCod(c));
+    const codigos = codigosTexto.filter((c) => !jaNaLista.has(normCod(c)));
+    if (!codigos.length) return toast.info("Todos esses códigos já estão na lista");
     if (codigos.length > LIMITE) return toast.error(`Limite de ${LIMITE} códigos por consulta`);
 
     setCarregando(true); setAviso(null);
     const resultado: LinhaManual[] = [];
-    let ordem = 0;
+    let ordem = itens.reduce((mx, i) => Math.max(mx, i.ordem), 0);
     for (let i = 0; i < codigos.length; i += 100) {
       const lote = codigos.slice(i, i + 100);
       const r = await chamarRelatorio(storeId, "encarte_manual", {
@@ -114,7 +139,8 @@ const InserirManualTab = ({ stores, storeId, onStoreChange, onEnviarImpressao }:
         resultado.push(linha);
       });
     }
-    setItens(resultado);
+    setItens((prev) => [...prev, ...resultado]);
+    setTexto("");
     setCarregando(false);
     const nok = resultado.filter((r) => !r.encontrado).length;
     toast.success(`${resultado.length - nok} produtos localizados${nok ? ` · ${nok} não localizados` : ""}`);
@@ -148,6 +174,8 @@ const InserirManualTab = ({ stores, storeId, onStoreChange, onEnviarImpressao }:
       descricao_encarte: i.descricao_encarte || null, secao: i.secao || null, grupo: i.grupo || null,
       estoque: i.estoque, custo: i.custo, preco_venda: i.preco_venda, margem_pct: i.margem_pct,
       preco_encarte: i.preco_encarte, margem_encarte_pct: margemEncarte(i.preco_encarte, i.custo),
+      preco_clube: i.preco_clube ?? null, margem_clube_pct: margemEncarte(i.preco_clube ?? null, i.custo),
+      observacao: i.observacao?.trim() || null,
       posicao: i.posicao, snapshot: i.bruto as never,
     }));
     const { error: e2 } = await supabase.from("encarte_manual_item").insert(linhas);
@@ -177,6 +205,8 @@ const InserirManualTab = ({ stores, storeId, onStoreChange, onEnviarImpressao }:
           preco_venda: Number(r.preco_venda ?? base.preco_venda),
           margem_pct: Number(r.margem_pct ?? base.margem_pct),
           preco_encarte: r.preco_encarte != null ? Number(r.preco_encarte) : null,
+          preco_clube: r.preco_clube != null ? Number(r.preco_clube) : null,
+          observacao: r.observacao ?? "",
           posicao: (r.posicao === "verso" ? "verso" : "capa") as LinhaManual["posicao"],
           encontrado: r.encontrado,
         };
@@ -204,14 +234,13 @@ const InserirManualTab = ({ stores, storeId, onStoreChange, onEnviarImpressao }:
       "Margem atual %": i.margem_pct,
       "Última promoção": i.preco_ultima_oferta ?? "",
       "Fim última promoção": i.data_fim_ultima_oferta ?? "",
-      "S-1": i.semanas[0]?.qtd ?? 0,
-      "S-2": i.semanas[1]?.qtd ?? 0,
-      "S-3": i.semanas[2]?.qtd ?? 0,
-      "S-4": i.semanas[3]?.qtd ?? 0,
       "Total 4 sem": i.qtd_4sem,
       "Média/sem": i.media_semanal_qtd,
       "Preço do encarte": i.preco_encarte ?? "",
       "Margem no encarte %": margemEncarte(i.preco_encarte, i.custo) ?? "",
+      "Preço clube": i.preco_clube ?? "",
+      "Margem no clube %": margemEncarte(i.preco_clube ?? null, i.custo) ?? "",
+      Observação: i.observacao ?? "",
       Posição: i.posicao === "capa" ? "Capa" : "Verso",
     }));
     const wb = XLSX.utils.book_new();
@@ -255,11 +284,14 @@ const InserirManualTab = ({ stores, storeId, onStoreChange, onEnviarImpressao }:
             onChange={(e) => setTexto(e.target.value)}
           />
           <div className="flex flex-wrap items-center gap-2 mt-2">
-            <span className="text-sm text-muted-foreground">{codigos.length} códigos</span>
+            <span className="text-sm text-muted-foreground">{codigosTexto.length} códigos</span>
             <Button size="sm" onClick={buscar} disabled={carregando}>
               <Search className="w-4 h-4 mr-2" /> {carregando ? "Buscando..." : "Buscar dados"}
             </Button>
-            <Button size="sm" variant="outline" onClick={() => { setTexto(""); setItens([]); }}>
+            <Button size="sm" variant="outline" onClick={() => {
+              if (itens.length && !confirm("Limpar todos os itens da lista?")) return;
+              setTexto(""); setItens([]); setNomeLista("");
+            }}>
               <Eraser className="w-4 h-4 mr-2" /> Limpar
             </Button>
             <Button size="sm" variant="outline" onClick={colarDoExcel}>

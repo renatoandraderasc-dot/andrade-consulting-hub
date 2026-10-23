@@ -25,6 +25,8 @@ export interface LinhaManual {
   qtd_4sem: number;
   media_semanal_qtd: number;
   preco_encarte: number | null;
+  preco_clube?: number | null;
+  observacao?: string;
   posicao: PosicaoManual;
   ja_saiu_recente?: boolean;
   bruto: Record<string, unknown>;
@@ -81,6 +83,8 @@ export const linhaDoRetorno = (r: Record<string, unknown>, fallbackCodigo: strin
     qtd_4sem: num(pick(r, "qtd_4sem")),
     media_semanal_qtd: num(pick(r, "media_semanal_qtd")),
     preco_encarte: null,
+    preco_clube: null,
+    observacao: "",
     posicao: "capa",
     bruto: r,
   };
@@ -109,6 +113,8 @@ export const linhaNaoLocalizada = (codigo: string, ordem: number): LinhaManual =
   qtd_4sem: 0,
   media_semanal_qtd: 0,
   preco_encarte: null,
+  preco_clube: null,
+  observacao: "",
   posicao: "capa",
   bruto: {},
 });
