@@ -207,22 +207,31 @@ export const ContRedeTab = ({ storeId }: Props) => {
   const [vendaErro, setVendaErro] = useState<string | null>(null);
   const [lendoVendas, setLendoVendas] = useState<string | null>(null);
 
-  const fetchVendas = useCallback(async () => {
+  // Sem `forcar`: lê só o que está salvo no banco (sem consultar a loja).
+  // Com `forcar` (botão Atualizar): consulta a loja apenas nos meses filtrados.
+  const fetchVendas = useCallback(async (forcar = false, meses?: number[]) => {
     if (!storeId || !mesesAno.length) { setVendas({}); return; }
-    const res: Record<number, VendaMes> = {};
+    const alvo = meses ?? mesesAno;
+    const res: Record<number, VendaMes> = forcar ? { ...vendasRef.current } : {};
     let preferido: string | null = null;
     let aviso: string | null = null;
-    for (const m of mesesAno) {
-      setLendoVendas(`Lendo vendas de ${MESES_CURTOS[m - 1]}/${ano}...`);
-      const r = await lerVendaMes(storeId, ano, m, preferido);
+    for (const m of alvo) {
+      if (forcar) setLendoVendas(`Lendo vendas de ${MESES_CURTOS[m - 1]}/${ano} no sistema da loja...`);
+      const r = await lerVendaMes(storeId, ano, m, preferido, forcar);
       res[m] = r.valor;
       if (r.valor) preferido = r.rel;
       else aviso = r.aviso ?? aviso;
-      setVendas({ ...res });
+      if (forcar) setVendas({ ...res });
     }
+    setVendas({ ...res });
     setLendoVendas(null);
-    setVendaErro(Object.values(res).some(Boolean) ? null : aviso ?? "o sistema da loja não retornou vendas");
+    setVendaErro(Object.values(res).some(Boolean) ? null
+      : forcar ? aviso ?? "o sistema da loja não retornou vendas"
+      : "nenhuma venda salva ainda — clique em Atualizar");
   }, [storeId, ano, mesesAno]);
+
+  const vendasRef = useRef<Record<number, VendaMes>>({});
+  useEffect(() => { vendasRef.current = vendas; }, [vendas]);
 
   useEffect(() => { fetchVendas(); }, [fetchVendas]);
 
@@ -245,26 +254,36 @@ export const ContRedeTab = ({ storeId }: Props) => {
     return () => { ativo = false; };
   }, [storeId, ano]);
 
-  // Botão Atualizar: busca no sistema os lançamentos dos últimos 12 meses
+  // Botão Atualizar: busca no sistema SOMENTE os meses filtrados.
+  // Lançamentos editados ou incluídos manualmente nunca são sobrescritos.
   const atualizar = async () => {
     if (!storeId || !user) { toast.error("Selecione uma loja"); return; }
+    if (!mesesVisiveis.length) return;
     setAtualizando(true);
-    const hoje = new Date();
-    const fim = hoje.toISOString().slice(0, 10);
-    const ini = new Date(Date.UTC(hoje.getUTCFullYear(), hoje.getUTCMonth() - 11, 1)).toISOString().slice(0, 10);
-    const { data, error } = await supabase.functions.invoke("importar-lancamentos-vr", {
-      body: { store_id: storeId, user_id: user.id, inicio: ini, fim },
-    });
-    const payload = data as any;
-    if (error || payload?.erro) {
-      toast.error(`Falha ao ler o sistema da loja: ${error?.message || payload?.erro}`);
-    } else {
-      const pend = (payload?.pendentes ?? []).length;
-      toast.success(`${payload?.gravados ?? 0} lançamento(s) atualizados (últimos 12 meses)` +
-        (pend ? ` · ${pend} tipo(s) de pagamento sem classificação` : ""));
+    let gravados = 0;
+    let preservados = 0;
+    const pendentes = new Set<string>();
+    const falhas: string[] = [];
+    for (const m of mesesVisiveis) {
+      setLendoVendas(`Lendo lançamentos de ${MESES_CURTOS[m - 1]}/${ano} no sistema da loja...`);
+      const ini = `${ano}-${String(m).padStart(2, "0")}-01`;
+      const fim = new Date(ano, m, 0).toISOString().slice(0, 10);
+      const { data, error } = await supabase.functions.invoke("importar-lancamentos-vr", {
+        body: { store_id: storeId, user_id: user.id, inicio: ini, fim },
+      });
+      const payload = data as any;
+      if (error || payload?.erro) { falhas.push(MESES_CURTOS[m - 1]); continue; }
+      gravados += Number(payload?.gravados ?? 0);
+      preservados += Number(payload?.preservados_manual ?? 0);
+      for (const p of payload?.pendentes ?? []) pendentes.add(String(p?.id_tipo ?? p));
     }
+    const nomes = mesesVisiveis.map(m => MESES_CURTOS[m - 1]).join(", ");
+    if (falhas.length) toast.error(`Falha ao ler o sistema da loja em: ${falhas.join(", ")}`);
+    toast.success(`${gravados} lançamento(s) atualizados (${nomes})` +
+      (preservados ? ` · ${preservados} edição(ões) manual(is) preservada(s)` : "") +
+      (pendentes.size ? ` · ${pendentes.size} tipo(s) de pagamento sem classificação` : ""));
     await fetchData();
-    await fetchVendas();
+    await fetchVendas(true, mesesVisiveis);
     setAtualizando(false);
   };
 
