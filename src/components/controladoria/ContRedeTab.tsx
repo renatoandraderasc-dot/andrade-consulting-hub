@@ -69,27 +69,47 @@ const fmtDate = (d: string) => {
 
 type VendaMes = { venda: number; cmv: number } | null;
 
-// Lê faturamento/CMV de um mês tentando os relatórios publicados pela loja
-async function lerVendaMes(storeId: string, ano: number, mes: number, preferido: string | null) {
+const extrairVenda = (dados: any[]): VendaMes => {
+  const venda = dados.reduce(
+    (s, x) => s + num(pick(x, "receita_bruta", "faturamento", "total_vendido", "venda", "vendas", "valor_venda")), 0);
+  let cmv = dados.reduce((s, x) => s + Math.abs(num(pick(x, "cmv", "custo", "custo_total"))), 0);
+  if (cmv === 0) {
+    const lucro = dados.reduce((s, x) => s + num(pick(x, "lucro", "lucro_bruto", "margem_valor")), 0);
+    if (lucro !== 0 && venda !== 0) cmv = Math.abs(venda - lucro);
+  }
+  return venda === 0 && cmv === 0 ? null : { venda, cmv };
+};
+
+const RELS_VENDA = ["dre_periodo", "kpis_periodo", "vendas_secao_periodo", "vendas_dep_periodo"];
+
+// Lê faturamento/CMV de um mês. Sem `forcar`, usa apenas o que já está salvo no banco.
+async function lerVendaMes(storeId: string, ano: number, mes: number, preferido: string | null, forcar = false) {
   const inicio = `${ano}-${String(mes).padStart(2, "0")}-01`;
   const fim = new Date(ano, mes, 0).toISOString().slice(0, 10);
-  const base = ["dre_periodo", "kpis_periodo", "vendas_secao_periodo", "vendas_dep_periodo"];
-  const candidatos = preferido ? [preferido, ...base.filter((c) => c !== preferido)] : base;
+  const candidatos = preferido ? [preferido, ...RELS_VENDA.filter((c) => c !== preferido)] : RELS_VENDA;
+
+  if (!forcar) {
+    const { data } = await supabase
+      .from("relatorio_cache")
+      .select("relatorio, dados")
+      .eq("store_id", storeId)
+      .in("relatorio", candidatos)
+      .eq("params_chave", JSON.stringify({ fim, inicio }));
+    for (const rel of candidatos) {
+      const row = (data as any[] | null)?.find((d) => d.relatorio === rel);
+      const v = row && Array.isArray(row.dados) ? extrairVenda(row.dados) : null;
+      if (v) return { valor: v, rel, aviso: null };
+    }
+    return { valor: null as VendaMes, rel: preferido, aviso: null };
+  }
+
   let aviso: string | null = null;
   for (const rel of candidatos) {
-    const r = await chamarRelatorio(storeId, rel, { inicio, fim });
+    const r = await chamarRelatorio(storeId, rel, { inicio, fim }, { forcar: true });
     const av = avisoRelatorio(r);
     if (av) { aviso = av; continue; }
-    if (!r.dados.length) continue;
-    const venda = r.dados.reduce(
-      (s, x) => s + num(pick(x, "receita_bruta", "faturamento", "total_vendido", "venda", "vendas", "valor_venda")), 0);
-    let cmv = r.dados.reduce((s, x) => s + Math.abs(num(pick(x, "cmv", "custo", "custo_total"))), 0);
-    if (cmv === 0) {
-      const lucro = r.dados.reduce((s, x) => s + num(pick(x, "lucro", "lucro_bruto", "margem_valor")), 0);
-      if (lucro !== 0 && venda !== 0) cmv = Math.abs(venda - lucro);
-    }
-    if (venda === 0 && cmv === 0) continue;
-    return { valor: { venda, cmv } as VendaMes, rel, aviso: null };
+    const v = extrairVenda(r.dados);
+    if (v) return { valor: v, rel, aviso: null };
   }
   return { valor: null as VendaMes, rel: preferido, aviso };
 }
