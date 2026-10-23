@@ -232,6 +232,13 @@
       "when": 1792762868706,
       "tag": "0032_encarte_manual_clube_obs",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1792790063168,
+      "tag": "0033_classificar_impostos_fazenda",
+      "breakpoints": true
     }
   ]
 }
