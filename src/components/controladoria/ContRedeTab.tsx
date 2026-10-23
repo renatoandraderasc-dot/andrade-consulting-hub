@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { chamarRelatorio, avisoRelatorio, pick, num } from "@/lib/vrReport";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -59,6 +59,12 @@ const fmtCompacto = (v: number) => {
   return neg ? `(${str})` : str;
 };
 
+const fmtExato = (v: number) => {
+  if (!v) return "—";
+  const str = Math.abs(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return v < 0 ? `(${str})` : str;
+};
+
 const fmtDate = (d: string) => {
   try {
     return new Date(d + "T12:00:00").toLocaleDateString("pt-BR");
@@ -69,27 +75,47 @@ const fmtDate = (d: string) => {
 
 type VendaMes = { venda: number; cmv: number } | null;
 
-// Lê faturamento/CMV de um mês tentando os relatórios publicados pela loja
-async function lerVendaMes(storeId: string, ano: number, mes: number, preferido: string | null) {
+const extrairVenda = (dados: any[]): VendaMes => {
+  const venda = dados.reduce(
+    (s, x) => s + num(pick(x, "receita_bruta", "faturamento", "total_vendido", "venda", "vendas", "valor_venda")), 0);
+  let cmv = dados.reduce((s, x) => s + Math.abs(num(pick(x, "cmv", "custo", "custo_total"))), 0);
+  if (cmv === 0) {
+    const lucro = dados.reduce((s, x) => s + num(pick(x, "lucro", "lucro_bruto", "margem_valor")), 0);
+    if (lucro !== 0 && venda !== 0) cmv = Math.abs(venda - lucro);
+  }
+  return venda === 0 && cmv === 0 ? null : { venda, cmv };
+};
+
+const RELS_VENDA = ["dre_periodo", "kpis_periodo", "vendas_secao_periodo", "vendas_dep_periodo"];
+
+// Lê faturamento/CMV de um mês. Sem `forcar`, usa apenas o que já está salvo no banco.
+async function lerVendaMes(storeId: string, ano: number, mes: number, preferido: string | null, forcar = false) {
   const inicio = `${ano}-${String(mes).padStart(2, "0")}-01`;
   const fim = new Date(ano, mes, 0).toISOString().slice(0, 10);
-  const base = ["dre_periodo", "kpis_periodo", "vendas_secao_periodo", "vendas_dep_periodo"];
-  const candidatos = preferido ? [preferido, ...base.filter((c) => c !== preferido)] : base;
+  const candidatos = preferido ? [preferido, ...RELS_VENDA.filter((c) => c !== preferido)] : RELS_VENDA;
+
+  if (!forcar) {
+    const { data } = await supabase
+      .from("relatorio_cache")
+      .select("relatorio, dados")
+      .eq("store_id", storeId)
+      .in("relatorio", candidatos)
+      .eq("params_chave", JSON.stringify({ fim, inicio }));
+    for (const rel of candidatos) {
+      const row = (data as any[] | null)?.find((d) => d.relatorio === rel);
+      const v = row && Array.isArray(row.dados) ? extrairVenda(row.dados) : null;
+      if (v) return { valor: v, rel, aviso: null };
+    }
+    return { valor: null as VendaMes, rel: preferido, aviso: null };
+  }
+
   let aviso: string | null = null;
   for (const rel of candidatos) {
-    const r = await chamarRelatorio(storeId, rel, { inicio, fim });
+    const r = await chamarRelatorio(storeId, rel, { inicio, fim }, { forcar: true });
     const av = avisoRelatorio(r);
     if (av) { aviso = av; continue; }
-    if (!r.dados.length) continue;
-    const venda = r.dados.reduce(
-      (s, x) => s + num(pick(x, "receita_bruta", "faturamento", "total_vendido", "venda", "vendas", "valor_venda")), 0);
-    let cmv = r.dados.reduce((s, x) => s + Math.abs(num(pick(x, "cmv", "custo", "custo_total"))), 0);
-    if (cmv === 0) {
-      const lucro = r.dados.reduce((s, x) => s + num(pick(x, "lucro", "lucro_bruto", "margem_valor")), 0);
-      if (lucro !== 0 && venda !== 0) cmv = Math.abs(venda - lucro);
-    }
-    if (venda === 0 && cmv === 0) continue;
-    return { valor: { venda, cmv } as VendaMes, rel, aviso: null };
+    const v = extrairVenda(r.dados);
+    if (v) return { valor: v, rel, aviso: null };
   }
   return { valor: null as VendaMes, rel: preferido, aviso };
 }
@@ -187,22 +213,31 @@ export const ContRedeTab = ({ storeId }: Props) => {
   const [vendaErro, setVendaErro] = useState<string | null>(null);
   const [lendoVendas, setLendoVendas] = useState<string | null>(null);
 
-  const fetchVendas = useCallback(async () => {
+  // Sem `forcar`: lê só o que está salvo no banco (sem consultar a loja).
+  // Com `forcar` (botão Atualizar): consulta a loja apenas nos meses filtrados.
+  const fetchVendas = useCallback(async (forcar = false, meses?: number[]) => {
     if (!storeId || !mesesAno.length) { setVendas({}); return; }
-    const res: Record<number, VendaMes> = {};
+    const alvo = meses ?? mesesAno;
+    const res: Record<number, VendaMes> = forcar ? { ...vendasRef.current } : {};
     let preferido: string | null = null;
     let aviso: string | null = null;
-    for (const m of mesesAno) {
-      setLendoVendas(`Lendo vendas de ${MESES_CURTOS[m - 1]}/${ano}...`);
-      const r = await lerVendaMes(storeId, ano, m, preferido);
+    for (const m of alvo) {
+      if (forcar) setLendoVendas(`Lendo vendas de ${MESES_CURTOS[m - 1]}/${ano} no sistema da loja...`);
+      const r = await lerVendaMes(storeId, ano, m, preferido, forcar);
       res[m] = r.valor;
       if (r.valor) preferido = r.rel;
       else aviso = r.aviso ?? aviso;
-      setVendas({ ...res });
+      if (forcar) setVendas({ ...res });
     }
+    setVendas({ ...res });
     setLendoVendas(null);
-    setVendaErro(Object.values(res).some(Boolean) ? null : aviso ?? "o sistema da loja não retornou vendas");
+    setVendaErro(Object.values(res).some(Boolean) ? null
+      : forcar ? aviso ?? "o sistema da loja não retornou vendas"
+      : "nenhuma venda salva ainda — clique em Atualizar");
   }, [storeId, ano, mesesAno]);
+
+  const vendasRef = useRef<Record<number, VendaMes>>({});
+  useEffect(() => { vendasRef.current = vendas; }, [vendas]);
 
   useEffect(() => { fetchVendas(); }, [fetchVendas]);
 
@@ -225,26 +260,36 @@ export const ContRedeTab = ({ storeId }: Props) => {
     return () => { ativo = false; };
   }, [storeId, ano]);
 
-  // Botão Atualizar: busca no sistema os lançamentos dos últimos 12 meses
+  // Botão Atualizar: busca no sistema SOMENTE os meses filtrados.
+  // Lançamentos editados ou incluídos manualmente nunca são sobrescritos.
   const atualizar = async () => {
     if (!storeId || !user) { toast.error("Selecione uma loja"); return; }
+    if (!mesesVisiveis.length) return;
     setAtualizando(true);
-    const hoje = new Date();
-    const fim = hoje.toISOString().slice(0, 10);
-    const ini = new Date(Date.UTC(hoje.getUTCFullYear(), hoje.getUTCMonth() - 11, 1)).toISOString().slice(0, 10);
-    const { data, error } = await supabase.functions.invoke("importar-lancamentos-vr", {
-      body: { store_id: storeId, user_id: user.id, inicio: ini, fim },
-    });
-    const payload = data as any;
-    if (error || payload?.erro) {
-      toast.error(`Falha ao ler o sistema da loja: ${error?.message || payload?.erro}`);
-    } else {
-      const pend = (payload?.pendentes ?? []).length;
-      toast.success(`${payload?.gravados ?? 0} lançamento(s) atualizados (últimos 12 meses)` +
-        (pend ? ` · ${pend} tipo(s) de pagamento sem classificação` : ""));
+    let gravados = 0;
+    let preservados = 0;
+    const pendentes = new Set<string>();
+    const falhas: string[] = [];
+    for (const m of mesesVisiveis) {
+      setLendoVendas(`Lendo lançamentos de ${MESES_CURTOS[m - 1]}/${ano} no sistema da loja...`);
+      const ini = `${ano}-${String(m).padStart(2, "0")}-01`;
+      const fim = new Date(ano, m, 0).toISOString().slice(0, 10);
+      const { data, error } = await supabase.functions.invoke("importar-lancamentos-vr", {
+        body: { store_id: storeId, user_id: user.id, inicio: ini, fim },
+      });
+      const payload = data as any;
+      if (error || payload?.erro) { falhas.push(MESES_CURTOS[m - 1]); continue; }
+      gravados += Number(payload?.gravados ?? 0);
+      for (const d of payload?.detalhe ?? []) preservados += Number(d?.preservados_manual ?? 0);
+      for (const p of payload?.pendentes ?? []) pendentes.add(String(p?.id_tipo ?? p));
     }
+    const nomes = mesesVisiveis.map(m => MESES_CURTOS[m - 1]).join(", ");
+    if (falhas.length) toast.error(`Falha ao ler o sistema da loja em: ${falhas.join(", ")}`);
+    toast.success(`${gravados} lançamento(s) atualizados (${nomes})` +
+      (preservados ? ` · ${preservados} edição(ões) manual(is) preservada(s)` : "") +
+      (pendentes.size ? ` · ${pendentes.size} tipo(s) de pagamento sem classificação` : ""));
     await fetchData();
-    await fetchVendas();
+    await fetchVendas(true, mesesVisiveis);
     setAtualizando(false);
   };
 
@@ -458,7 +503,7 @@ export const ContRedeTab = ({ storeId }: Props) => {
     doc.save(`${tituloExport.replace(/\s+/g, "-")}.pdf`);
   };
 
-  const colunas = `minmax(220px,1.6fr) repeat(${mesesVisiveis.length}, minmax(96px,1fr)) minmax(120px,1.1fr) 64px`;
+  const colunas = `minmax(240px,1.4fr) repeat(${mesesVisiveis.length}, minmax(128px,1fr)) minmax(150px,1.1fr) 72px`;
 
 
   const pctStr = (v: number, base: number) =>
@@ -475,9 +520,9 @@ export const ContRedeTab = ({ storeId }: Props) => {
           ? mapaMes?.get(parentId) || 0
           : mapaMes?.get("faturamento") || 0;
         return (
-          <div key={m} className={`text-right font-mono ${v < 0 ? "text-red-600" : ""} ${destaque}`}>
-            <div>{fmtCompacto(v)}</div>
-            <div className="text-[10px] text-muted-foreground font-normal">{pctStr(v, base)}</div>
+          <div key={m} className={`text-right tabular-nums leading-tight ${v < 0 ? "text-destructive" : "text-foreground"} ${destaque}`}>
+            <div className="text-[13px]">{fmtExato(v)}</div>
+            <div className="text-[11px] text-muted-foreground font-normal">{pctStr(v, base)}</div>
           </div>
         );
       })}
@@ -486,8 +531,8 @@ export const ContRedeTab = ({ storeId }: Props) => {
         const baseTotal = parentId ? (drePorMes.total.get(parentId) || 0) : faturamentoAno;
         return (
           <>
-            <div className={`text-right font-mono font-semibold ${t < 0 ? "text-red-600" : ""} ${destaque}`}>{fmtCompacto(t)}</div>
-            <div className={`text-right font-mono text-[10px] text-muted-foreground font-normal ${destaque}`}>{pctStr(t, baseTotal)}</div>
+            <div className={`text-right tabular-nums text-[13px] font-semibold bg-muted/40 rounded px-1 py-0.5 ${t < 0 ? "text-destructive" : "text-foreground"} ${destaque}`}>{fmtExato(t)}</div>
+            <div className={`text-right tabular-nums text-[11px] text-muted-foreground font-normal ${destaque}`}>{pctStr(t, baseTotal)}</div>
           </>
         );
       })()}
@@ -505,7 +550,7 @@ export const ContRedeTab = ({ storeId }: Props) => {
       <div key={node.id}>
         <div
           style={{ gridTemplateColumns: colunas }}
-          className={`group grid gap-x-2 items-center px-4 border-b border-border text-xs transition-all duration-200 hover:bg-orange-50 dark:hover:bg-orange-950/20
+          className={`group grid gap-x-3 items-center px-4 border-b border-border text-xs odd:bg-muted/10 transition-all duration-200 hover:bg-orange-50 dark:hover:bg-orange-950/20
             ${node.isResult ? "bg-accent/20 font-bold text-foreground py-3" : ""}
             ${isSection ? "bg-secondary/10 font-semibold py-2.5" : "py-2"}
             ${isClickable ? "cursor-pointer" : ""}
@@ -528,7 +573,7 @@ export const ContRedeTab = ({ storeId }: Props) => {
             <div
               key={child.id}
               style={{ gridTemplateColumns: colunas }}
-              className={`group grid gap-x-2 items-center px-4 py-1.5 border-b border-border/30 text-xs cursor-pointer transition-all duration-200
+              className={`group grid gap-x-3 items-center px-4 py-2 border-b border-border/40 bg-muted/5 text-xs cursor-pointer transition-all duration-200
                 ${isChildActive ? "bg-primary/10 border-l-2 border-l-primary" : "hover:bg-orange-50 dark:hover:bg-orange-950/20"}
               `}
               onClick={() => child.tipo && child.subtipo && handleChildClick(child.tipo, child.subtipo)}
@@ -565,7 +610,7 @@ export const ContRedeTab = ({ storeId }: Props) => {
             {atualizando ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
             {atualizando ? "Atualizando..." : "Atualizar"}
           </Button>
-          <span className="text-xs text-muted-foreground">Busca no sistema os lançamentos dos últimos 12 meses</span>
+          <span className="text-xs text-muted-foreground">Dados salvos no banco · Atualizar busca no sistema só os meses selecionados (edições manuais são preservadas)</span>
 
           <Button variant="outline" size="sm" onClick={exportarExcel} className="gap-2">
             <Download className="h-4 w-4" /> Excel
@@ -626,7 +671,7 @@ export const ContRedeTab = ({ storeId }: Props) => {
         <p className="text-xs text-muted-foreground">
           {lendoVendas ?? (vendaErro
             ? `Vendas do sistema indisponíveis — ${vendaErro}; usando lançamentos.`
-            : "Faturamento e CMV de cada mês lidos do sistema da loja.")}
+            : "Faturamento e CMV de cada mês salvos no banco (valores em R$).")}
         </p>
       )}
 
@@ -670,7 +715,7 @@ export const ContRedeTab = ({ storeId }: Props) => {
           <div className="min-w-max w-full">
             <div
               style={{ gridTemplateColumns: colunas }}
-              className="grid gap-x-2 items-center px-4 py-2.5 bg-secondary/30 backdrop-blur border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wide sticky top-0 z-20"
+              className="grid gap-x-3 items-center px-4 py-3 bg-secondary/30 backdrop-blur border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wide sticky top-0 z-20"
             >
               <div className="sticky left-0 bg-secondary/30 backdrop-blur">Conta</div>
               {mesesVisiveis.map(m => <div key={m} className="text-right">{MESES_CURTOS[m - 1]}</div>)}
