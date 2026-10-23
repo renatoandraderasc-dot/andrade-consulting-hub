@@ -246,6 +246,13 @@
       "when": 1792790337961,
       "tag": "0034_classificar_tipos_extras",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1792790670822,
+      "tag": "0035_classificar_lancamentos_respeita_depara",
+      "breakpoints": true
     }
   ]
 }
