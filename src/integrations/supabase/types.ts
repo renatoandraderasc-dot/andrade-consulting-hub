@@ -3891,6 +3891,13 @@ export type Database = {
         Args: { p_limite?: number; p_store_id?: string }
         Returns: number
       }
+      fn_classificar_tipo_extra: {
+        Args: { p: string }
+        Returns: {
+          subtipo: string
+          tipo: string
+        }[]
+      }
       fn_diagnostico_sistema: { Args: never; Returns: Json }
       fn_grupo_recalc_all: { Args: { p_group: string }; Returns: undefined }
       fn_grupo_recalc_daily: {
