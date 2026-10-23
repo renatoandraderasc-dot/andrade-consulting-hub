@@ -59,6 +59,12 @@ const fmtCompacto = (v: number) => {
   return neg ? `(${str})` : str;
 };
 
+const fmtExato = (v: number) => {
+  if (!v) return "—";
+  const str = Math.abs(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return v < 0 ? `(${str})` : str;
+};
+
 const fmtDate = (d: string) => {
   try {
     return new Date(d + "T12:00:00").toLocaleDateString("pt-BR");
@@ -274,7 +280,7 @@ export const ContRedeTab = ({ storeId }: Props) => {
       const payload = data as any;
       if (error || payload?.erro) { falhas.push(MESES_CURTOS[m - 1]); continue; }
       gravados += Number(payload?.gravados ?? 0);
-      preservados += Number(payload?.preservados_manual ?? 0);
+      for (const d of payload?.detalhe ?? []) preservados += Number(d?.preservados_manual ?? 0);
       for (const p of payload?.pendentes ?? []) pendentes.add(String(p?.id_tipo ?? p));
     }
     const nomes = mesesVisiveis.map(m => MESES_CURTOS[m - 1]).join(", ");
@@ -497,7 +503,7 @@ export const ContRedeTab = ({ storeId }: Props) => {
     doc.save(`${tituloExport.replace(/\s+/g, "-")}.pdf`);
   };
 
-  const colunas = `minmax(220px,1.6fr) repeat(${mesesVisiveis.length}, minmax(96px,1fr)) minmax(120px,1.1fr) 64px`;
+  const colunas = `minmax(240px,1.4fr) repeat(${mesesVisiveis.length}, minmax(128px,1fr)) minmax(150px,1.1fr) 72px`;
 
 
   const pctStr = (v: number, base: number) =>
@@ -514,9 +520,9 @@ export const ContRedeTab = ({ storeId }: Props) => {
           ? mapaMes?.get(parentId) || 0
           : mapaMes?.get("faturamento") || 0;
         return (
-          <div key={m} className={`text-right font-mono ${v < 0 ? "text-red-600" : ""} ${destaque}`}>
-            <div>{fmtCompacto(v)}</div>
-            <div className="text-[10px] text-muted-foreground font-normal">{pctStr(v, base)}</div>
+          <div key={m} className={`text-right tabular-nums leading-tight ${v < 0 ? "text-destructive" : "text-foreground"} ${destaque}`}>
+            <div className="text-[13px]">{fmtExato(v)}</div>
+            <div className="text-[11px] text-muted-foreground font-normal">{pctStr(v, base)}</div>
           </div>
         );
       })}
@@ -525,8 +531,8 @@ export const ContRedeTab = ({ storeId }: Props) => {
         const baseTotal = parentId ? (drePorMes.total.get(parentId) || 0) : faturamentoAno;
         return (
           <>
-            <div className={`text-right font-mono font-semibold ${t < 0 ? "text-red-600" : ""} ${destaque}`}>{fmtCompacto(t)}</div>
-            <div className={`text-right font-mono text-[10px] text-muted-foreground font-normal ${destaque}`}>{pctStr(t, baseTotal)}</div>
+            <div className={`text-right tabular-nums text-[13px] font-semibold bg-muted/40 rounded px-1 py-0.5 ${t < 0 ? "text-destructive" : "text-foreground"} ${destaque}`}>{fmtExato(t)}</div>
+            <div className={`text-right tabular-nums text-[11px] text-muted-foreground font-normal ${destaque}`}>{pctStr(t, baseTotal)}</div>
           </>
         );
       })()}
@@ -544,7 +550,7 @@ export const ContRedeTab = ({ storeId }: Props) => {
       <div key={node.id}>
         <div
           style={{ gridTemplateColumns: colunas }}
-          className={`group grid gap-x-2 items-center px-4 border-b border-border text-xs transition-all duration-200 hover:bg-orange-50 dark:hover:bg-orange-950/20
+          className={`group grid gap-x-3 items-center px-4 border-b border-border text-xs odd:bg-muted/10 transition-all duration-200 hover:bg-orange-50 dark:hover:bg-orange-950/20
             ${node.isResult ? "bg-accent/20 font-bold text-foreground py-3" : ""}
             ${isSection ? "bg-secondary/10 font-semibold py-2.5" : "py-2"}
             ${isClickable ? "cursor-pointer" : ""}
@@ -567,7 +573,7 @@ export const ContRedeTab = ({ storeId }: Props) => {
             <div
               key={child.id}
               style={{ gridTemplateColumns: colunas }}
-              className={`group grid gap-x-2 items-center px-4 py-1.5 border-b border-border/30 text-xs cursor-pointer transition-all duration-200
+              className={`group grid gap-x-3 items-center px-4 py-2 border-b border-border/40 bg-muted/5 text-xs cursor-pointer transition-all duration-200
                 ${isChildActive ? "bg-primary/10 border-l-2 border-l-primary" : "hover:bg-orange-50 dark:hover:bg-orange-950/20"}
               `}
               onClick={() => child.tipo && child.subtipo && handleChildClick(child.tipo, child.subtipo)}
@@ -604,7 +610,7 @@ export const ContRedeTab = ({ storeId }: Props) => {
             {atualizando ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
             {atualizando ? "Atualizando..." : "Atualizar"}
           </Button>
-          <span className="text-xs text-muted-foreground">Busca no sistema os lançamentos dos últimos 12 meses</span>
+          <span className="text-xs text-muted-foreground">Dados salvos no banco · Atualizar busca no sistema só os meses selecionados (edições manuais são preservadas)</span>
 
           <Button variant="outline" size="sm" onClick={exportarExcel} className="gap-2">
             <Download className="h-4 w-4" /> Excel
@@ -665,7 +671,7 @@ export const ContRedeTab = ({ storeId }: Props) => {
         <p className="text-xs text-muted-foreground">
           {lendoVendas ?? (vendaErro
             ? `Vendas do sistema indisponíveis — ${vendaErro}; usando lançamentos.`
-            : "Faturamento e CMV de cada mês lidos do sistema da loja.")}
+            : "Faturamento e CMV de cada mês salvos no banco (valores em R$).")}
         </p>
       )}
 
@@ -709,7 +715,7 @@ export const ContRedeTab = ({ storeId }: Props) => {
           <div className="min-w-max w-full">
             <div
               style={{ gridTemplateColumns: colunas }}
-              className="grid gap-x-2 items-center px-4 py-2.5 bg-secondary/30 backdrop-blur border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wide sticky top-0 z-20"
+              className="grid gap-x-3 items-center px-4 py-3 bg-secondary/30 backdrop-blur border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wide sticky top-0 z-20"
             >
               <div className="sticky left-0 bg-secondary/30 backdrop-blur">Conta</div>
               {mesesVisiveis.map(m => <div key={m} className="text-right">{MESES_CURTOS[m - 1]}</div>)}
