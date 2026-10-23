@@ -22,6 +22,7 @@ import { formatBRDate } from "@/lib/formatters";
 import TabelaItensEncarte from "@/components/encarte/TabelaItensEncarte";
 import {
   LinhaManual, linhaDoRetorno, linhaNaoLocalizada, margemEncarte, normalizarCodigos,
+  LOJAS_CUSTO_MEDIO,
 } from "./manualTypes";
 
 interface Store { id: string; name: string }
