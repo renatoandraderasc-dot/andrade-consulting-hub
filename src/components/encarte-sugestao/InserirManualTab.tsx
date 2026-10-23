@@ -53,6 +53,7 @@ const InserirManualTab = ({ stores, storeId, onStoreChange, onEnviarImpressao }:
   const [rascunhoPronto, setRascunhoPronto] = useState<string | null>(null);
   const [recentes, setRecentes] = useState<Set<string>>(new Set());
 
+  const custoMedio = LOJAS_CUSTO_MEDIO.test(stores.find((s) => s.id === storeId)?.name ?? "");
   const codigosTexto = useMemo(() => normalizarCodigos(texto), [texto]);
 
   useEffect(() => {
@@ -71,7 +72,11 @@ const InserirManualTab = ({ stores, storeId, onStoreChange, onEnviarImpressao }:
       const raw = localStorage.getItem(chaveRascunho(storeId));
       if (raw) {
         const r = JSON.parse(raw);
-        setItens(Array.isArray(r.itens) ? r.itens : []);
+        const medio = LOJAS_CUSTO_MEDIO.test(stores.find((s) => s.id === storeId)?.name ?? "");
+        setItens(Array.isArray(r.itens) ? r.itens.map((i: LinhaManual) =>
+          medio && i.encontrado && i.bruto ? { ...linhaDoRetorno(i.bruto, i.codigo_digitado, i.ordem, true),
+            uid: i.uid, descricao_encarte: i.descricao_encarte, preco_encarte: i.preco_encarte,
+            preco_clube: i.preco_clube, observacao: i.observacao, posicao: i.posicao, ja_saiu_recente: i.ja_saiu_recente } : i) : []);
         setTexto(r.texto ?? "");
         setNomeLista(r.nomeLista ?? "");
         if (r.dataRef) setDataRef(r.dataRef);
@@ -133,7 +138,7 @@ const InserirManualTab = ({ stores, storeId, onStoreChange, onEnviarImpressao }:
         const casa = bruto && [bruto["codigo_digitado"], bruto["codigo"], bruto["ean"]]
           .some((v) => String(v ?? "").trim() === cod);
         const linha = bruto && (casa || porCodigo.size === 0)
-          ? linhaDoRetorno(bruto, cod, ordem)
+          ? linhaDoRetorno(bruto, cod, ordem, custoMedio)
           : linhaNaoLocalizada(cod, ordem);
         linha.ja_saiu_recente = !!linha.codigo && recentes.has(linha.codigo);
         resultado.push(linha);
@@ -193,7 +198,7 @@ const InserirManualTab = ({ stores, storeId, onStoreChange, onEnviarImpressao }:
     setItens(
       (data ?? []).map((r) => {
         const snap = (r.snapshot ?? {}) as Record<string, unknown>;
-        const base = r.encontrado ? linhaDoRetorno(snap, r.codigo_digitado ?? "", r.ordem) : linhaNaoLocalizada(r.codigo_digitado ?? "", r.ordem);
+        const base = r.encontrado ? linhaDoRetorno(snap, r.codigo_digitado ?? "", r.ordem, custoMedio) : linhaNaoLocalizada(r.codigo_digitado ?? "", r.ordem);
         return {
           ...base,
           codigo: r.codigo ?? base.codigo,
@@ -201,9 +206,9 @@ const InserirManualTab = ({ stores, storeId, onStoreChange, onEnviarImpressao }:
           descricao: r.descricao ?? base.descricao,
           descricao_encarte: r.descricao_encarte ?? base.descricao_encarte,
           secao: r.secao ?? base.secao,
-          custo: Number(r.custo ?? base.custo),
+          custo: custoMedio ? base.custo : Number(r.custo ?? base.custo),
           preco_venda: Number(r.preco_venda ?? base.preco_venda),
-          margem_pct: Number(r.margem_pct ?? base.margem_pct),
+          margem_pct: custoMedio ? base.margem_pct : Number(r.margem_pct ?? base.margem_pct),
           preco_encarte: r.preco_encarte != null ? Number(r.preco_encarte) : null,
           preco_clube: r.preco_clube != null ? Number(r.preco_clube) : null,
           observacao: r.observacao ?? "",

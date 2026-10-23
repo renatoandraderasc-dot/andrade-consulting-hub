@@ -79,7 +79,9 @@ export const linhaDoRetorno = (
       ? num(pick(r, "custo_medio"))
       : num(pick(r, "custo", "custo_ultima_entrada", "custo_atual_cadastro", "custo_medio")),
     preco_venda: num(pick(r, "preco_venda")),
-    margem_pct: num(pick(r, "margem_pct")),
+    margem_pct: custoMedio && num(pick(r, "custo_medio")) > 0 && num(pick(r, "preco_venda")) > 0
+      ? ((num(pick(r, "preco_venda")) - num(pick(r, "custo_medio"))) / num(pick(r, "preco_venda"))) * 100
+      : num(pick(r, "margem_pct")),
     em_oferta_hoje: boolOf(pick(r, "em_oferta_hoje")),
     preco_ultima_oferta: precoUlt > 0 ? precoUlt : null,
     data_fim_ultima_oferta: txt(pick(r, "data_fim_ultima_oferta")) || null,
