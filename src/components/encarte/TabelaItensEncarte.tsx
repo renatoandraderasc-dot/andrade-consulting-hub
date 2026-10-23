@@ -145,7 +145,7 @@ const TabelaItensEncarte = ({ itens, onChange, onRemove, cargaTributariaPct }: P
       </div>
 
       <div className="w-full overflow-x-auto">
-        <table className="w-full min-w-[1380px] table-fixed text-[11px]">
+        <table className="w-full min-w-[1500px] table-fixed text-[11px]">
           <colgroup>
             <col className="w-[60px]" />
             <col className="w-[92px]" />
@@ -155,11 +155,13 @@ const TabelaItensEncarte = ({ itens, onChange, onRemove, cargaTributariaPct }: P
             <col className="w-[72px]" />
             <col className="w-[68px]" />
             <col className="w-[96px]" />
-            {[1, 2, 3, 4].map((n) => <col key={n} className="w-[48px]" />)}
-            <col className="w-[64px]" />
+                        <col className="w-[64px]" />
             <col className="w-[64px]" />
             <col className="w-[88px]" />
             <col className="w-[76px]" />
+            <col className="w-[88px]" />
+            <col className="w-[76px]" />
+            <col className="w-[160px]" />
             <col className="w-[76px]" />
             <col className="w-[44px]" />
           </colgroup>
@@ -173,13 +175,13 @@ const TabelaItensEncarte = ({ itens, onChange, onRemove, cargaTributariaPct }: P
               <Th campo="preco_venda" right>Preço atual</Th>
               <Th campo="margem_pct" right>Margem atual</Th>
                 <th className="px-1 py-2 text-right leading-tight">Última promoção</th>
-              {[1, 2, 3, 4].map((n) => (
-                  <th key={n} className="px-1 py-2 text-right">S-{n}</th>
-              ))}
               <Th campo="qtd_4sem" right>Total 4 sem</Th>
               <Th campo="media_semanal_qtd" right>Média/sem</Th>
                 <th className="px-1 py-2 text-right leading-tight">Preço do encarte</th>
               <Th campo="margem_encarte" right>Margem no encarte</Th>
+                <th className="px-1 py-2 text-right leading-tight">Preço clube</th>
+                <th className="px-1 py-2 text-right leading-tight">Margem no clube</th>
+                <th className="px-1 py-2 text-left">Observação</th>
                 <th className="px-1 py-2">Posição</th>
                 <th className="px-1 py-2 text-right">Ações</th>
             </tr>
@@ -187,13 +189,14 @@ const TabelaItensEncarte = ({ itens, onChange, onRemove, cargaTributariaPct }: P
           <tbody>
             {linhas.length === 0 && (
               <tr>
-                <td colSpan={18} className="py-10 text-center text-muted-foreground">
+                <td colSpan={17} className="py-10 text-center text-muted-foreground">
                   Nenhum item na lista. Cole os códigos e clique em Buscar dados.
                 </td>
               </tr>
             )}
             {linhas.map((i) => {
               const m = margemEncarte(i.preco_encarte, i.custo);
+              const mc = margemEncarte(i.preco_clube ?? null, i.custo);
               return (
                 <tr
                   key={i.uid}
@@ -202,7 +205,7 @@ const TabelaItensEncarte = ({ itens, onChange, onRemove, cargaTributariaPct }: P
                   {!i.encontrado ? (
                     <>
                       <td className="py-1.5 pr-2 font-mono text-xs">{i.codigo_digitado}</td>
-                      <td colSpan={16} className="py-1.5 pr-2 text-destructive text-xs">
+                      <td colSpan={15} className="py-1.5 pr-2 text-destructive text-xs">
                         código não localizado
                       </td>
                     </>
@@ -243,15 +246,6 @@ const TabelaItensEncarte = ({ itens, onChange, onRemove, cargaTributariaPct }: P
                           </span>
                         )}
                       </td>
-                      {i.semanas.map((s, idx) => (
-                        <td
-                          key={idx}
-                          className={`py-1.5 pr-2 text-right ${s.oferta ? "bg-amber-500/20" : ""}`}
-                        >
-                          {s.qtd.toLocaleString("pt-BR")}
-                          {s.oferta && <span className="ml-1 text-[9px] font-semibold text-amber-700">OF</span>}
-                        </td>
-                      ))}
                       <td className="py-1.5 pr-2 text-right">{i.qtd_4sem.toLocaleString("pt-BR")}</td>
                       <td className="py-1.5 pr-2 text-right">
                         {i.media_semanal_qtd.toLocaleString("pt-BR", { maximumFractionDigits: 1 })}
@@ -270,6 +264,21 @@ const TabelaItensEncarte = ({ itens, onChange, onRemove, cargaTributariaPct }: P
                         </Tooltip>
                       </td>
                       <td className={`py-1.5 pr-2 text-right font-medium ${corMargem(m)}`}>{pct(m)}</td>
+                      <td className="py-1.5 pr-2 text-right">
+                        <PrecoEncarteInput
+                          valor={i.preco_clube ?? null}
+                          onCommit={(v) => onChange(i.uid, { preco_clube: v })}
+                        />
+                      </td>
+                      <td className={`py-1.5 pr-2 text-right font-medium ${corMargem(mc)}`}>{pct(mc)}</td>
+                      <td className="px-1 py-1.5">
+                        <Input
+                          className="h-8 px-2 text-xs"
+                          placeholder="Observação"
+                          value={i.observacao ?? ""}
+                          onChange={(e) => onChange(i.uid, { observacao: e.target.value })}
+                        />
+                      </td>
                       <td className="py-1.5 pr-2">
                         <Select
                           value={i.posicao}
