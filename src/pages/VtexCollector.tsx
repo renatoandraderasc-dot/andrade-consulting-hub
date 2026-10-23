@@ -165,7 +165,7 @@ const VtexCollector = () => {
 
   return (
     <ClientLayout storeName={storeName}>
-      <div className="p-4 md:p-6 space-y-5 max-w-[1600px] mx-auto">
+      <div className="p-4 md:p-6 space-y-5 mx-auto">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">

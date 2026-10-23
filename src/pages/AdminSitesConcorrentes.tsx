@@ -3,7 +3,7 @@ import SitesCatalogoPanel from "@/components/repricing/SitesCatalogoPanel";
 
 const AdminSitesConcorrentes = () => (
   <ClientLayout>
-    <div className="p-4 md:p-6 space-y-5 max-w-[1400px] mx-auto">
+    <div className="p-4 md:p-6 space-y-5 mx-auto">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Catálogo de Sites</h1>
         <p className="text-sm text-muted-foreground mt-0.5">

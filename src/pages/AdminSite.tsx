@@ -146,7 +146,7 @@ const AdminSite = () => {
 
   return (
     <ClientLayout>
-      <div className="container mx-auto px-6 py-6 max-w-[1100px]">
+      <div className="w-full px-6 py-6">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="font-display text-2xl font-semibold text-foreground">Página Inicial — Editor</h1>

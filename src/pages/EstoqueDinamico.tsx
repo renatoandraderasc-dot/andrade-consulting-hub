@@ -432,7 +432,7 @@ const EstoqueDinamico = () => {
 
   return (
     <ClientLayout storeName={storeName}>
-      <div className="w-full max-w-[1600px] mx-auto space-y-4 p-3 sm:p-4 md:p-6">
+      <div className="w-full mx-auto space-y-4 p-3 sm:p-4 md:p-6">
         <div className="flex items-center gap-2">
           <h1 className="text-xl md:text-2xl font-bold text-foreground">Estoque Dinâmico</h1>
           <Tooltip>

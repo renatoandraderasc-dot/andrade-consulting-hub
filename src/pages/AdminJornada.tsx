@@ -202,7 +202,7 @@ const AdminJornada = () => {
 
   return (
     <ClientLayout>
-      <div className="max-w-[1200px] mx-auto px-4 py-6">
+      <div className="mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <span className="w-2 h-6 rounded" style={{ backgroundColor: "#CA3155" }} />

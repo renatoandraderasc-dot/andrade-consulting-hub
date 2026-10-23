@@ -455,7 +455,7 @@ const PIC = () => {
 
   return (
     <ClientLayout storeName={storeName}>
-      <div className="p-4 md:p-6 space-y-6 max-w-[1400px] mx-auto" translate="no">
+      <div className="p-4 md:p-6 space-y-6 mx-auto" translate="no">
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">

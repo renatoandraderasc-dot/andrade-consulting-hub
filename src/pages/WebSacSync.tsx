@@ -88,7 +88,7 @@ const WebSacSync = () => {
 
   return (
     <ClientLayout>
-      <div className="container mx-auto px-4 py-6 max-w-[1200px]">
+      <div className="w-full px-4 py-6">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3">

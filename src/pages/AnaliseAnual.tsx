@@ -801,7 +801,7 @@ const AnaliseAnual = () => {
 
   return (
     <ClientLayout storeName={storeName}>
-      <div className="container mx-auto px-4 py-6 max-w-[1600px]">
+      <div className="w-full px-4 py-6">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
           <div className="flex items-center gap-3">
             <TrendingUp className="w-7 h-7 text-primary" />

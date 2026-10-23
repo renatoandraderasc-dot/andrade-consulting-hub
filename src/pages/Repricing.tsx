@@ -58,7 +58,7 @@ const Repricing = () => {
 
   return (
     <ClientLayout storeName={storeName}>
-      <div className="p-4 md:p-6 space-y-5 max-w-[1400px] mx-auto">
+      <div className="p-4 md:p-6 space-y-5 mx-auto">
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-2xl font-bold text-foreground tracking-tight">Re-PRICING</h1>

@@ -234,7 +234,7 @@ const DashboardFinanceiro = () => {
 
   return (
     <ClientLayout storeName={storeName}>
-      <div className="container mx-auto px-6 py-6 max-w-[1400px]">
+      <div className="w-full px-6 py-6">
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3">
