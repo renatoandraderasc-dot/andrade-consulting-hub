@@ -127,6 +127,19 @@ export const ContRedeTab = ({ storeId }: Props) => {
     return Array.from({ length: ate }, (_, i) => i + 1);
   }, [ano]);
 
+  // Filtro de meses: quais colunas aparecem na DRE (dados continuam do ano todo)
+  const [mesesOff, setMesesOff] = useState<Set<number>>(new Set());
+  useEffect(() => { setMesesOff(new Set()); }, [ano]);
+  const mesesVisiveis = useMemo(() => mesesAno.filter(m => !mesesOff.has(m)), [mesesAno, mesesOff]);
+  const toggleMes = (m: number) => setMesesOff(prev => {
+    const next = new Set(prev);
+    if (next.has(m)) { next.delete(m); return next; }
+    next.add(m);
+    // Não deixa esconder todos os meses
+    if (mesesAno.every(x => next.has(x))) return prev;
+    return next;
+  });
+
   const fetchData = useCallback(async () => {
     if (!storeId) return;
     setLoading(true);
@@ -301,9 +314,13 @@ export const ContRedeTab = ({ storeId }: Props) => {
       })), overrides));
     }
     const total = new Map<string, number>();
-    for (const mapa of porMes.values()) for (const [k, v] of mapa) total.set(k, (total.get(k) || 0) + v);
+    for (const m of mesesVisiveis) {
+      const mapa = porMes.get(m);
+      if (!mapa) continue;
+      for (const [k, v] of mapa) total.set(k, (total.get(k) || 0) + v);
+    }
     return { porMes, total };
-  }, [lancamentosUnicos, structure, modo, vendas, comprasNf, mesesAno]);
+  }, [lancamentosUnicos, structure, modo, vendas, comprasNf, mesesAno, mesesVisiveis]);
 
   const faturamentoAno = drePorMes.total.get("faturamento") || 0;
 
@@ -387,7 +404,7 @@ export const ContRedeTab = ({ storeId }: Props) => {
     for (const node of structure) {
       linhas.push({
         conta: node.name,
-        valores: mesesAno.map(m => drePorMes.porMes.get(m)?.get(node.id) || 0),
+        valores: mesesVisiveis.map(m => drePorMes.porMes.get(m)?.get(node.id) || 0),
         total: drePorMes.total.get(node.id) || 0,
         nivel: 0,
       });
@@ -395,7 +412,7 @@ export const ContRedeTab = ({ storeId }: Props) => {
         for (const child of node.children) {
           linhas.push({
             conta: `   ${child.name}`,
-            valores: mesesAno.map(m => drePorMes.porMes.get(m)?.get(child.id) || 0),
+            valores: mesesVisiveis.map(m => drePorMes.porMes.get(m)?.get(child.id) || 0),
             total: drePorMes.total.get(child.id) || 0,
             nivel: 1,
           });
@@ -403,14 +420,14 @@ export const ContRedeTab = ({ storeId }: Props) => {
       }
     }
     return linhas;
-  }, [structure, mesesAno, drePorMes]);
+  }, [structure, mesesVisiveis, drePorMes]);
 
   const tituloExport = `DRE ${modo === "comercial" ? "Comercial" : "Financeiro"} ${ano}`;
 
   const exportarExcel = () => {
     const linhas = linhasExport().map(l => {
       const linha: Record<string, string | number> = { Conta: l.conta };
-      mesesAno.forEach((m, i) => { linha[MESES_CURTOS[m - 1]] = Math.round(l.valores[i] * 100) / 100; });
+      mesesVisiveis.forEach((m, i) => { linha[MESES_CURTOS[m - 1]] = Math.round(l.valores[i] * 100) / 100; });
       linha["Total"] = Math.round(l.total * 100) / 100;
       return linha;
     });
@@ -425,7 +442,7 @@ export const ContRedeTab = ({ storeId }: Props) => {
     doc.text(tituloExport, 40, 40);
     doc.setFontSize(9);
     doc.text(`${storeName || ""} · exportado em ${new Date().toLocaleString("pt-BR")}`, 40, 56);
-    const head = [["Conta", ...mesesAno.map(m => MESES_CURTOS[m - 1]), "Total"]];
+    const head = [["Conta", ...mesesVisiveis.map(m => MESES_CURTOS[m - 1]), "Total"]];
     const body = linhasExport().map(l => [
       l.conta,
       ...l.valores.map(v => fmtCompacto(v)),
@@ -441,7 +458,7 @@ export const ContRedeTab = ({ storeId }: Props) => {
     doc.save(`${tituloExport.replace(/\s+/g, "-")}.pdf`);
   };
 
-  const colunas = `minmax(220px,1.6fr) repeat(${mesesAno.length}, minmax(96px,1fr)) minmax(120px,1.1fr) 64px`;
+  const colunas = `minmax(220px,1.6fr) repeat(${mesesVisiveis.length}, minmax(96px,1fr)) minmax(120px,1.1fr) 64px`;
 
 
   const pctStr = (v: number, base: number) =>
@@ -451,7 +468,7 @@ export const ContRedeTab = ({ storeId }: Props) => {
   // subcontas sobre o total do próprio grupo naquele mês.
   const celulas = (id: string, destaque: string, parentId?: string) => (
     <>
-      {mesesAno.map(m => {
+      {mesesVisiveis.map(m => {
         const mapaMes = drePorMes.porMes.get(m);
         const v = mapaMes?.get(id) || 0;
         const base = parentId
@@ -557,6 +574,34 @@ export const ContRedeTab = ({ storeId }: Props) => {
             <FileText className="h-4 w-4" /> PDF
           </Button>
 
+          {/* Filtro de meses exibidos na DRE */}
+          <div className="flex flex-wrap items-center gap-1">
+            <span className="text-xs text-muted-foreground mr-1">Meses:</span>
+            {mesesAno.map(m => {
+              const ativo = !mesesOff.has(m);
+              return (
+                <button
+                  key={m}
+                  onClick={() => toggleMes(m)}
+                  title={ativo ? `Ocultar ${MESES_CURTOS[m - 1]}` : `Mostrar ${MESES_CURTOS[m - 1]}`}
+                  className={`h-7 min-w-[40px] rounded-md border px-1.5 text-xs font-medium transition-colors ${
+                    ativo
+                      ? "bg-primary/10 border-primary/40 text-primary"
+                      : "bg-muted/30 border-transparent text-muted-foreground hover:bg-muted/60"
+                  }`}
+                >
+                  {MESES_CURTOS[m - 1]}
+                </button>
+              );
+            })}
+            <button
+              onClick={() => setMesesOff(new Set())}
+              className="h-7 px-2 text-xs text-muted-foreground underline-offset-2 hover:underline"
+            >
+              Todos
+            </button>
+          </div>
+
           <div className="flex gap-1 ml-auto rounded-lg bg-secondary/20 p-1">
             <Button
               size="sm"
@@ -628,7 +673,7 @@ export const ContRedeTab = ({ storeId }: Props) => {
               className="grid gap-x-2 items-center px-4 py-2.5 bg-secondary/30 backdrop-blur border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wide sticky top-0 z-20"
             >
               <div className="sticky left-0 bg-secondary/30 backdrop-blur">Conta</div>
-              {mesesAno.map(m => <div key={m} className="text-right">{MESES_CURTOS[m - 1]}</div>)}
+              {mesesVisiveis.map(m => <div key={m} className="text-right">{MESES_CURTOS[m - 1]}</div>)}
               <div className="text-right">Total</div>
               <div className="text-right">% Fat.</div>
             </div>
