@@ -225,6 +225,13 @@
       "when": 1792540180191,
       "tag": "0031_tv_dimensoes_resolucao",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1792762868706,
+      "tag": "0032_encarte_manual_clube_obs",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,1 @@
+ALTER TABLE public.encarte_manual_item ADD COLUMN IF NOT EXISTS preco_clube numeric, ADD COLUMN IF NOT EXISTS margem_clube_pct numeric, ADD COLUMN IF NOT EXISTS observacao text;
