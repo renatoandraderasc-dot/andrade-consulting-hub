@@ -313,7 +313,7 @@ const AdminRedeContent = () => {
   const anos = Array.from({ length: 5 }, (_, i) => anoAtual - i);
 
   return (
-    <div className="max-w-[1600px] mx-auto px-4 py-6 space-y-6">
+    <div className="mx-auto px-4 py-6 space-y-6">
       {/* cabeçalho */}
       <div className="flex flex-wrap items-end gap-3">
         <div className="mr-auto">

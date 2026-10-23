@@ -422,7 +422,7 @@ const CapilaridadeMix = () => {
 
   return (
     <ClientLayout storeName={storeName}>
-      <div className="p-4 md:p-6 space-y-4 max-w-[1600px] mx-auto">
+      <div className="p-4 md:p-6 space-y-4 mx-auto">
         <div className="flex items-center gap-2">
           <h1 className="text-xl md:text-2xl font-bold text-foreground">Capilaridade de Mix</h1>
           <Tooltip>

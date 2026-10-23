@@ -251,7 +251,7 @@ const EncarteSugestao = () => {
 
   return (
     <ClientLayout>
-      <div className={`p-3 md:p-4 mx-auto space-y-5 ${aba === "manual" ? "w-full max-w-none" : "max-w-[1600px]"}`}>
+      <div className={`p-3 md:p-4 mx-auto space-y-5 ${aba === "manual" ? "w-full max-w-none" : "w-full"}`}>
         <div className="flex items-center gap-2">
           <Tags className="w-5 h-5 text-primary" />
           <div>

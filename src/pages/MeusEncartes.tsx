@@ -56,7 +56,7 @@ const MeusEncartes = () => {
 
   return (
     <ClientLayout>
-      <div className="p-4 md:p-6 max-w-[1400px] mx-auto space-y-5">
+      <div className="p-4 md:p-6 mx-auto space-y-5">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">Meus Encartes</h1>

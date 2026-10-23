@@ -183,7 +183,7 @@ const AdminConexoes = () => {
 
   return (
     <ClientLayout>
-      <div className="container mx-auto px-6 py-10 max-w-6xl">
+      <div className="w-full px-6 py-10">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-heading font-bold flex items-center gap-3">

@@ -159,7 +159,7 @@ const DashboardPadaria = () => {
   return (
     <ClientLayout>
       <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-6">
-        <div className="max-w-[1600px] mx-auto space-y-4">
+        <div className="mx-auto space-y-4">
           {/* Header */}
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-3">

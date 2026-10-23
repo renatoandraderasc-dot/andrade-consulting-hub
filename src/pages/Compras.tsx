@@ -846,7 +846,7 @@ const Compras = () => {
 
   return (
     <ClientLayout storeName={storeName}>
-      <div className="container mx-auto px-6 py-8 max-w-7xl">
+      <div className="w-full px-6 py-8">
         <div className="flex items-center gap-3 mb-6">
           <ShoppingCart className="w-7 h-7 text-primary" />
           <div>

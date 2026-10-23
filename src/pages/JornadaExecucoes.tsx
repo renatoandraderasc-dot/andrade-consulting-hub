@@ -179,7 +179,7 @@ const JornadaExecucoes = () => {
 
   return (
     <ClientLayout>
-      <div className="max-w-[1400px] mx-auto px-4 py-6">
+      <div className="mx-auto px-4 py-6">
         <div className="flex items-center justify-between gap-2 mb-4">
           <div className="flex items-center gap-2">
             <span className="w-2 h-6 rounded" style={{ backgroundColor: "#CA3155" }} />

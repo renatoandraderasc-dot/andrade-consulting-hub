@@ -415,7 +415,7 @@ const Jornada = () => {
 
   return (
     <ClientLayout>
-      <div className="max-w-[1400px] mx-auto px-4 py-6">
+      <div className="mx-auto px-4 py-6">
         <div className="flex items-center gap-2 mb-4">
           <span className="w-2 h-6 rounded" style={{ backgroundColor: "#CA3155" }} />
           <h1 className="text-xl font-semibold text-foreground">Minha Jornada</h1>

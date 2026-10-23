@@ -158,7 +158,7 @@ const EncarteEditor = () => {
 
   return (
     <ClientLayout>
-      <div className="p-4 md:p-6 max-w-[1600px] mx-auto">
+      <div className="p-4 md:p-6 mx-auto">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-2xl font-bold">Editor de Encarte</h1>
