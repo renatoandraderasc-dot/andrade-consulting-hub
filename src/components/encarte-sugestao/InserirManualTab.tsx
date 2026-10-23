@@ -102,7 +102,7 @@ const InserirManualTab = ({ stores, storeId, onStoreChange, onEnviarImpressao }:
 
   const buscar = async () => {
     if (!storeId) return toast.error("Escolha a loja");
-    if (!codigos.length) return toast.error("Cole os códigos de barras ou reduzidos");
+    if (!codigosTexto.length) return toast.error("Cole os códigos de barras ou reduzidos");
     const jaNaLista = new Set<string>();
     for (const i of itens) for (const c of [i.codigo_digitado, i.codigo, i.ean]) if (c) jaNaLista.add(normCod(c));
     const codigos = codigosTexto.filter((c) => !jaNaLista.has(normCod(c)));
