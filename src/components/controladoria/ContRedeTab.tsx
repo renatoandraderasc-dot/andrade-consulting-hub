@@ -441,7 +441,7 @@ export const ContRedeTab = ({ storeId }: Props) => {
     doc.save(`${tituloExport.replace(/\s+/g, "-")}.pdf`);
   };
 
-  const colunas = `minmax(220px,1fr) repeat(${mesesAno.length}, 110px) 130px 64px`;
+  const colunas = `minmax(220px,1.6fr) repeat(${mesesAno.length}, minmax(96px,1fr)) minmax(120px,1.1fr) 64px`;
 
 
   const pctStr = (v: number, base: number) =>
@@ -622,7 +622,7 @@ export const ContRedeTab = ({ storeId }: Props) => {
           </p>
         </CardHeader>
         <CardContent className="p-0 mt-4 overflow-auto max-h-[70vh]">
-          <div className="min-w-max">
+          <div className="min-w-max w-full">
             <div
               style={{ gridTemplateColumns: colunas }}
               className="grid gap-x-2 items-center px-4 py-2.5 bg-secondary/30 backdrop-blur border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wide sticky top-0 z-20"
