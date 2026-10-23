@@ -106,7 +106,7 @@ const AdminUsers = () => {
 
   return (
     <ClientLayout>
-      <div className="container mx-auto px-6 py-8 max-w-6xl">
+      <div className="w-full px-6 py-8">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between mb-6 gap-4 flex-wrap">
           <div>
             <div className="flex items-center gap-3">

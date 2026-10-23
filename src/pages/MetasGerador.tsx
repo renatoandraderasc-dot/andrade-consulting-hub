@@ -466,7 +466,7 @@ const MetasGerador = () => {
 
   return (
     <ClientLayout storeName={storeName}>
-      <div className="container mx-auto px-6 py-10 max-w-6xl">
+      <div className="w-full px-6 py-10">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-3">
             <Target className="w-8 h-8 text-primary" />
