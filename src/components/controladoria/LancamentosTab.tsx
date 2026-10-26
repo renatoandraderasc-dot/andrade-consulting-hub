@@ -147,6 +147,16 @@ export const LancamentosTab = ({ storeId, storeName }: Props) => {
   }, [storeId]);
 
   const tipoEntradaDe = (l: Lancamento) => {
+    const bruto = tipoEntradaBruto(l);
+    // O ERP às vezes lança imposto/despesa como "compra de mercadoria":
+    // nesse caso mostramos a conta real para não somar como compra.
+    if (/COMPRA DE MERCADORIA/i.test(bruto) && l.tipo !== "Compra do Mês") {
+      return (l.subtipo || l.tipo || bruto).toUpperCase();
+    }
+    return bruto;
+  };
+
+  const tipoEntradaBruto = (l: Lancamento) => {
     if (l.tipo_entrada && l.tipo_entrada.trim()) return l.tipo_entrada.trim();
     const nomeNovo = /tipo de entrada:\s*(.*?)\s*\(id\s+([\w-]+)\)/i.exec(l.observacao || "");
     if (nomeNovo) return nomeNovo[1] !== "NÃO CADASTRADO" ? nomeNovo[1] : (nomesTipo[nomeNovo[2]] || `VR ${nomeNovo[2]}`);

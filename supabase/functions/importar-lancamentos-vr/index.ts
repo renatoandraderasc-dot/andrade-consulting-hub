@@ -169,10 +169,14 @@ Deno.serve(async (req) => {
             nome_tipo_entrada: pick(x, NOMES_TIPO) ? String(pick(x, NOMES_TIPO)).trim() : null,
             // varios conectores VR nao devolvem "ref" em pagamentos_periodo:
             // gera uma chave estavel para nao perder o lancamento nem duplicar.
-            ref: x.ref ??
-              `PG-${String(x.vencimento ?? x.data_pagamento ?? "").slice(0, 10)}-${x.documento ?? i}-${
-                String(x.fornecedor ?? "").slice(0, 20)
-              }-${x.valor_pago ?? x.valor ?? 0}-${pick(x, NOMES_ID_TIPO) ?? ""}-${x.parcela ?? ""}`,
+            // Com documento, a chave NAO usa data: algumas consultas devolvem o
+            // vencimento e outras a liquidacao, o que gravava o mesmo pagamento 2x.
+            ref: x.ref ?? (x.documento
+              ? `PGD-${x.documento}-${String(x.fornecedor ?? "").slice(0, 20)}-${
+                  x.valor_pago ?? x.valor ?? 0}-${pick(x, NOMES_ID_TIPO) ?? ""}-${x.parcela ?? ""}`
+              : `PG-${String(x.vencimento ?? x.data_pagamento ?? "").slice(0, 10)}-${i}-${
+                  String(x.fornecedor ?? "").slice(0, 20)
+                }-${x.valor_pago ?? x.valor ?? 0}-${pick(x, NOMES_ID_TIPO) ?? ""}-${x.parcela ?? ""}`),
           }))) as unknown as LinhaVr[];
 
 
@@ -276,10 +280,20 @@ Deno.serve(async (req) => {
         const partes = ref.split("-");
         return partes.length > 2 ? partes.slice(0, -1).join("-") : ref;
       };
+      // Chave sem data: reconhece um manual gravado no formato antigo (PG-data-...)
+      // quando o mesmo pagamento chega no formato novo (PGD-...).
+      const semData = (ref: string) =>
+        ref.replace(/^PG-\d{4}-\d{2}-\d{2}-/, "").replace(/^PGD-/, "");
       const refsManuais = new Set<string>();
-      for (const m of manuais ?? []) refsManuais.add(String(m.origem_ref ?? ""));
+      const semDataManuais = new Set<string>();
+      for (const m of manuais ?? []) {
+        const r = String(m.origem_ref ?? "");
+        refsManuais.add(r);
+        semDataManuais.add(semData(r));
+      }
       const ehManual = (ref: string) =>
-        refsManuais.has(ref) || refsManuais.has(chaveBase(ref));
+        refsManuais.has(ref) || refsManuais.has(chaveBase(ref)) ||
+        (ref.startsWith("PGD-") && semDataManuais.has(semData(ref)));
 
       // Remove do lote tudo que o usuario ja ajustou manualmente.
       const preservadosManual = registros.filter((r) => ehManual(String(r.origem_ref))).length;
