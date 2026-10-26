@@ -253,6 +253,13 @@
       "when": 1792790670822,
       "tag": "0035_classificar_lancamentos_respeita_depara",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1793041221222,
+      "tag": "0036_regras_fixas_classificacao_santa_izabel",
+      "breakpoints": true
     }
   ]
 }
