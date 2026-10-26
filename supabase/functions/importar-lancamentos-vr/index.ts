@@ -169,10 +169,14 @@ Deno.serve(async (req) => {
             nome_tipo_entrada: pick(x, NOMES_TIPO) ? String(pick(x, NOMES_TIPO)).trim() : null,
             // varios conectores VR nao devolvem "ref" em pagamentos_periodo:
             // gera uma chave estavel para nao perder o lancamento nem duplicar.
-            ref: x.ref ??
-              `PG-${String(x.vencimento ?? x.data_pagamento ?? "").slice(0, 10)}-${x.documento ?? i}-${
-                String(x.fornecedor ?? "").slice(0, 20)
-              }-${x.valor_pago ?? x.valor ?? 0}-${pick(x, NOMES_ID_TIPO) ?? ""}-${x.parcela ?? ""}`,
+            // Com documento, a chave NAO usa data: algumas consultas devolvem o
+            // vencimento e outras a liquidacao, o que gravava o mesmo pagamento 2x.
+            ref: x.ref ?? (x.documento
+              ? `PGD-${x.documento}-${String(x.fornecedor ?? "").slice(0, 20)}-${
+                  x.valor_pago ?? x.valor ?? 0}-${pick(x, NOMES_ID_TIPO) ?? ""}-${x.parcela ?? ""}`
+              : `PG-${String(x.vencimento ?? x.data_pagamento ?? "").slice(0, 10)}-${i}-${
+                  String(x.fornecedor ?? "").slice(0, 20)
+                }-${x.valor_pago ?? x.valor ?? 0}-${pick(x, NOMES_ID_TIPO) ?? ""}-${x.parcela ?? ""}`),
           }))) as unknown as LinhaVr[];
 
 
