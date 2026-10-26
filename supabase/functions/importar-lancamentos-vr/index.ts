@@ -280,10 +280,20 @@ Deno.serve(async (req) => {
         const partes = ref.split("-");
         return partes.length > 2 ? partes.slice(0, -1).join("-") : ref;
       };
+      // Chave sem data: reconhece um manual gravado no formato antigo (PG-data-...)
+      // quando o mesmo pagamento chega no formato novo (PGD-...).
+      const semData = (ref: string) =>
+        ref.replace(/^PG-\d{4}-\d{2}-\d{2}-/, "").replace(/^PGD-/, "");
       const refsManuais = new Set<string>();
-      for (const m of manuais ?? []) refsManuais.add(String(m.origem_ref ?? ""));
+      const semDataManuais = new Set<string>();
+      for (const m of manuais ?? []) {
+        const r = String(m.origem_ref ?? "");
+        refsManuais.add(r);
+        semDataManuais.add(semData(r));
+      }
       const ehManual = (ref: string) =>
-        refsManuais.has(ref) || refsManuais.has(chaveBase(ref));
+        refsManuais.has(ref) || refsManuais.has(chaveBase(ref)) ||
+        (ref.startsWith("PGD-") && semDataManuais.has(semData(ref)));
 
       // Remove do lote tudo que o usuario ja ajustou manualmente.
       const preservadosManual = registros.filter((r) => ehManual(String(r.origem_ref))).length;
