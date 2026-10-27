@@ -1,0 +1,5 @@
+CREATE OR REPLACE FUNCTION public.escala_validar_vinculos() RETURNS trigger LANGUAGE plpgsql SET search_path=public AS $$ DECLARE tid uuid; BEGIN
+IF TG_TABLE_NAME='escala_funcionarios' THEN tid:=NEW.turno_padrao_id; ELSIF TG_TABLE_NAME IN ('escala_alocacoes','escala_cobertura') THEN tid:=NEW.turno_id; END IF;
+IF tid IS NOT NULL THEN IF NOT EXISTS(SELECT 1 FROM public.escala_turnos WHERE id=tid AND store_id=NEW.store_id) THEN RAISE EXCEPTION 'Turno não pertence à loja informada.' USING errcode='P0001'; END IF; END IF;
+IF TG_TABLE_NAME IN ('escala_alocacoes','escala_ausencias') THEN IF NOT EXISTS(SELECT 1 FROM public.escala_funcionarios WHERE id=NEW.funcionario_id AND store_id=NEW.store_id) THEN RAISE EXCEPTION 'Funcionário não pertence à loja informada.' USING errcode='P0001'; END IF; END IF;
+IF TG_TABLE_NAME='escala_alocacoes' THEN IF NOT EXISTS(SELECT 1 FROM public.escala_periodos WHERE id=NEW.periodo_id AND store_id=NEW.store_id AND ano=extract(year FROM NEW.data) AND mes=extract(month FROM NEW.data)) THEN RAISE EXCEPTION 'Data ou loja não pertence ao período informado.' USING errcode='P0001'; END IF; END IF; RETURN NEW; END $$;
