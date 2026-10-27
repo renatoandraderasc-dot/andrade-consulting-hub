@@ -2,11 +2,11 @@
 
 # Escala de Funcionários
 - [x] Receber e preservar o motor e seus testes; 17 testes aprovados.
-- [ ] Preparar as tabelas e permissões da escala, protegendo rascunhos e vínculos entre lojas.
-- [ ] Criar Escala do Mês com geração, edição, conformidade, publicação e exportações.
-- [ ] Criar Funcionários e Ausências com cadastro e importação Excel.
-- [ ] Criar Regras e Turnos, cobertura, datas especiais e marcos configuráveis.
-- [ ] Verificar permissões, geração e persistência na tela com sessão autorizada.
+- [x] Preparar as tabelas e permissões da escala, protegendo rascunhos e vínculos entre lojas.
+- [x] Criar Escala do Mês com geração, edição, conformidade, publicação e exportações.
+- [x] Criar Funcionários e Ausências com cadastro e importação Excel.
+- [x] Criar Regras e Turnos, cobertura, datas especiais e marcos configuráveis.
+- [x] Verificar cadastro, importação, ausências, geração atômica, preservação de travas, publicação/reabertura, leitura após recarregar, exportações e bloqueio de edição publicada; 19 testes aprovados, cadastros temporários removidos.
 
 # Dimensões das TVs
 - [x] Cadastrar dimensões, resolução e disposição por TV e aplicar a proporção no player.

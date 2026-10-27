@@ -33,7 +33,7 @@ export default function EscalaFuncionarios() {
   }
   function modelo() {const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([COLUNAS]),'Funcionarios');XLSX.writeFile(wb,'Modelo-funcionarios.xlsx');}
   async function lerArquivo(file:File) {
-    try {const wb=XLSX.read(await file.arrayBuffer());const rows=XLSX.utils.sheet_to_json<Record<string,unknown>>(wb.Sheets[wb.SheetNames[0]],{raw:false,defval:''});
+    try {const wb=file.name.toLowerCase().endsWith('.csv') ? XLSX.read(await file.text(), { type: 'string' }) : XLSX.read(await file.arrayBuffer());const rows=XLSX.utils.sheet_to_json<Record<string,unknown>>(wb.Sheets[wb.SheetNames[0]],{raw:false,defval:''});
       const text=(r:Record<string,unknown>,k:string)=>String(r[k]??'').trim();
       const boolean=(v:string)=>['sim','true','1','s'].includes(v.toLowerCase());
       const vistos=new Set<string>();
