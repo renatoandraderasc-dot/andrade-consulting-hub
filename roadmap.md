@@ -1,7 +1,12 @@
 # Ajustes do Painel de Compras
 
 # Escala de Funcionários
-- [ ] Criar o módulo conforme o documento enviado — bloqueado: tabelas `escala_*` ausentes no banco e motor/testes/SQL necessários não fornecidos.
+- [x] Receber e preservar o motor e seus testes; 17 testes aprovados.
+- [ ] Preparar as tabelas e permissões da escala, protegendo rascunhos e vínculos entre lojas.
+- [ ] Criar Escala do Mês com geração, edição, conformidade, publicação e exportações.
+- [ ] Criar Funcionários e Ausências com cadastro e importação Excel.
+- [ ] Criar Regras e Turnos, cobertura, datas especiais e marcos configuráveis.
+- [ ] Verificar permissões, geração e persistência na tela com sessão autorizada.
 
 # Dimensões das TVs
 - [x] Cadastrar dimensões, resolução e disposição por TV e aplicar a proporção no player.
