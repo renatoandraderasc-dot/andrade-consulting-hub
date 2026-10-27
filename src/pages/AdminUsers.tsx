@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { APP_MODULES } from "@/lib/modules";
+import { moduleAccessChanges, selectedModules, sameSelection } from "@/lib/userAccessEdit";
 
 // Departamentos que podem ser liberados individualmente (vazio = ve todos)
 const DEPARTAMENTOS = [
@@ -200,6 +201,7 @@ const AdminUsers = () => {
 
       {editing && (
         <EditUserDialog
+          key={editing.id}
           user={editing}
           stores={stores}
           onClose={() => setEditing(null)}
@@ -350,7 +352,7 @@ const EditUserDialog = ({ user, stores, onClose, onSaved, call }: any) => {
   const [papel, setPapel] = useState<"user" | "supervisor" | "admin">(papelAtual);
   const [blocked, setBlocked] = useState(!!user.profile?.blocked);
   const [storeIds, setStoreIds] = useState<string[]>(user.stores.filter((s: any) => s.approved).map((s: any) => s.store_id));
-  const [moduleKeys, setModuleKeys] = useState<string[]>(user.modules.filter((m: any) => m.allowed).map((m: any) => m.module));
+  const [moduleKeys, setModuleKeys] = useState<string[]>(selectedModules(user.modules, APP_MODULES.map(m => m.key)));
   const [buscaMod, setBuscaMod] = useState("");
   const modulosFiltrados = APP_MODULES.filter((m) =>
     m.label.toLowerCase().includes(buscaMod.trim().toLowerCase()));
@@ -367,9 +369,15 @@ const EditUserDialog = ({ user, stores, onClose, onSaved, call }: any) => {
       if (newPassword) ops.push(call("set_password", { user_id: user.id, password: newPassword }));
       if (papel !== papelAtual) ops.push(call("set_role", { user_id: user.id, role: papel }));
       if (blocked !== !!user.profile?.blocked) ops.push(call("set_blocked", { user_id: user.id, blocked }));
-      ops.push(call("set_stores", { user_id: user.id, store_ids: storeIds }));
-      ops.push(call("set_modules", { user_id: user.id, modules: APP_MODULES.map(m => ({ module: m.key, allowed: moduleKeys.includes(m.key) })) }));
-      ops.push(call("set_departments", { user_id: user.id, departments: depKeys }));
+      const initialStores = user.stores.filter((s: any) => s.approved).map((s: any) => s.store_id);
+      if (!sameSelection(storeIds, initialStores)) {
+        ops.push(call("set_stores", { user_id: user.id, store_ids: storeIds }));
+      }
+      const moduleChanges = moduleAccessChanges(user.modules, moduleKeys, APP_MODULES.map(m => m.key));
+      if (moduleChanges.length) ops.push(call("set_modules", { user_id: user.id, modules: moduleChanges }));
+      if (!sameSelection(depKeys, user.departments || [])) {
+        ops.push(call("set_departments", { user_id: user.id, departments: depKeys }));
+      }
       await Promise.all(ops);
       toast({ title: "Alterações salvas!" });
       onSaved();

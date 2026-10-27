@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { readAllPages } from "./access.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -38,14 +39,15 @@ Deno.serve(async (req) => {
     switch (action) {
       case "list": {
         // Listar todos os usuários
-        const { data: { users } } = await admin.auth.admin.listUsers({ perPage: 1000 });
+        const { data: { users }, error: usersError } = await admin.auth.admin.listUsers({ perPage: 1000 });
+        if (usersError) throw usersError;
         const userIds = users.map((u) => u.id);
-        const [{ data: profiles }, { data: roles }, { data: stores }, { data: modules }, { data: deps }] = await Promise.all([
-          admin.from("profiles").select("user_id, full_name, blocked").in("user_id", userIds),
-          admin.from("user_roles").select("user_id, role").in("user_id", userIds),
-          admin.from("user_store_access").select("user_id, store_id, approved, stores(name)").in("user_id", userIds),
-          admin.from("user_module_access").select("user_id, module, allowed").in("user_id", userIds),
-          admin.from("user_department_access").select("user_id, department").in("user_id", userIds),
+        const [profiles, roles, stores, modules, deps] = await Promise.all([
+          readAllPages((from, to) => admin.from("profiles").select("user_id, full_name, blocked").in("user_id", userIds).order("user_id").range(from, to)),
+          readAllPages((from, to) => admin.from("user_roles").select("user_id, role").in("user_id", userIds).order("user_id").order("role").range(from, to)),
+          readAllPages((from, to) => admin.from("user_store_access").select("user_id, store_id, approved, stores(name)").in("user_id", userIds).order("user_id").order("store_id").range(from, to)),
+          readAllPages((from, to) => admin.from("user_module_access").select("user_id, module, allowed").in("user_id", userIds).order("user_id").order("module").range(from, to)),
+          readAllPages((from, to) => admin.from("user_department_access").select("user_id, department").in("user_id", userIds).order("user_id").order("department").range(from, to)),
         ]);
         return Response.json(
           { users: users.map((u) => ({
@@ -163,11 +165,15 @@ Deno.serve(async (req) => {
       }
       case "set_modules": {
         const { user_id, modules } = payload as { user_id: string; modules: { module: string; allowed: boolean }[] };
-        await admin.from("user_module_access").delete().eq("user_id", user_id);
+        if (!user_id || !Array.isArray(modules) || modules.some(m => !m || typeof m.module !== "string" || !m.module.trim() || typeof m.allowed !== "boolean")) {
+          throw new Error("Informe o usuário e as alterações de acesso válidas.");
+        }
         if (modules.length) {
-          await admin.from("user_module_access").insert(
-            modules.map((m) => ({ user_id, module: m.module, allowed: m.allowed }))
+          const { error } = await admin.from("user_module_access").upsert(
+            modules.map((m) => ({ user_id, module: m.module, allowed: m.allowed })),
+            { onConflict: "user_id,module" }
           );
+          if (error) throw new Error(`Salvar telas autorizadas: ${error.message}`);
         }
         return Response.json({ ok: true }, { headers: corsHeaders });
       }
