@@ -1,5 +1,8 @@
 # Ajustes do Painel de Compras
 
+# Escala de Funcionários
+- [ ] Criar o módulo conforme o documento enviado — bloqueado: tabelas `escala_*` ausentes no banco e motor/testes/SQL necessários não fornecidos.
+
 # Dimensões das TVs
 - [x] Cadastrar dimensões, resolução e disposição por TV e aplicar a proporção no player.
 - [x] Configurar União com quatro telas lado a lado sem inventar resolução; gravação conferida e quatro testes aprovados.
