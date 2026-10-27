@@ -6,7 +6,7 @@ import {
   BarChart3, CheckSquare, Settings, Settings2, Users, LogOut, Menu, X, ArrowLeft,
   Activity, Target, ClipboardList, DollarSign, Database, RefreshCw, Trophy, Store, ShoppingCart, LayoutTemplate, TrendingUp, Package, KeyRound, Plug, ScanLine, Tags, ChevronDown, Globe, Network,
   Thermometer, LayoutDashboard, FileSpreadsheet, Layers,
-  ShoppingBag,
+  ShoppingBag, CalendarDays,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -104,6 +104,14 @@ const navGroups: NavGroup[] = [
       { key: "jornada", path: "/jornada", label: "Minha Jornada", icon: ClipboardList },
       { key: "jornada_execucoes", path: "/jornada/execucoes", label: "Execuções", icon: CheckSquare },
       { key: "admin_jornada", path: "/admin/jornada", label: "Admin da Jornada", icon: Settings, admin: true },
+    ],
+  },
+  {
+    id: "escala", label: "Escala", icon: CalendarDays,
+    items: [
+      { key: "escala", path: "/escala", label: "Escala do Mês", icon: CalendarDays },
+      { key: "escala_funcionarios", path: "/escala/funcionarios", label: "Funcionários", icon: Users },
+      { key: "admin_escala", path: "/admin/escala", label: "Regras e Turnos", icon: Settings },
     ],
   },
   {

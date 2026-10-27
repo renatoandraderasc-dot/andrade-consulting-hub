@@ -260,6 +260,27 @@
       "when": 1793041221222,
       "tag": "0036_regras_fixas_classificacao_santa_izabel",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1793104090152,
+      "tag": "0037_escala_funcionarios_segura",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1793104412999,
+      "tag": "0038_escala_validacao_vinculos_por_tabela",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1793104472048,
+      "tag": "0039_escala_geracao_atomica",
+      "breakpoints": true
     }
   ]
 }

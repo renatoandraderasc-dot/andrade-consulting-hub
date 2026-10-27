@@ -58,6 +58,9 @@ import AdminParametrizacoes from "./pages/AdminParametrizacoes";
 import Jornada from "./pages/Jornada";
 import JornadaExecucoes from "./pages/JornadaExecucoes";
 import AdminJornada from "./pages/AdminJornada";
+import Escala from "./pages/Escala";
+import EscalaFuncionarios from "./pages/EscalaFuncionarios";
+import AdminEscala from "./pages/AdminEscala";
 import AdminTv from "./pages/AdminTv";
 import TvPlayer from "./pages/TvPlayer";
 import NotFound from "./pages/NotFound";
@@ -142,6 +145,9 @@ const App = () => (
             <Route path="/encartes/editor" element={g("encarte_editor", <EncarteEditor />)} />
             <Route path="/encartes/editor/:id" element={g("encarte_editor", <EncarteEditor />)} />
             <Route path="/jornada" element={g("jornada", <Jornada />)} />
+            <Route path="/escala" element={g("escala", <Escala />)} />
+            <Route path="/escala/funcionarios" element={g("escala_funcionarios", <EscalaFuncionarios />)} />
+            <Route path="/admin/escala" element={g("admin_escala", <AdminEscala />)} />
             <Route path="/jornada/execucoes" element={g("jornada_execucoes", <JornadaExecucoes />)} />
             <Route path="/admin/jornada" element={g("jornada", <AdminJornada />)} />
             <Route path="/admin/tv" element={g("admin_tv", <AdminTv />)} />

@@ -288,3 +288,20 @@
   .pic-tv .tv-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .pic-tv .tv-row > div:first-child { grid-column: 1 / -1; }
 }
+
+/* Employee schedule semantic palette */
+:root { --escala-destaque: 346 61% 49%; --escala-destaque-hex: #CA3155; --escala-comp: 142 45% 83%; --escala-ferias: 207 74% 40%; --escala-atestado: 278 48% 45%; --escala-afastado: 220 9% 43%; --escala-status-ink: 0 0% 100%; --escala-comp-ink: 142 60% 15%; }
+.escala-area { --primary: var(--escala-destaque); --ring: var(--escala-destaque); letter-spacing: 0; }
+.escala-area h1, .escala-area h2 { letter-spacing: 0; }
+.escala-celula { font-variant-numeric: tabular-nums; border: 1px solid hsl(var(--border)); }
+.escala-trabalho, .escala-trabalho:hover { background-color: var(--turno-cor, hsl(var(--escala-destaque))); color: hsl(var(--escala-status-ink)); }
+.escala-folga, .escala-folga:hover { background-color: hsl(var(--success)); color: hsl(var(--success-foreground)); }
+.escala-folga_comp, .escala-folga_comp:hover { background-color: hsl(var(--escala-comp)); color: hsl(var(--escala-comp-ink)); }
+.escala-ferias, .escala-ferias:hover { background-color: hsl(var(--escala-ferias)); color: hsl(var(--escala-status-ink)); }
+.escala-atestado, .escala-atestado:hover { background-color: hsl(var(--escala-atestado)); color: hsl(var(--escala-status-ink)); }
+.escala-afastado, .escala-afastado:hover { background-color: hsl(var(--escala-afastado)); color: hsl(var(--escala-status-ink)); }
+.escala-feriado, .escala-feriado:hover { background-color: hsl(var(--warning)); color: hsl(var(--warning-foreground)); }
+.escala-dia-especial { background-color: hsl(var(--warning) / .1); }
+.escala-erro { outline: 2px solid hsl(var(--destructive)); outline-offset: -2px; }
+.escala-alerta { outline: 2px solid hsl(var(--warning)); outline-offset: -2px; }
+.escala-grade td:target { outline: 3px solid hsl(var(--ring)); }
