@@ -1,6 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
-import { CONFIG_PADRAO, diasDoMes, numParaData, type ContextoEscala } from './escala-motor';
+import { CONFIG_PADRAO, diasDoMes, numParaData, type ContextoEscala, type Alocacao } from './escala-motor';
 
 export type FuncionarioRow = Tables<'escala_funcionarios'>;
 export type TurnoRow = Tables<'escala_turnos'>;
@@ -58,7 +58,7 @@ export async function carregarDadosEscala(storeId: string, ano: number, mes: num
     alocacoesPeriodo(storeId, historico, fim),
   ]);
   for (const result of [config, marcos, turnos, funcionarios, cobertura, datas, ausencias, periodo]) if (result.error) throw result.error;
-  const trim = (a: AlocacaoRow) => ({ ...a, inicio: a.inicio?.slice(0, 5), fim: a.fim?.slice(0, 5) });
+  const trim = (a: AlocacaoRow): Alocacao => ({ ...a, origem: a.origem === 'manual' ? 'manual' : 'auto', inicio: a.inicio?.slice(0, 5), fim: a.fim?.slice(0, 5) });
   const turnosRows = (turnos.data || []).map(t => ({ ...t, inicio: t.inicio.slice(0, 5), fim: t.fim.slice(0, 5) }));
   const alocacoes = todas.filter(a => a.data >= inicio).map(a => ({ ...a, inicio: a.inicio?.slice(0, 5) || null, fim: a.fim?.slice(0, 5) || null }));
   const datasRows = precedenciaDatas(datas.data || [], storeId);
