@@ -42,16 +42,8 @@ export default function Escala() {
   async function salvarGeracao() {
     if (!dados || !geracao) return;
     await executar(async () => {
-      const p = await periodoRascunho();
-      const meta = await supabase.from('escala_periodos').update({ gerado_em: new Date().toISOString(), gerado_por: state.user?.id, erros: geracao.validacao.erros, alertas: geracao.validacao.alertas }).eq('id', p.id);
-      if (meta.error) throw meta.error;
-      const removed = await supabase.from('escala_alocacoes').delete().eq('periodo_id', p.id).eq('travado', false);
-      if (removed.error) throw removed.error;
-      const rows = geracao.alocacoes.filter(a => !a.travado).map(a => ({ ...a, store_id: state.loja, periodo_id: p.id }));
-      for (let i = 0; i < rows.length; i += 500) {
-        const result = await supabase.from('escala_alocacoes').insert(rows.slice(i, i + 500));
-        if (result.error) throw result.error;
-      }
+      const result = await supabase.rpc('escala_salvar_geracao', { p_store: state.loja, p_ano: state.ano, p_mes: state.mes, p_alocacoes: JSON.parse(JSON.stringify(geracao.alocacoes)), p_erros: geracao.validacao.erros, p_alertas: geracao.validacao.alertas });
+      if (result.error) throw result.error;
       setGeracao(null); toast.success('Escala gerada e salva. Células travadas preservadas.'); await state.carregar();
     });
   }
