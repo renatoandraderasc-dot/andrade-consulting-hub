@@ -4364,6 +4364,17 @@ export type Database = {
         }[]
       }
       escala_pode_gerir: { Args: { p_store: string }; Returns: boolean }
+      escala_salvar_geracao: {
+        Args: {
+          p_alertas: number
+          p_alocacoes: Json
+          p_ano: number
+          p_erros: number
+          p_mes: number
+          p_store: string
+        }
+        Returns: string
+      }
       escala_tem_acesso_loja: { Args: { p_store: string }; Returns: boolean }
       fn_classificar_conta: {
         Args: { p_nome: string }
