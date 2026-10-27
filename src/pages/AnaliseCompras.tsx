@@ -134,7 +134,7 @@ function Tabela<T>({ linhas, cols, titulo, expandir, destaque, chave }: {
       {mobile ? (
         <div className="space-y-2">
           {vis.map((r) => { const k = chave(r); return (
-            <Card key={k} className={`p-3 text-sm ${destaque?.(r) ? "bg-destructive/15 text-foreground" : ""}`}>
+            <Card key={k} className={`p-3 text-sm ${destaque?.(r) ? "bg-destructive/10 text-foreground" : ""}`}>
               {cols.map((c) => <div key={c.key} className="flex justify-between gap-2 py-0.5"><span className="text-muted-foreground">{c.label}</span><span className="text-right">{cel(c, r)}</span></div>)}
               {expandir && <Button size="sm" variant="ghost" className="w-full mt-1" onClick={() => toggle(k)}>{aberto.has(k) ? "Fechar" : "Ver itens"}</Button>}
               {expandir && aberto.has(k) && <div className="mt-2">{expandir(r)}</div>}
@@ -157,7 +157,7 @@ function Tabela<T>({ linhas, cols, titulo, expandir, destaque, chave }: {
             <tbody>
               {vis.map((r) => { const k = chave(r); return (
                 <Fragment key={k}>
-                  <tr className={`border-t ${destaque?.(r) ? "bg-destructive/15 text-foreground" : ""}`}>
+                  <tr className={`border-t ${destaque?.(r) ? "bg-destructive/10 text-foreground" : ""}`}>
                     {expandir && <td className="px-1"><button onClick={() => toggle(k)}>{aberto.has(k) ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</button></td>}
                     {cols.map((c) => <td key={c.key} className={`px-2 py-1.5 whitespace-nowrap ${c.num ? "text-right tabular-nums" : ""}`}>{cel(c, r)}</td>)}
                   </tr>
