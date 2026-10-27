@@ -1456,6 +1456,504 @@ export type Database = {
         }
         Relationships: []
       }
+      escala_alocacoes: {
+        Row: {
+          data: string
+          fim: string | null
+          funcionario_id: string
+          id: string
+          inicio: string | null
+          intervalo_min: number | null
+          observacao: string | null
+          origem: string
+          periodo_id: string
+          status: Database["public"]["Enums"]["escala_status_dia"]
+          store_id: string
+          travado: boolean
+          turno_id: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          data: string
+          fim?: string | null
+          funcionario_id: string
+          id?: string
+          inicio?: string | null
+          intervalo_min?: number | null
+          observacao?: string | null
+          origem?: string
+          periodo_id: string
+          status: Database["public"]["Enums"]["escala_status_dia"]
+          store_id: string
+          travado?: boolean
+          turno_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          data?: string
+          fim?: string | null
+          funcionario_id?: string
+          id?: string
+          inicio?: string | null
+          intervalo_min?: number | null
+          observacao?: string | null
+          origem?: string
+          periodo_id?: string
+          status?: Database["public"]["Enums"]["escala_status_dia"]
+          store_id?: string
+          travado?: boolean
+          turno_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escala_alocacoes_funcionario_id_fkey"
+            columns: ["funcionario_id"]
+            isOneToOne: false
+            referencedRelation: "escala_funcionarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escala_alocacoes_periodo_id_fkey"
+            columns: ["periodo_id"]
+            isOneToOne: false
+            referencedRelation: "escala_periodos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escala_alocacoes_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escala_alocacoes_turno_id_fkey"
+            columns: ["turno_id"]
+            isOneToOne: false
+            referencedRelation: "escala_turnos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      escala_ausencias: {
+        Row: {
+          created_at: string
+          fim: string
+          funcionario_id: string
+          id: string
+          inicio: string
+          observacao: string | null
+          store_id: string
+          tipo: Database["public"]["Enums"]["escala_status_dia"]
+        }
+        Insert: {
+          created_at?: string
+          fim: string
+          funcionario_id: string
+          id?: string
+          inicio: string
+          observacao?: string | null
+          store_id: string
+          tipo: Database["public"]["Enums"]["escala_status_dia"]
+        }
+        Update: {
+          created_at?: string
+          fim?: string
+          funcionario_id?: string
+          id?: string
+          inicio?: string
+          observacao?: string | null
+          store_id?: string
+          tipo?: Database["public"]["Enums"]["escala_status_dia"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escala_ausencias_funcionario_id_fkey"
+            columns: ["funcionario_id"]
+            isOneToOne: false
+            referencedRelation: "escala_funcionarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escala_ausencias_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      escala_cobertura: {
+        Row: {
+          departamento: string
+          dia_semana: number
+          id: string
+          minimo: number
+          store_id: string
+          turno_id: string | null
+        }
+        Insert: {
+          departamento: string
+          dia_semana: number
+          id?: string
+          minimo?: number
+          store_id: string
+          turno_id?: string | null
+        }
+        Update: {
+          departamento?: string
+          dia_semana?: number
+          id?: string
+          minimo?: number
+          store_id?: string
+          turno_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escala_cobertura_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escala_cobertura_turno_id_fkey"
+            columns: ["turno_id"]
+            isOneToOne: false
+            referencedRelation: "escala_turnos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      escala_config_loja: {
+        Row: {
+          acordo_compensacao: boolean
+          cct_referencia: string | null
+          cct_vigencia_fim: string | null
+          domingo_folga_cada_semanas: number
+          feriado_autorizado_cct: boolean
+          intervalo_min_minutos: number
+          max_dias_consecutivos: number
+          preferir_folgas_seguidas: boolean
+          regime: Database["public"]["Enums"]["escala_regime"]
+          semana_inicia: number
+          store_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          acordo_compensacao?: boolean
+          cct_referencia?: string | null
+          cct_vigencia_fim?: string | null
+          domingo_folga_cada_semanas?: number
+          feriado_autorizado_cct?: boolean
+          intervalo_min_minutos?: number
+          max_dias_consecutivos?: number
+          preferir_folgas_seguidas?: boolean
+          regime?: Database["public"]["Enums"]["escala_regime"]
+          semana_inicia?: number
+          store_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          acordo_compensacao?: boolean
+          cct_referencia?: string | null
+          cct_vigencia_fim?: string | null
+          domingo_folga_cada_semanas?: number
+          feriado_autorizado_cct?: boolean
+          intervalo_min_minutos?: number
+          max_dias_consecutivos?: number
+          preferir_folgas_seguidas?: boolean
+          regime?: Database["public"]["Enums"]["escala_regime"]
+          semana_inicia?: number
+          store_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escala_config_loja_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      escala_datas: {
+        Row: {
+          created_at: string
+          data: string
+          id: string
+          loja_abre: boolean
+          nome: string
+          store_id: string | null
+          tipo: Database["public"]["Enums"]["escala_tipo_data"]
+        }
+        Insert: {
+          created_at?: string
+          data: string
+          id?: string
+          loja_abre?: boolean
+          nome: string
+          store_id?: string | null
+          tipo?: Database["public"]["Enums"]["escala_tipo_data"]
+        }
+        Update: {
+          created_at?: string
+          data?: string
+          id?: string
+          loja_abre?: boolean
+          nome?: string
+          store_id?: string | null
+          tipo?: Database["public"]["Enums"]["escala_tipo_data"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escala_datas_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      escala_funcionarios: {
+        Row: {
+          admissao: string | null
+          aprendiz: boolean
+          ativo: boolean
+          carga_semanal_contratual: number | null
+          cargo: string | null
+          celular: string | null
+          created_at: string
+          data_nascimento: string | null
+          departamento: string
+          desligamento: string | null
+          domingo_quinzenal: boolean
+          folga_preferida: number | null
+          id: string
+          matricula: string | null
+          nome: string
+          store_id: string
+          turno_padrao_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          admissao?: string | null
+          aprendiz?: boolean
+          ativo?: boolean
+          carga_semanal_contratual?: number | null
+          cargo?: string | null
+          celular?: string | null
+          created_at?: string
+          data_nascimento?: string | null
+          departamento: string
+          desligamento?: string | null
+          domingo_quinzenal?: boolean
+          folga_preferida?: number | null
+          id?: string
+          matricula?: string | null
+          nome: string
+          store_id: string
+          turno_padrao_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          admissao?: string | null
+          aprendiz?: boolean
+          ativo?: boolean
+          carga_semanal_contratual?: number | null
+          cargo?: string | null
+          celular?: string | null
+          created_at?: string
+          data_nascimento?: string | null
+          departamento?: string
+          desligamento?: string | null
+          domingo_quinzenal?: boolean
+          folga_preferida?: number | null
+          id?: string
+          matricula?: string | null
+          nome?: string
+          store_id?: string
+          turno_padrao_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escala_funcionarios_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escala_funcionarios_turno_padrao_id_fkey"
+            columns: ["turno_padrao_id"]
+            isOneToOne: false
+            referencedRelation: "escala_turnos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      escala_marcos: {
+        Row: {
+          base_legal: string | null
+          created_at: string
+          folgas_semanais: number
+          horas_semanais: number
+          id: string
+          rotulo: string
+          store_id: string | null
+          vigencia_inicio: string
+        }
+        Insert: {
+          base_legal?: string | null
+          created_at?: string
+          folgas_semanais: number
+          horas_semanais: number
+          id?: string
+          rotulo: string
+          store_id?: string | null
+          vigencia_inicio: string
+        }
+        Update: {
+          base_legal?: string | null
+          created_at?: string
+          folgas_semanais?: number
+          horas_semanais?: number
+          id?: string
+          rotulo?: string
+          store_id?: string | null
+          vigencia_inicio?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escala_marcos_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      escala_periodos: {
+        Row: {
+          alertas: number
+          ano: number
+          created_at: string
+          erros: number
+          gerado_em: string | null
+          gerado_por: string | null
+          id: string
+          justificativa_publicacao: string | null
+          mes: number
+          publicado_em: string | null
+          publicado_por: string | null
+          status: Database["public"]["Enums"]["escala_status_periodo"]
+          store_id: string
+          updated_at: string
+          versao: number
+        }
+        Insert: {
+          alertas?: number
+          ano: number
+          created_at?: string
+          erros?: number
+          gerado_em?: string | null
+          gerado_por?: string | null
+          id?: string
+          justificativa_publicacao?: string | null
+          mes: number
+          publicado_em?: string | null
+          publicado_por?: string | null
+          status?: Database["public"]["Enums"]["escala_status_periodo"]
+          store_id: string
+          updated_at?: string
+          versao?: number
+        }
+        Update: {
+          alertas?: number
+          ano?: number
+          created_at?: string
+          erros?: number
+          gerado_em?: string | null
+          gerado_por?: string | null
+          id?: string
+          justificativa_publicacao?: string | null
+          mes?: number
+          publicado_em?: string | null
+          publicado_por?: string | null
+          status?: Database["public"]["Enums"]["escala_status_periodo"]
+          store_id?: string
+          updated_at?: string
+          versao?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escala_periodos_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      escala_turnos: {
+        Row: {
+          ativo: boolean
+          codigo: string
+          cor: string
+          created_at: string
+          departamento: string | null
+          fim: string
+          id: string
+          inicio: string
+          intervalo_min: number
+          nome: string | null
+          store_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          codigo: string
+          cor?: string
+          created_at?: string
+          departamento?: string | null
+          fim: string
+          id?: string
+          inicio: string
+          intervalo_min?: number
+          nome?: string | null
+          store_id: string
+        }
+        Update: {
+          ativo?: boolean
+          codigo?: string
+          cor?: string
+          created_at?: string
+          departamento?: string | null
+          fim?: string
+          id?: string
+          inicio?: string
+          intervalo_min?: number
+          nome?: string | null
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escala_turnos_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       historico_aplicacao_preco: {
         Row: {
           applied_at: string
@@ -3865,6 +4363,8 @@ export type Database = {
           total_meta: number
         }[]
       }
+      escala_pode_gerir: { Args: { p_store: string }; Returns: boolean }
+      escala_tem_acesso_loja: { Args: { p_store: string }; Returns: boolean }
       fn_classificar_conta: {
         Args: { p_nome: string }
         Returns: {
@@ -4031,6 +4531,17 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user" | "supervisor"
+      escala_regime: "5x2" | "compensatorio_cct"
+      escala_status_dia:
+        | "TRABALHO"
+        | "FOLGA"
+        | "FOLGA_COMP"
+        | "FERIAS"
+        | "ATESTADO"
+        | "AFASTADO"
+        | "FERIADO"
+      escala_status_periodo: "rascunho" | "publicada"
+      escala_tipo_data: "feriado" | "pico"
       jornada_cadencia: "diaria" | "semanal" | "mensal"
       jornada_status: "a_fazer" | "em_andamento" | "concluida"
     }
@@ -4161,6 +4672,18 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user", "supervisor"],
+      escala_regime: ["5x2", "compensatorio_cct"],
+      escala_status_dia: [
+        "TRABALHO",
+        "FOLGA",
+        "FOLGA_COMP",
+        "FERIAS",
+        "ATESTADO",
+        "AFASTADO",
+        "FERIADO",
+      ],
+      escala_status_periodo: ["rascunho", "publicada"],
+      escala_tipo_data: ["feriado", "pico"],
       jornada_cadencia: ["diaria", "semanal", "mensal"],
       jornada_status: ["a_fazer", "em_andamento", "concluida"],
     },
