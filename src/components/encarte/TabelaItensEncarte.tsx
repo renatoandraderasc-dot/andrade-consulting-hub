@@ -139,19 +139,29 @@ const TabelaItensEncarte = ({ itens, onChange, onRemove, onReordenar, cargaTribu
 
   return (
     <div className="space-y-3">
-      <div className="relative max-w-xs">
-        <Search className="w-4 h-4 absolute left-2.5 top-2.5 text-muted-foreground" />
-        <Input
-          className="pl-8 h-9"
-          placeholder="Buscar por descrição, código ou EAN"
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-        />
+      <div className="flex items-center gap-3">
+        <div className="relative max-w-xs w-full">
+          <Search className="w-4 h-4 absolute left-2.5 top-2.5 text-muted-foreground" />
+          <Input
+            className="pl-8 h-9"
+            placeholder="Buscar por descrição, código ou EAN"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+          />
+        </div>
+        {itens.length > 1 && (
+          <span className={`text-xs ${podeArrastar ? "text-muted-foreground" : "text-muted-foreground/60"}`}>
+            {podeArrastar
+              ? "Arraste o ⋮⋮ de uma linha para trocar a posição"
+              : "Limpe a busca e ordene por Ordem (crescente) para reordenar arrastando"}
+          </span>
+        )}
       </div>
 
       <div className="w-full overflow-x-auto">
         <table className="w-full min-w-[1500px] table-fixed text-[11px]">
           <colgroup>
+            <col className="w-[24px]" />
             <col className="w-[60px]" />
             <col className="w-[92px]" />
             <col className="w-[190px]" />
