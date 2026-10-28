@@ -228,7 +228,8 @@ const AnaliseCompras = () => {
     }
     setStores(lojas);
     const p = lojas.find((s) => s.id === sid) || lojas[0];
-    if (p) { setStoreId(p.id); buscar(p.id); }
+    // Sem consulta automática: o usuário clica em "Atualizar" para buscar.
+    if (p) { setStoreId(p.id); setPendente(true); }
   };
 
   const carregarLimites = async () => {
