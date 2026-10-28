@@ -30,30 +30,7 @@ const ItemView = ({ atual, url, catalogo, proximo }: { atual: TvItem; url?: stri
   if (atual.tipo !== "precos") return null;
   const mapa = new Map(catalogo.map((c) => [normalizarCodigo(c.codigo), c]));
   const linhas = (atual.config.codigos || []).map((c) => mapa.get(normalizarCodigo(c))).filter(Boolean) as CatalogoItem[];
-  if (url) {
-    // Arte 1920x1920: cabeçalho até 335px e 12 faixas de ~132px
-    const TOPO = 335 / 1920, FAIXA = (1920 - 335) / 12 / 1920;
-    return (
-      <div key={atual.id} className="relative w-full h-full" style={{ containerType: "size" } as any}>
-        <img src={url} alt={atual.titulo || ""} className="absolute inset-0 w-full h-full object-fill" />
-        {linhas.length === 0 && <p className="absolute inset-x-0 text-center opacity-80" style={{ top: `${TOPO * 100 + 2}%`, fontSize: "3cqh" }}>Buscando preços no sistema da loja...</p>}
-        {linhas.slice(0, 12).map((p, i) => {
-          const oferta = p.precoOferta && p.preco && p.precoOferta < p.preco;
-          return (
-            <div key={p.codigo} className="absolute inset-x-0 flex items-center" style={{ top: `${(TOPO + i * FAIXA) * 100}%`, height: `${FAIXA * 100}%`, padding: "0.8cqh 2cqw", gap: "1.5cqw" }}>
-              <div className="flex-1 min-w-0 h-full flex items-center rounded-lg bg-white/15 border border-white/30 overflow-hidden" style={{ padding: "0 2cqw" }}>
-                <span className="font-bold uppercase leading-none line-clamp-2" style={{ fontSize: p.descricao.length > 26 ? "2.5cqh" : "3.3cqh" }}>{p.descricao}</span>
-              </div>
-              <div className="h-full flex flex-col items-center justify-center rounded-lg bg-white text-[hsl(222,80%,30%)] shrink-0" style={{ width: "32cqw" }}>
-                {oferta && <span className="line-through opacity-60 leading-none" style={{ fontSize: "1.8cqh" }}>{fmt(p.preco)}</span>}
-                <span className="font-extrabold leading-none" style={{ fontSize: "4.6cqh" }}>{fmt(oferta ? p.precoOferta : p.preco)}</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  }
+  if (url) return <ArtePrecos atual={atual} url={url} linhas={linhas} />;
   return (
     <div key={atual.id} className="h-full flex flex-col p-[3cqw] bg-gradient-to-br from-[hsl(222,60%,18%)] to-[hsl(222,60%,8%)]">
       <h2 className="font-bold mb-[2cqh] text-[hsl(25,95%,55%)]" style={{ fontSize: "7cqh" }}>{atual.titulo || "Ofertas"}</h2>
@@ -72,6 +49,42 @@ const ItemView = ({ atual, url, catalogo, proximo }: { atual: TvItem; url?: stri
           );
         })}
       </div>
+    </div>
+  );
+};
+
+/** Tabela com arte: cabeçalho da arte no topo (sem distorcer) e quantas faixas couberem na altura disponível. */
+const ArtePrecos = ({ atual, url, linhas }: { atual: TvItem; url: string; linhas: CatalogoItem[] }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const [tam, setTam] = useState({ w: 0, h: 0 });
+  useEffect(() => {
+    const el = ref.current; if (!el) return;
+    const ro = new ResizeObserver(([e]) => setTam({ w: e.contentRect.width, h: e.contentRect.height }));
+    ro.observe(el); return () => ro.disconnect();
+  }, []);
+  const topo = tam.w * 335 / 1920;
+  const faixaBase = tam.w * ((1920 - 335) / 12) / 1920;
+  const nFaixas = tam.h > topo && faixaBase > 0 ? Math.max(12, Math.floor((tam.h - topo) / faixaBase)) : 12;
+  const faixa = tam.h > topo ? (tam.h - topo) / nFaixas : faixaBase;
+  const fs = faixa / 100; // escala da fonte pela altura da faixa
+  return (
+    <div ref={ref} key={atual.id} className="relative w-full h-full overflow-hidden" style={{ background: `repeating-linear-gradient(180deg, hsl(222,85%,40%) 0 ${faixa}px, hsl(208,72%,46%) ${faixa}px ${faixa * 2}px)`, backgroundPositionY: topo }}>
+      <div className="absolute inset-x-0 top-0" style={{ height: topo, backgroundImage: `url(${url})`, backgroundSize: "100% auto", backgroundPosition: "top", backgroundRepeat: "no-repeat" }} />
+      {linhas.length === 0 && <p className="absolute inset-x-0 text-center opacity-80" style={{ top: topo + faixa * 0.3, fontSize: 30 * fs }}>Buscando preços no sistema da loja...</p>}
+      {linhas.slice(0, nFaixas).map((p, i) => {
+        const oferta = p.precoOferta && p.preco && p.precoOferta < p.preco;
+        return (
+          <div key={p.codigo} className="absolute inset-x-0 flex items-center" style={{ top: topo + i * faixa, height: faixa, padding: `${faixa * 0.08}px ${tam.w * 0.02}px`, gap: tam.w * 0.015 }}>
+            <div className="flex-1 min-w-0 h-full flex items-center rounded-lg bg-white/15 border border-white/30 overflow-hidden" style={{ padding: `0 ${tam.w * 0.02}px` }}>
+              <span className="font-bold uppercase leading-none line-clamp-2" style={{ fontSize: (p.descricao.length > 26 ? 32 : 42) * fs }}>{p.descricao}</span>
+            </div>
+            <div className="h-full flex flex-col items-center justify-center rounded-lg bg-white text-[hsl(222,80%,30%)] shrink-0" style={{ width: tam.w * 0.32 }}>
+              {oferta && <span className="line-through opacity-60 leading-none" style={{ fontSize: 22 * fs }}>{fmt(p.preco)}</span>}
+              <span className="font-extrabold leading-none" style={{ fontSize: 58 * fs }}>{fmt(oferta ? p.precoOferta : p.preco)}</span>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 };
@@ -138,7 +151,8 @@ const TvPlayer = () => {
   const linhasGrid = Math.max(1, tela?.linhas || 1);
   const modulos = colunas * linhasGrid;
   const grupos = distribuirColunas(itens, modulos);
-  const razao = (tela && dimensoesTotais({ largura_m: tela.largura_m ?? null, altura_m: tela.altura_m ?? null, resolucao_largura: tela.resolucao_largura ?? null, resolucao_altura: tela.resolucao_altura ?? null, colunas, linhas: linhasGrid }).proporcao) || colunas / linhasGrid;
+  // const razao removido: o telão sempre preenche 100% da tela
+  void (tela && dimensoesTotais({ largura_m: tela.largura_m ?? null, altura_m: tela.altura_m ?? null, resolucao_largura: tela.resolucao_largura ?? null, resolucao_altura: tela.resolucao_altura ?? null, colunas, linhas: linhasGrid }).proporcao) || colunas / linhasGrid;
 
   if (loading) return null;
   if (!user) {
@@ -150,13 +164,12 @@ const TvPlayer = () => {
       {erro && <div className="h-full grid place-items-center text-2xl">{erro}</div>}
       {!erro && itens.length === 0 && <div className="h-full grid place-items-center text-2xl opacity-70">{tela ? "Sem programação ativa nesta TV" : "Carregando..."}</div>}
       {!erro && itens.length > 0 && (
-        <div className="w-full h-full flex items-center justify-center">
-          {/* Mantém o conjunto na proporção real do telão (ex.: 3 telas de 1×1 m = 3:1) para nada esticar */}
-          <div className="grid" style={{ aspectRatio: String(razao), width: `min(100vw, ${razao * 100}vh)`, gridTemplateColumns: `repeat(${colunas}, 1fr)`, gridTemplateRows: `repeat(${linhasGrid}, 1fr)` }}>
-            {grupos.map((g, i) => (
-              <Slot key={i} itens={g} urls={urls} catalogo={catalogo} mostrarLogo={i === modulos - 1} />
-            ))}
-          </div>
+        <div className="w-full h-full grid" style={{ gridTemplateColumns: `repeat(${colunas}, 1fr)`, gridTemplateRows: `repeat(${linhasGrid}, 1fr)` }}>
+          {grupos.map((g, i) => (
+            <div key={i} className="min-w-0 min-h-0 border-2 border-white">
+              <Slot itens={g} urls={urls} catalogo={catalogo} mostrarLogo={i === modulos - 1} />
+            </div>
+          ))}
         </div>
       )}
       <style>{`@keyframes tvbar{from{width:0}to{width:100%}}`}</style>
