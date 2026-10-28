@@ -156,6 +156,18 @@ const InserirManualTab = ({ stores, storeId, onStoreChange, onEnviarImpressao }:
     setItens((prev) => prev.map((i) => (i.uid === uid ? { ...i, ...patch } : i)));
   const remover = (uid: string) => setItens((prev) => prev.filter((i) => i.uid !== uid));
 
+  // arrastar e soltar: move o item para a posição do alvo e renumera a ordem
+  const reordenar = (fromUid: string, toUid: string) =>
+    setItens((prev) => {
+      const from = prev.findIndex((i) => i.uid === fromUid);
+      const to = prev.findIndex((i) => i.uid === toUid);
+      if (from < 0 || to < 0 || from === to) return prev;
+      const arr = [...prev];
+      const [item] = arr.splice(from, 1);
+      arr.splice(to, 0, item);
+      return arr.map((i, idx) => (i.ordem === idx + 1 ? i : { ...i, ordem: idx + 1 }));
+    });
+
   const colarDoExcel = async () => {
     try {
       const t = await navigator.clipboard.readText();
@@ -338,6 +350,7 @@ const InserirManualTab = ({ stores, storeId, onStoreChange, onEnviarImpressao }:
           itens={itens}
           onChange={alterar}
           onRemove={remover}
+          onReordenar={reordenar}
           cargaTributariaPct={carga}
           modo="manual"
         />
