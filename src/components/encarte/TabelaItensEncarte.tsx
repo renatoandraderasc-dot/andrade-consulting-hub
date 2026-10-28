@@ -83,12 +83,16 @@ const PrecoEncarteInput = forwardRef<HTMLInputElement, PrecoProps>(
 );
 PrecoEncarteInput.displayName = "PrecoEncarteInput";
 
-const TabelaItensEncarte = ({ itens, onChange, onRemove, cargaTributariaPct }: Props) => {
+const TabelaItensEncarte = ({ itens, onChange, onRemove, onReordenar, cargaTributariaPct }: Props) => {
   const [busca, setBusca] = useState("");
   const [ordem, setOrdem] = useState<Ordem>({ campo: "ordem", asc: true });
+  const dragUidRef = useRef<string | null>(null);
 
   const ordenar = (campo: Ordem["campo"]) =>
     setOrdem((o) => ({ campo, asc: o.campo === campo ? !o.asc : true }));
+
+  // arrastar só faz sentido quando a lista está na ordem natural, sem busca ativa
+  const podeArrastar = !!onReordenar && !busca.trim() && ordem.campo === "ordem" && ordem.asc && itens.length > 1;
 
   const linhas = useMemo(() => {
     const termo = busca.trim().toLowerCase();
