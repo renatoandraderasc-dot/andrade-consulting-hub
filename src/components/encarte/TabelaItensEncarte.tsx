@@ -216,8 +216,27 @@ const TabelaItensEncarte = ({ itens, onChange, onRemove, onReordenar, cargaTribu
               return (
                 <tr
                   key={i.uid}
-                  className={`border-b border-border/50 ${i.encontrado ? "" : "bg-destructive/10"}`}
+                  draggable={podeArrastar}
+                  onDragStart={(e) => {
+                    dragUidRef.current = i.uid;
+                    e.dataTransfer.effectAllowed = "move";
+                    e.dataTransfer.setData("text/plain", i.uid);
+                  }}
+                  onDragEnter={() => {
+                    if (podeArrastar && dragUidRef.current && dragUidRef.current !== i.uid) {
+                      onReordenar?.(dragUidRef.current, i.uid);
+                    }
+                  }}
+                  onDragOver={(e) => { if (podeArrastar) e.preventDefault(); }}
+                  onDragEnd={() => { dragUidRef.current = null; }}
+                  onDrop={(e) => { e.preventDefault(); dragUidRef.current = null; }}
+                  className={`border-b border-border/50 ${i.encontrado ? "" : "bg-destructive/10"} ${podeArrastar ? "cursor-grab active:cursor-grabbing" : ""}`}
                 >
+                  <td className="py-1.5 pr-0 text-center select-none">
+                    {podeArrastar && (
+                      <GripVertical className="w-3.5 h-3.5 mx-auto text-muted-foreground/70" />
+                    )}
+                  </td>
                   {!i.encontrado ? (
                     <>
                       <td className="py-1.5 pr-2 font-mono text-xs">{i.codigo_digitado}</td>
