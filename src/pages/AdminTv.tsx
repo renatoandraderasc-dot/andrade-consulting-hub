@@ -14,10 +14,10 @@ import { CatalogoItem, carregarBaseCatalogo, normalizarCodigo } from "@/lib/cata
 import TvDimensoesForm from "@/components/TvDimensoesForm";
 
 const fmt = (v: number | null) => (v == null ? "—" : v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }));
-const MAX_PRODUTOS = 12;
+const MAX_PRODUTOS = 30;
 
-type Form = { id?: string; tipo: TvTipo; titulo: string; duracao: number; codigos: string[]; texto: string; arquivo: File | null; midia_path: string | null };
-const vazio = (): Form => ({ tipo: "precos", titulo: "", duracao: 30, codigos: [], texto: "", arquivo: null, midia_path: null });
+type Form = { id?: string; tipo: TvTipo; titulo: string; duracao: number; codigos: string[]; descricoes: Record<string, string>; texto: string; arquivo: File | null; midia_path: string | null };
+const vazio = (): Form => ({ tipo: "precos", titulo: "", duracao: 30, codigos: [], descricoes: {}, texto: "", arquivo: null, midia_path: null });
 
 const AdminTv = () => {
   const [lojas, setLojas] = useState<{ id: string; name: string }[]>([]);
@@ -103,7 +103,7 @@ const AdminTv = () => {
 
   const abrirNovo = () => { setForm(vazio()); setBusca(""); setColar(""); };
   const abrirEdicao = (it: TvItem) => {
-    setForm({ id: it.id, tipo: it.tipo, titulo: it.titulo || "", duracao: it.duracao_seg, codigos: it.config.codigos || [], texto: it.config.texto || "", arquivo: null, midia_path: it.midia_path });
+    setForm({ id: it.id, tipo: it.tipo, titulo: it.titulo || "", duracao: it.duracao_seg, codigos: it.config.codigos || [], descricoes: it.config.descricoes || {}, texto: it.config.texto || "", arquivo: null, midia_path: it.midia_path });
     setBusca(""); setColar("");
     if (it.tipo === "precos") garantirCatalogo();
   };
@@ -137,7 +137,7 @@ const AdminTv = () => {
       }
       const dados = {
         tipo: form.tipo, titulo: form.titulo || null, midia_path, duracao_seg: form.duracao,
-        config: form.tipo === "precos" ? { codigos: form.codigos } : form.tipo === "texto" ? { texto: form.texto } : {},
+        config: form.tipo === "precos" ? { codigos: form.codigos, descricoes: Object.fromEntries(Object.entries(form.descricoes).filter(([k, v]) => v.trim() && form.codigos.some((c) => normalizarCodigo(c) === k))) } : form.tipo === "texto" ? { texto: form.texto } : {},
       };
       const { error } = form.id
         ? await tvDb.from("tv_itens").update(dados).eq("id", form.id)
@@ -385,7 +385,10 @@ const AdminTv = () => {
                         return (
                           <div key={c} className="flex items-center gap-1 p-1.5 text-sm">
                             <span className="w-5 text-xs text-muted-foreground">{i + 1}</span>
-                            <span className="flex-1 truncate">{p ? p.descricao : <span className="text-destructive">Código {c} não encontrado</span>}</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="truncate text-xs text-muted-foreground">{p ? p.descricao : <span className="text-destructive">Código {c} não encontrado</span>}</div>
+                              <Input className="h-7 text-sm" placeholder="Descrição 2 (opcional)" value={form.descricoes[normalizarCodigo(c)] || ""} onChange={(e) => setForm({ ...form, descricoes: { ...form.descricoes, [normalizarCodigo(c)]: e.target.value } })} />
+                            </div>
                             <span className="font-semibold shrink-0">{p ? fmt(p.precoOferta && p.preco && p.precoOferta < p.preco ? p.precoOferta : p.preco) : ""}</span>
                             <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => moverCodigo(i, -1)} disabled={i === 0}><ArrowUp className="w-3.5 h-3.5" /></Button>
                             <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => moverCodigo(i, 1)} disabled={i === form.codigos.length - 1}><ArrowDown className="w-3.5 h-3.5" /></Button>

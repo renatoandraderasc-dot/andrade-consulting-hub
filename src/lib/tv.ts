@@ -19,7 +19,7 @@ export interface TvItem {
   titulo: string | null;
   midia_path: string | null;
   duracao_seg: number;
-  config: { codigos?: string[]; texto?: string };
+  config: { codigos?: string[]; texto?: string; descricoes?: Record<string, string> };
   ativo: boolean;
 }
 
