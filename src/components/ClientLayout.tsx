@@ -161,6 +161,14 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
   const [pwdOpen, setPwdOpen] = useState(false);
   const [allowedModules, setAllowedModules] = useState<Set<string> | null>(null);
 
+  // Gerenciador de TV: fora o admin geral, só aparece para quem tem o módulo liberado explicitamente.
+  const [tvLiberada, setTvLiberada] = useState(false);
+  useEffect(() => {
+    if (!user || isGlobalAdmin) { setTvLiberada(false); return; }
+    supabase.from("user_module_access").select("allowed").eq("user_id", user.id).eq("module", "admin_tv").maybeSingle()
+      .then(({ data }) => setTvLiberada(!!data?.allowed));
+  }, [user, isGlobalAdmin]);
+
   useEffect(() => {
     if (!user || isAdmin) { setAllowedModules(null); return; }
     supabase.from("user_module_access").select("module, allowed").eq("user_id", user.id).then(({ data }) => {
@@ -196,7 +204,8 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
     .map((g) => ({
       ...g,
       items: g.items.filter((i) =>
-        i.globalAdmin && !isGlobalAdmin ? false : i.admin && !isAdmin ? false : canSee(i.key)),
+        i.key === "admin_tv" && !isGlobalAdmin ? tvLiberada
+          : i.globalAdmin && !isGlobalAdmin ? false : i.admin && !isAdmin ? false : canSee(i.key)),
     }))
     .filter((g) => g.items.length > 0);
 
