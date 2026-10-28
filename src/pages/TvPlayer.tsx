@@ -4,7 +4,6 @@ import { useAuth } from "@/hooks/useAuth";
 import logoAndrade from "@/assets/andrade-logo.png";
 import { TvItem, TvTela, listarItens, tvDb, urlMidia } from "@/lib/tv";
 import { CatalogoItem, carregarBaseCatalogo, normalizarCodigo } from "@/lib/catalogoProdutos";
-import { dimensoesTotais } from "@/lib/tvDimensoes";
 
 const RECARREGAR_MS = 10 * 60 * 1000;
 const fmt = (v: number | null) => (v == null ? "—" : v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }));
@@ -151,8 +150,6 @@ const TvPlayer = () => {
   const linhasGrid = Math.max(1, tela?.linhas || 1);
   const modulos = colunas * linhasGrid;
   const grupos = distribuirColunas(itens, modulos);
-  // const razao removido: o telão sempre preenche 100% da tela
-  void (tela && dimensoesTotais({ largura_m: tela.largura_m ?? null, altura_m: tela.altura_m ?? null, resolucao_largura: tela.resolucao_largura ?? null, resolucao_altura: tela.resolucao_altura ?? null, colunas, linhas: linhasGrid }).proporcao) || colunas / linhasGrid;
 
   if (loading) return null;
   if (!user) {
