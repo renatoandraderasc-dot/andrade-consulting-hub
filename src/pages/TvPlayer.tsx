@@ -52,8 +52,8 @@ const ItemView = ({ atual, url, catalogo, proximo }: { atual: TvItem; url?: stri
   );
 };
 
-/** Tabela com arte: cabeçalho da arte no topo (sem distorcer) e quantas faixas couberem na altura disponível. */
-const ArtePrecos = ({ atual, url, linhas }: { atual: TvItem; url: string; linhas: CatalogoItem[] }) => {
+/** Each row owns its stripe, product and price; no independently tiled background. */
+export const ArtePrecos = ({ atual, url, linhas }: { atual: TvItem; url: string; linhas: CatalogoItem[] }) => {
   const ref = useRef<HTMLDivElement>(null);
   const [tam, setTam] = useState({ w: 0, h: 0 });
   useEffect(() => {
@@ -62,28 +62,31 @@ const ArtePrecos = ({ atual, url, linhas }: { atual: TvItem; url: string; linhas
     ro.observe(el); return () => ro.disconnect();
   }, []);
   const topo = tam.w * 335 / 1920;
-  const faixaBase = tam.w * ((1920 - 335) / 12) / 1920;
-  const nFaixas = tam.h > topo && faixaBase > 0 ? Math.max(12, Math.floor((tam.h - topo) / faixaBase)) : 12;
-  const faixa = tam.h > topo ? (tam.h - topo) / nFaixas : faixaBase;
-  const fs = faixa / 100; // escala da fonte pela altura da faixa
+  const nFaixas = Math.max(12, linhas.length);
+  const faixa = Math.max(0, tam.h - topo) / nFaixas;
+  const fs = Math.min(faixa / 100, tam.w / 1100);
   return (
-    <div ref={ref} key={atual.id} className="relative w-full h-full overflow-hidden" style={{ background: `repeating-linear-gradient(180deg, hsl(222,85%,40%) 0 ${faixa}px, hsl(208,72%,46%) ${faixa}px ${faixa * 2}px)`, backgroundPositionY: topo }}>
+    <div ref={ref} key={atual.id} className="relative w-full h-full overflow-hidden">
       <div className="absolute inset-x-0 top-0" style={{ height: topo, backgroundImage: `url(${url})`, backgroundSize: "100% auto", backgroundPosition: "top", backgroundRepeat: "no-repeat" }} />
       {linhas.length === 0 && <p className="absolute inset-x-0 text-center opacity-80" style={{ top: topo + faixa * 0.3, fontSize: 30 * fs }}>Buscando preços no sistema da loja...</p>}
-      {linhas.slice(0, nFaixas).map((p, i) => {
+      <div className="absolute inset-x-0 bottom-0 grid" style={{ top: topo, gridTemplateRows: `repeat(${nFaixas}, minmax(0, 1fr))` }}>
+      {Array.from({ length: nFaixas }, (_, i) => {
+        const p = linhas[i];
+        if (!p) return <div key={`empty-${i}`} className="tv-price-row" />;
         const oferta = p.precoOferta && p.preco && p.precoOferta < p.preco;
         return (
-          <div key={p.codigo} className="absolute inset-x-0 flex items-center" style={{ top: topo + i * faixa, height: faixa, padding: `${faixa * 0.08}px ${tam.w * 0.02}px`, gap: tam.w * 0.015 }}>
-            <div className="flex-1 min-w-0 h-full flex items-center rounded-lg bg-white/15 border border-white/30 overflow-hidden" style={{ padding: `0 ${tam.w * 0.02}px` }}>
-              <span className="font-bold uppercase leading-none line-clamp-2" style={{ fontSize: (p.descricao.length > 26 ? 32 : 42) * fs }}>{p.descricao}</span>
+          <div key={p.codigo} className="tv-price-row min-h-0 flex items-center overflow-hidden" style={{ padding: `${faixa * 0.1}px ${tam.w * 0.02}px`, gap: tam.w * 0.015 }}>
+            <div className="flex-1 min-w-0 h-full flex items-center overflow-hidden">
+              <span className="font-bold uppercase leading-tight break-words" style={{ fontSize: (p.descricao.length > 26 ? 32 : 42) * fs, overflowWrap: "anywhere" }}>{p.descricao}</span>
             </div>
-            <div className="h-full flex flex-col items-center justify-center rounded-lg bg-white text-[hsl(222,80%,30%)] shrink-0" style={{ width: tam.w * 0.32 }}>
+            <div className="tv-price-value h-full flex flex-col items-center justify-center rounded-lg shrink-0 overflow-hidden" style={{ width: tam.w * 0.32 }}>
               {oferta && <span className="line-through opacity-60 leading-none" style={{ fontSize: 22 * fs }}>{fmt(p.preco)}</span>}
               <span className="font-extrabold leading-none" style={{ fontSize: 58 * fs }}>{fmt(oferta ? p.precoOferta : p.preco)}</span>
             </div>
           </div>
         );
       })}
+      </div>
     </div>
   );
 };
@@ -163,7 +166,7 @@ const TvPlayer = () => {
       {!erro && itens.length > 0 && (
         <div className="w-full h-full grid" style={{ gridTemplateColumns: `repeat(${colunas}, 1fr)`, gridTemplateRows: `repeat(${linhasGrid}, 1fr)` }}>
           {grupos.map((g, i) => (
-            <div key={i} className="min-w-0 min-h-0 border-2 border-white">
+            <div key={i} className="tv-module min-w-0 min-h-0 border-2">
               <Slot itens={g} urls={urls} catalogo={catalogo} mostrarLogo={i === modulos - 1} />
             </div>
           ))}

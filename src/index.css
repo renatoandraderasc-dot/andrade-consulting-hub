@@ -289,6 +289,19 @@
   .pic-tv .tv-row > div:first-child { grid-column: 1 / -1; }
 }
 
+/* Fixed signage palette, independent of the management screen theme. */
+:root {
+  --tv-row-odd: 222 85% 40%;
+  --tv-row-even: 208 72% 46%;
+  --tv-row-foreground: 0 0% 100%;
+  --tv-price-background: 0 0% 100%;
+  --tv-price-foreground: 222 80% 30%;
+}
+.tv-price-row { background-color: hsl(var(--tv-row-odd)); color: hsl(var(--tv-row-foreground)); }
+.tv-price-row:nth-child(even) { background-color: hsl(var(--tv-row-even)); }
+.tv-price-value { background-color: hsl(var(--tv-price-background)); color: hsl(var(--tv-price-foreground)); }
+.tv-module { border-color: hsl(var(--tv-price-background)); }
+
 /* Employee schedule semantic palette */
 :root { --escala-destaque: 346 61% 49%; --escala-destaque-hex: #CA3155; --escala-comp: 142 45% 83%; --escala-ferias: 207 74% 40%; --escala-atestado: 278 48% 45%; --escala-afastado: 220 9% 43%; --escala-status-ink: 0 0% 100%; --escala-comp-ink: 142 60% 15%; }
 .escala-area { --primary: var(--escala-destaque); --ring: var(--escala-destaque); letter-spacing: 0; }
