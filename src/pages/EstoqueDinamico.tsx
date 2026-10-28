@@ -188,9 +188,10 @@ const EstoqueDinamico = () => {
     setLoading(true); setAviso(null); setPage(1);
     try {
       const [r, cadastro, estoqueAtual, produtosAtivos] = await limitarEspera(Promise.all([
+        // Vendas: da ultima entrada de cada produto ate D-1 (ignora o fim do filtro).
         chamarRelatorio(storeId, "estoque_dinamico", {
           inicio: iso(range.from),
-          fim: iso(range.to),
+          fim: iso(subDays(new Date(), 1)),
         }),
         chamarRelatorio(storeId, "produtos", {}).catch(() => null),
         chamarRelatorio(storeId, "estoque_atual", {}).catch(() => null),
@@ -273,23 +274,10 @@ const EstoqueDinamico = () => {
     // venda a partir da primeira compra. Complementamos com:
     //  - ranking_produtos: venda total real do periodo inteiro;
     //  - analise_compras: quantidade total comprada em unidades.
-    const [rv, ac] = await Promise.all([
-      limitarEspera(chamarRelatorio(storeId, "ranking_produtos", {
-        inicio: iso(range.from), fim: iso(range.to), limite: 50000,
-      }), 60000).catch(() => null),
-      limitarEspera(chamarRelatorio(storeId, "analise_compras", {
-        inicio: iso(range.from), fim: iso(range.to),
-      }), 130000).catch(() => null),
-    ]);
-    const vendasPorCodigo = new Map<string, { qtd: number; valor: number }>();
-    for (const l of (rv?.dados as any[]) || []) {
-      const cod = String(col(l, "codigo", "cod", "cod_produto", "id_produto") ?? "");
-      if (!cod) continue;
-      const cur = vendasPorCodigo.get(cod) ?? { qtd: 0, valor: 0 };
-      cur.qtd += num(col(l, "volume", "qtd", "quantidade"));
-      cur.valor += num(col(l, "vendas", "valor", "venda", "total_venda"));
-      vendasPorCodigo.set(cod, cur);
-    }
+    // Compras respeitam o filtro de datas (quantidade total em unidades).
+    const ac = await limitarEspera(chamarRelatorio(storeId, "analise_compras", {
+      inicio: iso(range.from), fim: iso(range.to),
+    }), 130000).catch(() => null);
     const comprasPorCodigo = new Map<string, { qtd: number; valor: number }>();
     for (const l of (ac?.dados as any[]) || []) {
       const cod = String(col(l, "codigo", "cod", "cod_produto", "id_produto") ?? "");
@@ -300,11 +288,9 @@ const EstoqueDinamico = () => {
       comprasPorCodigo.set(cod, cur);
     }
     for (const l of base) {
-      const v = vendasPorCodigo.get(l.codigo);
-      if (v) { l.qtdVenda = v.qtd; l.valorVenda = v.valor; }
       const c = comprasPorCodigo.get(l.codigo);
       if (c && c.qtd > 0) { l.qtdCompra = c.qtd; if (c.valor > 0) l.valorCompra = c.valor; }
-      if (v || c) {
+      if (c) {
         l.progresso = l.qtdCompra > 0 ? (l.qtdVenda / l.qtdCompra) * 100 : 0;
         l.estoqueDinamico = l.qtdCompra - l.qtdVenda;
       }
@@ -454,7 +440,7 @@ const EstoqueDinamico = () => {
             </TooltipTrigger>
             <TooltipContent className="max-w-xs">
               As compras respeitam o intervalo de datas selecionado. As vendas são contadas
-              da data da última compra de cada produto até hoje, ignorando o fim do intervalo.
+              da data da última entrada de cada produto até ontem (D-1), ignorando o fim do intervalo.
             </TooltipContent>
           </Tooltip>
         </div>
