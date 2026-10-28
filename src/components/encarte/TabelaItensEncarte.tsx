@@ -182,6 +182,7 @@ const TabelaItensEncarte = ({ itens, onChange, onRemove, onReordenar, cargaTribu
           </colgroup>
           <thead>
             <tr className="text-left text-xs uppercase text-muted-foreground border-b border-border">
+              <th className="px-0 py-2" aria-label="Reordenar" />
               <Th campo="codigo">Código</Th>
               <Th campo="ean">EAN</Th>
               <Th campo="descricao">Descrição</Th>
@@ -204,7 +205,7 @@ const TabelaItensEncarte = ({ itens, onChange, onRemove, onReordenar, cargaTribu
           <tbody>
             {linhas.length === 0 && (
               <tr>
-                <td colSpan={17} className="py-10 text-center text-muted-foreground">
+                <td colSpan={18} className="py-10 text-center text-muted-foreground">
                   Nenhum item na lista. Cole os códigos e clique em Buscar dados.
                 </td>
               </tr>
