@@ -269,33 +269,44 @@ const EstoqueDinamico = () => {
       l.codigo && l.departamento && (codigosAtivos.size === 0 || codigosAtivos.has(l.codigo)),
     );
 
-    // Pontes que so publicam o estoque atual (sem venda do periodo):
-    // complementa com o ranking de produtos para preencher venda e progresso.
-    const semVenda = base.length > 0 && base.every((l) => l.qtdVenda === 0 && l.valorVenda === 0);
-      if (semVenda) {
-        const rv = await limitarEspera(chamarRelatorio(storeId, "ranking_produtos", {
-          inicio: iso(range.from),
-          fim: iso(range.to),
-          limite: 50000,
-        }), 30000).catch(() => null);
-       const vendasPorCodigo = new Map<string, { qtd: number; valor: number }>();
-      for (const l of (rv?.dados as any[]) || []) {
-         const cod = String(col(l, "codigo", "cod", "cod_produto", "id_produto") ?? "");
-        if (!cod) continue;
-         const cur = vendasPorCodigo.get(cod) ?? { qtd: 0, valor: 0 };
-        cur.qtd += num(col(l, "volume", "qtd", "quantidade"));
-        cur.valor += num(col(l, "vendas", "valor", "venda", "total_venda"));
-         vendasPorCodigo.set(cod, cur);
-      }
-       if (vendasPorCodigo.size) {
-        for (const l of base) {
-           const v = vendasPorCodigo.get(l.codigo);
-          if (!v) continue;
-          l.qtdVenda = v.qtd;
-          l.valorVenda = v.valor;
-          l.progresso = l.qtdCompra > 0 ? (v.qtd / l.qtdCompra) * 100 : 0;
-          l.estoqueDinamico = l.estoqueSistema || l.qtdCompra - v.qtd;
-        }
+    // Algumas pontes VR contam a compra em embalagens (caixas) e so somam a
+    // venda a partir da primeira compra. Complementamos com:
+    //  - ranking_produtos: venda total real do periodo inteiro;
+    //  - analise_compras: quantidade total comprada em unidades.
+    const [rv, ac] = await Promise.all([
+      limitarEspera(chamarRelatorio(storeId, "ranking_produtos", {
+        inicio: iso(range.from), fim: iso(range.to), limite: 50000,
+      }), 60000).catch(() => null),
+      limitarEspera(chamarRelatorio(storeId, "analise_compras", {
+        inicio: iso(range.from), fim: iso(range.to),
+      }), 130000).catch(() => null),
+    ]);
+    const vendasPorCodigo = new Map<string, { qtd: number; valor: number }>();
+    for (const l of (rv?.dados as any[]) || []) {
+      const cod = String(col(l, "codigo", "cod", "cod_produto", "id_produto") ?? "");
+      if (!cod) continue;
+      const cur = vendasPorCodigo.get(cod) ?? { qtd: 0, valor: 0 };
+      cur.qtd += num(col(l, "volume", "qtd", "quantidade"));
+      cur.valor += num(col(l, "vendas", "valor", "venda", "total_venda"));
+      vendasPorCodigo.set(cod, cur);
+    }
+    const comprasPorCodigo = new Map<string, { qtd: number; valor: number }>();
+    for (const l of (ac?.dados as any[]) || []) {
+      const cod = String(col(l, "codigo", "cod", "cod_produto", "id_produto") ?? "");
+      if (!cod) continue;
+      const cur = comprasPorCodigo.get(cod) ?? { qtd: 0, valor: 0 };
+      cur.qtd += num(col(l, "qtd_compra", "quantidade"));
+      cur.valor += num(col(l, "valor_compra", "valor_total"));
+      comprasPorCodigo.set(cod, cur);
+    }
+    for (const l of base) {
+      const v = vendasPorCodigo.get(l.codigo);
+      if (v) { l.qtdVenda = v.qtd; l.valorVenda = v.valor; }
+      const c = comprasPorCodigo.get(l.codigo);
+      if (c && c.qtd > 0) { l.qtdCompra = c.qtd; if (c.valor > 0) l.valorCompra = c.valor; }
+      if (v || c) {
+        l.progresso = l.qtdCompra > 0 ? (l.qtdVenda / l.qtdCompra) * 100 : 0;
+        l.estoqueDinamico = l.qtdCompra - l.qtdVenda;
       }
     }
 
