@@ -288,6 +288,13 @@
       "when": 1793112373224,
       "tag": "0040_escala_gravacao_atomica_performance",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1793150334241,
+      "tag": "0041_tv_gestor_por_loja",
+      "breakpoints": true
     }
   ]
 }
