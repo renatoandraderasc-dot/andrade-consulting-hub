@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import logoAndrade from "@/assets/andrade-logo.png";
 import { TvItem, TvTela, listarItens, tvDb, urlMidia } from "@/lib/tv";
 import { CatalogoItem, carregarBaseCatalogo, normalizarCodigo } from "@/lib/catalogoProdutos";
 
@@ -28,14 +27,16 @@ const ItemView = ({ atual, url, catalogo, proximo }: { atual: TvItem; url?: stri
   );
   if (atual.tipo !== "precos") return null;
   const mapa = new Map(catalogo.map((c) => [normalizarCodigo(c.codigo), c]));
-  const linhas = (atual.config.codigos || []).map((c) => mapa.get(normalizarCodigo(c))).filter(Boolean) as CatalogoItem[];
+  let linhas = (atual.config.codigos || []).map((c) => mapa.get(normalizarCodigo(c))).filter(Boolean) as CatalogoItem[];
+  const d2 = atual.config.descricoes || {};
+  linhas = linhas.map((p) => { const t = d2[normalizarCodigo(p.codigo)]?.trim(); return t ? { ...p, descricao: t } : p; });
   if (url) return <ArtePrecos atual={atual} url={url} linhas={linhas} />;
   return (
     <div key={atual.id} className="h-full flex flex-col p-[3cqw] bg-gradient-to-br from-[hsl(222,60%,18%)] to-[hsl(222,60%,8%)]">
       <h2 className="font-bold mb-[2cqh] text-[hsl(25,95%,55%)]" style={{ fontSize: "7cqh" }}>{atual.titulo || "Ofertas"}</h2>
       {linhas.length === 0 && <p className="opacity-70" style={{ fontSize: "3.5cqh" }}>Buscando preços no sistema da loja...</p>}
       <div className="flex flex-col gap-[1cqh] flex-1">
-        {linhas.slice(0, 12).map((p) => {
+        {linhas.map((p) => {
           const oferta = p.precoOferta && p.preco && p.precoOferta < p.preco;
           return (
             <div key={p.codigo} className="flex items-center justify-between gap-[2cqw] bg-white/10 rounded-xl px-[2cqw] py-[0.8cqh]">
@@ -108,7 +109,6 @@ const Slot = ({ itens, urls, catalogo, mostrarLogo }: { itens: TvItem[]; urls: R
   return (
     <div className="relative w-full h-full overflow-hidden" style={{ containerType: "size" } as any}>
       {atual ? <ItemView atual={atual} url={urls[atual.id]} catalogo={catalogo} proximo={proximo} /> : <div className="h-full bg-background" />}
-      {mostrarLogo && atual && atual.tipo !== "pic" && <img src={logoAndrade} alt="Andrade Consultoria" className="absolute bottom-[1.5cqh] right-[1.5cqw] h-[4cqh] opacity-80" />}
       {itens.length > 1 && (
         <div className="absolute top-0 left-0 h-1 bg-[hsl(25,95%,55%)]" key={`${idx}-bar`} style={{ animation: `tvbar ${atual?.tipo === "video" ? 0 : atual?.duracao_seg}s linear forwards`, width: 0 }} />
       )}
