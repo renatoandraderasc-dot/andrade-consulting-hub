@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useMemo, useState } from "react";
+import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -6,7 +6,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { ArrowUpDown, History, Search, Trash2 } from "lucide-react";
+import { ArrowUpDown, GripVertical, History, Search, Trash2 } from "lucide-react";
 import { formatBRL, formatBRDate } from "@/lib/formatters";
 import { pct } from "@/components/encarte-sugestao/types";
 import {
@@ -17,6 +17,7 @@ interface Props {
   itens: LinhaManual[];
   onChange: (uid: string, patch: Partial<LinhaManual>) => void;
   onRemove: (uid: string) => void;
+  onReordenar?: (fromUid: string, toUid: string) => void;
   cargaTributariaPct: number;
   modo?: "manual" | "sugestao";
 }
@@ -82,12 +83,16 @@ const PrecoEncarteInput = forwardRef<HTMLInputElement, PrecoProps>(
 );
 PrecoEncarteInput.displayName = "PrecoEncarteInput";
 
-const TabelaItensEncarte = ({ itens, onChange, onRemove, cargaTributariaPct }: Props) => {
+const TabelaItensEncarte = ({ itens, onChange, onRemove, onReordenar, cargaTributariaPct }: Props) => {
   const [busca, setBusca] = useState("");
   const [ordem, setOrdem] = useState<Ordem>({ campo: "ordem", asc: true });
+  const dragUidRef = useRef<string | null>(null);
 
   const ordenar = (campo: Ordem["campo"]) =>
     setOrdem((o) => ({ campo, asc: o.campo === campo ? !o.asc : true }));
+
+  // arrastar só faz sentido quando a lista está na ordem natural, sem busca ativa
+  const podeArrastar = !!onReordenar && !busca.trim() && ordem.campo === "ordem" && ordem.asc && itens.length > 1;
 
   const linhas = useMemo(() => {
     const termo = busca.trim().toLowerCase();
@@ -134,19 +139,29 @@ const TabelaItensEncarte = ({ itens, onChange, onRemove, cargaTributariaPct }: P
 
   return (
     <div className="space-y-3">
-      <div className="relative max-w-xs">
-        <Search className="w-4 h-4 absolute left-2.5 top-2.5 text-muted-foreground" />
-        <Input
-          className="pl-8 h-9"
-          placeholder="Buscar por descrição, código ou EAN"
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-        />
+      <div className="flex items-center gap-3">
+        <div className="relative max-w-xs w-full">
+          <Search className="w-4 h-4 absolute left-2.5 top-2.5 text-muted-foreground" />
+          <Input
+            className="pl-8 h-9"
+            placeholder="Buscar por descrição, código ou EAN"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+          />
+        </div>
+        {itens.length > 1 && (
+          <span className={`text-xs ${podeArrastar ? "text-muted-foreground" : "text-muted-foreground/60"}`}>
+            {podeArrastar
+              ? "Arraste o ⋮⋮ de uma linha para trocar a posição"
+              : "Limpe a busca e ordene por Ordem (crescente) para reordenar arrastando"}
+          </span>
+        )}
       </div>
 
       <div className="w-full overflow-x-auto">
         <table className="w-full min-w-[1500px] table-fixed text-[11px]">
           <colgroup>
+            <col className="w-[24px]" />
             <col className="w-[60px]" />
             <col className="w-[92px]" />
             <col className="w-[190px]" />
@@ -167,6 +182,7 @@ const TabelaItensEncarte = ({ itens, onChange, onRemove, cargaTributariaPct }: P
           </colgroup>
           <thead>
             <tr className="text-left text-xs uppercase text-muted-foreground border-b border-border">
+              <th className="px-0 py-2" aria-label="Reordenar" />
               <Th campo="codigo">Código</Th>
               <Th campo="ean">EAN</Th>
               <Th campo="descricao">Descrição</Th>
@@ -189,7 +205,7 @@ const TabelaItensEncarte = ({ itens, onChange, onRemove, cargaTributariaPct }: P
           <tbody>
             {linhas.length === 0 && (
               <tr>
-                <td colSpan={17} className="py-10 text-center text-muted-foreground">
+                <td colSpan={18} className="py-10 text-center text-muted-foreground">
                   Nenhum item na lista. Cole os códigos e clique em Buscar dados.
                 </td>
               </tr>
@@ -200,8 +216,27 @@ const TabelaItensEncarte = ({ itens, onChange, onRemove, cargaTributariaPct }: P
               return (
                 <tr
                   key={i.uid}
-                  className={`border-b border-border/50 ${i.encontrado ? "" : "bg-destructive/10"}`}
+                  draggable={podeArrastar}
+                  onDragStart={(e) => {
+                    dragUidRef.current = i.uid;
+                    e.dataTransfer.effectAllowed = "move";
+                    e.dataTransfer.setData("text/plain", i.uid);
+                  }}
+                  onDragEnter={() => {
+                    if (podeArrastar && dragUidRef.current && dragUidRef.current !== i.uid) {
+                      onReordenar?.(dragUidRef.current, i.uid);
+                    }
+                  }}
+                  onDragOver={(e) => { if (podeArrastar) e.preventDefault(); }}
+                  onDragEnd={() => { dragUidRef.current = null; }}
+                  onDrop={(e) => { e.preventDefault(); dragUidRef.current = null; }}
+                  className={`border-b border-border/50 ${i.encontrado ? "" : "bg-destructive/10"} ${podeArrastar ? "cursor-grab active:cursor-grabbing" : ""}`}
                 >
+                  <td className="py-1.5 pr-0 text-center select-none">
+                    {podeArrastar && (
+                      <GripVertical className="w-3.5 h-3.5 mx-auto text-muted-foreground/70" />
+                    )}
+                  </td>
                   {!i.encontrado ? (
                     <>
                       <td className="py-1.5 pr-2 font-mono text-xs">{i.codigo_digitado}</td>
