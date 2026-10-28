@@ -138,6 +138,7 @@ const TvPlayer = () => {
   const linhasGrid = Math.max(1, tela?.linhas || 1);
   const modulos = colunas * linhasGrid;
   const grupos = distribuirColunas(itens, modulos);
+  const razao = (tela && dimensoesTotais({ largura_m: tela.largura_m ?? null, altura_m: tela.altura_m ?? null, resolucao_largura: tela.resolucao_largura ?? null, resolucao_altura: tela.resolucao_altura ?? null, colunas, linhas: linhasGrid }).proporcao) || colunas / linhasGrid;
 
   if (loading) return null;
   if (!user) {
@@ -149,10 +150,13 @@ const TvPlayer = () => {
       {erro && <div className="h-full grid place-items-center text-2xl">{erro}</div>}
       {!erro && itens.length === 0 && <div className="h-full grid place-items-center text-2xl opacity-70">{tela ? "Sem programação ativa nesta TV" : "Carregando..."}</div>}
       {!erro && itens.length > 0 && (
-        <div className="w-full h-full grid" style={{ gridTemplateColumns: `repeat(${colunas}, 1fr)`, gridTemplateRows: `repeat(${linhasGrid}, 1fr)` }}>
-          {grupos.map((g, i) => (
-            <Slot key={i} itens={g} urls={urls} catalogo={catalogo} mostrarLogo={i === modulos - 1} />
-          ))}
+        <div className="w-full h-full flex items-center justify-center">
+          {/* Mantém o conjunto na proporção real do telão (ex.: 3 telas de 1×1 m = 3:1) para nada esticar */}
+          <div className="grid" style={{ aspectRatio: String(razao), width: `min(100vw, ${razao * 100}vh)`, gridTemplateColumns: `repeat(${colunas}, 1fr)`, gridTemplateRows: `repeat(${linhasGrid}, 1fr)` }}>
+            {grupos.map((g, i) => (
+              <Slot key={i} itens={g} urls={urls} catalogo={catalogo} mostrarLogo={i === modulos - 1} />
+            ))}
+          </div>
         </div>
       )}
       <style>{`@keyframes tvbar{from{width:0}to{width:100%}}`}</style>
