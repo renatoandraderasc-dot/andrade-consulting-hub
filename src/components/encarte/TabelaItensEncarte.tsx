@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useMemo, useState } from "react";
+import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -6,7 +6,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { ArrowUpDown, History, Search, Trash2 } from "lucide-react";
+import { ArrowUpDown, GripVertical, History, Search, Trash2 } from "lucide-react";
 import { formatBRL, formatBRDate } from "@/lib/formatters";
 import { pct } from "@/components/encarte-sugestao/types";
 import {
@@ -17,6 +17,7 @@ interface Props {
   itens: LinhaManual[];
   onChange: (uid: string, patch: Partial<LinhaManual>) => void;
   onRemove: (uid: string) => void;
+  onReordenar?: (fromUid: string, toUid: string) => void;
   cargaTributariaPct: number;
   modo?: "manual" | "sugestao";
 }
