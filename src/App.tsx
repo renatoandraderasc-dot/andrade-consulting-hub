@@ -47,6 +47,7 @@ import AdminPicDepartments from "./pages/AdminPicDepartments";
 import Produtos from "./pages/Produtos";
 import EncarteEditor from "./pages/EncarteEditor";
 import MeusEncartes from "./pages/MeusEncartes";
+import CalendarioPromocional from "./pages/CalendarioPromocional";
 import EncarteSugestao from "./pages/EncarteSugestao";
 import OAuthConsent from "./pages/OAuthConsent";
 import AdminSite from "./pages/AdminSite";
@@ -141,6 +142,7 @@ const App = () => (
             <Route path="/admin/sites-concorrentes" element={g("admin_sites_concorrentes", <AdminSitesConcorrentes />)} />
             <Route path="/produtos" element={g("produtos", <Produtos />)} />
             <Route path="/encartes" element={g("encartes", <MeusEncartes />)} />
+            <Route path="/calendario-promocional" element={g("encartes", <CalendarioPromocional />)} />
             <Route path="/encarte-sugestao" element={g("encarte_sugestao", <EncarteSugestao />)} />
             <Route path="/encartes/editor" element={g("encarte_editor", <EncarteEditor />)} />
             <Route path="/encartes/editor/:id" element={g("encarte_editor", <EncarteEditor />)} />

@@ -10,7 +10,6 @@ import InserirManualTab from "@/components/encarte-sugestao/InserirManualTab";
 import CapaVersoTab from "@/components/encarte-sugestao/CapaVersoTab";
 import ModeloTab from "@/components/encarte-sugestao/ModeloTab";
 import ImpressaoTab from "@/components/encarte-sugestao/ImpressaoTab";
-import CalendarioPromocionalTab from "@/components/encarte-sugestao/CalendarioPromocionalTab";
 import {
   Alternativa, CalendarioRow, CategoriaRow, DiagnosticoEncarte, Face, ItemEncarte, ModeloRow,
 } from "@/components/encarte-sugestao/types";
@@ -270,7 +269,6 @@ const EncarteSugestao = () => {
             <TabsTrigger value="manual">Inserir manualmente</TabsTrigger>
             <TabsTrigger value="capaverso">Capa &amp; Verso</TabsTrigger>
             <TabsTrigger value="impressao">Impressão / Export</TabsTrigger>
-            <TabsTrigger value="calendario">Calendário promocional</TabsTrigger>
           </TabsList>
 
           <TabsContent value="montagem" className="mt-4">
@@ -333,8 +331,6 @@ const EncarteSugestao = () => {
           <TabsContent value="impressao" className="mt-4">
             <ImpressaoTab itens={itensOrdenados} nomeEncarte={nomeEncarte} />
           </TabsContent>
-          <TabsContent value="calendario" className="mt-4">
-            <CalendarioPromocionalTab storeId={storeId} />
           </TabsContent>
         </Tabs>
       </div>
