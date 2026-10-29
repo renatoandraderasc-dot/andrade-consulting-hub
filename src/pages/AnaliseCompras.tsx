@@ -10,7 +10,7 @@ import { CalendarDays, ChevronDown, ChevronRight, Download, Filter, RefreshCw, S
 import ClientLayout from "@/components/ClientLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { chamarRelatorio, avisoRelatorio, pick, num, txt } from "@/lib/vrReport";
+import { chamarRelatorioFatiado, avisoRelatorio, pick, num, txt } from "@/lib/vrReport";
 import { salvarWorkbook } from "@/lib/exportBranding";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
@@ -247,11 +247,17 @@ const AnaliseCompras = () => {
         carregarLimites(),
       ]);
       setDeParaSecao(Object.fromEntries((dp || []).map((r) => [r.secao_vr.trim().toUpperCase(), r.department])));
-      const r = await chamarRelatorio(sid, "analise_compras", {
+      // Busca em lotes de 2 dias, um por vez: periodos longos estouravam o
+      // limite de 100s do tunel da loja (erro 504).
+      const r = await chamarRelatorioFatiado(sid, "analise_compras", {
         inicio: iso(range.from), fim: iso(range.to), loja: (cfg as any)?.codigo_loja || 0,
+      }, {
+        diasPorLote: 2,
+        onProgresso: (f, t) => { if (t > 1) toast.loading(`Buscando compras… ${f}/${t} partes`, { id: "ac-lotes" }); },
       });
+      toast.dismiss("ac-lotes");
       const msg = r.indisponivel ? "Relatório não disponível no sistema desta loja." : avisoRelatorio(r);
-      setAviso(msg);
+      setAviso(msg ?? r.aviso ?? null);
       setBrutos(msg ? [] : r.dados);
     } finally { setLoading(false); }
   };

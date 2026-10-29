@@ -23,6 +23,8 @@ export interface RelatorioResultado {
   atualizadoEm?: string | null;
   /** true quando vieram da ultima leitura guardada */
   doCache?: boolean;
+  /** aviso parcial (ex.: alguns lotes de datas falharam) */
+  aviso?: string;
 }
 
 const INDISPONIVEL = /relatorio nao encontrado|nao encontrado|nao existe|nao cadastrado|parametro ausente|parametros obrigatorios|404|ORA-\d+|illegal variable|invalid identifier|not supported/i;
@@ -236,3 +238,53 @@ export function maxDiasConsulta(storeId: string): Promise<number> {
 
 /** Erro de protecao da ponte: periodo longo, ponte ocupada ou tempo esgotado. */
 export const ERRO_PROTECAO_PONTE = /tls handshake|tunnel instavel|periodo longo|ponte ocupada|ocupada|tempo esgotado|\b50[34]\b/i;
+
+// ============================================================
+// Consulta fatiada por datas: relatorios pesados (ex.: analise_compras)
+// passam do limite de 100s do tunel quando o periodo e longo. Pedimos
+// um lote de poucos dias por vez, em sequencia (pontes lentas travam
+// com consultas paralelas), e juntamos o resultado. Cada lote fica no
+// cache do servidor, entao dias ja buscados voltam instantaneos.
+// ============================================================
+export async function chamarRelatorioFatiado(
+  storeId: string,
+  relatorio: string,
+  params: Record<string, unknown> & { inicio: string; fim: string },
+  opts: { diasPorLote?: number; forcar?: boolean; onProgresso?: (feitos: number, total: number) => void } = {},
+): Promise<RelatorioResultado> {
+  const dias = Math.max(1, opts.diasPorLote ?? 2);
+  const lotes: Array<[string, string]> = [];
+  const d = new Date(`${params.inicio}T12:00:00`);
+  const fim = new Date(`${params.fim}T12:00:00`);
+  const f = (x: Date) => x.toISOString().slice(0, 10);
+  while (d <= fim) {
+    const ini = new Date(d);
+    d.setDate(d.getDate() + dias - 1);
+    const ate = d > fim ? fim : new Date(d);
+    lotes.push([f(ini), f(ate)]);
+    d.setDate(d.getDate() + 1);
+  }
+  const dados: any[] = [];
+  const erros: string[] = [];
+  let primeiro: RelatorioResultado | null = null;
+  for (let i = 0; i < lotes.length; i++) {
+    opts.onProgresso?.(i, lotes.length);
+    const [ini, ate] = lotes[i];
+    const r = await chamarRelatorio(storeId, relatorio, { ...params, inicio: ini, fim: ate }, { forcar: opts.forcar });
+    if (!primeiro) primeiro = r;
+    if (r.indisponivel) return r;
+    const aviso = avisoRelatorio(r);
+    if (aviso) erros.push(`${ini.split("-").reverse().join("/")}–${ate.split("-").reverse().join("/")}`);
+    else dados.push(...(r.dados || []));
+  }
+  opts.onProgresso?.(lotes.length, lotes.length);
+  if (erros.length && !dados.length) return primeiro ?? { dados: [], indisponivel: false, offline: true, erro: null } as RelatorioResultado;
+  return {
+    ...(primeiro as RelatorioResultado),
+    dados,
+    indisponivel: false,
+    offline: false,
+    erro: null,
+    aviso: erros.length ? `Alguns dias não responderam a tempo (${erros.join(", ")}). Clique em Atualizar para tentar de novo.` : undefined,
+  } as RelatorioResultado;
+}
