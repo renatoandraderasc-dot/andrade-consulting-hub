@@ -142,7 +142,7 @@ const App = () => (
             <Route path="/admin/sites-concorrentes" element={g("admin_sites_concorrentes", <AdminSitesConcorrentes />)} />
             <Route path="/produtos" element={g("produtos", <Produtos />)} />
             <Route path="/encartes" element={g("encartes", <MeusEncartes />)} />
-            <Route path="/calendario-promocional" element={g("encartes", <CalendarioPromocional />)} />
+            <Route path="/calendario-promocional" element={g("calendario_promocional", <CalendarioPromocional />)} />
             <Route path="/encarte-sugestao" element={g("encarte_sugestao", <EncarteSugestao />)} />
             <Route path="/encartes/editor" element={g("encarte_editor", <EncarteEditor />)} />
             <Route path="/encartes/editor/:id" element={g("encarte_editor", <EncarteEditor />)} />

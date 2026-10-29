@@ -45,6 +45,7 @@ export const APP_MODULES = [
   { key: "websac_sync", label: "Sync WebSac", path: "/websac-sync" },
   { key: "produtos", label: "Produtos", path: "/produtos" },
   { key: "encartes", label: "Meus Encartes", path: "/encartes" },
+  { key: "calendario_promocional", label: "Calendário Promocional", path: "/calendario-promocional" },
   { key: "encarte_editor", label: "Editor de Encarte", path: "/encartes/editor" },
   { key: "encarte_sugestao", label: "Sugestão de Encarte", path: "/encarte-sugestao" },
   { key: "jornada", label: "Jornada", path: "/jornada" },
