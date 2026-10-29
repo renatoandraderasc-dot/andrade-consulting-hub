@@ -331,7 +331,6 @@ const EncarteSugestao = () => {
           <TabsContent value="impressao" className="mt-4">
             <ImpressaoTab itens={itensOrdenados} nomeEncarte={nomeEncarte} />
           </TabsContent>
-          </TabsContent>
         </Tabs>
       </div>
     </ClientLayout>
