@@ -93,7 +93,7 @@ Deno.serve(async (req) => {
       const r = await consultarComCache({
         supabaseUrl, serviceKey, storeId: store_id, relatorio, params, cfg,
         forcar: forcar === true, origem: forcar === true ? "manual" : "proxy",
-        timeoutMs: relatorio === "analise_compras" ? 120000 : undefined,
+        timeoutMs: relatorio === "analise_compras" ? 120000 : 90000,
       });
       if (!r.ok) {
         console.error("vr-proxy falha (diario_d1)", JSON.stringify({ store_id, relatorio, erro: r.erro }));
@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
 
     // ---------- modo ao vivo (comportamento original) ----------
     const r = await consultarRelatorioLoja({
-      supabaseUrl, serviceKey, storeId: store_id, relatorio, params, cfg,
+      supabaseUrl, serviceKey, storeId: store_id, relatorio, params, cfg, timeoutMs: 90000,
     });
     if (!r.ok) {
       const msg = r.erro ?? "falha ao consultar o sistema da loja";

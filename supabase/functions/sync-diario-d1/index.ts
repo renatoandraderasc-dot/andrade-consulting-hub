@@ -131,10 +131,14 @@ Deno.serve(async (req) => {
 
     const inicioMs = Date.now();
     let ok = 0, falhas = 0, semRelatorio = 0;
-    await comLimite([...alvos.values()], 2, async (a) => {
+    // prioriza os relatorios principais e consulta 1 por vez (pontes lentas caem em paralelo)
+    const PRIORIDADE = ["kpis_periodo", "vendas_secao_periodo", "compras_vendas_periodo"];
+    const pri = (r: string) => { const i = PRIORIDADE.indexOf(r); return i < 0 ? 99 : i; };
+    const fila = [...alvos.values()].sort((a, b) => pri(a.relatorio) - pri(b.relatorio));
+    await comLimite(fila, 1, async (a) => {
       const r = await consultarComCache({
         supabaseUrl, serviceKey, storeId, relatorio: a.relatorio, params: a.params,
-        cfg, forcar: true, origem: "job", timeoutMs: 60000,
+        cfg, forcar: true, origem: "job", timeoutMs: 90000,
       });
       if (r.ok) ok++;
       else if (/nao encontrado|nao existe|404/i.test(r.erro ?? "")) semRelatorio++;
