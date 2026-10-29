@@ -23,6 +23,8 @@ export interface RelatorioResultado {
   atualizadoEm?: string | null;
   /** true quando vieram da ultima leitura guardada */
   doCache?: boolean;
+  /** aviso parcial (ex.: alguns lotes de datas falharam) */
+  aviso?: string;
 }
 
 const INDISPONIVEL = /relatorio nao encontrado|nao encontrado|nao existe|nao cadastrado|parametro ausente|parametros obrigatorios|404|ORA-\d+|illegal variable|invalid identifier|not supported/i;
