@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import PrintTelaButton from "@/components/PrintTelaButton";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -337,7 +338,8 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
 
       <ChangePasswordDialog open={pwdOpen} onOpenChange={setPwdOpen} />
 
-      <main className="flex-1">{children}</main>
+      <main id="area-print" className="flex-1">{children}</main>
+      <PrintTelaButton targetId="area-print" />
     </div>
   );
 };
