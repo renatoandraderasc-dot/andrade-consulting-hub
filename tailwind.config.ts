@@ -42,6 +42,7 @@ export default {
         ink: 'hsl(var(--ink))',
         'poster-yellow': { DEFAULT: 'hsl(var(--poster-yellow))', foreground: 'hsl(var(--poster-yellow-foreground))' },
         'offer-red': { DEFAULT: 'hsl(var(--offer-red))', foreground: 'hsl(var(--offer-red-foreground))' },
+        'promo-yellow': { DEFAULT: 'hsl(var(--promo-yellow))', foreground: 'hsl(var(--promo-yellow-foreground))' },
         'gondola-green': { DEFAULT: 'hsl(var(--gondola-green))', foreground: 'hsl(var(--gondola-green-foreground))' },
         gold: 'hsl(var(--gold))',
         'gold-light': 'hsl(var(--gold-light))',

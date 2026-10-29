@@ -118,6 +118,50 @@ export type Database = {
         }
         Relationships: []
       }
+      calendario_promocional: {
+        Row: {
+          agv_pct: number | null
+          created_at: string
+          data_fim: string
+          data_inicio: string
+          destaque: boolean
+          id: string
+          nome: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          agv_pct?: number | null
+          created_at?: string
+          data_fim: string
+          data_inicio: string
+          destaque?: boolean
+          id?: string
+          nome?: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          agv_pct?: number | null
+          created_at?: string
+          data_fim?: string
+          data_inicio?: string
+          destaque?: boolean
+          id?: string
+          nome?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendario_promocional_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       checklist_answers: {
         Row: {
           checked: boolean
