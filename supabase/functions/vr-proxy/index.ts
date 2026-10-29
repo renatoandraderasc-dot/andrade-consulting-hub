@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
 
     // ---------- modo ao vivo (comportamento original) ----------
     const r = await consultarRelatorioLoja({
-      supabaseUrl, serviceKey, storeId: store_id, relatorio, params, cfg,
+      supabaseUrl, serviceKey, storeId: store_id, relatorio, params, cfg, timeoutMs: 90000,
     });
     if (!r.ok) {
       const msg = r.erro ?? "falha ao consultar o sistema da loja";
