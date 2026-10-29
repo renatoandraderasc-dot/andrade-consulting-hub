@@ -150,8 +150,11 @@ export default function CalendarioPromocionalTab({ storeId }: { storeId: string 
         ))}
         {semanas.map((w) => (
           <div key={w.semana} className="col-span-7 grid grid-cols-7 gap-3">
-            <div className="col-span-4">{w.seg && <Bloco s={w.seg} />}</div>
-            <div className="col-span-3">{w.fds && <Bloco s={w.fds} />}</div>
+            {[w.seg, w.fds].map((s, i) => s && (
+              <div key={i} style={{ gridColumn: `${((s.inicio.getDay() + 6) % 7) + 1} / span ${Math.round((s.fim.getTime() - s.inicio.getTime()) / 86400000) + 1}` }}>
+                <Bloco s={s} />
+              </div>
+            ))}
           </div>
         ))}
       </div>
