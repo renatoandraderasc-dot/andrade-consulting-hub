@@ -76,9 +76,11 @@ Deno.serve(async (req) => {
 
   let q = service
     .from("store_vr_config")
-    .select("store_id, api_url, api_key, sistema, codigo_loja, modo_sync, enabled")
-    .eq("modo_sync", "diario_d1");
+    .select("store_id, api_url, api_key, sistema, codigo_loja, modo_sync, enabled");
+  // Pedido para uma loja especifica (Diagnostico por cliente) atualiza qualquer modo;
+  // o cron sem store_id continua so com as lojas 'diario_d1'.
   if (body.store_id) q = q.eq("store_id", body.store_id);
+  else q = q.eq("modo_sync", "diario_d1");
   const { data: configs, error } = await q;
   if (error) return json({ erro: error.message }, 500);
 
