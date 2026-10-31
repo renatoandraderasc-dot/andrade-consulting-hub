@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import ClientLayout from "@/components/ClientLayout";
+import DiagnosticoClientes from "@/components/diagnostico/DiagnosticoClientes";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Activity, RefreshCw, AlertTriangle, CheckCircle2, XCircle, Database, Server, KeyRound } from "lucide-react";
@@ -155,7 +156,7 @@ const Diagnostico = () => {
 
   return (
     <ClientLayout>
-      <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
+      <div className="p-4 md:p-6 space-y-6 w-full">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Activity className="h-6 w-6 text-primary" />
@@ -173,6 +174,8 @@ const Diagnostico = () => {
         </div>
 
         <AtualizarTodas />
+
+        <DiagnosticoClientes />
 
         <div className="grid gap-4 md:grid-cols-3">
           {testes.map((t) => {
