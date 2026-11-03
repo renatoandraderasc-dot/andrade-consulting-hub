@@ -7,7 +7,7 @@ import {
   BarChart3, CheckSquare, Settings, Settings2, Users, LogOut, Menu, X, ArrowLeft,
   Activity, Target, ClipboardList, DollarSign, Database, RefreshCw, Trophy, Store, ShoppingCart, LayoutTemplate, TrendingUp, Package, KeyRound, Plug, ScanLine, Tags, ChevronDown, Globe, Network,
   Thermometer, LayoutDashboard, FileSpreadsheet, Layers,
-  ShoppingBag, CalendarDays,
+  ShoppingBag, CalendarDays, TrendingDown,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -73,6 +73,7 @@ const navGroups: NavGroup[] = [
       { key: "compras", path: "/compras", label: "Compras", icon: ShoppingCart },
       { key: "compras_analise", path: "/compras/analise", label: "Análise de Compras", icon: ShoppingCart },
       { key: "estoque_dinamico", path: "/estoque-dinamico", label: "Estoque Dinâmico", icon: Package },
+      { key: "margem_baixa", path: "/margem-baixa", label: "Margem Baixa", icon: TrendingDown },
       { key: "repricing", path: "/repricing", label: "Re-Pricing", icon: DollarSign },
       { key: "pricing", path: "/precificacao/pricing", label: "Pricing", icon: Tags },
       { key: "catalogo", path: "/catalogo", label: "Catálogo", icon: Package },
