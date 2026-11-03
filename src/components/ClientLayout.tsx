@@ -7,7 +7,7 @@ import {
   BarChart3, CheckSquare, Settings, Settings2, Users, LogOut, Menu, X, ArrowLeft,
   Activity, Target, ClipboardList, DollarSign, Database, RefreshCw, Trophy, Store, ShoppingCart, LayoutTemplate, TrendingUp, Package, KeyRound, Plug, ScanLine, Tags, ChevronDown, Globe, Network,
   Thermometer, LayoutDashboard, FileSpreadsheet, Layers,
-  ShoppingBag, CalendarDays, TrendingDown,
+  ShoppingBag, CalendarDays, TrendingDown, GitCompare,
 } from "lucide-react";
 import {
   DropdownMenu,
