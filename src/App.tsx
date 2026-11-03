@@ -34,6 +34,7 @@ import CapilaridadeMix from "./pages/CapilaridadeMix";
 import Relatorios from "./pages/Relatorios";
 import PainelAnalitico from "./pages/PainelAnalitico";
 import PainelComparativo from "./pages/PainelComparativo";
+import ComparativoProdutos from "./pages/ComparativoProdutos";
 import Repricing from "./pages/Repricing";
 import Pricing from "./pages/Pricing";
 import VtexCollector from "./pages/VtexCollector";
@@ -125,6 +126,7 @@ const App = () => (
             <Route path="/relatorios" element={g("relatorios", <Relatorios />)} />
             <Route path="/painel-analitico" element={g("painel_analitico", <PainelAnalitico />)} />
             <Route path="/painel-comparativo" element={g("painel_comparativo", <PainelComparativo />)} />
+            <Route path="/comparativo-produtos" element={g("comparativo_produtos", <ComparativoProdutos />)} />
             <Route path="/precificacao/pricing" element={g("pricing", <Pricing />)} />
             <Route path="/repricing" element={g("repricing", <Repricing />)} />
             <Route path="/vtex-collector" element={g("vtex_collector", <VtexCollector />)} />

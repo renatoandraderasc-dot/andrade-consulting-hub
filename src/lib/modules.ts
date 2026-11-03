@@ -21,6 +21,7 @@ export const APP_MODULES = [
   { key: "relatorios", label: "Relatórios", path: "/relatorios" },
   { key: "painel_analitico", label: "Painel Analítico", path: "/painel-analitico" },
   { key: "painel_comparativo", label: "Comparativo de Indicadores", path: "/painel-comparativo" },
+  { key: "comparativo_produtos", label: "Comparativo de Departamentos e Produtos", path: "/comparativo-produtos" },
   { key: "pic", label: "PIC", path: "/pic" },
   { key: "pic_percentual", label: "PIC: somente % (visualizador)", path: "/pic" },
   { key: "pic_padaria", label: "Dashboard Padaria", path: "/pic/padaria" },
