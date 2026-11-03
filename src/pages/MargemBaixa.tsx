@@ -335,7 +335,7 @@ export default function MargemBaixa() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[auto_auto_auto_minmax(220px,1fr)_auto] xl:items-end">
             {stores.length > 1 && (
               <div className="min-w-0 space-y-1">
-                <label className="text-xs text-muted-foreground">Loja</label>
+                <label className="block text-xs text-muted-foreground">Loja</label>
                 <Select value={storeId} onValueChange={(v) => {
                   setStoreId(v);
                   setStoreName(stores.find((s) => s.id === v)?.name || "");
@@ -351,7 +351,7 @@ export default function MargemBaixa() {
             )}
 
             <div className="min-w-0 space-y-1">
-              <label className="text-xs text-muted-foreground">Período</label>
+              <label className="block text-xs text-muted-foreground">Período</label>
               <Popover open={calOpen} onOpenChange={setCalOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-full justify-start gap-2 xl:w-[260px]">
@@ -376,7 +376,7 @@ export default function MargemBaixa() {
             </Button>
 
             <div className="min-w-0 space-y-1">
-              <label className="text-xs text-muted-foreground">Buscar</label>
+              <label className="block text-xs text-muted-foreground">Buscar</label>
               <div className="relative">
                 <Search className="w-4 h-4 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <Input className="pl-8" placeholder="Código, descrição ou barras" value={busca} onChange={(e) => setBusca(e.target.value)} />
