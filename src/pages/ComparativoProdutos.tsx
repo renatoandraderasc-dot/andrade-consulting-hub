@@ -261,7 +261,7 @@ export default function ComparativoProdutos() {
     for (const m of meses) {
       const c = cupons.get(m);
       if (!c) continue;
-      if (dep === undefined) { t += c.total; tem = true; }
+      if (dep === undefined) { if (c.total) { t += c.total; tem = true; } }
       else if (c.porDep.has(chaveDept(dep))) { t += c.porDep.get(chaveDept(dep))!; tem = true; }
     }
     return tem ? t : null;
