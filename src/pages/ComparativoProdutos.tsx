@@ -166,23 +166,34 @@ export default function ComparativoProdutos() {
     return { linhas: compactos.map((c) => expandir(c, mes)), aviso: r.aviso ? `${rotuloMes(mes)}: ${r.aviso}` : null };
   }
 
-  async function carregarCupons(mes: string, forcar: boolean) {
+  /** Lê um relatório mensal guardado (mês encerrado) ou busca na loja e guarda. */
+  async function lerMensal(relatorio: string, mes: string, forcar: boolean): Promise<any[] | null> {
     const { de, ate } = limitesMes(mes);
-    let linhas = forcar ? null : await lerPeriodoCache(storeId, "diagnostico_mensal", "", de, ate);
-    if (!linhas) {
-      const r = await chamarRelatorio(storeId, "diagnostico_mensal", { inicio: de, fim: ate }, { forcar }).catch(() => null);
-      if (!r || avisoRelatorio(r)) return null;
-      linhas = r.dados ?? [];
-      await gravarPeriodoCache(storeId, "diagnostico_mensal", "", de, ate, linhas).catch(() => undefined);
-    }
+    const guardado = forcar ? null : await lerPeriodoCache(storeId, relatorio, "", de, ate);
+    if (guardado) return guardado;
+    const r = await chamarRelatorio(storeId, relatorio, { inicio: de, fim: ate }, { forcar }).catch(() => null);
+    if (!r || avisoRelatorio(r)) return null;
+    await gravarPeriodoCache(storeId, relatorio, "", de, ate, r.dados ?? []).catch(() => undefined);
+    return r.dados ?? [];
+  }
+
+  // Total da loja: cupons_e_ticket (cupom único). Por departamento: diagnostico_mensal
+  // (um mesmo cupom pode aparecer em vários departamentos, por isso não somamos para o total).
+  async function carregarCupons(mes: string, forcar: boolean) {
     const porDep = new Map<string, number>();
-    let total = 0;
-    for (const l of linhas) {
+    let somaDiag = 0, temDiag = false;
+    for (const l of (await lerMensal("diagnostico_mensal", mes, forcar)) ?? []) {
       const c = num(pick(l, "clientes", "cupons"));
-      total += c;
+      if (!c) continue;
+      temDiag = true;
+      somaDiag += c;
       const d = chaveDept(mercadologicoNivel1(l) || txt(pick(l, "setor")));
       if (d) porDep.set(d, (porDep.get(d) ?? 0) + c);
     }
+    const diarios = (await lerMensal("cupons_e_ticket", mes, forcar)) ?? [];
+    const somaDiaria = diarios.reduce((s, l) => s + num(pick(l, "cupons", "clientes", "qtd_cupons")), 0);
+    const total = somaDiaria > 0 ? somaDiaria : !porDep.size && temDiag ? somaDiag : 0;
+    if (!total && !porDep.size) return null;
     return { total, porDep };
   }
 
