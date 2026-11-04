@@ -65,6 +65,26 @@ const fmtExato = (v: number) => {
   return v < 0 ? `(${str})` : str;
 };
 
+// Valor em milhares (R$ mil) com 1 casa: 1.234.567,89 -> 1.234,6
+const fmtMil = (v: number) => {
+  if (!v) return "—";
+  const str = (Math.abs(v) / 1000).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  return v < 0 ? `(${str})` : str;
+};
+
+type BasePct = "faturamento" | "arrecadacao" | "lucro";
+const BASES: { key: BasePct; label: string; curto: string; dica: string }[] = [
+  { key: "faturamento", label: "Faturamento", curto: "% Fat.", dica: "Percentual sobre o faturamento" },
+  { key: "arrecadacao", label: "Arrecadação", curto: "% Arrec.", dica: "Faturamento − CMV" },
+  { key: "lucro", label: "Lucro Líquido", curto: "% L. Líq.", dica: "Faturamento − Pagamento de fornecedores" },
+];
+const baseDoMapa = (mapa: Map<string, number> | undefined, base: BasePct) => {
+  const fat = mapa?.get("faturamento") || 0;
+  if (base === "arrecadacao") return fat - Math.abs(mapa?.get("cmv") || 0);
+  if (base === "lucro") return fat - Math.abs(mapa?.get("pag_fornec") || 0);
+  return fat;
+};
+
 const fmtDate = (d: string) => {
   try {
     return new Date(d + "T12:00:00").toLocaleDateString("pt-BR");
@@ -135,6 +155,9 @@ export const ContRedeTab = ({ storeId }: Props) => {
   const [mapaVr, setMapaVr] = useState<Map<number, { tipo: string; subtipo: string }>>(new Map());
   const [loading, setLoading] = useState(false);
   const [atualizando, setAtualizando] = useState(false);
+  const [basePct, setBasePct] = useState<BasePct>("faturamento");
+  const [emMil, setEmMil] = useState(true);
+  const [rebuscarFechados, setRebuscarFechados] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [detailFilter, setDetailFilter] = useState<{ tipo: string; subtipo?: string } | null>(null);
 
@@ -503,39 +526,29 @@ export const ContRedeTab = ({ storeId }: Props) => {
     doc.save(`${tituloExport.replace(/\s+/g, "-")}.pdf`);
   };
 
-  const colunas = `minmax(240px,1.4fr) repeat(${mesesVisiveis.length}, minmax(128px,1fr)) minmax(150px,1.1fr) 72px`;
-
+  const fmtValor = emMil ? fmtMil : fmtExato;
+  const largMes = emMil ? 118 : 168;
+  const colunas = `minmax(240px,1.4fr) repeat(${mesesVisiveis.length}, minmax(${largMes}px,1fr)) minmax(${largMes + 20}px,1.1fr)`;
 
   const pctStr = (v: number, base: number) =>
     base !== 0 ? `${((v / Math.abs(base)) * 100).toFixed(1)}%` : "—";
 
-  // Percentuais por mês: grupos/seções sobre o faturamento do mês;
-  // subcontas sobre o total do próprio grupo naquele mês.
-  const celulas = (id: string, destaque: string, parentId?: string) => (
+  // Valor e participação lado a lado; a base é escolhida no seletor
+  // (Faturamento, Arrecadação ou Lucro Líquido) e vale para todas as linhas.
+  const celula = (v: number, base: number, destaque: string, total = false) => (
+    <div className={`flex items-baseline justify-end gap-1.5 tabular-nums whitespace-nowrap ${total ? "bg-muted/40 rounded px-1 py-0.5 font-semibold" : ""} ${v < 0 ? "text-destructive" : "text-foreground"} ${destaque}`}>
+      <span className="text-[13px]">{fmtValor(v)}</span>
+      <span className="text-[10px] text-muted-foreground font-normal w-[42px] text-right">{v ? pctStr(v, base) : ""}</span>
+    </div>
+  );
+
+  const celulas = (id: string, destaque: string) => (
     <>
       {mesesVisiveis.map(m => {
         const mapaMes = drePorMes.porMes.get(m);
-        const v = mapaMes?.get(id) || 0;
-        const base = parentId
-          ? mapaMes?.get(parentId) || 0
-          : mapaMes?.get("faturamento") || 0;
-        return (
-          <div key={m} className={`text-right tabular-nums leading-tight ${v < 0 ? "text-destructive" : "text-foreground"} ${destaque}`}>
-            <div className="text-[13px]">{fmtExato(v)}</div>
-            <div className="text-[11px] text-muted-foreground font-normal">{pctStr(v, base)}</div>
-          </div>
-        );
+        return <div key={m}>{celula(mapaMes?.get(id) || 0, baseDoMapa(mapaMes, basePct), destaque)}</div>;
       })}
-      {(() => {
-        const t = drePorMes.total.get(id) || 0;
-        const baseTotal = parentId ? (drePorMes.total.get(parentId) || 0) : faturamentoAno;
-        return (
-          <>
-            <div className={`text-right tabular-nums text-[13px] font-semibold bg-muted/40 rounded px-1 py-0.5 ${t < 0 ? "text-destructive" : "text-foreground"} ${destaque}`}>{fmtExato(t)}</div>
-            <div className={`text-right tabular-nums text-[11px] text-muted-foreground font-normal ${destaque}`}>{pctStr(t, baseTotal)}</div>
-          </>
-        );
-      })()}
+      {celula(drePorMes.total.get(id) || 0, baseDoMapa(drePorMes.total, basePct), destaque, true)}
     </>
   );
 
@@ -579,7 +592,7 @@ export const ContRedeTab = ({ storeId }: Props) => {
               onClick={() => child.tipo && child.subtipo && handleChildClick(child.tipo, child.subtipo)}
             >
               <div className={`pl-8 text-foreground/75 sticky left-0 bg-card/95 ${hover}`}>{child.name}</div>
-              {celulas(child.id, hover, node.id)}
+              {celulas(child.id, hover)}
             </div>
           );
         })}
@@ -646,6 +659,25 @@ export const ContRedeTab = ({ storeId }: Props) => {
               Todos
             </button>
           </div>
+
+          <div className="flex items-center gap-1 rounded-lg bg-secondary/20 p-1">
+            <span className="text-xs text-muted-foreground px-1">Participação:</span>
+            {BASES.map(b => (
+              <Button key={b.key} size="sm" title={b.dica}
+                variant={basePct === b.key ? "default" : "ghost"}
+                onClick={() => setBasePct(b.key)}>{b.label}</Button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-1 rounded-lg bg-secondary/20 p-1">
+            <Button size="sm" variant={emMil ? "default" : "ghost"} onClick={() => setEmMil(true)}>R$ mil</Button>
+            <Button size="sm" variant={!emMil ? "default" : "ghost"} onClick={() => setEmMil(false)}>R$ exato</Button>
+          </div>
+
+          <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+            <input type="checkbox" checked={rebuscarFechados} onChange={e => setRebuscarFechados(e.target.checked)} />
+            Rebuscar meses fechados
+          </label>
 
           <div className="flex gap-1 ml-auto rounded-lg bg-secondary/20 p-1">
             <Button
@@ -720,7 +752,6 @@ export const ContRedeTab = ({ storeId }: Props) => {
               <div className="sticky left-0 bg-secondary/30 backdrop-blur">Conta</div>
               {mesesVisiveis.map(m => <div key={m} className="text-right">{MESES_CURTOS[m - 1]}</div>)}
               <div className="text-right">Total</div>
-              <div className="text-right">% Fat.</div>
             </div>
             {structure.map(renderNode)}
           </div>
