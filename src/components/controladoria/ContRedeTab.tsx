@@ -288,12 +288,25 @@ export const ContRedeTab = ({ storeId }: Props) => {
   const atualizar = async () => {
     if (!storeId || !user) { toast.error("Selecione uma loja"); return; }
     if (!mesesVisiveis.length) return;
+    // Meses fechados (antes do mês anterior) que já têm vendas e lançamentos
+    // salvos não são consultados de novo, a menos que "Rebuscar meses fechados" esteja marcado.
+    const hoje = new Date();
+    const idx = (a: number, m: number) => a * 12 + (m - 1);
+    const limite = idx(hoje.getFullYear(), hoje.getMonth() + 1) - 1;
+    const temLanc = (m: number) => lancamentos.some(l => Number(String(l.data).slice(5, 7)) === m);
+    const alvo = mesesVisiveis.filter(m =>
+      rebuscarFechados || idx(ano, m) >= limite || !vendas[m] || !temLanc(m));
+    const pulados = mesesVisiveis.length - alvo.length;
+    if (!alvo.length) {
+      toast.info("Esses meses já estão salvos. Marque “Rebuscar meses fechados” para buscar de novo.");
+      return;
+    }
     setAtualizando(true);
     let gravados = 0;
     let preservados = 0;
     const pendentes = new Set<string>();
     const falhas: string[] = [];
-    for (const m of mesesVisiveis) {
+    for (const m of alvo) {
       setLendoVendas(`Lendo lançamentos de ${MESES_CURTOS[m - 1]}/${ano} no sistema da loja...`);
       const ini = `${ano}-${String(m).padStart(2, "0")}-01`;
       const fim = new Date(ano, m, 0).toISOString().slice(0, 10);
@@ -306,13 +319,14 @@ export const ContRedeTab = ({ storeId }: Props) => {
       for (const d of payload?.detalhe ?? []) preservados += Number(d?.preservados_manual ?? 0);
       for (const p of payload?.pendentes ?? []) pendentes.add(String(p?.id_tipo ?? p));
     }
-    const nomes = mesesVisiveis.map(m => MESES_CURTOS[m - 1]).join(", ");
+    const nomes = alvo.map(m => MESES_CURTOS[m - 1]).join(", ") +
+      (pulados ? ` · ${pulados} mês(es) fechado(s) usados do salvo` : "");
     if (falhas.length) toast.error(`Falha ao ler o sistema da loja em: ${falhas.join(", ")}`);
     toast.success(`${gravados} lançamento(s) atualizados (${nomes})` +
       (preservados ? ` · ${preservados} edição(ões) manual(is) preservada(s)` : "") +
       (pendentes.size ? ` · ${pendentes.size} tipo(s) de pagamento sem classificação` : ""));
     await fetchData();
-    await fetchVendas(true, mesesVisiveis);
+    await fetchVendas(true, alvo);
     setAtualizando(false);
   };
 
