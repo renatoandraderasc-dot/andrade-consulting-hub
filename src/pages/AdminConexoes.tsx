@@ -46,7 +46,7 @@ const relatoriosDoSistema = (sistema?: string | null) =>
 const pendencias = (r: Row): string[] => {
   const out: string[] = [];
   if (!r.api_url && !r.api_key && !r.sistema) return ["Conexão não cadastrada (sem ERP configurado)"];
-  if (!r.sistema) out.push("Definir o sistema (VR / ORACLE / WEBSAC)");
+  if (!r.sistema) out.push("Definir o sistema (VR / ORACLE / WEBSAC / DIRECTOR / SISCOMP)");
   if (!r.api_url || /SEU-DOMINIO|SEU_DOMINIO|example/i.test(r.api_url))
     out.push("Informar a URL real do conector (URL ainda é placeholder)");
   if (!r.api_key) out.push("Informar a chave de acesso da API");
