@@ -76,21 +76,28 @@ export async function chamarRelatorio(
   const vazio = { dados: [] as any[], indisponivel: false, offline: false, erro: null as string | null };
   if (!storeId) return vazio;
 
-  const { data, error } = await supabase.functions.invoke("vr-proxy", {
-    body: { store_id: storeId, relatorio, params, ...(opts.forcar ? { forcar: true } : {}) },
-  });
-
+  let data: any = null;
   let msg = "";
-  if (error) {
-    let corpo: any = null;
-    try {
-      corpo = await (error as any)?.context?.json?.();
-    } catch {
-      corpo = null;
+  // Ponte ocupada (fila da loja cheia): espera e tenta de novo, ate 3 vezes.
+  for (const espera of [0, 10000, 20000, 30000]) {
+    if (espera) await new Promise((ok) => setTimeout(ok, espera));
+    const resp = await supabase.functions.invoke("vr-proxy", {
+      body: { store_id: storeId, relatorio, params, ...(opts.forcar ? { forcar: true } : {}) },
+    });
+    data = resp.data;
+    msg = "";
+    if (resp.error) {
+      let corpo: any = null;
+      try {
+        corpo = await (resp.error as any)?.context?.json?.();
+      } catch {
+        corpo = null;
+      }
+      msg = String(corpo?.erro ?? resp.error.message ?? "");
+    } else if ((data as any)?.erro) {
+      msg = String((data as any).erro);
     }
-    msg = String(corpo?.erro ?? error.message ?? "");
-  } else if ((data as any)?.erro) {
-    msg = String((data as any).erro);
+    if (!/ponte ocupada/i.test(msg)) break;
   }
 
   if (msg) {
