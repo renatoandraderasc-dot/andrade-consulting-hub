@@ -148,15 +148,14 @@ export default function MargemBaixa() {
       const inicio = iso(range.from), fim = iso(range.to);
       const limite = await maxDiasConsulta(storeId);
       const dias = differenceInCalendarDays(range.to, range.from) + 1;
-      const [r, cadastro] = await Promise.all([
-        limite > 0 && dias > limite
+      // Uma consulta por vez: a ponte da loja atende apenas uma fila.
+      const r = await (limite > 0 && dias > limite
           ? chamarRelatorioFatiado(storeId, "ranking_produtos", { inicio, fim, limite: 200000 }, {
               diasPorLote: limite,
               onProgresso: (f, t) => setProgresso(`${f}/${t} partes`),
             })
-          : chamarRelatorio(storeId, "ranking_produtos", { inicio, fim, limite: 200000 }),
-        chamarRelatorio(storeId, "produtos", {}).catch(() => null),
-      ]);
+          : chamarRelatorio(storeId, "ranking_produtos", { inicio, fim, limite: 200000 }));
+      const cadastro = await chamarRelatorio(storeId, "produtos", {}).catch(() => null);
       const msg = avisoRelatorio(r);
       if (msg) { setAviso(msg); return; }
       if (r.aviso) setAviso(r.aviso);
