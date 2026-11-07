@@ -17,7 +17,7 @@ it("restaura fórmula, Dashboard, taxas, ativos, históricos, centavos e protege
     CREATE TABLE compras_departamento(store_id uuid,departamento text,tx_recuperacao numeric,tx_perdas numeric,ativo boolean);
     CREATE TABLE compras_historico(store_id uuid,departamento text,ano int,mes int,venda numeric,cmv numeric,compra numeric);
     CREATE TABLE compras_meta(store_id uuid,departamento text,ano int,mes int,participacao numeric,meta_venda numeric,meta_compra numeric,parcela_excesso numeric,compra_sobre_venda numeric,venda_hist numeric,cmv_hist numeric,compra_hist numeric,cmv_pct numeric,excesso_hist numeric,gerado_em timestamptz,meta_lucro numeric,meta_pagamentos numeric,UNIQUE(store_id,departamento,ano,mes));
-    ${definition}
+    ${definition};
     INSERT INTO compras_config VALUES ('00000000-0000-0000-0000-000000000001',2026,11,999,6,'2026-10-01','2026-10-31');
     INSERT INTO compras_departamento SELECT '00000000-0000-0000-0000-000000000001',d,100,3,true FROM unnest(ARRAY['A','B','C']) d;
     INSERT INTO compras_departamento VALUES ('00000000-0000-0000-0000-000000000001','INATIVO',1,0,false);
