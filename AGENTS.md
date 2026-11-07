@@ -11,3 +11,4 @@ PIC TV weather uses browser-authorized location with Open-Meteo and degrades ind
 - TV price artwork uses a single full-height grid whose rows own their alternating stripe, product and price; this prevents independently positioned backgrounds from crossing product labels.
 - Every client page renders inside ClientLayout, which mounts the floating PrintTelaButton (PNG capture of the main area); new screens get it automatically by using ClientLayout.
 - Comparativo de Departamentos e Produtos reads ranking_produtos one month at a time and stores closed months as compact rows in painel_periodo_cache (relatorio comparativo_produtos_v1); the store-wide receipt count comes from cupons_e_ticket because summing per-department receipts would double count.
+- Dashboard daily realized sales use vendas_secao_dia for DIRECTOR via consultarVendasDiarias, with sequential per-day fallback for undated responses; period totals must not be assigned to the first day.
