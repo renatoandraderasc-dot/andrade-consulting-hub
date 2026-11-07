@@ -36,48 +36,7 @@ export function segmentosMes(ano: number, mes: number): { semana: number; seg?: 
   return out;
 }
 
-export default function CalendarioPromocionalTab({ storeId }: { storeId: string }) {
-  const hoje = new Date();
-  const [ano, setAno] = useState(hoje.getFullYear());
-  const [mes, setMes] = useState(hoje.getMonth());
-  const [camps, setCamps] = useState<Record<string, Camp>>({});
-
-  const semanas = useMemo(() => segmentosMes(ano, mes), [ano, mes]);
-
-  useEffect(() => {
-    if (!storeId) return;
-    const ini = iso(new Date(ano, mes, 1)), fim = iso(new Date(ano, mes + 1, 0));
-    supabase.from("calendario_promocional").select("*").eq("store_id", storeId)
-      .gte("data_inicio", ini).lte("data_inicio", fim)
-      .then(({ data, error }) => {
-        if (error) { toast.error(error.message); return; }
-        const m: Record<string, Camp> = {};
-        (data || []).forEach((c: any) => { m[c.data_inicio] = c; });
-        setCamps(m);
-      });
-  }, [storeId, ano, mes]);
-
-  const salvar = async (s: Seg, patch: Partial<Camp>) => {
-    const k = iso(s.inicio);
-    const atual: Camp = camps[k] ?? { data_inicio: k, data_fim: iso(s.fim), nome: "", agv_pct: null, destaque: false };
-    const novo = { ...atual, ...patch };
-    setCamps((p) => ({ ...p, [k]: novo }));
-    const payload = { store_id: storeId, data_inicio: novo.data_inicio, data_fim: iso(s.fim), nome: novo.nome, agv_pct: novo.agv_pct, destaque: novo.destaque, updated_at: new Date().toISOString() };
-    const q = novo.id
-      ? supabase.from("calendario_promocional").update(payload).eq("id", novo.id).select().single()
-      : supabase.from("calendario_promocional").insert(payload).select().single();
-    const { data, error } = await q;
-    if (error) { toast.error(error.message); return; }
-    setCamps((p) => ({ ...p, [k]: { ...p[k], id: (data as any).id } }));
-  };
-
-  const mudarMes = (d: number) => {
-    const n = new Date(ano, mes + d, 1);
-    setAno(n.getFullYear()); setMes(n.getMonth());
-  };
-
-  const Bloco = ({ s }: { s: Seg }) => {
-    const c = camps[iso(s.inicio)];
+export const BlocoCampanha = ({ s, c, salvar }: { s: Seg; c?: Camp; salvar: (s: Seg, patch: Partial<Camp>) => unknown }) => {
     const [nome, setNome] = useState(c?.nome ?? "");
     const [agv, setAgv] = useState(c?.agv_pct != null ? String(c.agv_pct) : "");
     useEffect(() => { setNome(c?.nome ?? ""); setAgv(c?.agv_pct != null ? String(c.agv_pct) : ""); }, [c?.nome, c?.agv_pct]);
@@ -122,6 +81,48 @@ export default function CalendarioPromocionalTab({ storeId }: { storeId: string 
     );
   };
 
+
+export default function CalendarioPromocionalTab({ storeId }: { storeId: string }) {
+  const hoje = new Date();
+  const [ano, setAno] = useState(hoje.getFullYear());
+  const [mes, setMes] = useState(hoje.getMonth());
+  const [camps, setCamps] = useState<Record<string, Camp>>({});
+
+  const semanas = useMemo(() => segmentosMes(ano, mes), [ano, mes]);
+
+  useEffect(() => {
+    if (!storeId) return;
+    const ini = iso(new Date(ano, mes, 1)), fim = iso(new Date(ano, mes + 1, 0));
+    supabase.from("calendario_promocional").select("*").eq("store_id", storeId)
+      .gte("data_inicio", ini).lte("data_inicio", fim)
+      .then(({ data, error }) => {
+        if (error) { toast.error(error.message); return; }
+        const m: Record<string, Camp> = {};
+        (data || []).forEach((c: any) => { m[c.data_inicio] = c; });
+        setCamps(m);
+      });
+  }, [storeId, ano, mes]);
+
+  const salvar = async (s: Seg, patch: Partial<Camp>) => {
+    const k = iso(s.inicio);
+    const atual: Camp = camps[k] ?? { data_inicio: k, data_fim: iso(s.fim), nome: "", agv_pct: null, destaque: false };
+    const novo = { ...atual, ...patch };
+    setCamps((p) => ({ ...p, [k]: novo }));
+    const payload = { store_id: storeId, data_inicio: novo.data_inicio, data_fim: iso(s.fim), nome: novo.nome, agv_pct: novo.agv_pct, destaque: novo.destaque, updated_at: new Date().toISOString() };
+    const q = novo.id
+      ? supabase.from("calendario_promocional").update(payload).eq("id", novo.id).select().single()
+      : supabase.from("calendario_promocional").insert(payload).select().single();
+    const { data, error } = await q;
+    if (error) { toast.error(error.message); return; }
+    setCamps((p) => ({ ...p, [k]: { ...p[k], id: (data as any).id } }));
+  };
+
+  const mudarMes = (d: number) => {
+    const n = new Date(ano, mes + d, 1);
+    setAno(n.getFullYear()); setMes(n.getMonth());
+  };
+
+
   if (!storeId) return <Card className="p-6 text-muted-foreground">Selecione uma loja.</Card>;
 
   return (
@@ -152,7 +153,7 @@ export default function CalendarioPromocionalTab({ storeId }: { storeId: string 
           <div key={w.semana} className="col-span-7 grid grid-cols-7 gap-3">
             {[w.seg, w.fds].map((s, i) => s && (
               <div key={i} style={{ gridColumn: `${((s.inicio.getDay() + 6) % 7) + 1} / span ${Math.round((s.fim.getTime() - s.inicio.getTime()) / 86400000) + 1}` }}>
-                <Bloco s={s} />
+                <BlocoCampanha key={`${storeId}:${iso(s.inicio)}`} s={s} c={camps[iso(s.inicio)]} salvar={salvar} />
               </div>
             ))}
           </div>
