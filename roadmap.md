@@ -3,7 +3,7 @@
 # Revisão dos seis alertas
 - [x] Restaurar fórmula de metas com ajuste de centavos e preservar metas dos compradores; definição real testada em PostgreSQL descartável.
 - [x] Preservar foco e texto ao salvar campanhas; teste aprovado.
-- [ ] Complemento de vendas desde última entrada no Estoque Dinâmico: aguarda aprovação do plano, pois a ponte fornece primeira compra e não última entrada confiável.
+- [x] Complementar vendas desde última entrada por datas verificadas em analise_compras, sequencialmente até D-1; cinco testes aprovados. Produto 270410 confirmado no cache com entrada 30/09 e 75 unidades; conferência ao vivo bloqueada por acesso da sessão à loja.
 - [x] Evitar soma duplicada de metas no Dashboard Financeiro; teste aprovado.
 - [x] Corrigir imagem de premiação no celular; captura 768px validada. Conferência das páginas com dados reais bloqueada pelas permissões da sessão disponível.
 
