@@ -309,6 +309,13 @@
       "when": 1793301255206,
       "tag": "0043_calendario_promocional",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1794094895748,
+      "tag": "0044_restaurar_metas_compra_com_centavos",
+      "breakpoints": true
     }
   ]
 }
