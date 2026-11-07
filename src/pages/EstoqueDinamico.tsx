@@ -188,18 +188,15 @@ const EstoqueDinamico = () => {
     if (!storeId || !range?.from || !range?.to) return;
     setLoading(true); setAviso(null); setPage(1);
     try {
-      const [r, cadastro, estoqueAtual, produtosAtivos] = await limitarEspera(Promise.all([
-        // Vendas: da ultima entrada de cada produto ate D-1 (ignora o fim do filtro).
-        chamarRelatorio(storeId, "estoque_dinamico", {
-          inicio: iso(range.from),
-          fim: iso(subDays(new Date(), 1)),
-        }),
-        chamarRelatorio(storeId, "produtos", {}).catch(() => null),
-        chamarRelatorio(storeId, "estoque_atual", {}).catch(() => null),
-        chamarRelatorio(storeId, "produtos_ativos_12m", {}).catch(() => null),
-      ]));
+      // Uma consulta por vez evita disputar a fila das pontes lentas.
+      const r = await limitarEspera(chamarRelatorio(storeId, "estoque_dinamico", {
+        inicio: iso(range.from), fim: iso(subDays(new Date(), 1)),
+      }), 130000);
       const msg = avisoRelatorio(r);
       if (msg) { setAviso(msg); return; }
+      const cadastro = await limitarEspera(chamarRelatorio(storeId, "produtos", {}), 130000).catch(() => null);
+      const estoqueAtual = await limitarEspera(chamarRelatorio(storeId, "estoque_atual", {}), 130000).catch(() => null);
+      const produtosAtivos = await limitarEspera(chamarRelatorio(storeId, "produtos_ativos_12m", {}), 130000).catch(() => null);
 
       const porCodigo = new Map<string, any>();
       for (const l of cadastro?.dados || []) {
