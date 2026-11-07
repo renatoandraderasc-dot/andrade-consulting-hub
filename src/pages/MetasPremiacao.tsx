@@ -193,7 +193,8 @@ const MetasPremiacao = () => {
 
   // Converte imagens externas em data URL antes da captura (evita canvas "tainted" por CORS)
   const gerarBlob = async (): Promise<Blob> => {
-    const el = cartazRef.current!;
+    const el = cartazRef.current;
+    if (!el) throw new Error("Cartaz não disponível.");
     const imgs = Array.from(el.querySelectorAll("img"));
     const originais = new Map<HTMLImageElement, string>();
     await Promise.all(imgs.map(async (img) => {
@@ -208,7 +209,18 @@ const MetasPremiacao = () => {
       } catch { /* mantém original */ }
     }));
     try {
+      // Mede o cartaz no mesmo tamanho usado pelo clone e pelo PNG, inclusive no celular.
+      const larguraAnterior = el.style.width;
+      const maxAnterior = el.style.maxWidth;
+      el.style.width = "768px";
+      el.style.maxWidth = "768px";
+      await document.fonts.ready;
+      const altura = el.getBoundingClientRect().height;
+      el.style.width = larguraAnterior;
+      el.style.maxWidth = maxAnterior;
       return await gerarFotoElemento(el, {
+        width: 768,
+        height: altura,
         backgroundColor: "#f4f4f4",
         pixelRatio: 2,
         style: { width: "768px", maxWidth: "768px", borderRadius: "0" },

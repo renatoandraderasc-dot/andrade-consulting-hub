@@ -1,5 +1,12 @@
 # Ajustes do Painel de Compras
 
+# Revisão dos seis alertas
+- [x] Restaurar fórmula de metas com ajuste de centavos e preservar metas dos compradores; definição real testada em PostgreSQL descartável.
+- [x] Preservar foco e texto ao salvar campanhas; teste aprovado.
+- [ ] Complemento de vendas desde última entrada no Estoque Dinâmico: aguarda aprovação do plano, pois a ponte fornece primeira compra e não última entrada confiável.
+- [x] Evitar soma duplicada de metas no Dashboard Financeiro; teste aprovado.
+- [x] Corrigir imagem de premiação no celular; captura 768px validada. Conferência das páginas com dados reais bloqueada pelas permissões da sessão disponível.
+
 # Escala de Funcionários
 - [x] Receber e preservar o motor e seus testes; 17 testes aprovados.
 - [x] Preparar as tabelas e permissões da escala, protegendo rascunhos e vínculos entre lojas.
