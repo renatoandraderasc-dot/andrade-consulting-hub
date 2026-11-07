@@ -1,6 +1,8 @@
 import { toBlob } from "html-to-image";
 
 interface FotoOptions {
+  width?: number;
+  height?: number;
   pixelRatio?: number;
   backgroundColor?: string;
   cacheBust?: boolean;
@@ -13,8 +15,8 @@ interface FotoOptions {
  * vertical que o html2canvas causa em rótulos e números.
  */
 export async function gerarFotoElemento(el: HTMLElement, opts: FotoOptions = {}): Promise<Blob> {
-  const { pixelRatio = 2, backgroundColor, cacheBust = false, style } = opts;
-  const opcoes = { pixelRatio, backgroundColor, cacheBust, style };
+  const { pixelRatio = 2, backgroundColor, cacheBust = false, style, width, height } = opts;
+  const opcoes = { pixelRatio, backgroundColor, cacheBust, style, width, height };
   // A primeira passada embute fontes e imagens no clone; é descartada.
   await toBlob(el, opcoes);
   const blob = await toBlob(el, opcoes);

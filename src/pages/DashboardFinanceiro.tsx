@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { chamarRelatorio, num, pick } from "@/lib/vrReport";
 import { formatBRL } from "@/lib/formatters";
+import { somarMetasDepartamento } from "@/lib/metaCompraDepartamento";
 
 const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
@@ -104,7 +105,7 @@ const DashboardFinanceiro = () => {
       const [l, la, meta, cv, cvAnt, vs, rec, recAnt] = await Promise.all([
         somaLanc(ano, mes),
         somaLanc(anoAnt, mesAnt),
-        supabase.from("compras_meta").select("meta_compra").eq("store_id", storeId).eq("ano", ano).eq("mes", mes),
+        supabase.from("compras_meta").select("departamento, meta_compra").eq("store_id", storeId).eq("ano", ano).eq("mes", mes),
         chamarRelatorio(storeId, "compras_vendas_periodo", { inicio: atual.inicio, fim: atual.fim }),
         chamarRelatorio(storeId, "compras_vendas_periodo", { inicio: anterior.inicio, fim: anterior.fim }),
         chamarRelatorio(storeId, "vendas_secao_periodo", { inicio: atual.inicio, fim: atual.fim }),
@@ -114,7 +115,7 @@ const DashboardFinanceiro = () => {
 
       setLanc(l);
       setLancAnt(la);
-      setMetaCompra(((meta.data as any[]) || []).reduce((s, r) => s + (Number(r.meta_compra) || 0), 0));
+      setMetaCompra(somarMetasDepartamento(meta.data || []));
 
       const somaCompra = (r: any) =>
         (r.dados || []).reduce((s: number, x: any) => s + num(pick(x, "valor_compra", "total_compra", "compra")), 0);
