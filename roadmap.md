@@ -1,5 +1,12 @@
 # Ajustes do Painel de Compras
 
+# Revisão dos seis alertas
+- [ ] Restaurar fórmula de metas com ajuste de centavos e preservar metas dos compradores.
+- [ ] Preservar foco e texto ao salvar campanhas.
+- [ ] Verificar complemento de vendas desde última entrada no Estoque Dinâmico.
+- [ ] Evitar soma duplicada de metas no Dashboard Financeiro.
+- [ ] Corrigir imagem de premiação no celular e validar alterações.
+
 # Escala de Funcionários
 - [x] Receber e preservar o motor e seus testes; 17 testes aprovados.
 - [x] Preparar as tabelas e permissões da escala, protegendo rascunhos e vínculos entre lojas.
