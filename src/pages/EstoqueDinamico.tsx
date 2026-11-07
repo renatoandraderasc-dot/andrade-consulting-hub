@@ -15,6 +15,7 @@ import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
 import { supabase } from "@/integrations/supabase/client";
 import { ALIAS_EAN, chamarRelatorio, avisoRelatorio, pick as col, num } from "@/lib/vrReport";
 import { mercadologicoNivel1, mercadologicoNivel2, mercadologicoNivel3 } from "@/lib/mercadologico";
+import { aplicarComprasFiltradas, complementarVendasEstoque } from "@/lib/estoqueVendas";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -216,7 +217,7 @@ const EstoqueDinamico = () => {
           .filter(Boolean),
       );
 
-    const base: Linha[] = (r.dados || []).map((l: any) => {
+    let base: Linha[] = (r.dados || []).map((l: any) => {
       const codigo = String(col(l, "codigo", "cod", "cod_produto", "id_produto") ?? "");
       const produto = porCodigo.get(codigo);
       const estoque = estoquePorCodigo.get(codigo);
@@ -233,7 +234,7 @@ const EstoqueDinamico = () => {
         grupo: mercadologicoNivel2(l) || mercadologicoNivel2(produto),
         subgrupo: mercadologicoNivel3(l) || mercadologicoNivel3(produto),
         ultimaCompra: String(
-          col(l, "ultima_compra", "data_ultima_compra", "dt_ultima_compra", "ultima_entrada", "primeira_compra") ??
+          col(l, "ultima_compra", "data_ultima_compra", "dt_ultima_compra", "ultima_entrada") ??
           col(estoque, "ultima_compra", "data_ultima_compra", "dt_ultima_compra") ?? "",
         ),
         ultimaVenda: String(
@@ -270,30 +271,23 @@ const EstoqueDinamico = () => {
       l.codigo && l.departamento && (codigosAtivos.size === 0 || codigosAtivos.has(l.codigo)),
     );
 
-    // Algumas pontes VR contam a compra em embalagens (caixas) e so somam a
-    // venda a partir da primeira compra. Complementamos com:
-    //  - ranking_produtos: venda total real do periodo inteiro;
-    //  - analise_compras: quantidade total comprada em unidades.
-    // Compras respeitam o filtro de datas (quantidade total em unidades).
+    // Compras seguem o filtro; vendas precisam da última entrada real até D-1.
     const ac = await limitarEspera(chamarRelatorio(storeId, "analise_compras", {
       inicio: iso(range.from), fim: iso(range.to),
-    }), 130000).catch(() => null);
-    const comprasPorCodigo = new Map<string, { qtd: number; valor: number }>();
-    for (const l of (ac?.dados as any[]) || []) {
-      const cod = String(col(l, "codigo", "cod", "cod_produto", "id_produto") ?? "");
-      if (!cod) continue;
-      const cur = comprasPorCodigo.get(cod) ?? { qtd: 0, valor: 0 };
-      cur.qtd += num(col(l, "qtd_compra", "quantidade"));
-      cur.valor += num(col(l, "valor_compra", "valor_total"));
-      comprasPorCodigo.set(cod, cur);
-    }
-    for (const l of base) {
-      const c = comprasPorCodigo.get(l.codigo);
-      if (c && c.qtd > 0) { l.qtdCompra = c.qtd; if (c.valor > 0) l.valorCompra = c.valor; }
-      if (c) {
-        l.progresso = l.qtdCompra > 0 ? (l.qtdVenda / l.qtdCompra) * 100 : 0;
-        l.estoqueDinamico = l.qtdCompra - l.qtdVenda;
-      }
+    }), 130000);
+    const avisoCompra = avisoRelatorio(ac);
+    if (avisoCompra) throw new Error(avisoCompra);
+    const precisaComplemento = base.length > 0 && (
+      base.every(l => l.qtdVenda === 0 && l.valorVenda === 0) ||
+      base.some(l => !l.ultimaCompra)
+    );
+    base = aplicarComprasFiltradas(base, ac.dados);
+    if (precisaComplemento) {
+      base = await complementarVendasEstoque(base, iso(range.from), iso(range.to), iso(subDays(new Date(), 1)),
+        (relatorio, params) => chamarRelatorio(storeId, relatorio, params));
+    } else {
+      base = base.map(l => ({ ...l, progresso: l.qtdCompra > 0 ? l.qtdVenda / l.qtdCompra * 100 : 0,
+        estoqueDinamico: l.qtdCompra - l.qtdVenda }));
     }
 
     // Classificacao ABC sobre o resultado inteiro (antes dos filtros)
@@ -310,9 +304,9 @@ const EstoqueDinamico = () => {
     });
 
       setLinhas(base);
-    } catch {
+    } catch (e) {
       setAviso(
-        linhas?.length
+        e instanceof Error && e.message !== "consulta_timeout" ? e.message : linhas?.length
           ? "A nova consulta demorou mais que o esperado. Mantivemos os últimos dados exibidos."
           : "A consulta demorou mais que o esperado. Tente novamente com um intervalo menor.",
       );

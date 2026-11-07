@@ -15,3 +15,4 @@ PIC TV weather uses browser-authorized location with Open-Meteo and degrades ind
 - Purchase target generation preserves aggregated LOJA/GERAL rows and the established loss/recovery formula; financial totals sum only department rows to avoid double counting buyer targets.
 - Calendar campaign blocks have stable component identity, so asynchronous saves do not reset another block's focus or draft.
 - Fixed-format prize image exports pass measured layout width and height to the image renderer; clone styles alone do not set canvas dimensions.
+- Dynamic stock fallback groups product rankings by verified last-entry dates through D-1, queries sequentially, and rejects incomplete results; first-purchase dates are never treated as last entries.
