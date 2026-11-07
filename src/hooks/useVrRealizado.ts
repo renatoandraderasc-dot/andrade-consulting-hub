@@ -3,11 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { lucroDaLinha } from "@/lib/vrReport";
 import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
 import { mercadologicoNivel1, mercadologicoNivel2, abrirDepartamentoOutros } from "@/lib/mercadologico";
+import { consultarVendasDiarias } from "@/lib/vendasDiarias";
 
 // ============================================================
 // Leitura AO VIVO do realizado do VR (nada e gravado no banco).
 // Consulta a edge function vr-proxy com o relatorio
-// vendas_secao_periodo e agrega no front por departamento
+// vendas_secao_periodo (vendas_secao_dia no DIRECTOR) e agrega por departamento
 // usando o mapeamento de vr_secao_departamento.
 // Secoes sem mapeamento somam apenas no total da loja (LOJA).
 // O filtro por categoria (mercadologico nivel 1) e feito no front,
@@ -107,11 +108,16 @@ export function canonDept(s: string): string {
 }
 
 async function loadRaw(storeId: string, inicio: string, fim: string, forcar = false): Promise<RawResult> {
+  const { data: config, error: configError } = await supabase
+    .from("store_vr_config").select("sistema").eq("store_id", storeId).maybeSingle();
+  if (configError) throw new Error(configError.message);
   const [{ data: mapas }, { data: proxy, error }, posv, kpi, ranking] = await Promise.all([
     supabase.from("vr_secao_departamento").select("secao_vr, department").eq("store_id", storeId),
-    supabase.functions.invoke("vr-proxy", {
-      body: { store_id: storeId, relatorio: "vendas_secao_periodo", params: { inicio, fim }, forcar },
-    }),
+    consultarVendasDiarias(config?.sistema, inicio, fim, (relatorio, params) =>
+      supabase.functions.invoke("vr-proxy", {
+        body: { store_id: storeId, relatorio, params, forcar },
+      }),
+    ),
     // Positivacao de mix: produtos distintos vendidos pela primeira vez no dia.
     // Somados no mes dao a quantidade de produtos diferentes vendidos (mix continuo).
     supabase.functions
@@ -176,7 +182,7 @@ async function loadRaw(storeId: string, inicio: string, fim: string, forcar = fa
 
   const linhas: VrLinha[] = [];
   for (const l of brutas) {
-    // Pontes DIRECTOR (ex.: Medeiros) devolvem o periodo totalizado, sem data.
+    // DIRECTOR chega aqui com datas reais, inclusive nas pontes antigas.
     const date = String(pick(l, "data", "dia") ?? "").slice(0, 10) || inicio;
     linhas.push({
       date,
@@ -355,9 +361,8 @@ export function useVrRealizado(
       if (!storeId || !inicio || !fim) return "ignorado" as const;
       const key = `${storeId}|${inicio}|${fim}`;
       const cached = cache.get(key);
-      const fresh = cached && Date.now() - cached.at < TTL_MS && !force;
-      const entry: CacheEntry = fresh
-        ? cached!
+      const entry: CacheEntry = cached && Date.now() - cached.at < TTL_MS && !force
+        ? cached
         : { at: Date.now(), promise: loadRaw(storeId, inicio, fim, force) };
       cache.set(key, entry);
 
