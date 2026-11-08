@@ -9,8 +9,8 @@
 //   - vendas/custo por departamento -> ranking_produtos (secao)
 // Nada e gravado; tudo roda sob acao do usuario.
 // ============================================================
-import { chamarRelatorio, pick as col, num } from "@/lib/vrReport";
-import { mercadologicoNivel1 } from "@/lib/mercadologico";
+import { chamarRelatorio } from "@/lib/vrReport";
+import { abrirDepartamentoOutros, mercadologicoNivel1 } from "@/lib/mercadologico";
 
 export interface LinhaComprasVendas {
   departamento: string;
@@ -31,42 +31,21 @@ export function comprasAgrupadas(linhas: any[]): boolean {
   return nomes.has("OUTROS");
 }
 
-/** Remonta a abertura por departamento. Devolve null se nao for possivel. */
+/**
+ * Abre o balde "OUTROS" pelos departamentos reais do ranking de produtos,
+ * rateando os valores OFICIAIS de compra/venda/CMV da propria linha OUTROS
+ * pelo peso de venda de cada departamento. O total fica identico ao do ERP.
+ * Nunca zera compras: se o ranking falhar, devolve null (mantem as linhas base).
+ */
 export async function detalharComprasVendas(
   storeId: string,
   inicio: string,
   fim: string,
-): Promise<LinhaComprasVendas[] | null> {
-  const [compras, vendas] = await Promise.all([
-    chamarRelatorio(storeId, "estoque_dinamico", { inicio, fim }).catch(() => ({ dados: [] as any[], erro: "x" })),
-    chamarRelatorio(storeId, "ranking_produtos", { inicio, fim, limite: 200000 }).catch(() => ({ dados: [] as any[], erro: "x" })),
-  ]);
-
-  const acc = new Map<string, LinhaComprasVendas>();
-  const get = (nome: string) => {
-    const k = nome || "SEM DEPARTAMENTO";
-    let cur = acc.get(k);
-    if (!cur) {
-      cur = { departamento: k, venda: 0, cmv: 0, compra: 0, qtde_compra: 0, volume: 0 };
-      acc.set(k, cur);
-    }
-    return cur;
-  };
-
-  for (const l of compras.dados ?? []) {
-    const cur = get(mercadologicoNivel1(l));
-    cur.compra += num(col(l, "valor_comprado", "total_compra", "compra", "compras"));
-    cur.qtde_compra += num(col(l, "qtd_comprada", "qtde_compra"));
-  }
-
-  for (const l of vendas.dados ?? []) {
-    const cur = get(mercadologicoNivel1(l));
-    cur.venda += num(col(l, "valor", "venda", "vendas", "total_vendido", "total_venda"));
-    cur.cmv += num(col(l, "custo", "cmv"));
-    cur.volume += num(col(l, "qtd", "quantidade", "volume"));
-  }
-
-  const linhas = [...acc.values()].filter((l) => l.compra > 0 || l.venda > 0);
-  if (linhas.length < 2) return null;
-  return linhas.sort((a, b) => b.compra - a.compra);
+  base: any[] = [],
+): Promise<any[] | null> {
+  if (!base.length) return null;
+  const vendas = await chamarRelatorio(storeId, "ranking_produtos", { inicio, fim, limite: 200000 })
+    .catch(() => ({ dados: [] as any[] }));
+  const abertas = abrirDepartamentoOutros(base, vendas.dados ?? []);
+  return abertas === base ? null : abertas;
 }

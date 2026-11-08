@@ -114,7 +114,7 @@ const MetasPremiacaoCompradores = () => {
       // têm a abertura remontada antes de somar.
       let linhasCompra: any[] = r.dados ?? [];
       if (comprasAgrupadas(linhasCompra)) {
-        const det = await detalharComprasVendas(storeId, inicio, fim);
+        const det = await detalharComprasVendas(storeId, inicio, fim, linhasCompra);
         if (det) linhasCompra = det as any[];
       }
       const depsComMeta = new Set(
