@@ -254,7 +254,7 @@ const Compras = () => {
       // Pontes que devolvem tudo em "OUTROS": remonta a abertura completa.
       let linhas = r.dados;
       if (comprasAgrupadas(linhas)) {
-        const detalhe = await detalharComprasVendas(storeId, inicio, fim);
+        const detalhe = await detalharComprasVendas(storeId, inicio, fim, linhas);
         if (detalhe) linhas = detalhe as any[];
       }
       // agrupa por departamento via vr_secao_departamento
@@ -296,7 +296,7 @@ const Compras = () => {
       setCvAviso(avisoRelatorio(r));
       let linhas = r.dados;
       if (comprasAgrupadas(linhas)) {
-        const detalhe = await detalharComprasVendas(storeId, cvInicio, cvFim);
+        const detalhe = await detalharComprasVendas(storeId, cvInicio, cvFim, linhas);
         if (detalhe) linhas = detalhe as any[];
       }
       setCvLinhas(linhas);
