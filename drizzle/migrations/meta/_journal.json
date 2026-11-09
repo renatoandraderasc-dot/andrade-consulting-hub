@@ -316,6 +316,13 @@
       "when": 1794094895748,
       "tag": "0044_restaurar_metas_compra_com_centavos",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1794261791554,
+      "tag": "0045_recebimento_nfe",
+      "breakpoints": true
     }
   ]
 }

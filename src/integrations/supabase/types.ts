@@ -2457,6 +2457,50 @@ export type Database = {
         }
         Relationships: []
       }
+      lista_cega_itens: {
+        Row: {
+          codproduto: number | null
+          contado_em: string
+          contado_por: string
+          descricao: string | null
+          ean: string
+          id: number
+          qtd_contada: number
+          recebimento_id: string
+          rodada: number
+        }
+        Insert: {
+          codproduto?: number | null
+          contado_em?: string
+          contado_por: string
+          descricao?: string | null
+          ean: string
+          id?: number
+          qtd_contada: number
+          recebimento_id: string
+          rodada?: number
+        }
+        Update: {
+          codproduto?: number | null
+          contado_em?: string
+          contado_por?: string
+          descricao?: string | null
+          ean?: string
+          id?: number
+          qtd_contada?: number
+          recebimento_id?: string
+          rodada?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lista_cega_itens_recebimento_id_fkey"
+            columns: ["recebimento_id"]
+            isOneToOne: false
+            referencedRelation: "recebimentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       margens_padrao: {
         Row: {
           created_at: string
@@ -2978,6 +3022,283 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      recebimento_config: {
+        Row: {
+          atualizado_em: string
+          dias_max_emissao: number
+          entrada_automatica: boolean
+          exigir_pedido: boolean
+          recontagens: number
+          store_id: string
+          tolerancia_prazo: number
+          tolerancia_preco: number
+          tolerancia_qtd: number
+        }
+        Insert: {
+          atualizado_em?: string
+          dias_max_emissao?: number
+          entrada_automatica?: boolean
+          exigir_pedido?: boolean
+          recontagens?: number
+          store_id: string
+          tolerancia_prazo?: number
+          tolerancia_preco?: number
+          tolerancia_qtd?: number
+        }
+        Update: {
+          atualizado_em?: string
+          dias_max_emissao?: number
+          entrada_automatica?: boolean
+          exigir_pedido?: boolean
+          recontagens?: number
+          store_id?: string
+          tolerancia_prazo?: number
+          tolerancia_preco?: number
+          tolerancia_qtd?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recebimento_config_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recebimento_criterios: {
+        Row: {
+          avaliado_em: string
+          ciente_em: string | null
+          ciente_por: string | null
+          criterio: number
+          detalhe: Json | null
+          justificativa: string | null
+          nome: string
+          recebimento_id: string
+          resultado: string
+        }
+        Insert: {
+          avaliado_em?: string
+          ciente_em?: string | null
+          ciente_por?: string | null
+          criterio: number
+          detalhe?: Json | null
+          justificativa?: string | null
+          nome: string
+          recebimento_id: string
+          resultado: string
+        }
+        Update: {
+          avaliado_em?: string
+          ciente_em?: string | null
+          ciente_por?: string | null
+          criterio?: number
+          detalhe?: Json | null
+          justificativa?: string | null
+          nome?: string
+          recebimento_id?: string
+          resultado?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recebimento_criterios_recebimento_id_fkey"
+            columns: ["recebimento_id"]
+            isOneToOne: false
+            referencedRelation: "recebimentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recebimento_eventos: {
+        Row: {
+          criado_em: string
+          detalhe: Json | null
+          evento: string
+          id: number
+          recebimento_id: string
+          usuario_id: string | null
+        }
+        Insert: {
+          criado_em?: string
+          detalhe?: Json | null
+          evento: string
+          id?: number
+          recebimento_id: string
+          usuario_id?: string | null
+        }
+        Update: {
+          criado_em?: string
+          detalhe?: Json | null
+          evento?: string
+          id?: number
+          recebimento_id?: string
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recebimento_eventos_recebimento_id_fkey"
+            columns: ["recebimento_id"]
+            isOneToOne: false
+            referencedRelation: "recebimentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recebimento_itens: {
+        Row: {
+          codproduto: number | null
+          cprod: string | null
+          descricao_produto: string | null
+          descricao_xml: string | null
+          ean: string | null
+          fator: number
+          id: number
+          preco_pedido: number | null
+          preco_xml: number | null
+          qtd_pedido: number | null
+          qtd_unidades: number | null
+          qtd_xml: number
+          recebimento_id: string
+          seq_xml: number
+          situacao_pedido: string | null
+          un_xml: string | null
+        }
+        Insert: {
+          codproduto?: number | null
+          cprod?: string | null
+          descricao_produto?: string | null
+          descricao_xml?: string | null
+          ean?: string | null
+          fator?: number
+          id?: number
+          preco_pedido?: number | null
+          preco_xml?: number | null
+          qtd_pedido?: number | null
+          qtd_unidades?: number | null
+          qtd_xml: number
+          recebimento_id: string
+          seq_xml: number
+          situacao_pedido?: string | null
+          un_xml?: string | null
+        }
+        Update: {
+          codproduto?: number | null
+          cprod?: string | null
+          descricao_produto?: string | null
+          descricao_xml?: string | null
+          ean?: string | null
+          fator?: number
+          id?: number
+          preco_pedido?: number | null
+          preco_xml?: number | null
+          qtd_pedido?: number | null
+          qtd_unidades?: number | null
+          qtd_xml?: number
+          recebimento_id?: string
+          seq_xml?: number
+          situacao_pedido?: string | null
+          un_xml?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recebimento_itens_recebimento_id_fkey"
+            columns: ["recebimento_id"]
+            isOneToOne: false
+            referencedRelation: "recebimentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recebimentos: {
+        Row: {
+          atualizado_em: string
+          chave: string
+          cnpj_emitente: string | null
+          codfornec: number | null
+          data_emissao: string | null
+          entrada_confirmada_em: string | null
+          entrada_iniciada_em: string | null
+          estado: string
+          id: string
+          idnfeestabelec: number | null
+          idnotafiscal_entrada: number | null
+          iniciado_em: string
+          iniciado_por: string | null
+          justificativa: string | null
+          liberado_em: string | null
+          liberado_por: string | null
+          nome_emitente: string | null
+          numero_nf: number | null
+          numpedido: number | null
+          pedido_origem: string | null
+          serie: string | null
+          store_id: string
+          total_nf: number | null
+          xml_resumo: Json | null
+        }
+        Insert: {
+          atualizado_em?: string
+          chave: string
+          cnpj_emitente?: string | null
+          codfornec?: number | null
+          data_emissao?: string | null
+          entrada_confirmada_em?: string | null
+          entrada_iniciada_em?: string | null
+          estado?: string
+          id?: string
+          idnfeestabelec?: number | null
+          idnotafiscal_entrada?: number | null
+          iniciado_em?: string
+          iniciado_por?: string | null
+          justificativa?: string | null
+          liberado_em?: string | null
+          liberado_por?: string | null
+          nome_emitente?: string | null
+          numero_nf?: number | null
+          numpedido?: number | null
+          pedido_origem?: string | null
+          serie?: string | null
+          store_id: string
+          total_nf?: number | null
+          xml_resumo?: Json | null
+        }
+        Update: {
+          atualizado_em?: string
+          chave?: string
+          cnpj_emitente?: string | null
+          codfornec?: number | null
+          data_emissao?: string | null
+          entrada_confirmada_em?: string | null
+          entrada_iniciada_em?: string | null
+          estado?: string
+          id?: string
+          idnfeestabelec?: number | null
+          idnotafiscal_entrada?: number | null
+          iniciado_em?: string
+          iniciado_por?: string | null
+          justificativa?: string | null
+          liberado_em?: string | null
+          liberado_por?: string | null
+          nome_emitente?: string | null
+          numero_nf?: number | null
+          numpedido?: number | null
+          pedido_origem?: string | null
+          serie?: string | null
+          store_id?: string
+          total_nf?: number | null
+          xml_resumo?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recebimentos_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       rede_metricas_mensais: {
         Row: {
@@ -4344,6 +4665,30 @@ export type Database = {
           },
           {
             foreignKeyName: "encarte_posicao_regra_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      v_recebimento_painel: {
+        Row: {
+          bloqueadas: number | null
+          cnpj_emitente: string | null
+          codfornec: number | null
+          com_divergencia_contagem: number | null
+          com_ressalva: number | null
+          entradas: number | null
+          mes: string | null
+          minutos_medios: number | null
+          nome_emitente: string | null
+          recebimentos: number | null
+          store_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recebimentos_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
