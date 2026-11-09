@@ -223,11 +223,26 @@ const AnaliseAnual = () => {
         const { data } = await supabase
           .from("relatorio_cache").select("params, dados")
           .eq("store_id", sid).eq("relatorio", "dre_periodo");
+        // Guarda, por mês, o registro com a maior data final (o mais completo).
+        const fimPorMes = new Map<string, string>();
         for (const c of (data as any[]) || []) {
           const ini = String(c.params?.inicio ?? "");
+          const fimC = String(c.params?.fim ?? "");
           if (!/^\d{4}-\d{2}-01$/.test(ini)) continue;
+          const k = ini.slice(0, 7);
+          if ((fimPorMes.get(k) ?? "") >= fimC) continue;
           const linhas = mapearDre(c.dados || []);
-          if (linhas.length) salvos.set(ini.slice(0, 7), linhas);
+          if (linhas.length) { salvos.set(k, linhas); fimPorMes.set(k, fimC); }
+        }
+        // Mês salvo antes de terminar (ex.: 01 a 21/10) fica incompleto:
+        // busca de novo até o último dia (ou ontem, no mês corrente).
+        const ontemD = new Date(); ontemD.setDate(ontemD.getDate() - 1);
+        const isoD = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        for (const [k, fimC] of fimPorMes) {
+          const [a, m] = k.split("-").map(Number);
+          const ult = new Date(a, m, 0);
+          const esperado = ult > ontemD ? isoD(ontemD) : isoD(ult);
+          if (fimC < esperado) salvos.delete(k);
         }
       }
       const base = Array.from(salvos.values()).flat();
