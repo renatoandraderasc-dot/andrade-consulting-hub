@@ -25,6 +25,8 @@ const PERIODICOS = [
   "ranking_produtos", "cupons_e_ticket", "receber_periodo", "pagamentos_periodo",
   "contas_a_pagar", "dre_periodo", "estoque_dinamico", "compras_por_fornecedor",
 ];
+// Guardados dia a dia para sempre (telas montam periodos sem ir na loja)
+const DIARIOS = ["ranking_produtos", "compras_vendas_periodo"];
 const SNAPSHOT = ["produtos", "produtos_precos", "estoque_atual", "produtos_ativos_12m"];
 const MESES_HISTORICO = ["resultados_mensais", "resultados_mensais_depto", "rede_mensal", "mix_trimestre"];
 
@@ -71,7 +73,7 @@ Deno.serve(async (req) => {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const service = createClient(supabaseUrl, serviceKey);
 
-  let body: { store_id?: string; so_existentes?: boolean } = {};
+  let body: { store_id?: string; so_existentes?: boolean; backfill?: { inicio: string; fim: string } } = {};
   try { body = await req.json(); } catch { /* sem corpo */ }
 
   let q = service
@@ -95,6 +97,14 @@ Deno.serve(async (req) => {
     const add = (relatorio: string, params: Record<string, unknown>) =>
       alvos.set(`${relatorio}|${JSON.stringify(params)}`, { relatorio, params });
 
+    // Hub diario: so grava dias faltantes do periodo pedido (carga do historico)
+    if (body.backfill && body.store_id) {
+      const { data: tem } = await service.from("relatorio_cache").select("relatorio, params_chave")
+        .eq("store_id", storeId).in("relatorio", DIARIOS);
+      const ja = new Set((tem ?? []).map((t) => `${t.relatorio}|${t.params_chave}`));
+      for (let d = body.backfill.inicio; d <= body.backfill.fim && d <= ontem; d = addDias(d, 1))
+        for (const r of DIARIOS) if (!ja.has(`${r}|${JSON.stringify({ fim: d, inicio: d })}`)) add(r, { inicio: d, fim: d });
+    } else {
     // 1+2. o que ja esta no cache (rolando a janela para terminar em ontem)
     const { data: existentes } = await service
       .from("relatorio_cache")
@@ -130,6 +140,9 @@ Deno.serve(async (req) => {
       for (const r of SNAPSHOT) add(r, {});
       for (const r of MESES_HISTORICO) add(r, { inicio: `${ontem.slice(0, 4)}-01-01`, fim: ontem });
     }
+    // Hub diario: o dia de ontem fica guardado para sempre
+    for (const r of DIARIOS) add(r, { inicio: ontem, fim: ontem });
+    }
 
     const inicioMs = Date.now();
     let ok = 0, falhas = 0, semRelatorio = 0;
@@ -148,10 +161,17 @@ Deno.serve(async (req) => {
     });
 
     // 4. limpeza de cache velho
-    await service.from("relatorio_cache").delete()
+    const { data: velhos } = await service.from("relatorio_cache").select("id, relatorio, params")
       .eq("store_id", storeId)
       .neq("relatorio", "dre_periodo") // historico mensal nunca expira
       .lt("atualizado_em", new Date(Date.now() - 60 * 86400000).toISOString());
+    const apagar = (velhos ?? []).filter((v) => {
+      const p = (v.params ?? {}) as Record<string, unknown>;
+      // dias do Hub diario nunca expiram
+      return !(DIARIOS.includes(v.relatorio as string) && p.inicio && p.inicio === p.fim);
+    }).map((v) => v.id);
+    for (let i = 0; i < apagar.length; i += 200)
+      await service.from("relatorio_cache").delete().in("id", apagar.slice(i, i + 200));
 
     resumo.push({ store_id: storeId, consultas: alvos.size, ok, falhas, sem_relatorio: semRelatorio,
       segundos: Math.round((Date.now() - inicioMs) / 1000) });
