@@ -223,7 +223,7 @@ const MetasPremiacao = () => {
         height: altura,
         backgroundColor: "#f4f4f4",
         pixelRatio: 2,
-        style: { width: "768px", maxWidth: "768px", borderRadius: "0" },
+        style: { width: "768px", maxWidth: "768px", borderRadius: "0", margin: "0" },
       });
     } finally {
       originais.forEach((src, img) => { img.src = src; });
