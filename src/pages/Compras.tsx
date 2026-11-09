@@ -415,11 +415,28 @@ const Compras = () => {
       }, { onConflict: "store_id,ano,mes" });
       setCfg((c: any) => ({ ...c, hist_inicio: periodo.inicio, hist_fim: periodo.fim }));
 
-      const { data, error } = await supabase.functions.invoke("importar-compras-vr", {
-        body: { store_id: storeId, inicio: periodo.inicio, fim: periodo.fim },
-      });
-      if (error) throw error;
-      toast({ title: "Histórico importado", description: `${data?.gravadas ?? 0} linhas em ${data?.meses ?? 0} mês(es).` });
+      // Um mês por chamada: lojas lentas estouram o tempo limite com 6 meses de uma vez.
+      const meses: { ini: string; fim: string }[] = [];
+      let cur = new Date(periodo.inicio.slice(0, 7) + "-01T12:00:00");
+      const ult = new Date(periodo.fim.slice(0, 7) + "-01T12:00:00");
+      while (cur <= ult) {
+        const y = cur.getFullYear(), m = cur.getMonth() + 1;
+        const last = new Date(y, m, 0).getDate();
+        const mm = String(m).padStart(2, "0");
+        meses.push({ ini: `${y}-${mm}-01`, fim: `${y}-${mm}-${last}` });
+        cur = new Date(y, m, 1, 12);
+      }
+      let gravadas = 0;
+      for (const [i, mes] of meses.entries()) {
+        toast({ title: `Importando histórico ${i + 1}/${meses.length}`, description: mes.ini.slice(0, 7) });
+        const { data, error } = await supabase.functions.invoke("importar-compras-vr", {
+          body: { store_id: storeId, inicio: mes.ini, fim: mes.fim },
+        });
+        if (error) throw error;
+        if (data?.erro) throw new Error(`${mes.ini.slice(0, 7)}: ${data.erro}`);
+        gravadas += Number(data?.gravadas ?? 0);
+      }
+      toast({ title: "Histórico importado", description: `${gravadas} linhas em ${meses.length} mês(es).` });
       fetchHistorico();
     } catch (err: any) {
       toast({ title: "Erro na importação", description: err.message, variant: "destructive" });

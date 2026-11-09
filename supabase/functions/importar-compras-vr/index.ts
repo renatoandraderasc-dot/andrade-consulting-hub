@@ -102,6 +102,7 @@ Deno.serve(async (req) => {
         relatorio: "compras_vendas_produto",
         params: { inicio: ini, fim: fimM },
         cfg,
+        timeoutMs: 110000,
       });
       if (produto.ok && Array.isArray(produto.dados) && produto.dados.length) {
         return produto.dados as Record<string, string>[];
@@ -112,6 +113,7 @@ Deno.serve(async (req) => {
         relatorio: "compras_vendas_periodo",
         params: { inicio: ini, fim: fimM },
         cfg,
+        timeoutMs: 110000,
       });
       if (!r.ok) throw new Error(r.erro ?? "falha ao consultar o sistema da loja");
       return r.dados as Record<string, string>[];
