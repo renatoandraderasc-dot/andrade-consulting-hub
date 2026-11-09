@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { registrarAtualizacao } from "@/lib/ultimaAtualizacao";
+import { montarDoHub } from "@/lib/hubDiario";
 
 // ============================================================
 // Utilitario compartilhado para consultar relatorios ao vivo
@@ -75,6 +76,14 @@ export async function chamarRelatorio(
 ): Promise<RelatorioResultado> {
   const vazio = { dados: [] as any[], indisponivel: false, offline: false, erro: null as string | null };
   if (!storeId) return vazio;
+
+  if (!opts.forcar) {
+    const hub = await montarDoHub(storeId, relatorio, params).catch(() => null);
+    if (hub) {
+      registrarAtualizacao(hub.atualizadoEm, true);
+      return { dados: hub.dados, indisponivel: false, offline: false, erro: null, atualizadoEm: hub.atualizadoEm, doCache: true };
+    }
+  }
 
   let data: any = null;
   let msg = "";

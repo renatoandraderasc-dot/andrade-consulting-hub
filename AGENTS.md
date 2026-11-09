@@ -16,3 +16,4 @@ PIC TV weather uses browser-authorized location with Open-Meteo and degrades ind
 - Calendar campaign blocks have stable component identity, so asynchronous saves do not reset another block's focus or draft.
 - Fixed-format prize image exports pass measured layout width and height to the image renderer; clone styles alone do not set canvas dimensions.
 - Dynamic stock fallback groups product rankings by verified last-entry dates through D-1, queries sequentially, and rejects incomplete results; first-purchase dates are never treated as last entries.
+- Heavy reports (ranking_produtos, compras_vendas_periodo) are stored per day in relatorio_cache forever by sync-diario-d1 (also via body.backfill); chamarRelatorio assembles past multi-day ranges from those days via src/lib/hubDiario.ts before contacting the store, so slow bridges are only queried for missing days.
