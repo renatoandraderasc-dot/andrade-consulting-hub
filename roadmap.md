@@ -1,5 +1,8 @@
 # Ajustes do Painel de Compras
 
+# Análise Anual — Medeiros 2026
+- [x] Validar leitura mensal de 2026 com acesso administrativo ao Medeiros: janeiro a outubro exibidos; consultas dos meses faltantes concluídas e salvas no Hub. Novembro fica fora pela regra vigente de meses fechados.
+
 # Recebimento de NF-e — passo 3
 - [x] Criar fila, scanner, validação, lista cega, resultado, painel e parâmetros sem alterar funções ou tabelas.
 - [x] Registrar navegação e restringir WebSac; seis testes de regras aprovados e compilação OK.
