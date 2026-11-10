@@ -1,5 +1,9 @@
 # Ajustes do Painel de Compras
 
+# Recebimento de NF-e — passo 3
+- [ ] Criar fila, scanner, validação, lista cega, resultado, painel e parâmetros sem alterar funções ou tabelas.
+- [ ] Registrar navegação, restringir WebSac e testar regras e telas.
+
 # Recebimento de NF-e — passo 2
 - [x] Aplicar e conferir os dois relatórios enviados.
 - [x] Criar recebimento e websac-entrada sem telas nem alterações em outras funções; CORS do SDK e verificações de nulidade exigidos pelo projeto.
