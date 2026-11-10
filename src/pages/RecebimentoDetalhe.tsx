@@ -14,7 +14,10 @@ import { readHeaders,invokeReceipt,brl,dataBR,cnpjBR,type Criterio } from '@/lib
 import { SAFE_CRITERIA_COLUMNS,podeContar,podeAprovar,podeEntrar } from '@/lib/recebimentoRules';
 export default function RecebimentoDetalhe(){
  const {id=''}=useParams();const {data:store}=useReceiptStore();const {user,isAdmin,isGlobalAdmin}=useAuth();const nav=useNavigate();const qc=useQueryClient();
- const [step,setStep]=useState<'validacao'|'contagem'|'resultado'>('validacao'),[round,setRound]=useState(1),[targets,setTargets]=useState<{ean:string;descricao:string}[]>([]),[busy,setBusy]=useState(false),[modal,setModal]=useState<{acao:string;criterio?:number}|null>(null),[entry,setEntry]=useState<any>(null),[dry,setDry]=useState<any>(null),[recount,setRecount]=useState<any>(null),[xmlRead,setXmlRead]=useState<boolean|undefined>();
+ const progressKey=`receipt-progress:${user?.id}:${id}`;
+ const progress=JSON.parse(sessionStorage.getItem(progressKey)||'{}');
+ const [step,setStep]=useState<'validacao'|'contagem'|'resultado'>(progress.step==='contagem'?'contagem':'validacao'),[round,setRound]=useState(Number(progress.round)||1),[targets,setTargets]=useState<{ean:string;descricao:string}[]>(progress.targets||[]),[busy,setBusy]=useState(false),[modal,setModal]=useState<{acao:string;criterio?:number}|null>(null),[entry,setEntry]=useState<any>(null),[dry,setDry]=useState<any>(null),[recount,setRecount]=useState<any>(null),[xmlRead,setXmlRead]=useState<boolean|undefined>();
+ useEffect(()=>{sessionStorage.setItem(progressKey,JSON.stringify({step,round,targets}));},[progressKey,step,round,targets]);
  const header=useQuery({queryKey:['receipt-header',user?.id,store?.id,id],enabled:!!store?.websac,queryFn:async()=>{const rows=await readHeaders(store?.id||'',id);if(!rows[0])throw new Error('Recebimento não encontrado nesta loja.');return rows[0];}});
  const rec=header.data;
  const criteria=useQuery({queryKey:['receipt-criteria',user?.id,store?.id,id,step==='contagem'?'safe':'full'],enabled:!!rec,queryFn:async()=>{const {data,error}=await supabase.from('recebimento_criterios').select(step==='contagem'?SAFE_CRITERIA_COLUMNS:'*').eq('recebimento_id',id).order('criterio');if(error)throw error;return (data||[]) as unknown as Criterio[];}});
@@ -43,7 +46,7 @@ export default function RecebimentoDetalhe(){
    qc.removeQueries({queryKey:['receipt-criteria',user?.id,store?.id,id,'full']});
    setStep('contagem');
  }
- const cs=criteria.data||[], c5=cs.find(c=>c.criterio===5), detail=(c5?.detalhe||{}) as any;
+ const cs=step==='contagem' ? [] : criteria.data||[], c5=cs.find(c=>c.criterio===5), detail=(c5?.detalhe||{}) as any;
  const resultRows=(detail.itens||[]).slice().sort((a:any,b:any)=>Number(a.situacao==='OK')-Number(b.situacao==='OK'));
  const warnings=cs.some(c=>c.resultado==='AVISO');
  const confirmed=rec?.estado==='ENTRADA_CONFIRMADA'||entry?.estado==='ENTRADA_CONFIRMADA';
