@@ -28,6 +28,10 @@ import DashboardFinanceiro from "./pages/DashboardFinanceiro";
 import AnaliseAnual from "./pages/AnaliseAnual";
 import Compras from "./pages/Compras";
 import AnaliseCompras from "./pages/AnaliseCompras";
+import RecebimentoFila from "./pages/RecebimentoFila";
+import RecebimentoDetalhe from "./pages/RecebimentoDetalhe";
+import RecebimentoPainel from "./pages/RecebimentoPainel";
+import AdminRecebimento from "./pages/AdminRecebimento";
 import EstoqueDinamico from "./pages/EstoqueDinamico";
 import MargemBaixa from "./pages/MargemBaixa";
 import CapilaridadeMix from "./pages/CapilaridadeMix";
@@ -120,6 +124,10 @@ const App = () => (
 
             <Route path="/compras" element={g("compras", <Compras />)} />
             <Route path="/compras/analise" element={g("compras_analise", <AnaliseCompras />)} />
+            <Route path="/recebimento" element={g("recebimento", <RecebimentoFila />)} />
+            <Route path="/recebimento/painel" element={g("recebimento", <RecebimentoPainel />)} />
+            <Route path="/recebimento/:id" element={g("recebimento", <RecebimentoDetalhe />)} />
+            <Route path="/admin/recebimento" element={g("recebimento", <AdminRecebimento />)} />
             <Route path="/estoque-dinamico" element={g("estoque_dinamico", <EstoqueDinamico />)} />
             <Route path="/margem-baixa" element={g("margem_baixa", <MargemBaixa />)} />
             <Route path="/capilaridade-mix" element={g("capilaridade_mix", <CapilaridadeMix />)} />
