@@ -1,5 +1,8 @@
 # Ajustes do Painel de Compras
 
+# Análise Anual — Medeiros 2026
+- [ ] Corrigir leitura mensal do DIRECTOR e validar 2026 com dados reais.
+
 # Recebimento de NF-e — passo 3
 - [x] Criar fila, scanner, validação, lista cega, resultado, painel e parâmetros sem alterar funções ou tabelas.
 - [x] Registrar navegação e restringir WebSac; seis testes de regras aprovados e compilação OK.
