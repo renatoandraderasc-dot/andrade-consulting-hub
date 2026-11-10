@@ -311,8 +311,20 @@ const AnaliseAnual = () => {
             inicio: `${a}-01-01`,
             fim: a === hoje0.getFullYear() ? fim : `${a}-12-31`,
           });
-          partes.push(p);
-          if (p.offline || p.erro) break;
+          if (p.offline || p.erro) { partes.push(p); break; }
+          // Alguns sistemas (ex.: DIRECTOR) devolvem o total do período sem a
+          // data: nesse caso lê mês a mês e carimba cada linha com o mês.
+          const semData = p.dados.length > 0 && p.dados.every((l) => !pick(l, "dia", "data"));
+          if (!semData) { partes.push(p); continue; }
+          const ultMes = a === hoje0.getFullYear() ? hoje0.getMonth() + 1 : 12;
+          for (let m = ultMes; m >= 1; m--) {
+            const mm = String(m).padStart(2, "0");
+            const fimMes = a === hoje0.getFullYear() && m === ultMes
+              ? fim : `${a}-${mm}-${new Date(a, m, 0).getDate()}`;
+            const pm = await chamarRelatorio(sid, "vendas_secao_periodo", { inicio: `${a}-${mm}-01`, fim: fimMes }).catch(() => null);
+            if (!pm || pm.offline || pm.erro) continue;
+            partes.push({ ...pm, dados: pm.dados.map((l: any) => ({ ...l, dia: `${a}-${mm}-01` })) });
+          }
         }
         const acc = new Map<string, Row>();
         for (const p of partes) {
