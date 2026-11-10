@@ -18,3 +18,6 @@ PIC TV weather uses browser-authorized location with Open-Meteo and degrades ind
 - Dynamic stock fallback groups product rankings by verified last-entry dates through D-1, queries sequentially, and rejects incomplete results; first-purchase dates are never treated as last entries.
 - Heavy reports (ranking_produtos, compras_vendas_periodo) are stored per day in relatorio_cache forever by sync-diario-d1 (also via body.backfill); chamarRelatorio assembles past multi-day ranges from those days via src/lib/hubDiario.ts before contacting the store, so slow bridges are only queried for missing days.
 - NF-e receipt validation and WebSac entry are separate edge functions using _shared/consultaLoja.ts; preserve the supplied workflow so validation stays separate from ERP writes.
+
+- Receipt screens use cached manual-refresh reads and explicit header columns; blind counting unmounts invoice views, evicts invoice detail caches, and queries only safe criterion fields so invoice quantities are not passed into counting.
+- Receipt business writes invoke the published functions; only own blind counts and global-admin configuration write directly, preserving existing RLS.

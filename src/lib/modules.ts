@@ -15,6 +15,7 @@ export const APP_MODULES = [
   { key: "analise_anual", label: "Análise Anual", path: "/analise-anual" },
   { key: "compras", label: "Compras", path: "/compras" },
   { key: "compras_analise", label: "Análise de Compras", path: "/compras/analise" },
+  { key: "recebimento", label: "Recebimento de NF-e", path: "/recebimento" },
   { key: "estoque_dinamico", label: "Estoque Dinâmico", path: "/estoque-dinamico" },
   { key: "margem_baixa", label: "Produtos com Margem Baixa", path: "/margem-baixa" },
   { key: "capilaridade_mix", label: "Capilaridade de Mix", path: "/capilaridade-mix" },

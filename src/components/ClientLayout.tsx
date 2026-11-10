@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import PrintTelaButton from "@/components/PrintTelaButton";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -73,6 +74,7 @@ const navGroups: NavGroup[] = [
     items: [
       { key: "compras", path: "/compras", label: "Compras", icon: ShoppingCart },
       { key: "compras_analise", path: "/compras/analise", label: "Análise de Compras", icon: ShoppingCart },
+      { key: "recebimento", path: "/recebimento", label: "Recebimento de NF-e", icon: ScanLine },
       { key: "estoque_dinamico", path: "/estoque-dinamico", label: "Estoque Dinâmico", icon: Package },
       { key: "margem_baixa", path: "/margem-baixa", label: "Margem Baixa", icon: TrendingDown },
       { key: "repricing", path: "/repricing", label: "Re-Pricing", icon: DollarSign },
@@ -161,6 +163,8 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
   const { user, isAdmin, isGlobalAdmin, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const selectedStoreId = sessionStorage.getItem("selectedStoreId") || "";
+  const receiptSystem = useQuery({ queryKey: ["nav-receipt-system", selectedStoreId], enabled: !!user && !!selectedStoreId, queryFn: async () => { const { data } = await supabase.from("store_vr_config").select("sistema").eq("store_id", selectedStoreId).maybeSingle(); return data?.sistema === "WEBSAC"; } });
   const [menuOpen, setMenuOpen] = useState(false);
   const [pwdOpen, setPwdOpen] = useState(false);
   const [allowedModules, setAllowedModules] = useState<Set<string> | null>(null);
@@ -207,7 +211,7 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
     .filter((g) => (g.globalAdmin ? isGlobalAdmin : g.admin ? isAdmin : true))
     .map((g) => ({
       ...g,
-      items: g.items.filter((i) =>
+      items: g.items.filter((i) => i.key !== "recebimento" || receiptSystem.data === true).filter((i) =>
         i.key === "admin_tv" && !isGlobalAdmin ? tvLiberada
           : i.globalAdmin && !isGlobalAdmin ? false : i.admin && !isAdmin ? false : canSee(i.key)),
     }))
