@@ -1,8 +1,9 @@
 # Ajustes do Painel de Compras
 
 # Recebimento de NF-e — passo 3
-- [ ] Criar fila, scanner, validação, lista cega, resultado, painel e parâmetros sem alterar funções ou tabelas.
-- [ ] Registrar navegação, restringir WebSac e testar regras e telas.
+- [x] Criar fila, scanner, validação, lista cega, resultado, painel e parâmetros sem alterar funções ou tabelas.
+- [x] Registrar navegação e restringir WebSac; seis testes de regras aprovados e compilação OK.
+- [ ] Validar câmera e fluxo com nota real: sessão disponível é Usuário sem módulo recebimento autorizado; cadastro de perfil comprador não existe no modelo publicado (ações gerenciais usam supervisor/admin).
 
 # Recebimento de NF-e — passo 2
 - [x] Aplicar e conferir os dois relatórios enviados.
