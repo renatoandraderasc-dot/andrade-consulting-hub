@@ -1,5 +1,10 @@
 # Ajustes do Painel de Compras
 
+# Recebimento de NF-e — passo 2
+- [ ] Aplicar os dois relatórios enviados.
+- [ ] Criar recebimento e websac-entrada sem telas nem alterações em outras funções.
+- [ ] Confirmar publicação das duas funções e verificar autenticação sem gravar notas reais.
+
 # Revisão dos seis alertas
 - [x] Restaurar fórmula de metas com ajuste de centavos e preservar metas dos compradores; definição real testada em PostgreSQL descartável.
 - [x] Preservar foco e texto ao salvar campanhas; teste aprovado.

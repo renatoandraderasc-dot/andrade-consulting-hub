@@ -41,3 +41,9 @@ verify_jwt = false
 
 [functions.sync-diario-d1]
 verify_jwt = false
+
+[functions.recebimento]
+verify_jwt = false
+
+[functions.websac-entrada]
+verify_jwt = false
