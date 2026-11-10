@@ -1,5 +1,10 @@
 # Ajustes do Painel de Compras
 
+# Recebimento de NF-e — passo 2
+- [x] Aplicar e conferir os dois relatórios enviados.
+- [x] Criar recebimento e websac-entrada sem telas nem alterações em outras funções; CORS do SDK e verificações de nulidade exigidos pelo projeto.
+- [x] Publicação das duas confirmada; ambas recusam token inválido com 401 e cinco testes passaram; nenhuma nota real gravada. Fluxo autenticado não testado por ausência de sessão nesta chamada.
+
 # Revisão dos seis alertas
 - [x] Restaurar fórmula de metas com ajuste de centavos e preservar metas dos compradores; definição real testada em PostgreSQL descartável.
 - [x] Preservar foco e texto ao salvar campanhas; teste aprovado.
