@@ -104,7 +104,13 @@ export async function consultarComCache(opts: {
       .eq("relatorio", relatorio)
       .eq("params_chave", chave)
       .maybeSingle();
-    if (data) {
+    // Leitura gravada antes do fim do periodo terminar esta incompleta
+    // (ex.: setembro inteiro gravado em 23/09): consulta de novo.
+    const gravadoEm = data?.atualizado_em
+      ? new Intl.DateTimeFormat("en-CA", { timeZone: FUSO }).format(new Date(data.atualizado_em as string))
+      : null;
+    const incompleto = !!(gravadoEm && rec.fim && gravadoEm <= rec.fim);
+    if (data && !incompleto) {
       return {
         ok: true,
         dados: (data.dados as Record<string, unknown>[]) ?? [],
