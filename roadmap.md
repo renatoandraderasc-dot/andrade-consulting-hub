@@ -1,5 +1,8 @@
 # Ajustes do Painel de Compras
 
+# Compras × Vendas — Cobal
+- [ ] Conferir departamentos e valores salvos; corrigir a abertura e validar os totais.
+
 # Análise Anual — Medeiros 2026
 - [x] Validar leitura mensal de 2026 com acesso administrativo ao Medeiros: janeiro a outubro exibidos; consultas dos meses faltantes concluídas e salvas no Hub. Novembro fica fora pela regra vigente de meses fechados.
 
