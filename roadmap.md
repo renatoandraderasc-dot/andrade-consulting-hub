@@ -1,9 +1,9 @@
 # Ajustes do Painel de Compras
 
 # Conexões — sincronização individual e consultas sem 504
-- [ ] Corrigir relatórios pesados com consultas menores e sequenciais, reaproveitando dados salvos.
-- [ ] Mostrar última sincronização, situação e atualização individual de cada loja em Conexões.
-- [ ] Verificar testes e fluxo autenticado; preservar lançamentos e edições manuais.
+- [x] Corrigir relatórios pesados com consultas diárias sequenciais, reaproveitando o Hub e sem apresentar períodos incompletos como totais.
+- [x] Mostrar última sincronização completa, última leitura salva, progresso persistido e botão individual por loja em Conexões; sem consultar ERP ao abrir.
+- [x] Verificar fluxo autenticado desktop/celular e 32 testes; Oliveira terminou 37 consultas com 29 salvas, 7 indisponíveis e 1 falha no catálogo (resultado parcial exibido após reabrir). Nenhum lançamento manual alterado.
 
 # Compras × Vendas — Cobal
 - [x] Conferir relatórios completos de setembro e outubro e departamentos cadastrados do Cobal.
