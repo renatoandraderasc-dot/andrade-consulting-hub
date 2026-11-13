@@ -15,7 +15,7 @@ import DemoWorkforce from "@/components/demo/DemoWorkforce";
 import DemoOperations from "@/components/demo/DemoOperations";
 import DemoMarketing from "@/components/demo/DemoMarketing";
 import DemoAdmin from "@/components/demo/DemoAdmin";
-import { Check, ChevronDown, Grid2X2, RefreshCw, RotateCcw, Search } from "lucide-react";
+import { Check, Grid2X2, RefreshCw, RotateCcw, Search } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function DemoWorkspace() {

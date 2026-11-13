@@ -169,7 +169,7 @@ const App = () => (
             <Route path="/jornada/execucoes" element={g("jornada_execucoes", <JornadaExecucoes />)} />
             <Route path="/admin/jornada" element={g("jornada", <AdminJornada />)} />
             <Route path="/admin/tv" element={g("admin_tv", <AdminTv />)} />
-            <Route path="/tv/:id" element={g("admin_tv", <TvPlayer />)} />
+            <Route path="/tv/:id" element={g("tv_player", <TvPlayer />)} />
             <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
 
             <Route path="*" element={<NotFound />} />

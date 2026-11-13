@@ -4,7 +4,7 @@ export function demoDomain(path: string): DemoDomain {
   if (/^\/(checklist|recebimento)|^\/admin\/(questions|recebimento)/.test(path)) return "operations";
   if (/^\/(encarte|calendario-promocional|tv)|^\/admin\/tv/.test(path)) return "marketing";
   if (/^\/(controladoria|dashboard-financeiro)/.test(path)) return "finance";
-  if (/^\/(compras|estoque|margem-baixa|repricing|precificacao|catalogo|consulta-preco|produtos|vtex)/.test(path)) return "commercial";
+  if (/^\/(compras|estoque|margem-baixa|repricing|precificacao|catalogo|consulta-preco|produtos|vtex|comparativo-produtos)/.test(path)) return "commercial";
   if (/^\/admin\/(users|stores|rede|conexoes|diagnostico|site|sites|parametrizacoes|padaria)|^\/websac/.test(path)) return "admin";
   return "dashboard";
 }
