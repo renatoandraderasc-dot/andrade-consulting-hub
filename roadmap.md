@@ -1,5 +1,11 @@
 # Ajustes do Painel de Compras
 
+# Relatórios atualizados — Comparativo Cobal e Hub
+- [ ] Corrigir outubro fechado do Cobal usando a leitura completa já salva no Hub.
+- [ ] Evitar relatórios secundários antigos após nova sincronização, preservando dados manuais e atualização explícita da loja.
+- [ ] Abrir o Comparativo com os meses disponíveis salvos, sem consulta automática ao sistema da loja.
+- [ ] Testar regras de atualização e conferir o Comparativo com dados reais.
+
 # Conexões — sincronização individual e consultas sem 504
 - [x] Corrigir relatórios pesados com consultas diárias sequenciais, reaproveitando o Hub e sem apresentar períodos incompletos como totais.
 - [x] Mostrar última sincronização completa, última leitura salva, progresso persistido e botão individual por loja em Conexões; sem consultar ERP ao abrir.
