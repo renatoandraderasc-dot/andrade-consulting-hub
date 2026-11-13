@@ -2,7 +2,8 @@
 
 # Compras × Vendas — Cobal
 - [x] Conferir relatórios completos de setembro e outubro e departamentos cadastrados do Cobal.
-- [ ] Ajustar a abertura após confirmação do agrupamento desejado: cadastro contém nomes antigos e atuais; sessão disponível sem acesso ao Cobal.
+- [x] Mostrar todos os departamentos e movimentos em Compras × Vendas e realizado, sem filtros de ativação de metas ou atividade recente dos produtos; incluir departamentos sem movimento.
+- [x] Cinco testes aprovados, compilação OK e consulta real conferida no Nascimento Embu sem erros. Valores completos do Cobal conferidos no Hub; sessão disponível não permite conferência visual nessa loja.
 
 # Análise Anual — Medeiros 2026
 - [x] Validar leitura mensal de 2026 com acesso administrativo ao Medeiros: janeiro a outubro exibidos; consultas dos meses faltantes concluídas e salvas no Hub. Novembro fica fora pela regra vigente de meses fechados.
