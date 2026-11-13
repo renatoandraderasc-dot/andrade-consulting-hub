@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useDepartamentosPermitidos } from "@/hooks/useDepartamentosPermitidos";
 import { supabase } from "@/integrations/supabase/client";
 import { chamarRelatorio, avisoRelatorio, pick, num, lucroDaLinha, maxDiasConsulta } from "@/lib/vrReport";
+import { leituraCompleta, selecionarLeituraHub } from "@/lib/hubDiario";
 import { mercadologicoNivel1, mercadologicoNivel2 } from "@/lib/mercadologico";
 import ClientLayout from "@/components/ClientLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -221,17 +222,21 @@ const AnaliseAnual = () => {
       const salvos = new Map<string, Row[]>();
       if (!forcar) {
         const { data } = await supabase
-          .from("relatorio_cache").select("params, dados")
-          .eq("store_id", sid).eq("relatorio", "dre_periodo");
+          .from("relatorio_cache").select("params, dados, atualizado_em")
+          .eq("store_id", sid).eq("relatorio", "dre_periodo")
+          .order("atualizado_em", { ascending: false });
         // Guarda, por mês, o registro com a maior data final (o mais completo).
         const fimPorMes = new Map<string, string>();
         for (const c of (data as any[]) || []) {
           const ini = String(c.params?.inicio ?? "");
           const fimC = String(c.params?.fim ?? "");
           if (!/^\d{4}-\d{2}-01$/.test(ini)) continue;
+          if (!leituraCompleta(c.params ?? {}, c.atualizado_em)) continue;
+          const leitura = selecionarLeituraHub([c], { inicio: ini, fim: fimC });
+          if (!leitura) continue; // never mix a filtered ERP slice into the store total
           const k = ini.slice(0, 7);
           if ((fimPorMes.get(k) ?? "") >= fimC) continue;
-          const linhas = mapearDre(c.dados || []);
+          const linhas = mapearDre(leitura.dados);
           if (linhas.length) { salvos.set(k, linhas); fimPorMes.set(k, fimC); }
         }
         // Mês salvo antes de terminar (ex.: 01 a 21/10) fica incompleto:

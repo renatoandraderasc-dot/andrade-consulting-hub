@@ -166,7 +166,9 @@ export default function ComparativoProdutos() {
       cur.k += venda - lucro;
       agg.set(k, cur);
     }
-    const compactos = [...agg.values()].map((c) => ({ ...c, q: +c.q.toFixed(3), v: +c.v.toFixed(2), k: +c.k.toFixed(2) }));
+    // Preserve ERP precision in storage; format cents only after totals are
+    // calculated, otherwise thousands of rounded products change the profit.
+    const compactos = [...agg.values()];
     if (!r.aviso) await gravarPeriodoCache(storeId, CACHE_REL, "", de, ate, compactos).catch(() => undefined);
     return { linhas: compactos.map((c) => expandir(c, mes)), aviso: r.aviso ? `${rotuloMes(mes)}: ${r.aviso}` : null };
   }
@@ -449,7 +451,7 @@ export default function ComparativoProdutos() {
   ];
 
   const mesInput = (v: string, set: (s: string) => void, label: string) => (
-    <label className="space-y-1 block">
+    <label className="space-y-1 block min-w-0">
       <span className="block text-[11px] text-muted-foreground">{label}</span>
       <Input type="month" className="h-9 w-full min-w-0 sm:w-[150px]" value={v} max={mesAtual()} onChange={(e) => e.target.value && set(e.target.value)} />
     </label>
@@ -488,11 +490,11 @@ export default function ComparativoProdutos() {
             )}
             <div className="w-full sm:w-auto rounded-md border border-border p-2 space-y-1">
               <div className="text-xs font-semibold text-muted-foreground">Período A (base)</div>
-              <div className="flex gap-2">{mesInput(aDe, setADe, "De")}{mesInput(aAte, setAAte, "Até")}</div>
+              <div className="grid grid-cols-2 gap-2">{mesInput(aDe, setADe, "De")}{mesInput(aAte, setAAte, "Até")}</div>
             </div>
             <div className="w-full sm:w-auto rounded-md border border-primary/50 p-2 space-y-1">
               <div className="text-xs font-semibold text-primary">Período B (comparado)</div>
-              <div className="flex gap-2">{mesInput(bDe, setBDe, "De")}{mesInput(bAte, setBAte, "Até")}</div>
+              <div className="grid grid-cols-2 gap-2">{mesInput(bDe, setBDe, "De")}{mesInput(bAte, setBAte, "Até")}</div>
             </div>
             <div className="space-y-1">
               <span className="block text-[11px] text-muted-foreground">Preencher o Período A com</span>
