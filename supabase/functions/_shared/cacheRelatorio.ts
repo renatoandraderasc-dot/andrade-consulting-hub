@@ -10,6 +10,7 @@
 // ============================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { consultarRelatorioLoja, type ConfigLoja, type ResultadoConsulta } from "./consultaLoja.ts";
+import { diario, diasEntre, juntarDias } from "./hubDados.ts";
 
 export interface ConfigLojaCache extends ConfigLoja {
   modo_sync?: string | null;
@@ -121,6 +122,23 @@ export async function consultarComCache(opts: {
     }
   }
 
+  // Never submit a long movement report to the bridge. Each successful day
+  // survives interruptions; retrying loads only the missing days.
+  if (diario(relatorio) && typeof rec.params.inicio === "string" && typeof rec.params.fim === "string" && rec.params.inicio !== rec.params.fim) {
+    const dias = diasEntre(rec.params.inicio, rec.params.fim);
+    const linhas: Record<string, unknown>[][] = [];
+    const datas: string[] = [];
+    let ponte = false;
+    for (const dia of dias) {
+      const r = await consultarComCache({ ...opts, params: { ...rec.params, inicio: dia, fim: dia } });
+      if (!r.ok) return { ...r, dados: [], erro: `Falha no dia ${dia}: ${r.erro ?? "consulta não concluída"}. Os dias concluídos ficaram salvos.`, origem: "ponte" };
+      linhas.push(r.dados);
+      if (r.cache_em) datas.push(r.cache_em);
+      ponte ||= r.origem === "ponte";
+    }
+    return { ok: true, dados: juntarDias(relatorio, linhas), origem: ponte ? "ponte" : "cache", cache_em: datas.sort().pop(), recortado_d1: rec.recortado };
+  }
+
   const r = await consultarRelatorioLoja({
     supabaseUrl, serviceKey, storeId, relatorio,
     params: rec.params, cfg, timeoutMs: opts.timeoutMs ?? 25000,
@@ -128,7 +146,7 @@ export async function consultarComCache(opts: {
   if (!r.ok) return { ...r, origem: "ponte", recortado_d1: rec.recortado };
 
   const agora = new Date().toISOString();
-  await service.from("relatorio_cache").upsert({
+  const { error: erroGravacao } = await service.from("relatorio_cache").upsert({
     store_id: storeId,
     relatorio,
     params_chave: chave,
@@ -139,6 +157,7 @@ export async function consultarComCache(opts: {
     origem,
     atualizado_em: agora,
   }, { onConflict: "store_id,relatorio,params_chave" });
+  if (erroGravacao) return { ok: false, dados: [], origem: "ponte", erro: "Não foi possível guardar a consulta no Hub. Tente novamente." };
 
   return { ...r, origem: "ponte", cache_em: agora, recortado_d1: rec.recortado };
 }

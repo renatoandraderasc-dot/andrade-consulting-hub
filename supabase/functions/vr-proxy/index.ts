@@ -11,6 +11,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { consultarRelatorioLoja } from "../_shared/consultaLoja.ts";
 import { consultarComCache, gravarUltimaLeitura, lerUltimaLeitura, type ConfigLojaCache } from "../_shared/cacheRelatorio.ts";
+import { diario } from "../_shared/hubDados.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -80,7 +81,7 @@ Deno.serve(async (req) => {
     const maxDias = maxLoja > 0 && relatorio in LIMITE_RELATORIO ? LIMITE_RELATORIO[relatorio] : maxLoja;
     const ini = typeof params?.inicio === "string" ? Date.parse(params.inicio) : NaN;
     const fimP = typeof params?.fim === "string" ? Date.parse(params.fim) : NaN;
-    if (maxDias > 0 && !isNaN(ini) && !isNaN(fimP) && (fimP - ini) / 86400000 + 1 > maxDias) {
+    if (!diario(relatorio) && maxDias > 0 && !isNaN(ini) && !isNaN(fimP) && (fimP - ini) / 86400000 + 1 > maxDias) {
       const u = await ultima();
       if (u) {
         return json({ ok: true, relatorio, dados: u.dados, origem: "cache", cache_em: u.atualizado_em, aviso: "dados da ultima atualizacao" });
@@ -89,7 +90,7 @@ Deno.serve(async (req) => {
     }
 
     // ---------- modo diario D-1: cache primeiro ----------
-    if ((cfg.modo_sync ?? "ao_vivo") === "diario_d1") {
+    if ((cfg.modo_sync ?? "ao_vivo") === "diario_d1" || diario(relatorio)) {
       const r = await consultarComCache({
         supabaseUrl, serviceKey, storeId: store_id, relatorio, params, cfg,
         forcar: forcar === true, origem: forcar === true ? "manual" : "proxy",
