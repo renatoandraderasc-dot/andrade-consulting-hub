@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { chamarRelatorio, avisoRelatorio, pick as col, num } from "@/lib/vrReport";
 import { comprasAgrupadas, detalharComprasVendas } from "@/lib/comprasDetalhe";
+import { completarDepartamentos } from "@/lib/comprasDepartamentos";
 import { useNavigate } from "react-router-dom";
 import {
   ShoppingCart, TrendingUp, TrendingDown, Wallet, Target, Download, Wand2, Save, RefreshCw, Info,
@@ -19,7 +20,7 @@ import ClientLayout from "@/components/ClientLayout";
 import { useToast } from "@/hooks/use-toast";
 import BotaoFotoTela from "@/components/BotaoFotoTela";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { carregarBaseCatalogo, carregarProdutosAtivos12m } from "@/lib/catalogoProdutos";
+import { carregarBaseCatalogo } from "@/lib/catalogoProdutos";
 import { CartProgressOverlay } from "@/components/CartProgress";
 import { useAutoRefresh } from "@/hooks/useSaasConfig";
 import { mercadologicoNivel1, mercadologicoNivel2, mercadologicoNivel3 } from "@/lib/mercadologico";
@@ -210,8 +211,8 @@ const Compras = () => {
   const fetchMercadologicos1 = async () => {
     setMercadologicos1([]);
     try {
-      const { itens } = await carregarProdutosAtivos12m(storeId);
-      const nomes = [...new Set(itens.map((produto) => produto.secao.trim().toUpperCase()).filter(Boolean))]
+      const itens = await carregarBaseCatalogo(storeId);
+      const nomes = [...new Set(itens.map((produto) => produto.n1.trim().toUpperCase()).filter(Boolean))]
         .sort((a, b) => a.localeCompare(b, "pt-BR"));
       setMercadologicos1(nomes);
       await semearDepartamentos(nomes);
@@ -497,10 +498,13 @@ const Compras = () => {
     for (const meta of metas) metasPorDep.set(chaveDep(meta.departamento), meta);
     const departamentos = new Map<string, string>();
     for (const d of deptos) {
-      if (d.ativo !== false && permiteDept(d.departamento)) departamentos.set(chaveDep(d.departamento), d.departamento);
+      if (permiteDept(d.departamento)) departamentos.set(chaveDep(d.departamento), d.departamento);
     }
     for (const nome of mercadologicos1) {
-      if (permiteDept(nome) && !deptosInativos.has(chaveDep(nome))) departamentos.set(chaveDep(nome), nome);
+      if (permiteDept(nome)) departamentos.set(chaveDep(nome), nome);
+    }
+    for (const nome of Object.keys(realizadoDep)) {
+      if (permiteDept(nome)) departamentos.set(chaveDep(nome), nome);
     }
     return [...departamentos.entries()].map(([chave, departamento]) => {
       const m = metasPorDep.get(chave) ?? {};
@@ -541,12 +545,9 @@ const Compras = () => {
   // ============ Derived (Aba 2) ============
   // Uma linha por departamento + secao vinda do relatorio compras_vendas_periodo
   const cvItens = useMemo(() => {
-    // Ativos = setores cadastrados e ativos da loja + mercadológico 1 do cadastro.
-    const ativos = new Set([
-      ...mercadologicos1.map(chaveDep),
-      ...deptos.filter((d) => d.ativo !== false).map((d) => chaveDep(d.departamento)),
-    ]);
-    return cvLinhas
+    return completarDepartamentos(cvLinhas, [
+      ...mercadologicos1, ...deptos.map((d) => d.departamento),
+    ], permiteDept)
       .map((l: any) => ({
       // Mercadológico 1: WebSac/Oracle mandam "nivel1"/"departamento";
       // no VR o nível 1 é a própria "secao" do relatório.
@@ -566,10 +567,7 @@ const Compras = () => {
       qtde_compra: num(col(l, "qtde_compra")),
       compra: num(col(l, "total_compra", "compra", "compras")),
       }))
-      // Usuario restrito a departamentos
-      // Sem lista de ativos (ponte sem o relatório), não descarta nada além de sem departamento.
-      .filter((i) => permiteDept(i.departamento) && i.departamento !== "SEM DEPARTAMENTO" &&
-        (ativos.size === 0 || ativos.has(chaveDep(i.departamento))));
+      ;
   }, [cvLinhas, restrito, mercadologicos1, deptos]);
 
 
@@ -584,22 +582,16 @@ const Compras = () => {
     part: vendaTotal > 0 ? (r.venda / vendaTotal) * 100 : 0,
   });
 
-  // Retirados da apuracao = departamentos inativos na Configuracao.
-  const cvExcluir = useMemo(
-    () => [...deptosInativos],
-    [deptosInativos],
-  );
-
   const cvFiltrados = useMemo(
     () => cvItens.filter(
-      (i) => !cvExcluir.includes(chaveDep(i.departamento)) && (fN1 === "__all__" || i.departamento === fN1),
+      (i) => fN1 === "__all__" || i.departamento === fN1,
     ),
-    [cvItens, fN1, cvExcluir],
+    [cvItens, fN1],
   );
 
   const cvOpcoes = useMemo(() => {
     const n1 = new Set<string>(cvItens
-      .filter((i) => !deptosInativos.has(chaveDep(i.departamento)) && permiteDept(i.departamento))
+      .filter((i) => permiteDept(i.departamento))
       .map((i) => i.departamento));
     return { n1: [...n1].sort((a, b) => a.localeCompare(b, "pt-BR")) };
   }, [cvItens, deptosInativos]);
@@ -668,8 +660,6 @@ const Compras = () => {
       }
       setProdutosAviso(avisoRelatorio(r));
       const catalogo = await carregarBaseCatalogo(storeId).catch(() => []);
-      const ativos12m = await carregarProdutosAtivos12m(storeId).catch(() => ({ itens: [] }));
-      const codigosAtivos = new Set(ativos12m.itens.map((produto) => produto.codigo.replace(/^0+/, "")));
       const cadastro = new Map<string, (typeof catalogo)[number]>();
       for (const produto of catalogo) {
         cadastro.set(String(produto.codigo).replace(/^0+/, ""), produto);
@@ -694,10 +684,7 @@ const Compras = () => {
           };
         })
         .filter((p: ProdLinha) =>
-          permiteDept(p.departamento) &&
-          (mercadologicos1.some((nome) => chaveDep(nome) === chaveDep(p.departamento)) ||
-            deptos.some((d) => d.ativo !== false && chaveDep(d.departamento) === chaveDep(p.departamento))) &&
-          (codigosAtivos.size === 0 || codigosAtivos.has(p.codigo.replace(/^0+/, ""))),
+          permiteDept(p.departamento),
         );
 
       // Algumas pontes DIRECTOR publicam vendas por produto, mas compras apenas
@@ -778,7 +765,7 @@ const Compras = () => {
       }
     }
     const produtos = (produtosCache[chaveProdutos(cvInicio, cvFim)] || [])
-      .filter((p) => !cvExcluir.includes(chaveDep(p.departamento)))
+      .filter((p) => permiteDept(p.departamento) && (fN1 === "__all__" || p.departamento === fN1))
       .map((p) => ({
       Departamento: p.departamento, Grupo: p.secao, Subgrupo: p.subgrupo, Código: p.codigo,
       Descrição: p.descricao, EAN: p.ean,
@@ -1133,11 +1120,6 @@ const Compras = () => {
                   </div>
                   {fN1 !== "__all__" && (
                     <button onClick={() => setFN1("__all__")} className={btnGhost}>Limpar filtro</button>
-                  )}
-                  {cvExcluir.length > 0 && (
-                    <span className="text-xs text-muted-foreground self-center">
-                      {cvExcluir.length} departamento(s) fora da apuração (Configuração)
-                    </span>
                   )}
                   <button onClick={exportarComprasVendas} className={btnGhost}>
                     <Download className="w-4 h-4" /> Exportar Excel

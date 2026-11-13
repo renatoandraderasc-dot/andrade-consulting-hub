@@ -13,6 +13,7 @@ PIC TV weather uses browser-authorized location with Open-Meteo and degrades ind
 - Comparativo de Departamentos e Produtos reads ranking_produtos one month at a time and stores closed months as compact rows in painel_periodo_cache (relatorio comparativo_produtos_v1); the store-wide receipt count comes from cupons_e_ticket because summing per-department receipts would double count.
 - Dashboard daily realized sales use vendas_secao_dia for DIRECTOR via consultarVendasDiarias, with sequential per-day fallback for undated responses; period totals must not be assigned to the first day.
 - Purchase target generation preserves aggregated LOJA/GERAL rows and the established loss/recovery formula; financial totals sum only department rows to avoid double counting buyer targets.
+- Purchase realized views use the union of report movements, full catalog departments and configured departments; goal activation flags and recent product activity never filter realized amounts, preserving complete ERP totals.
 - Calendar campaign blocks have stable component identity, so asynchronous saves do not reset another block's focus or draft.
 - Fixed-format prize image exports pass measured layout width and height to the image renderer; clone styles alone do not set canvas dimensions.
 - Dynamic stock fallback groups product rankings by verified last-entry dates through D-1, queries sequentially, and rejects incomplete results; first-purchase dates are never treated as last entries.
