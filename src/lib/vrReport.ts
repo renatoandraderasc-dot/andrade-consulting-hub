@@ -72,7 +72,7 @@ export async function chamarRelatorio(
   storeId: string,
   relatorio: string,
   params: Record<string, unknown> = {},
-  opts: { forcar?: boolean } = {},
+  opts: { forcar?: boolean; apenasSalvos?: boolean } = {},
 ): Promise<RelatorioResultado> {
   const vazio = { dados: [] as any[], indisponivel: false, offline: false, erro: null as string | null };
   if (!storeId) return vazio;
@@ -80,10 +80,15 @@ export async function chamarRelatorio(
   if (!opts.forcar) {
     const hub = await montarDoHub(storeId, relatorio, params).catch(() => null);
     if (hub) {
+      if (await usaCustoReposicao(storeId)) {
+        for (const l of hub.dados) l.__custoReposicao = true;
+      }
       registrarAtualizacao(hub.atualizadoEm, true);
       return { dados: hub.dados, indisponivel: false, offline: false, erro: null, atualizadoEm: hub.atualizadoEm, doCache: true };
     }
   }
+
+  if (opts.apenasSalvos) return { ...vazio, erro: "Este período ainda não está salvo no Hub." };
 
   // One HTTP request per day avoids the gateway's request-time limit even
   // when filling a month for the first time. Completed days stay in the Hub.

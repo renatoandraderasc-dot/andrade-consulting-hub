@@ -1,10 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
+import { montarDoHub } from "@/lib/hubDiario";
 
 // ============================================================
 // Cache de relatorios por periodo.
-// Periodos ja encerrados (que terminam antes do mes corrente)
-// nunca mudam — por isso ficam gravados e nao sao consultados
-// de novo no sistema da loja.
+// Períodos encerrados ficam guardados, mas uma nova leitura do
+// Hub sempre tem prioridade sobre cópias secundárias da tela.
 // ============================================================
 
 /** Primeiro dia do mes corrente (America/Sao_Paulo) em ISO. */
@@ -29,6 +29,12 @@ export async function lerPeriodoCache(
   ate: string,
 ): Promise<any[] | null> {
   if (!storeId || !periodoFechado(ate)) return null;
+  // Compact product rows have a different shape; the comparative page
+  // rebuilds those directly from ranking_produtos before using its fallback.
+  if (relatorio !== "comparativo_produtos_v1") {
+    const hub = await montarDoHub(storeId, relatorio, { inicio: de, fim: ate, ...(departamento ? { departamento } : {}) }).catch(() => null);
+    if (hub) return hub.dados;
+  }
   const { data } = await supabase
     .from("painel_periodo_cache")
     .select("dados")
