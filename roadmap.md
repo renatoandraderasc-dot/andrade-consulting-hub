@@ -1,5 +1,10 @@
 # Ajustes do Painel de Compras
 
+# Acesso de demonstração — supermercado fictício
+- [ ] Definir o acesso de demonstração e se precisa guardar dados de perfil, mantendo isolamento das lojas reais.
+- [ ] Preencher os módulos com dados fictícios coerentes e permitir testar as ações de cada área.
+- [ ] Verificar entrada, navegação entre todas as telas, alterações e apresentação no celular e computador.
+
 # Apresentação do SaaS para palestra
 - [x] Criar apresentação pública separada dos dados das lojas, com 15 telas nos seis pilares, navegação e tela cheia em /apresentacao; link Demonstração no site.
 - [x] Incluir 12 fotos ilustrativas e vídeo de 24 segundos sem expor clientes; uploads podem substituir cada tela.
