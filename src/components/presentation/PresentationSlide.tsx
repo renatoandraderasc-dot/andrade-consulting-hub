@@ -3,14 +3,11 @@ import { Button } from "@/components/ui/button";
 import logo from "@/assets/andrade-logo.png";
 import supermarket from "@/assets/presentation/supermercado.jpg";
 import { presentationChapters, type PresentationSlideData } from "@/lib/presentation/content";
+import { builtInScreenUrl } from "@/lib/presentation/assets";
 import DemoScreen from "./DemoScreen";
 
 export type VisibleMedia = { url: string; kind: "image" | "video"; name: string };
-const screenAssets = import.meta.glob<{ default: { url: string } }>("/src/assets/presentation/*.jpg.asset.json", { eager: true });
-
-export function builtInScreenUrl(id: string) {
-  return screenAssets[`/src/assets/presentation/${id}.jpg.asset.json`]?.default.url;
-}
+export { builtInScreenUrl } from "@/lib/presentation/assets";
 
 export default function PresentationSlide({ slide, index, total, partner, media, onNavigate, onExpand, staticView = false }: { slide: PresentationSlideData; index: number; total: number; partner?: string; media?: VisibleMedia; onNavigate?: (index: number) => void; onExpand?: () => void; staticView?: boolean }) {
   const imageUrl = builtInScreenUrl(slide.id);
