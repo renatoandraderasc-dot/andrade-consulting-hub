@@ -14,14 +14,14 @@ interface Store {
  * e recarrega para que todos os dados sejam refeitos para a loja ativa.
  */
 const StoreSwitcher = () => {
-  const { user } = useAuth();
+  const { user, isDemo } = useAuth();
   const [stores, setStores] = useState<Store[]>([]);
   const [current, setCurrent] = useState<string>(
     () => sessionStorage.getItem("selectedStoreId") || ""
   );
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || isDemo) return;
     let cancelled = false;
 
     const load = async () => {
@@ -43,7 +43,7 @@ const StoreSwitcher = () => {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user, isDemo]);
 
   const change = (id: string) => {
     if (!id || id === current) return;
@@ -53,6 +53,7 @@ const StoreSwitcher = () => {
     window.location.reload();
   };
 
+  if (isDemo) return <span className="inline-flex gap-2 items-center text-xs text-muted-foreground"><StoreIcon className="h-3.5 w-3.5" /> Supermercado Aurora</span>;
   if (stores.length === 0) return null;
 
   return (

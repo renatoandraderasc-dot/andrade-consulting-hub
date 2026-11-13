@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { DemoWorkspaceProvider } from "@/hooks/useDemoWorkspace";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import AdminSetup from "./pages/AdminSetup";
@@ -99,6 +100,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <DemoWorkspaceProvider>
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/apresentacao" element={<Apresentacao />} />
@@ -167,11 +169,12 @@ const App = () => (
             <Route path="/jornada/execucoes" element={g("jornada_execucoes", <JornadaExecucoes />)} />
             <Route path="/admin/jornada" element={g("jornada", <AdminJornada />)} />
             <Route path="/admin/tv" element={g("admin_tv", <AdminTv />)} />
-            <Route path="/tv/:id" element={<TvPlayer />} />
+            <Route path="/tv/:id" element={g("admin_tv", <TvPlayer />)} />
             <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </DemoWorkspaceProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

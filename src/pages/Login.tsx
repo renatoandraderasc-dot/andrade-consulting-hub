@@ -4,7 +4,8 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { LogIn, UserPlus } from "lucide-react";
+import { LogIn, UserPlus, Store } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import andradeLogo from "@/assets/andrade-logo.png";
 
 interface Store {
@@ -38,10 +39,11 @@ const MSG_REDE =
 const Login = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const demonstration = searchParams.get("demo") === "1";
   const nextPath = sanitizeNext(searchParams.get("next"));
   const postLoginTarget = nextPath ?? "/dashboard";
   const [isSignup, setIsSignup] = useState(false);
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(demonstration ? "demonstracao@andradeconsultoria.app" : "");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [selectedStore, setSelectedStore] = useState("");
@@ -51,6 +53,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    if (demonstration || !isSignup) return;
     supabase.functions
       .invoke("list-stores")
       .then(({ data }) => {
@@ -59,7 +62,7 @@ const Login = () => {
       .catch(() => {
         /* lista de lojas é opcional: só é usada no cadastro */
       });
-  }, []);
+  }, [demonstration, isSignup]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,10 +146,10 @@ const Login = () => {
             <img src={andradeLogo} alt="Andrade" className="h-14 mx-auto mb-4" />
           </Link>
           <h1 className="font-display text-2xl font-bold">
-            {isSignup ? "Criar Conta" : "Área do Cliente"}
+            {demonstration ? "Acesso de demonstração" : isSignup ? "Criar Conta" : "Área do Cliente"}
           </h1>
           <p className="text-muted-foreground font-body text-sm mt-1">
-            {isSignup ? "Preencha seus dados para se cadastrar" : "Faça login para acessar o checklist"}
+            {demonstration ? "Supermercado Aurora · dados fictícios" : isSignup ? "Preencha seus dados para se cadastrar" : "Entre para acessar seu supermercado"}
           </p>
         </div>
 
@@ -198,24 +201,25 @@ const Login = () => {
 
                 {error && <p className="text-destructive text-sm font-body">{error}</p>}
 
-                <button
+                <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-gradient-gold text-primary-foreground font-body font-semibold py-3 rounded-lg flex items-center justify-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50"
+                  className="w-full"
                 >
                   {isSignup ? <UserPlus className="w-4 h-4" /> : <LogIn className="w-4 h-4" />}
                   {loading ? "Aguarde..." : isSignup ? "Cadastrar" : "Entrar"}
-                </button>
+                </Button>
               </form>
 
-              <div className="mt-4 text-center">
+              {!demonstration && <div className="mt-4 text-center">
                 <button
                   onClick={() => { setIsSignup(!isSignup); setError(""); setSuccess(""); }}
                   className="text-primary font-body text-sm hover:underline"
                 >
                   {isSignup ? "Já tem conta? Faça login" : "Não tem conta? Cadastre-se"}
                 </button>
-              </div>
+              </div>}
+              {!demonstration && <Button asChild variant="outline" className="w-full mt-4"><Link to="/login?demo=1"><Store /> Acesso de demonstração</Link></Button>}
             </>
           )}
         </div>

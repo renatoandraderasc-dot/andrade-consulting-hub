@@ -3,6 +3,7 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { APP_MODULES } from "@/lib/modules";
+import DemoWorkspace from "@/pages/DemoWorkspace";
 
 interface ModuleGuardProps {
   module: string;
@@ -14,13 +15,13 @@ interface ModuleGuardProps {
  * restrictions that do not include it. Admins always pass.
  */
 const ModuleGuard = ({ module, children }: ModuleGuardProps) => {
-  const { user, isAdmin, loading } = useAuth();
+  const { user, isAdmin, isDemo, loading } = useAuth();
   const location = useLocation();
   const [allowed, setAllowed] = useState<Set<string> | null>(null);
 
   useEffect(() => {
     if (loading) return;
-    if (!user || isAdmin) {
+    if (!user || isAdmin || isDemo) {
       setAllowed(null);
       return;
     }
@@ -53,7 +54,7 @@ const ModuleGuard = ({ module, children }: ModuleGuardProps) => {
       active = false;
       window.clearTimeout(timer);
     };
-  }, [user, isAdmin, loading]);
+  }, [user, isAdmin, isDemo, loading]);
 
   if (loading) {
     return (
@@ -66,6 +67,9 @@ const ModuleGuard = ({ module, children }: ModuleGuardProps) => {
   if (!user) {
     return <Navigate to={`/login?next=${encodeURIComponent(location.pathname)}`} replace />;
   }
+
+  // Do not mount production page hooks, readers, ERP calls or mutations for a demo account.
+  if (isDemo) return <DemoWorkspace />;
 
   // módulos que dão acesso à mesma rota (ex.: visualizador só de %)
   // Controladoria: a rota /controladoria abre se o usuário tiver o módulo
