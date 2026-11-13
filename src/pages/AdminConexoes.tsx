@@ -342,7 +342,7 @@ const AdminConexoes = () => {
                   <div><p className="text-xs text-muted-foreground mb-1">Relatórios salvos</p><p className="font-semibold text-sm tabular-nums">{(r.summary?.saved_reports ?? 0).toLocaleString("pt-BR")}</p></div>
                   <div className="flex items-end"><Button className="w-full" onClick={() => sincronizar(r)} disabled={r.syncing || r.enabled === false || !r.sistema || (!r.api_url && r.sistema !== "WEBSAC") || r.checking}>
                     <Database className={r.syncing ? "animate-pulse motion-reduce:animate-none" : ""} />
-                    {r.syncing ? "Sincronizando…" : syncAtiva(r.job) ? "Retomar sincronização" : "Sincronizar loja"}
+                    {r.syncing ? "Sincronizando…" : syncInterrompida(r.job) ? "Retomar sincronização" : syncAtiva(r.job) ? "Acompanhar sincronização" : "Sincronizar loja"}
                   </Button></div>
                 </div>
                 {r.job && <div aria-live="polite" className="space-y-2 text-sm">
