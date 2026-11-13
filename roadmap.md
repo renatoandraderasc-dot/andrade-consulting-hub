@@ -1,9 +1,9 @@
 # Ajustes do Painel de Compras
 
 # Acesso de demonstração — supermercado fictício
-- [ ] Definir o acesso de demonstração e se precisa guardar dados de perfil, mantendo isolamento das lojas reais.
-- [ ] Preencher os módulos com dados fictícios coerentes e permitir testar as ações de cada área.
-- [ ] Verificar entrada, navegação entre todas as telas, alterações e apresentação no celular e computador.
+- [x] Criar conta com e-mail e senha, sem perfil pessoal novo nem permissões de lojas reais; espaço fictício protegido no Cloud e instruções privadas em Files.
+- [x] Preencher 59 telas demonstrativas em sete áreas, com 36 produtos, 16 funcionários, 12 meses e 5.840 marcações; edições salvas, exportações e ações simuladas sem ERP ou e-mails reais.
+- [x] Login e 59 links conferidos; produto persistido após reabrir, Excel exportado, PIS lançado, escala publicada/travada/reaberta, contagem cega concluída e telão com três módulos; celular 405px sem transbordamento. 28 testes aprovados; sete tabelas reais bloqueadas e funções privilegiadas recusadas para a conta de demonstração; dados fictícios restaurados após os testes e compilação OK.
 
 # Apresentação do SaaS para palestra
 - [x] Criar apresentação pública separada dos dados das lojas, com 15 telas nos seis pilares, navegação e tela cheia em /apresentacao; link Demonstração no site.
