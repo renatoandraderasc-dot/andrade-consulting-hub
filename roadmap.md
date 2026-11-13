@@ -1,10 +1,10 @@
 # Ajustes do Painel de Compras
 
 # Apresentação do SaaS para palestra
-- [ ] Criar apresentação pública separada dos dados das lojas, com visão dos seis pilares, navegação e tela cheia.
-- [ ] Incluir imagens demonstrativas das telas principais e vídeo de demonstração, sem expor clientes.
-- [ ] Permitir adicionar a logo do parceiro, fotos e vídeos, mantendo-os neste navegador.
-- [ ] Conferir apresentação, mídias, logo, navegação e exibição no computador e celular.
+- [x] Criar apresentação pública separada dos dados das lojas, com 15 telas nos seis pilares, navegação e tela cheia em /apresentacao; link Demonstração no site.
+- [x] Incluir 12 fotos ilustrativas e vídeo de 24 segundos sem expor clientes; uploads podem substituir cada tela.
+- [x] Permitir adicionar a logo do parceiro, fotos e vídeos em IndexedDB no navegador, informando que não acompanham o link compartilhado.
+- [x] Cinco testes aprovados; logo e vídeo persistidos após reabrir, vídeo reproduzido, notas salvas, grade, ampliação, apresentador sincronizado, teclado, tela cheia horizontal, swipe e celular 489px sem transbordamento; 15 páginas de impressão com imagens carregadas e compilação OK. Fotos/vídeo do CDN testados via encaminhamento do navegador ao host da prévia, pois localhost não serve /__l5e.
 
 # Relatórios atualizados — Comparativo Cobal e Hub
 - [x] Corrigir outubro fechado do Cobal usando a leitura completa já salva no Hub: 4.389 produtos, R$ 750.582,34 e volume 81.088,881.
