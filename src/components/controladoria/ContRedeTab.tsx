@@ -115,15 +115,9 @@ async function lerVendaMes(storeId: string, ano: number, mes: number, preferido:
   const candidatos = preferido ? [preferido, ...RELS_VENDA.filter((c) => c !== preferido)] : RELS_VENDA;
 
   if (!forcar) {
-    const { data } = await supabase
-      .from("relatorio_cache")
-      .select("relatorio, dados")
-      .eq("store_id", storeId)
-      .in("relatorio", candidatos)
-      .eq("params_chave", JSON.stringify({ fim, inicio }));
     for (const rel of candidatos) {
-      const row = (data as any[] | null)?.find((d) => d.relatorio === rel);
-      const v = row && Array.isArray(row.dados) ? extrairVenda(row.dados) : null;
+      const r = await chamarRelatorio(storeId, rel, { inicio, fim }, { apenasSalvos: true });
+      const v = !avisoRelatorio(r) ? extrairVenda(r.dados) : null;
       if (v) return { valor: v, rel, aviso: null };
     }
     return { valor: null as VendaMes, rel: preferido, aviso: null };

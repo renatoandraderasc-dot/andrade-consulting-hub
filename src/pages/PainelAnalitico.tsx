@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { carregarLojasPermitidas, type LojaSimples } from "@/lib/lojasPermitidas";
 import { chamarRelatorio, avisoRelatorio, pick, num } from "@/lib/vrReport";
+import { montarDoHub } from "@/lib/hubDiario";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -235,6 +236,16 @@ export default function PainelAnalitico() {
       for (const g of gravados ?? []) {
         const d = (g as any).dados as MesRow | null;
         if (d) cache.set(`${(g as any).ano}-${(g as any).mes}`, { ...vazio((g as any).mes), ...d, mes: (g as any).mes });
+      }
+
+      // Secondary monthly snapshots cannot hide corrected Hub reports.
+      for (const y of anos) for (let m = 1; m <= 12; m++) {
+        if (futuro(y, m)) continue;
+        const mm = String(m).padStart(2, "0");
+        const hub = await montarDoHub(storeId, "diagnostico_mensal", {
+          inicio: `${y}-${mm}-01`, fim: `${y}-${mm}-${String(ultimoDia(y, m)).padStart(2, "0")}`,
+        });
+        if (hub) cache.set(`${y}-${m}`, { ...somar(mapear(hub.dados)), mes: m });
       }
 
       const pendentes: Array<[number, number]> = [];

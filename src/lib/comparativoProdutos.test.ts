@@ -42,4 +42,10 @@ describe("comparativo de produtos", () => {
     expect(situacao(rows.find((r) => r.codigo === "1")!)).toBe("perdido");
     expect(situacao(rows.find((r) => r.codigo === "2")!)).toBe("novo");
   });
+
+  it("mantém a precisão de custo do Hub antes de fechar o lucro do Cobal em R$ 237.045,31", () => {
+    const [l] = agregar([p("2026-10", "198", "LOJA", 750582.34, 513537.0294415, 81088.881)], "departamento", new Set(), new Set(["2026-10"]));
+    expect(l.b.custo).toBe(513537.0294415);
+    expect(Number(l.b.lucro.toFixed(2))).toBe(237045.31);
+  });
 });

@@ -8,7 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { carregarLojasPermitidas, type LojaSimples } from "@/lib/lojasPermitidas";
 import { chamarRelatorio, avisoRelatorio } from "@/lib/vrReport";
 import { salvarWorkbook } from "@/lib/exportBranding";
-import { lerPeriodoCache, gravarPeriodoCache, limparPeriodoCache } from "@/lib/relatorioCache";
+import { lerPeriodoCache, gravarPeriodoCache } from "@/lib/relatorioCache";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -95,8 +95,6 @@ export default function Relatorios() {
     setColunas([]);
     setDoCache(false);
 
-    if (forcar) await limparPeriodoCache(storeId, def.nome, "", inicio, fim);
-
     const guardado = forcar ? null : await lerPeriodoCache(storeId, def.nome, "", inicio, fim);
     if (guardado?.length) {
       setCarregando(false);
@@ -107,7 +105,7 @@ export default function Relatorios() {
       return;
     }
 
-    const r = await chamarRelatorio(storeId, def.nome, { inicio, fim });
+    const r = await chamarRelatorio(storeId, def.nome, { inicio, fim }, { forcar });
     setCarregando(false);
     setRodado(def);
 

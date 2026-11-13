@@ -1,5 +1,11 @@
 # Ajustes do Painel de Compras
 
+# Relatórios atualizados — Comparativo Cobal e Hub
+- [x] Corrigir outubro fechado do Cobal usando a leitura completa já salva no Hub: 4.389 produtos, R$ 750.582,34 e volume 81.088,881.
+- [x] Leituras compartilhadas, relatórios mensais/anuais e Cont Rede priorizam dados completos mais recentes do Hub, sem escrever lançamentos manuais.
+- [x] Abrir o Comparativo com meses salvos, sem consulta automática à loja; filtros e troca de loja protegidos contra respostas antigas.
+- [x] 62 testes aprovados; total e lucro de R$ 237.045,31 conferidos no Cobal autenticado, por produto e após reabrir; celular 405px sem transbordamento e sem erros.
+
 # Conexões — sincronização individual e consultas sem 504
 - [x] Corrigir relatórios pesados com consultas diárias sequenciais, reaproveitando o Hub e sem apresentar períodos incompletos como totais.
 - [x] Mostrar última sincronização completa, última leitura salva, progresso persistido e botão individual por loja em Conexões; sem consultar ERP ao abrir.

@@ -37,3 +37,10 @@ it("dados salvos do Hub não consultam a loja novamente", async () => {
   expect(r.dados[0].vendas).toBe(540);
   expect(r.doCache).toBe(true);
 });
+
+it("abrir a tela só com dados salvos nunca inicia uma consulta automática à loja", async () => {
+  const r = await chamarRelatorio("cobal", "ranking_produtos", { inicio: "2026-10-01", fim: "2026-10-31" }, { apenasSalvos: true });
+  expect(invoke).not.toHaveBeenCalled();
+  expect(r.dados).toEqual([]);
+  expect(r.erro).not.toBeNull();
+});
