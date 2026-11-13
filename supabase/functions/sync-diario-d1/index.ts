@@ -1,181 +1,144 @@
-// ============================================================
-// sync-diario-d1
-// Roda as 08:00 (cron) ou sob demanda (botao Atualizar / body.store_id).
-// Para cada loja com modo_sync = 'diario_d1':
-//  1. renova as consultas ja existentes no cache cujo periodo termina nos
-//     ultimos 8 dias (janelas "mes corrente", "ultimos 7 dias" etc.) —
-//     a janela e ROLADA para terminar em ontem (D-1)
-//  2. renova as consultas sem data (produtos, precos, estoque atual...)
-//  3. pre-aquece as janelas padrao dos relatorios principais
-//  4. apaga cache com mais de 60 dias sem uso
-// Loja offline nao apaga nada do cache.
-// ============================================================
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
+import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import { z } from "npm:zod@4";
 import { consultarComCache, ontemBrasilia, type ConfigLojaCache } from "../_shared/cacheRelatorio.ts";
+import { planejarSincronizacao, type TarefaSync } from "../_shared/hubDados.ts";
+import { permiteSincronizar } from "../_shared/syncAutorizacao.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-sync-secret",
-};
+const DataISO = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(v => !Number.isNaN(Date.parse(v)), "Data inválida");
+const Body = z.object({
+  store_id: z.string().uuid().optional(),
+  action: z.enum(["start", "resume"]).default("start"),
+  job_id: z.string().uuid().optional(),
+  so_existentes: z.boolean().optional(),
+  backfill: z.object({ inicio: DataISO, fim: DataISO }).refine(v => v.inicio <= v.fim && (Date.parse(v.fim) - Date.parse(v.inicio)) / 86400000 < 366, "Intervalo inválido ou maior que 366 dias").optional(),
+});
 
-// Relatorios pre-aquecidos todas as manhas (janelas padrao das telas)
-const PERIODICOS = [
-  "kpis_periodo", "kpis_pic_periodo", "vendas_secao_periodo", "vendas_secao_dia",
-  "vendas_departamento_dia", "vendas_dep_periodo", "compras_vendas_periodo",
-  "ranking_produtos", "cupons_e_ticket", "receber_periodo", "pagamentos_periodo",
-  "contas_a_pagar", "dre_periodo", "estoque_dinamico", "compras_por_fornecedor",
-];
-// Guardados dia a dia para sempre (telas montam periodos sem ir na loja)
-const DIARIOS = ["ranking_produtos", "compras_vendas_periodo"];
-const SNAPSHOT = ["produtos", "produtos_precos", "estoque_atual", "produtos_ativos_12m"];
-const MESES_HISTORICO = ["resultados_mensais", "resultados_mensais_depto", "rede_mensal", "mix_trimestre"];
-
-function addDias(d: string, n: number): string {
-  const x = new Date(`${d}T12:00:00Z`);
-  x.setUTCDate(x.getUTCDate() + n);
-  return x.toISOString().slice(0, 10);
-}
-
-function janelasPadrao(ontem: string): Array<Record<string, string>> {
-  const [ano, mes] = ontem.split("-");
-  const inicioMes = `${ano}-${mes}-01`;
-  const mesAnteriorFim = addDias(inicioMes, -1);
-  const mesAnteriorIni = mesAnteriorFim.slice(0, 8) + "01";
-  return [
-    { inicio: inicioMes, fim: ontem },          // mes corrente ate ontem
-    { inicio: addDias(ontem, -6), fim: ontem }, // ultimos 7 dias
-    { inicio: addDias(ontem, -29), fim: ontem },// ultimos 30 dias
-    { inicio: mesAnteriorIni, fim: mesAnteriorFim }, // mes anterior fechado
-  ];
-}
-
-async function comLimite<T, R>(itens: T[], limite: number, fn: (i: T) => Promise<R>): Promise<R[]> {
-  const out: R[] = new Array(itens.length);
-  let idx = 0;
-  const workers = Array.from({ length: Math.min(limite, itens.length) }, async () => {
-    while (idx < itens.length) { const i = idx++; out[i] = await fn(itens[i]); }
-  });
-  await Promise.all(workers);
-  return out;
-}
-
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
-  const json = (b: unknown, s = 200) =>
-    new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-
-  const segredo = Deno.env.get("SYNC_VR_SECRET");
-  const temSegredo = segredo && req.headers.get("x-sync-secret") === segredo;
-  const temApiKey = !!(req.headers.get("apikey") || req.headers.get("authorization"));
-  if (!temSegredo && !temApiKey) return json({ erro: "nao autorizado" }, 401);
-
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+Deno.serve(async req => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  if (req.method !== "POST") return json({ erro: "Método não permitido" }, 405);
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  if (!supabaseUrl || !serviceKey || !anonKey) return json({ erro: "Serviço de sincronização indisponível" }, 500);
   const service = createClient(supabaseUrl, serviceKey);
+  try {
+    const parsed = Body.safeParse(await req.json().catch(() => ({})));
+    if (!parsed.success) return json({ erro: "Informe uma loja e datas válidas" }, 400);
+    const body = parsed.data;
+    const authorization = req.headers.get("Authorization") ?? "";
+    const secret = Deno.env.get("SYNC_VR_SECRET");
+    const interno = authorization === `Bearer ${serviceKey}` || (!!secret && req.headers.get("x-sync-secret") === secret);
+    let admin = interno;
+    let userId: string | undefined;
+    if (!interno) {
+      if (!authorization.startsWith("Bearer ")) return json({ erro: "Não autenticado" }, 401);
+      const auth = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: authorization } } });
+      const { data, error } = await auth.auth.getClaims(authorization.slice(7));
+      if (error || !data?.claims?.sub) return json({ erro: "Sessão inválida" }, 401);
+      userId = String(data.claims.sub);
+      const { data: roles } = await service.from("user_roles").select("role").eq("user_id", userId).eq("role", "admin");
+      admin = !!roles?.length;
+    }
+    let storeId = body.store_id;
+    if (body.action === "resume") {
+      if (!body.job_id) return json({ erro: "Sincronização não informada" }, 400);
+      const { data: job } = await service.from("store_sync_jobs").select("store_id").eq("id", body.job_id).maybeSingle();
+      if (!job) return json({ erro: "Sincronização não encontrada" }, 404);
+      storeId = job.store_id;
+    }
+    let aprovado = false;
+    if (!admin && userId && storeId) {
+      const { data } = await service.from("user_store_access").select("id").eq("user_id", userId).eq("store_id", storeId).eq("approved", true).limit(1);
+      aprovado = !!data?.length;
+    }
+    if (!permiteSincronizar(admin, aprovado, storeId)) return json({ erro: "Sem permissão para sincronizar esta loja" }, 403);
+    if (body.backfill && !storeId) return json({ erro: "Informe a loja para carregar o histórico" }, 400);
 
-  let body: { store_id?: string; so_existentes?: boolean; backfill?: { inicio: string; fim: string } } = {};
-  try { body = await req.json(); } catch { /* sem corpo */ }
-
-  let q = service
-    .from("store_vr_config")
-    .select("store_id, api_url, api_key, sistema, codigo_loja, modo_sync, enabled");
-  // Pedido para uma loja especifica (Diagnostico por cliente) atualiza qualquer modo;
-  // o cron sem store_id continua so com as lojas 'diario_d1'.
-  if (body.store_id) q = q.eq("store_id", body.store_id);
-  else q = q.eq("modo_sync", "diario_d1");
-  const { data: configs, error } = await q;
-  if (error) return json({ erro: error.message }, 500);
-
-  const ontem = ontemBrasilia();
-  const limiteRenovar = addDias(ontem, -8);
-  const resumo: Record<string, unknown>[] = [];
-
-  for (const cfg of (configs ?? []) as (ConfigLojaCache & { store_id: string; enabled?: boolean })[]) {
-    if (cfg.enabled === false) continue;
-    const storeId = cfg.store_id;
-    const alvos = new Map<string, { relatorio: string; params: Record<string, unknown> }>();
-    const add = (relatorio: string, params: Record<string, unknown>) =>
-      alvos.set(`${relatorio}|${JSON.stringify(params)}`, { relatorio, params });
-
-    // Hub diario: so grava dias faltantes do periodo pedido (carga do historico)
-    if (body.backfill && body.store_id) {
-      const { data: tem } = await service.from("relatorio_cache").select("relatorio, params_chave")
-        .eq("store_id", storeId).in("relatorio", DIARIOS);
-      const ja = new Set((tem ?? []).map((t) => `${t.relatorio}|${t.params_chave}`));
-      for (let d = body.backfill.inicio; d <= body.backfill.fim && d <= ontem; d = addDias(d, 1))
-        for (const r of DIARIOS) if (!ja.has(`${r}|${JSON.stringify({ fim: d, inicio: d })}`)) add(r, { inicio: d, fim: d });
-    } else {
-    // 1+2. o que ja esta no cache (rolando a janela para terminar em ontem)
-    const { data: existentes } = await service
-      .from("relatorio_cache")
-      .select("relatorio, params, fim")
-      .eq("store_id", storeId);
-    const mesAnterior = (() => { const d = new Date(`${ontem.slice(0, 7)}-01T12:00:00Z`); d.setUTCMonth(d.getUTCMonth() - 1); return d.toISOString().slice(0, 7); })();
-    for (const e of existentes ?? []) {
-      const p = { ...(e.params as Record<string, unknown>) };
-      const fim = e.fim as string | null;
-      // dre_periodo mensal: historico permanente. So mes corrente e anterior sao renovados.
-      if (e.relatorio === "dre_periodo" && typeof p.inicio === "string" && String(p.inicio).endsWith("-01")) {
-        const mesIni = String(p.inicio).slice(0, 7);
-        if (mesIni === ontem.slice(0, 7)) { p.fim = ontem; add("dre_periodo", p); }
-        else if (mesIni === mesAnterior) add("dre_periodo", p);
-        continue;
+    // A request returns immediately. The persisted queue is processed in short
+    // invocations, each with a lease, so slow stores do not hit gateway timeouts.
+    const executar = async (id: string) => {
+      const lease = crypto.randomUUID();
+      const agora = new Date().toISOString();
+      const { data: job, error: leaseError } = await service.from("store_sync_jobs").update({
+        status: "running", lease_id: lease, lease_until: new Date(Date.now() + 155000).toISOString(), updated_at: agora,
+      }).eq("id", id).in("status", ["pending", "running"])
+        .or(`lease_until.is.null,lease_until.lt.${agora}`).select("*").maybeSingle();
+      if (leaseError || !job) return;
+      try {
+        const { data: config } = await service.from("store_vr_config").select("api_url, api_key, sistema, codigo_loja, modo_sync, enabled").eq("store_id", job.store_id).maybeSingle();
+        if (!config || config.enabled === false) throw new Error("Conexão desligada ou não cadastrada");
+        const cfg = config as ConfigLojaCache;
+        const tasks = job.tasks as TarefaSync[];
+        let processed = job.processed, succeeded = job.succeeded, failed = job.failed, unavailable = job.unavailable;
+        let lastError = job.last_error as string | null;
+        const inicio = Date.now();
+        while (processed < tasks.length && Date.now() - inicio < 65000) {
+          const t = tasks[processed];
+          await service.from("store_sync_jobs").update({ current_report: t.relatorio, updated_at: new Date().toISOString() }).eq("id", id).eq("lease_id", lease);
+          const resultado = await consultarComCache({ supabaseUrl, serviceKey, storeId: job.store_id, relatorio: t.relatorio, params: t.params,
+            cfg, forcar: true, origem: "job", timeoutMs: 90000 });
+          if (resultado.ok) succeeded++;
+          else if (/relatorio.*(nao encontrado|não encontrado|nao existe)|404|não publicado/i.test(resultado.erro ?? "")) unavailable++;
+          else { failed++; lastError = `${t.relatorio}: ${resultado.erro ?? "Sem resposta"}`.slice(0, 400); }
+          processed++;
+          const { error: progressError } = await service.from("store_sync_jobs").update({ processed, succeeded, failed, unavailable, last_error: lastError, updated_at: new Date().toISOString() }).eq("id", id).eq("lease_id", lease);
+          if (progressError) throw new Error("Não foi possível salvar o progresso");
+        }
+        if (processed === tasks.length) {
+          const status = failed ? (succeeded ? "partial" : "failed") : (succeeded ? "completed" : "failed");
+          const finishedAt = new Date().toISOString();
+          const mensagem = lastError ?? (succeeded ? null : "Nenhum relatório disponível nesta loja");
+          await service.from("store_sync_jobs").update({ status, finished_at: finishedAt, updated_at: finishedAt, lease_until: null, current_report: null, last_error: mensagem }).eq("id", id).eq("lease_id", lease);
+          await service.from("store_vr_config").update({ ...(status === "completed" ? { last_sync_at: finishedAt } : {}), last_error: status === "completed" ? null : mensagem }).eq("store_id", job.store_id);
+        } else {
+          await service.from("store_sync_jobs").update({ lease_until: null }).eq("id", id).eq("lease_id", lease);
+          // Start the next short worker, rather than holding this HTTP request.
+          const next = await fetch(`${supabaseUrl}/functions/v1/sync-diario-d1`, {
+            method: "POST", headers: { Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "resume", job_id: id }), signal: AbortSignal.timeout(15000),
+          });
+          if (!next.ok) throw new Error("Sincronização interrompida. Retome para buscar somente os relatórios pendentes.");
+          await next.body?.cancel();
+        }
+      } catch (e) {
+        // Saved tasks remain resumable; UI explicitly offers Resume after failure.
+        await service.from("store_sync_jobs").update({ lease_until: null, last_error: e instanceof Error ? e.message : "Sincronização interrompida", updated_at: new Date(Date.now() - 180000).toISOString() }).eq("id", id).eq("lease_id", lease);
       }
-      if (!fim) { add(e.relatorio as string, p); continue; }           // snapshot
-      if (fim < limiteRenovar) continue;                               // periodo antigo, fica como esta
-      if (p.data !== undefined) { p.data = ontem; }
-      else if (p.fim !== undefined) {
-        const dias = Math.round((Date.parse(fim) - Date.parse(String(p.inicio ?? fim))) / 86400000);
-        const eraInicioMes = String(p.inicio ?? "").endsWith("-01");
-        p.fim = ontem;
-        // janela relativa (7/30 dias) rola inteira; janela "desde o dia 1" so estica o fim
-        if (!eraInicioMes && dias >= 0) p.inicio = addDias(ontem, -dias);
+    };
+    if (body.action === "resume" && body.job_id) {
+      EdgeRuntime.waitUntil(executar(body.job_id));
+      return json({ ok: true, job_id: body.job_id, store_id: storeId });
+    }
+    let q = service.from("store_vr_config").select("store_id, enabled, modo_sync").neq("enabled", false);
+    q = storeId ? q.eq("store_id", storeId) : q.eq("modo_sync", "diario_d1");
+    const { data: configs, error } = await q;
+    if (error) return json({ erro: "Não foi possível carregar as lojas" }, 500);
+    if (!configs?.length) return json({ erro: "Loja sem conexão ativa cadastrada" }, 400);
+    const jobs: { id: string; store_id: string }[] = [];
+    const d1 = ontemBrasilia();
+    for (const cfg of configs) {
+      const { data: active } = await service.from("store_sync_jobs").select("id, store_id").eq("store_id", cfg.store_id).in("status", ["pending", "running"]).maybeSingle();
+      if (active) { jobs.push(active); continue; }
+      const existentes: TarefaSync[] = [];
+      for (let offset = 0; ; offset += 1000) {
+        const { data: page, error: cacheError } = await service.from("relatorio_cache").select("relatorio, params").eq("store_id", cfg.store_id).order("id").range(offset, offset + 999);
+        if (cacheError) throw new Error("Não foi possível ler o Hub");
+        existentes.push(...(page ?? []).map(r => ({ relatorio: r.relatorio, params: r.params as Record<string, unknown> })));
+        if ((page?.length ?? 0) < 1000) break;
       }
-      add(e.relatorio as string, p);
+      const tasks = planejarSincronizacao(d1, existentes, body.so_existentes, body.backfill);
+      const { data: created, error: createError } = await service.from("store_sync_jobs").insert({ store_id: cfg.store_id, d1, tasks, total: tasks.length }).select("id, store_id").single();
+      if (createError) {
+        if (createError.code !== "23505") throw new Error("Não foi possível iniciar a sincronização");
+        const { data: concurrent } = await service.from("store_sync_jobs").select("id, store_id").eq("store_id", cfg.store_id).in("status", ["pending", "running"]).single();
+        if (concurrent) jobs.push(concurrent);
+      } else jobs.push(created);
     }
-
-    // 3. pre-aquecimento padrao
-    if (!body.so_existentes) {
-      for (const r of PERIODICOS) for (const j of janelasPadrao(ontem)) add(r, j);
-      for (const r of SNAPSHOT) add(r, {});
-      for (const r of MESES_HISTORICO) add(r, { inicio: `${ontem.slice(0, 4)}-01-01`, fim: ontem });
-    }
-    // Hub diario: o dia de ontem fica guardado para sempre
-    for (const r of DIARIOS) add(r, { inicio: ontem, fim: ontem });
-    }
-
-    const inicioMs = Date.now();
-    let ok = 0, falhas = 0, semRelatorio = 0;
-    // prioriza os relatorios principais e consulta 1 por vez (pontes lentas caem em paralelo)
-    const PRIORIDADE = ["kpis_periodo", "vendas_secao_periodo", "compras_vendas_periodo"];
-    const pri = (r: string) => { const i = PRIORIDADE.indexOf(r); return i < 0 ? 99 : i; };
-    const fila = [...alvos.values()].sort((a, b) => pri(a.relatorio) - pri(b.relatorio));
-    await comLimite(fila, 1, async (a) => {
-      const r = await consultarComCache({
-        supabaseUrl, serviceKey, storeId, relatorio: a.relatorio, params: a.params,
-        cfg, forcar: true, origem: "job", timeoutMs: 90000,
-      });
-      if (r.ok) ok++;
-      else if (/nao encontrado|nao existe|404/i.test(r.erro ?? "")) semRelatorio++;
-      else { falhas++; console.error("sync-diario-d1", storeId, a.relatorio, r.erro); }
-    });
-
-    // 4. limpeza de cache velho
-    const { data: velhos } = await service.from("relatorio_cache").select("id, relatorio, params")
-      .eq("store_id", storeId)
-      .neq("relatorio", "dre_periodo") // historico mensal nunca expira
-      .lt("atualizado_em", new Date(Date.now() - 60 * 86400000).toISOString());
-    const apagar = (velhos ?? []).filter((v) => {
-      const p = (v.params ?? {}) as Record<string, unknown>;
-      // dias do Hub diario nunca expiram
-      return !(DIARIOS.includes(v.relatorio as string) && p.inicio && p.inicio === p.fim);
-    }).map((v) => v.id);
-    for (let i = 0; i < apagar.length; i += 200)
-      await service.from("relatorio_cache").delete().in("id", apagar.slice(i, i + 200));
-
-    resumo.push({ store_id: storeId, consultas: alvos.size, ok, falhas, sem_relatorio: semRelatorio,
-      segundos: Math.round((Date.now() - inicioMs) / 1000) });
+    for (const job of jobs) EdgeRuntime.waitUntil(executar(job.id));
+    return json({ ok: true, d1, jobs, job_id: jobs[0]?.id });
+  } catch (e) {
+    return json({ erro: e instanceof Error ? e.message : "Erro ao iniciar sincronização" }, 500);
   }
-
-  return json({ ok: true, d1: ontem, lojas: resumo });
 });

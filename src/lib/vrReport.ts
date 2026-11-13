@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { registrarAtualizacao } from "@/lib/ultimaAtualizacao";
-import { montarDoHub } from "@/lib/hubDiario";
+import { montarDoHub, RELATORIOS_DIARIOS, diasEntre, agregarDias } from "@/lib/hubDiario";
 
 // ============================================================
 // Utilitario compartilhado para consultar relatorios ao vivo
@@ -83,6 +83,22 @@ export async function chamarRelatorio(
       registrarAtualizacao(hub.atualizadoEm, true);
       return { dados: hub.dados, indisponivel: false, offline: false, erro: null, atualizadoEm: hub.atualizadoEm, doCache: true };
     }
+  }
+
+  // One HTTP request per day avoids the gateway's request-time limit even
+  // when filling a month for the first time. Completed days stay in the Hub.
+  const inicio = typeof params.inicio === "string" ? params.inicio : "";
+  const fim = typeof params.fim === "string" ? params.fim : "";
+  if ((RELATORIOS_DIARIOS as readonly string[]).includes(relatorio) && /^\d{4}-\d{2}-\d{2}$/.test(inicio) && /^\d{4}-\d{2}-\d{2}$/.test(fim) && inicio < fim) {
+    const resultados: RelatorioResultado[] = [];
+    for (const dia of diasEntre(inicio, fim)) {
+      const r = await chamarRelatorio(storeId, relatorio, { ...params, inicio: dia, fim: dia }, opts);
+      if (r.erro || r.offline || r.indisponivel || r.aviso) return { ...r, dados: [] };
+      resultados.push(r);
+    }
+    const dados = resultados.map(r => r.dados);
+    return { ...vazio, dados: relatorio === "analise_compras" ? dados.flat() : agregarDias(dados),
+      doCache: resultados.every(r => r.doCache), atualizadoEm: resultados.map(r => r.atualizadoEm).filter(Boolean).sort().pop() ?? null };
   }
 
   let data: any = null;
@@ -268,7 +284,7 @@ export async function chamarRelatorioFatiado(
   params: Record<string, unknown> & { inicio: string; fim: string },
   opts: { diasPorLote?: number; forcar?: boolean; onProgresso?: (feitos: number, total: number) => void } = {},
 ): Promise<RelatorioResultado> {
-  const dias = Math.max(1, opts.diasPorLote ?? 2);
+  const dias = (RELATORIOS_DIARIOS as readonly string[]).includes(relatorio) ? 1 : Math.max(1, opts.diasPorLote ?? 2);
   const lotes: Array<[string, string]> = [];
   const d = new Date(`${params.inicio}T12:00:00`);
   const fim = new Date(`${params.fim}T12:00:00`);
