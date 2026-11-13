@@ -17,7 +17,8 @@ PIC TV weather uses browser-authorized location with Open-Meteo and degrades ind
 - Calendar campaign blocks have stable component identity, so asynchronous saves do not reset another block's focus or draft.
 - Fixed-format prize image exports pass measured layout width and height to the image renderer; clone styles alone do not set canvas dimensions.
 - Dynamic stock fallback groups product rankings by verified last-entry dates through D-1, queries sequentially, and rejects incomplete results; first-purchase dates are never treated as last entries.
-- Heavy reports (ranking_produtos, compras_vendas_periodo) are stored per day in relatorio_cache forever by sync-diario-d1 (also via body.backfill); chamarRelatorio assembles past multi-day ranges from those days via src/lib/hubDiario.ts before contacting the store, so slow bridges are only queried for missing days.
+- Heavy movement reports (including purchase entries) are fetched sequentially by day and retained in relatorio_cache; shared hubDados merges only additive movements and preserves separate invoice entries, preventing gateway timeouts and incorrect unit-cost sums.
+- Store synchronization uses persisted store_sync_jobs queues with per-store uniqueness and worker leases; only authenticated approved-store access or trusted cron credentials can start/resume work, and Conexões polls saved progress only after an explicit request, keeping ERP refresh manual and resumable.
 - NF-e receipt validation and WebSac entry are separate edge functions using _shared/consultaLoja.ts; preserve the supplied workflow so validation stays separate from ERP writes.
 
 - Receipt screens use cached manual-refresh reads and explicit header columns; blind counting unmounts invoice views, evicts invoice detail caches, and queries only safe criterion fields so invoice quantities are not passed into counting.

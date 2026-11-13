@@ -7,6 +7,7 @@ import DiagnosticoClientes from "@/components/diagnostico/DiagnosticoClientes";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Activity, RefreshCw, AlertTriangle, CheckCircle2, XCircle, Database, Server, KeyRound } from "lucide-react";
+import { iniciarSync, acompanharSync } from "@/lib/storeSync";
 
 const LIMITE_MS = 20000;
 
@@ -73,8 +74,9 @@ const AtualizarTodas = () => {
       const l = lista[i];
       setProgresso(`Atualizando ${l.stores?.name ?? "loja"} (${i + 1} de ${lista.length})...`);
       try {
-        const { error } = await supabase.functions.invoke("sync-diario-d1", { body: { store_id: l.store_id } });
-        if (!error) ok++;
+        const id = await iniciarSync(l.store_id);
+        const job = await acompanharSync(id, job => setProgresso(`Atualizando ${l.stores?.name ?? "loja"}: ${job.processed} de ${job.total} consultas (${i + 1} de ${lista.length} lojas)`));
+        if (job.status === "completed") ok++;
       } catch { /* segue para a próxima loja */ }
     }
     // Invalida o selo de sync guardado no navegador para refletir a nova atualização.

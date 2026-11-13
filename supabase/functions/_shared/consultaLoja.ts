@@ -181,7 +181,7 @@ export async function consultarRelatorioLoja(opts: {
   };
 
   async function chamar(nome: string): Promise<ResultadoConsulta> {
-    const raiz = `${cfg!.api_url.replace(/\/+$/, "")}/relatorios/${nome}`;
+    const raiz = `${opts.cfg?.api_url?.replace(/\/+$/, "") ?? cfg?.api_url.replace(/\/+$/, "")}/relatorios/${nome}`;
     const url = `${raiz}?${qs.toString()}`;
     // URLs muito longas (listas de codigos/itens) estouram o limite da ponte
     // (431/414). Nesses casos enviamos os parametros no corpo via POST.

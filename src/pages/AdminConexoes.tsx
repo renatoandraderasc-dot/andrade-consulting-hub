@@ -1,10 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import ClientLayout from "@/components/ClientLayout";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, XCircle, AlertTriangle, RefreshCw, Plug } from "lucide-react";
+import { CheckCircle2, XCircle, AlertTriangle, RefreshCw, Plug, Database, Search, Clock3, Wifi } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
+import { iniciarSync, acompanharSync, fmtSync, syncAtiva, syncInterrompida, type SyncJob, type SyncSummary } from "@/lib/storeSync";
 
 interface Row {
   store_id: string;
@@ -19,6 +22,13 @@ interface Row {
   erro?: string | null;
   checking?: boolean;
   relatorios?: { nome: string; ok: boolean; msg?: string }[];
+  last_sync_at: string | null;
+  last_error: string | null;
+  modo_sync: string | null;
+  summary?: SyncSummary;
+  job?: SyncJob;
+  syncing?: boolean;
+  sync_error?: string | null;
 }
 
 // relatórios essenciais por sistema (cada ERP publica nomes diferentes)
@@ -75,9 +85,22 @@ const AdminConexoes = () => {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [testingAll, setTestingAll] = useState(false);
+  const [busca, setBusca] = useState("");
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const acompanhando = useRef(new Set<string>());
+  const patchRow = (id: string, patch: Partial<Row>) => setRows(prev => prev.map(r => r.store_id === id ? { ...r, ...patch } : r));
 
   useEffect(() => {
-    if (!authLoading && (!user || !isAdmin)) navigate("/login");
+    if (authLoading) return;
+    if (!user) { navigate("/login"); return; }
+    if (isAdmin) return;
+    // Role hydration finishes after the session. Do not redirect an admin
+    // before the server's role read has resolved.
+    let active = true;
+    supabase.from("user_roles").select("role").eq("user_id", user.id).then(({ data }) => {
+      if (active && !data?.some(r => r.role === "admin")) navigate("/login");
+    });
+    return () => { active = false; };
   }, [user, isAdmin, authLoading, navigate]);
 
   useEffect(() => {
@@ -86,11 +109,20 @@ const AdminConexoes = () => {
 
   const load = async () => {
     setLoading(true);
-    const [{ data: stores }, { data: cfgs }] = await Promise.all([
+    setLoadError(null);
+    const [{ data: stores, error: storesError }, { data: cfgs, error: cfgError }, { data: summaries, error: summaryError }, { data: jobs, error: jobsError }] = await Promise.all([
       supabase.from("stores").select("id, name").order("name"),
       supabase.from("store_vr_config").select("*"),
+      supabase.rpc("admin_store_sync_summary"),
+      supabase.from("store_sync_jobs").select("id, store_id, status, started_at, updated_at, finished_at, d1, total, processed, succeeded, failed, unavailable, current_report, last_error").order("started_at", { ascending: false }).limit(500),
     ]);
+    if (storesError || cfgError || summaryError || jobsError) {
+      setLoadError("Não foi possível carregar todas as informações. Atualize a lista para tentar novamente.");
+    }
     const map = new Map((cfgs || []).map((c: any) => [c.store_id, c]));
+    const summaryMap = new Map((summaries ?? []).map(s => [s.store_id, s]));
+    const jobMap = new Map<string, SyncJob>();
+    for (const j of jobs ?? []) if (!jobMap.has(j.store_id)) jobMap.set(j.store_id, j);
     setRows(
       (stores || []).map((s) => {
         const c: any = map.get(s.id) || {};
@@ -102,18 +134,51 @@ const AdminConexoes = () => {
           sistema: c.sistema ?? null,
           enabled: c.enabled ?? null,
           codigo_loja: c.codigo_loja ?? null,
+          online: c.online ?? null,
+          latency: c.latency_ms ?? null,
+          erro: c.health_error ?? null,
+          last_sync_at: c.last_sync_at ?? null,
+          last_error: c.last_error ?? null,
+          modo_sync: c.modo_sync ?? null,
+          summary: summaryMap.get(s.id),
+          job: jobMap.get(s.id),
         } as Row;
       }),
     );
     setLoading(false);
   };
 
+  const atualizarDadosSalvos = async (storeId: string) => {
+    const [{ data: summaries }, { data: config }] = await Promise.all([
+      supabase.rpc("admin_store_sync_summary"),
+      supabase.from("store_vr_config").select("last_sync_at, last_error").eq("store_id", storeId).maybeSingle(),
+    ]);
+    patchRow(storeId, { summary: summaries?.find(s => s.store_id === storeId), last_sync_at: config?.last_sync_at ?? null, last_error: config?.last_error ?? null });
+  };
+
+  const sincronizar = async (r: Row) => {
+    if (acompanhando.current.has(r.store_id)) return;
+    acompanhando.current.add(r.store_id);
+    patchRow(r.store_id, { syncing: true, sync_error: null });
+    try {
+      const id = await iniciarSync(r.store_id, r.job);
+      await acompanharSync(id, job => patchRow(r.store_id, { job }));
+      localStorage.removeItem(`sync_status_${r.store_id}`);
+    } catch (e) {
+      patchRow(r.store_id, { sync_error: e instanceof Error ? e.message : "Não foi possível sincronizar esta loja." });
+    } finally {
+      await atualizarDadosSalvos(r.store_id);
+      patchRow(r.store_id, { syncing: false });
+      acompanhando.current.delete(r.store_id);
+    }
+  };
+
   const sondarRelatorios = async (storeId: string, sistema?: string | null) => {
     const hoje = new Date();
     const inicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1).toISOString().slice(0, 10);
     const fim = hoje.toISOString().slice(0, 10);
-    const res = await Promise.all(
-      relatoriosDoSistema(sistema).map(async (rel) => {
+    const res = [];
+    for (const rel of relatoriosDoSistema(sistema)) {
         const { data, error } = await supabase.functions.invoke("vr-proxy", {
           body: {
             store_id: storeId,
@@ -122,9 +187,8 @@ const AdminConexoes = () => {
           },
         });
         const msg = error ? error.message : (data?.erro as string | undefined);
-        return { nome: rel.nome, ok: !msg, msg };
-      }),
-    );
+        res.push({ nome: rel.nome, ok: !msg, msg });
+    }
     setRows((prev) => prev.map((r) => (r.store_id === storeId ? { ...r, relatorios: res } : r)));
   };
 
@@ -169,7 +233,7 @@ const AdminConexoes = () => {
     setTestingAll(false);
   };
 
-  if (authLoading || loading) {
+  if (authLoading || !user || !isAdmin || loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p className="text-muted-foreground font-body">Carregando...</p>
@@ -180,23 +244,24 @@ const AdminConexoes = () => {
   const conectadas = rows.filter((r) => r.online === true).length;
   const comProblema = rows.filter((r) => r.online === false).length;
   const semCadastro = rows.filter((r) => !r.api_url && !r.sistema).length;
+  const filtradas = rows.filter(r => `${r.name} ${r.sistema ?? ""}`.toLocaleLowerCase("pt-BR").includes(busca.toLocaleLowerCase("pt-BR")));
+  const sincronizando = rows.filter(r => syncAtiva(r.job)).length;
 
   return (
     <ClientLayout>
-      <div className="w-full px-6 py-10">
+      <div className="w-full p-3 sm:p-6 space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
           <div>
             <h1 className="text-3xl font-heading font-bold flex items-center gap-3">
-              <Plug className="w-7 h-7 text-primary" /> Gestão de Conexão
+              <Plug className="w-7 h-7 text-primary shrink-0" /> Conexões e Dados
             </h1>
-            <p className="text-sm text-muted-foreground font-body mt-1">
-              Situação da conexão de cada cliente com o ERP (VR, Oracle ou WebSac).
-            </p>
           </div>
-          <Button onClick={testarTodos} disabled={testingAll}>
-            <RefreshCw className={`w-4 h-4 mr-2 ${testingAll ? "animate-spin" : ""}`} />
-            Testar todas
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={load} disabled={loading || rows.some(r => r.syncing)}><RefreshCw className="w-4 h-4" /> Atualizar lista</Button>
+            <Button variant="outline" onClick={testarTodos} disabled={testingAll || rows.some(r => r.syncing)}>
+              <Wifi className="w-4 h-4" /> {testingAll ? "Testando…" : "Testar conexões"}
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -204,36 +269,45 @@ const AdminConexoes = () => {
             { label: "Clientes", value: rows.length },
             { label: "Conectados", value: conectadas },
             { label: "Com problema", value: comProblema },
-            { label: "Sem cadastro", value: semCadastro },
+            { label: "Sincronizando", value: sincronizando },
           ].map((k) => (
-            <div key={k.label} className="rounded-xl border border-border bg-card p-4">
+            <div key={k.label} className="rounded-lg border border-border bg-card p-4">
               <p className="text-xs text-muted-foreground font-body">{k.label}</p>
               <p className="text-2xl font-heading font-bold">{k.value}</p>
             </div>
           ))}
         </div>
 
+        <div className="flex flex-wrap gap-3 items-center justify-between">
+          <div className="relative w-full sm:w-80">
+            <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+            <Input aria-label="Buscar loja" placeholder="Buscar loja ou sistema" className="pl-9" value={busca} onChange={e => setBusca(e.target.value)} />
+          </div>
+          <span className="text-sm text-muted-foreground">{filtradas.length} lojas · {semCadastro} sem cadastro</span>
+        </div>
+        {loadError && <p role="alert" className="text-sm text-destructive">{loadError}</p>}
+
         <div className="space-y-3">
-          {rows.map((r) => {
+          {filtradas.map((r) => {
             const faltas = pendencias(r);
             const status =
               r.checking ? "checking" : r.online === true ? "on" : r.online === false ? "off" : "unknown";
             return (
-              <div key={r.store_id} className="rounded-xl border border-border bg-card p-4">
+              <section key={r.store_id} aria-label={r.name} className="rounded-lg border border-border bg-card p-4 sm:p-5 space-y-4 min-w-0">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
                     {status === "on" ? (
-                      <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                      <CheckCircle2 className="w-5 h-5 text-success shrink-0" />
                     ) : status === "off" ? (
-                      <XCircle className="w-5 h-5 text-red-500" />
+                      <XCircle className="w-5 h-5 text-destructive shrink-0" />
                     ) : (
                       <AlertTriangle className="w-5 h-5 text-muted-foreground" />
                     )}
-                    <div>
+                    <div className="min-w-0">
                       <p className="font-heading font-semibold">{r.name}</p>
                       <p className="text-xs text-muted-foreground font-body break-all">
                         {(r.sistema ?? "sem sistema").toUpperCase()} ·{" "}
-                        {r.api_url || "sem URL"}
+                        {r.modo_sync === "diario_d1" ? "Dados até D-1" : "Consulta ao sistema"}
                         {r.latency != null && status === "on" ? ` · ${r.latency} ms` : ""}
                       </p>
                     </div>
@@ -242,9 +316,9 @@ const AdminConexoes = () => {
                     <span
                       className={`text-xs font-body px-2.5 py-1 rounded-full border ${
                         status === "on"
-                          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-500"
+                          ? "border-success/30 bg-success/10 text-success"
                           : status === "off"
-                          ? "border-red-500/30 bg-red-500/10 text-red-500"
+                          ? "border-destructive/30 bg-destructive/10 text-destructive"
                           : "border-border text-muted-foreground"
                       }`}
                     >
@@ -256,16 +330,37 @@ const AdminConexoes = () => {
                         ? "Testando..."
                         : "Não testado"}
                     </span>
-                    <Button size="sm" variant="outline" onClick={() => testar(r.store_id)} disabled={r.checking}>
-                      Testar
+                    <Button size="sm" variant="outline" onClick={() => testar(r.store_id)} disabled={r.checking || r.syncing || syncAtiva(r.job)}>
+                      <Wifi /> Testar
                     </Button>
                   </div>
                 </div>
 
+                <div className="grid gap-4 grid-cols-1 min-[440px]:grid-cols-2 lg:grid-cols-4 border-t border-border pt-4">
+                  <div><p className="text-xs text-muted-foreground flex items-center gap-1 mb-1"><Clock3 className="w-3.5 h-3.5" /> Última sincronização completa</p><p className="font-semibold text-sm tabular-nums">{fmtSync(r.last_sync_at)}</p></div>
+                  <div><p className="text-xs text-muted-foreground mb-1">Últimos dados salvos</p><p className="font-semibold text-sm tabular-nums">{r.summary?.last_saved_at ? fmtSync(r.summary.last_saved_at) : "Sem dados salvos"}</p></div>
+                  <div><p className="text-xs text-muted-foreground mb-1">Relatórios salvos</p><p className="font-semibold text-sm tabular-nums">{(r.summary?.saved_reports ?? 0).toLocaleString("pt-BR")}</p></div>
+                  <div className="flex items-end"><Button className="w-full" onClick={() => sincronizar(r)} disabled={r.syncing || r.enabled === false || !r.sistema || (!r.api_url && r.sistema !== "WEBSAC") || r.checking}>
+                    <Database className={r.syncing ? "animate-pulse motion-reduce:animate-none" : ""} />
+                    {r.syncing ? "Sincronizando…" : syncInterrompida(r.job) ? "Retomar sincronização" : syncAtiva(r.job) ? "Acompanhar sincronização" : "Sincronizar loja"}
+                  </Button></div>
+                </div>
+                {r.job && <div aria-live="polite" className="space-y-2 text-sm">
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <span className={r.job.status === "completed" ? "text-success" : r.job.status === "failed" ? "text-destructive" : "text-muted-foreground"}>
+                      {syncInterrompida(r.job) ? "Interrompida — dados já salvos preservados" : r.job.status === "completed" ? "Sincronização concluída" : r.job.status === "partial" ? "Sincronização parcial" : r.job.status === "failed" ? "Falha na sincronização" : r.job.status === "pending" ? "Aguardando início" : "Sincronização em andamento"}
+                    </span>
+                    <span className="tabular-nums">{r.job.processed} / {r.job.total} consultas · {r.job.succeeded} salvas{r.job.failed > 0 ? ` · ${r.job.failed} falhas` : ""}{r.job.unavailable > 0 ? ` · ${r.job.unavailable} indisponíveis` : ""}</span>
+                  </div>
+                  {syncAtiva(r.job) && <Progress aria-label="Progresso da sincronização" className="h-2 rounded" value={r.job.total ? r.job.processed / r.job.total * 100 : 0} />}
+                  {r.job.finished_at && <p className="text-xs text-muted-foreground">Última tentativa: {fmtSync(r.job.finished_at)}</p>}
+                </div>}
+                {(r.sync_error || r.job?.last_error) && <p role="alert" className="text-xs text-destructive break-words">{r.sync_error || r.job?.last_error}</p>}
+
                 {faltas.length > 0 && (
                   <ul className="mt-3 pl-8 space-y-1">
                     {faltas.map((f) => (
-                      <li key={f} className="text-xs font-body text-amber-500 flex items-start gap-2">
+                      <li key={f} className="text-xs font-body text-warning flex items-start gap-2">
                         <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" /> {f}
                       </li>
                     ))}
@@ -279,8 +374,8 @@ const AdminConexoes = () => {
                         title={rel.msg || undefined}
                         className={`text-[11px] font-body px-2 py-0.5 rounded-full border ${
                           rel.ok
-                            ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-500"
-                            : "border-red-500/30 bg-red-500/10 text-red-500"
+                            ? "border-success/30 bg-success/10 text-success"
+                            : "border-destructive/30 bg-destructive/10 text-destructive"
                         }`}
                       >
                         {rel.nome}
@@ -289,9 +384,9 @@ const AdminConexoes = () => {
                   </div>
                 )}
                 {faltas.length === 0 && status === "on" && (
-                  <p className="mt-3 pl-8 text-xs font-body text-emerald-500">Conexão completa e respondendo.</p>
+                  <p className="mt-3 pl-8 text-xs font-body text-success">Conexão completa e respondendo.</p>
                 )}
-              </div>
+              </section>
             );
           })}
         </div>

@@ -14,8 +14,8 @@ describe("hub diario", () => {
   });
   it("mantem departamentos separados", () => {
     const r = agregarDias([[{ departamento: "A", total_compra: 10 }, { departamento: "B", total_compra: 5 }], [{ departamento: "A", total_compra: 1 }]]);
-    expect(r.find((x) => x.departamento === "A").total_compra).toBe(11);
-    expect(r.find((x) => x.departamento === "B").total_compra).toBe(5);
+    expect(r.find((x) => x.departamento === "A")?.total_compra).toBe(11);
+    expect(r.find((x) => x.departamento === "B")?.total_compra).toBe(5);
   });
   it("lista os dias do periodo", () => {
     expect(diasEntre("2026-10-30", "2026-11-02")).toEqual(["2026-10-30", "2026-10-31", "2026-11-01", "2026-11-02"]);

@@ -1,4 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
+import { RELATORIOS_DIARIOS, diasEntre, juntarDias, chaveDia, type LinhaHub } from "../../supabase/functions/_shared/hubDados";
+export { RELATORIOS_DIARIOS, diasEntre, agregarDias } from "../../supabase/functions/_shared/hubDados";
 
 // ============================================================
 // Hub diario: relatorios pesados guardados DIA A DIA no banco
@@ -7,50 +9,10 @@ import { supabase } from "@/integrations/supabase/client";
 // a maquina do cliente.
 // ============================================================
 
-export const RELATORIOS_DIARIOS = ["ranking_produtos", "compras_vendas_periodo"] as const;
-
-// Colunas que identificam a linha (nunca somadas)
-const IDENT = /^(codigo|barras|ean|cod_.*|id_.*|data|mes|loja)$/i;
-// Colunas numericas que nao se somam entre dias
-const NAO_SOMA = /(_pct|percent|preco|mix|^margem)/i;
-
-export function agregarDias(dias: any[][]): any[] {
-  const mapa = new Map<string, any>();
-  for (const linhas of dias) {
-    for (const l of linhas || []) {
-      if (!l || typeof l !== "object") continue;
-      const ident: Record<string, unknown> = {};
-      for (const [k, v] of Object.entries(l)) {
-        if (IDENT.test(k) || typeof v !== "number") ident[k] = v;
-      }
-      const chave = JSON.stringify(Object.keys(ident).sort().map((k) => [k, ident[k]]));
-      const acc = mapa.get(chave);
-      if (!acc) { mapa.set(chave, { ...l }); continue; }
-      for (const [k, v] of Object.entries(l)) {
-        if (typeof v === "number" && !IDENT.test(k) && !NAO_SOMA.test(k)) acc[k] = (Number(acc[k]) || 0) + v;
-      }
-    }
-  }
-  const out = [...mapa.values()];
-  for (const o of out) {
-    const venda = Number(o.vendas ?? o.total_venda ?? o.faturamento);
-    const lucro = Number(o.lucro);
-    if ("margem_pct" in o && venda) o.margem_pct = Math.round((lucro / venda) * 10000) / 100;
-  }
-  return out;
-}
-
-export function diasEntre(inicio: string, fim: string): string[] {
-  const out: string[] = [];
-  const d = new Date(`${inicio}T12:00:00Z`);
-  const f = new Date(`${fim}T12:00:00Z`);
-  while (d <= f && out.length < 400) { out.push(d.toISOString().slice(0, 10)); d.setUTCDate(d.getUTCDate() + 1); }
-  return out;
-}
-
-function ontemIso() {
-  const d = new Date(); d.setDate(d.getDate() - 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+export function ontemIso() {
+  const hoje = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  const d = new Date(`${hoje}T12:00:00Z`); d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
 }
 
 /** Monta o periodo a partir dos dias guardados; null se faltar algum dia. */
@@ -62,12 +24,15 @@ export async function montarDoHub(storeId: string, relatorio: string, params: Re
   if (extras.length) return null;
   const dias = diasEntre(inicio, fim);
   if (dias.length < 2) return null;
-  const chaves = dias.map((d) => JSON.stringify({ fim: d, inicio: d }));
+  const chaves = dias.map((d) => chaveDia({ fim: d, inicio: d }));
   const { data, error } = await supabase.from("relatorio_cache")
     .select("params_chave, dados, atualizado_em")
     .eq("store_id", storeId).eq("relatorio", relatorio).in("params_chave", chaves);
   if (error || !data || data.length < dias.length) return null;
-  const linhas = (data as any[]).map((r) => (Array.isArray(r.dados) ? r.dados : []));
+  const ordenados = [...data].sort((a, b) => a.params_chave.localeCompare(b.params_chave));
+  const linhas: LinhaHub[][] = ordenados.map(r => Array.isArray(r.dados)
+    ? r.dados.filter((v): v is Record<string, import("@/integrations/supabase/types").Json> => v !== null && typeof v === "object" && !Array.isArray(v))
+    : []);
   const atualizadoEm = (data as any[]).map((r) => r.atualizado_em).sort().pop() ?? null;
-  return { dados: agregarDias(linhas), atualizadoEm };
+  return { dados: juntarDias(relatorio, linhas), atualizadoEm };
 }

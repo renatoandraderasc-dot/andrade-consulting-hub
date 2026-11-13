@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, XCircle, RefreshCw, Wifi, Loader2, Store } from "lucide-react";
+import { iniciarSync, acompanharSync } from "@/lib/storeSync";
 
 interface Cliente {
   store_id: string;
@@ -96,16 +97,13 @@ const DiagnosticoClientes = () => {
   const atualizar = async (c: Cliente) => {
     patch(c.store_id, { sync: { rodando: true, msg: "Buscando todos os números na loja… pode levar alguns minutos." } });
     try {
-      const { data, error } = await supabase.functions.invoke("sync-diario-d1", { body: { store_id: c.store_id } });
-      if (error) throw error;
-      const r = (data as { lojas?: { ok: number; falhas: number; consultas: number; segundos: number }[] })?.lojas?.[0];
+      const id = await iniciarSync(c.store_id);
+      const r = await acompanharSync(id, job => patch(c.store_id, { sync: { rodando: true, msg: `${job.processed} de ${job.total} consultas · ${job.succeeded} salvas` } }));
       localStorage.removeItem(`sync_status_${c.store_id}`);
       const cache = await infoCache(c.store_id);
       patch(c.store_id, {
         ...cache,
-        sync: r
-          ? { rodando: false, erro: r.falhas > 0, msg: `${r.ok} de ${r.consultas} relatórios atualizados${r.falhas ? `, ${r.falhas} falharam` : ""} (${r.segundos}s)` }
-          : { rodando: false, erro: true, msg: "A loja não retornou nenhum relatório (conexão desligada?)" },
+        sync: { rodando: false, erro: r.status !== "completed", msg: `${r.succeeded} de ${r.total} consultas salvas${r.failed ? `, ${r.failed} falharam` : ""}${r.unavailable ? `, ${r.unavailable} indisponíveis` : ""}` },
       });
     } catch (e) {
       const cache = await infoCache(c.store_id);
