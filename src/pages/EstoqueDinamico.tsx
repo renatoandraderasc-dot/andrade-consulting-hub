@@ -161,7 +161,7 @@ const EstoqueDinamico = () => {
       const { data } = await supabase
         .from("user_store_access")
         .select("stores(id, name)")
-        .eq("user_id", user!.id)
+        .eq("user_id", user?.id ?? "")
         .eq("approved", true);
       const lojas = (data || []).map((r: any) => r.stores).filter(Boolean) as Store[];
       setStores(lojas);
@@ -189,11 +189,25 @@ const EstoqueDinamico = () => {
     setLoading(true); setAviso(null); setPage(1);
     try {
       // Uma consulta por vez evita disputar a fila das pontes lentas.
-      const r = await limitarEspera(chamarRelatorio(storeId, "estoque_dinamico", {
+      let r = await limitarEspera(chamarRelatorio(storeId, "estoque_dinamico", {
         inicio: iso(range.from), fim: iso(subDays(new Date(), 1)),
       }), 130000);
-      const msg = avisoRelatorio(r);
-      if (msg) { setAviso(msg); return; }
+      const usarEntradas = !!avisoRelatorio(r);
+      // A bridge may time out on its combined stock report. Invoice entries
+      // are already fetched by day; they provide a safe product base instead.
+      const ac = await chamarRelatorio(storeId, "analise_compras", {
+        inicio: iso(range.from), fim: iso(range.to),
+      });
+      const avisoCompra = avisoRelatorio(ac);
+      if (avisoCompra || ac.aviso) throw new Error(avisoCompra || ac.aviso);
+      if (usarEntradas) {
+        const produtos = new Map<string, unknown>();
+        for (const l of ac.dados) {
+          const cod = String(col(l, "codigo", "cod", "cod_produto", "id_produto") ?? "");
+          if (cod) produtos.set(cod, l);
+        }
+        r = { ...ac, dados: [...produtos.values()] };
+      }
       const cadastro = await limitarEspera(chamarRelatorio(storeId, "produtos", {}), 130000).catch(() => null);
       const estoqueAtual = await limitarEspera(chamarRelatorio(storeId, "estoque_atual", {}), 130000).catch(() => null);
       const produtosAtivos = await limitarEspera(chamarRelatorio(storeId, "produtos_ativos_12m", {}), 130000).catch(() => null);
@@ -269,12 +283,8 @@ const EstoqueDinamico = () => {
     );
 
     // Compras seguem o filtro; vendas precisam da última entrada real até D-1.
-    const ac = await limitarEspera(chamarRelatorio(storeId, "analise_compras", {
-      inicio: iso(range.from), fim: iso(range.to),
-    }), 130000);
-    const avisoCompra = avisoRelatorio(ac);
-    if (avisoCompra) throw new Error(avisoCompra);
     const precisaComplemento = base.length > 0 && (
+      usarEntradas ||
       base.every(l => l.qtdVenda === 0 && l.valorVenda === 0) ||
       base.some(l => !l.ultimaCompra)
     );
