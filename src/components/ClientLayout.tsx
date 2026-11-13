@@ -160,11 +160,11 @@ const navGroups: NavGroup[] = [
 ];
 
 const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
-  const { user, isAdmin, isGlobalAdmin, signOut } = useAuth();
+  const { user, isAdmin, isGlobalAdmin, isDemo, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const selectedStoreId = sessionStorage.getItem("selectedStoreId") || "";
-  const receiptSystem = useQuery({ queryKey: ["nav-receipt-system", selectedStoreId], enabled: !!user && !!selectedStoreId, queryFn: async () => { const { data } = await supabase.from("store_vr_config").select("sistema").eq("store_id", selectedStoreId).maybeSingle(); return data?.sistema === "WEBSAC"; } });
+  const receiptSystem = useQuery({ queryKey: ["nav-receipt-system", selectedStoreId], enabled: !!user && !!selectedStoreId && !isDemo, queryFn: async () => { const { data } = await supabase.from("store_vr_config").select("sistema").eq("store_id", selectedStoreId).maybeSingle(); return data?.sistema === "WEBSAC"; } });
   const [menuOpen, setMenuOpen] = useState(false);
   const [pwdOpen, setPwdOpen] = useState(false);
   const [allowedModules, setAllowedModules] = useState<Set<string> | null>(null);
@@ -172,17 +172,17 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
   // Gerenciador de TV: fora o admin geral, só aparece para quem tem o módulo liberado explicitamente.
   const [tvLiberada, setTvLiberada] = useState(false);
   useEffect(() => {
-    if (!user || isGlobalAdmin) { setTvLiberada(false); return; }
+    if (!user || isGlobalAdmin || isDemo) { setTvLiberada(false); return; }
     supabase.from("user_module_access").select("allowed").eq("user_id", user.id).eq("module", "admin_tv").maybeSingle()
       .then(({ data }) => setTvLiberada(!!data?.allowed));
-  }, [user, isGlobalAdmin]);
+  }, [user, isGlobalAdmin, isDemo]);
 
   useEffect(() => {
-    if (!user || isAdmin) { setAllowedModules(null); return; }
+    if (!user || isAdmin || isDemo) { setAllowedModules(null); return; }
     supabase.from("user_module_access").select("module, allowed").eq("user_id", user.id).then(({ data }) => {
       setAllowedModules(new Set((data || []).filter((r) => r.allowed).map((r) => r.module)));
     });
-  }, [user, isAdmin]);
+  }, [user, isAdmin, isDemo]);
 
   const CONTROLADORIA_TAB_KEYS = [
     "controladoria_contrede", "controladoria_lancamentos", "controladoria_historico",
@@ -193,7 +193,7 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
   const canSee = (key: string) => {
     if (isAdmin || allowedModules === null || allowedModules.size === 0 || allowedModules.has(key)) return true;
     // Controladoria aparece no menu se o usuário tiver qualquer aba liberada.
-    if (key === "controladoria") return CONTROLADORIA_TAB_KEYS.some((k) => allowedModules!.has(k));
+    if (key === "controladoria") return CONTROLADORIA_TAB_KEYS.some((k) => allowedModules?.has(k));
     return false;
   };
 
@@ -208,11 +208,11 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
   const isActive = (path: string) => location.pathname === path;
 
   const visibleGroups = navGroups
-    .filter((g) => (g.globalAdmin ? isGlobalAdmin : g.admin ? isAdmin : true))
+    .filter((g) => isDemo || (g.globalAdmin ? isGlobalAdmin : g.admin ? isAdmin : true))
     .map((g) => ({
       ...g,
-      items: g.items.filter((i) => i.key !== "recebimento" || receiptSystem.data === true).filter((i) =>
-        i.key === "admin_tv" && !isGlobalAdmin ? tvLiberada
+      items: g.items.filter((i) => isDemo || i.key !== "recebimento" || receiptSystem.data === true).filter((i) =>
+        isDemo ? true : i.key === "admin_tv" && !isGlobalAdmin ? tvLiberada
           : i.globalAdmin && !isGlobalAdmin ? false : i.admin && !isAdmin ? false : canSee(i.key)),
     }))
     .filter((g) => g.items.length > 0);
@@ -220,7 +220,7 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="sticky top-0 z-40 bg-card/95 backdrop-blur border-b border-border">
-        <div className="flex items-stretch h-14 px-4">
+        <div className={`flex items-stretch h-14 px-4 ${isDemo ? "min-w-0" : ""}`}>
           <Link to="/" className="flex items-center gap-3 pr-4 mr-2 border-r border-border">
             <img src={andradeLogo} alt="Andrade" className="h-7" />
             {storeName && (
@@ -233,7 +233,7 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
             )}
           </Link>
 
-          <nav className="hidden md:flex items-stretch gap-1">
+          <nav className={`hidden md:flex items-stretch gap-1 ${isDemo ? "flex-1 min-w-0 overflow-x-auto" : ""}`}>
             {visibleGroups.map((group) => {
               const groupActive = group.items.some((i) => isActive(i.path));
               return (
@@ -270,9 +270,9 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
             })}
           </nav>
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-2 shrink-0">
             <UltimaAtualizacaoBadge />
-            <div className="hidden sm:block"><StoreSwitcher /></div>
+            {!isDemo && <div className="hidden sm:block"><StoreSwitcher /></div>}
             <ThemeToggle />
 
             <Link
@@ -281,12 +281,12 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
             >
               <ArrowLeft className="w-3.5 h-3.5" /> Site
             </Link>
-            <button
+            {!isDemo && <button
               onClick={() => setPwdOpen(true)}
               className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-secondary text-foreground text-[12px] font-medium hover:bg-secondary/70 transition-colors"
             >
               <KeyRound className="w-3.5 h-3.5" /> Senha
-            </button>
+            </button>}
             <button
               onClick={handleSignOut}
               className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-secondary text-foreground text-[12px] font-medium hover:bg-secondary/70 transition-colors"
@@ -326,12 +326,12 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
                 ))}
               </div>
             ))}
-            <button
+            {!isDemo && <button
               onClick={() => { setMenuOpen(false); setPwdOpen(true); }}
               className="w-full flex items-center gap-2 px-3 py-3 text-sm text-foreground border-t border-border"
             >
               <KeyRound className="w-4 h-4" /> Alterar senha
-            </button>
+            </button>}
             <button
               onClick={handleSignOut}
               className="w-full flex items-center gap-2 px-3 py-3 text-sm text-foreground border-t border-border"
@@ -342,7 +342,7 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
         )}
       </header>
 
-      <ChangePasswordDialog open={pwdOpen} onOpenChange={setPwdOpen} />
+      {!isDemo && <ChangePasswordDialog open={pwdOpen} onOpenChange={setPwdOpen} />}
 
       <main id="area-print" className="flex-1">{children}</main>
       <PrintTelaButton targetId="area-print" />

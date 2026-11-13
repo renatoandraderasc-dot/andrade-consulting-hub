@@ -647,6 +647,30 @@ export type Database = {
           },
         ]
       }
+      demo_workspaces: {
+        Row: {
+          data: Json
+          enabled: boolean
+          store_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          data?: Json
+          enabled?: boolean
+          store_name?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          data?: Json
+          enabled?: boolean
+          store_name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       departments: {
         Row: {
           created_at: string
@@ -4953,6 +4977,7 @@ export type Database = {
         }[]
       }
       importar_lancamentos_vr_auto: { Args: never; Returns: number }
+      is_demo_account: { Args: never; Returns: boolean }
       is_supervisor: { Args: { _user_id?: string }; Returns: boolean }
       jornada_criar_tarefa_pessoal: {
         Args: {

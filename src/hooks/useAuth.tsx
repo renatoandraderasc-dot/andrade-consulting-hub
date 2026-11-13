@@ -21,6 +21,8 @@ interface AuthContextType {
   /** somente Administrador global (configurações da rede: lojas, usuários, parâmetros, site) */
   isGlobalAdmin: boolean;
   isSupervisor: boolean;
+  /** Server-managed membership in the isolated fictional workspace, never an admin role. */
+  isDemo: boolean;
   loading: boolean;
   signOut: () => Promise<void>;
 }
@@ -31,6 +33,7 @@ const AuthContext = createContext<AuthContextType>({
   isAdmin: false,
   isGlobalAdmin: false,
   isSupervisor: false,
+  isDemo: false,
   loading: true,
   signOut: async () => {},
 });
@@ -40,6 +43,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [isGlobalAdmin, setIsGlobalAdmin] = useState(false);
   const [isSupervisor, setIsSupervisor] = useState(false);
+  const [isDemo, setIsDemo] = useState(false);
+  const authRevisionRef = useRef(0);
   const [loading, setLoading] = useState(true);
   const roleCheckUserRef = useRef<string | null>(null);
   const isAdmin = isGlobalAdmin || isSupervisor;
@@ -62,32 +67,46 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
+    const hydrate = async (nextSession: Session | null) => {
+      const revision = ++authRevisionRef.current;
+      setLoading(true);
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
+      setIsDemo(false);
+      if (!nextSession?.user) {
+        roleCheckUserRef.current = null;
+        setIsGlobalAdmin(false); setIsSupervisor(false); setLoading(false);
+        return;
+      }
+      try {
+        const verified = await withTimeout(supabase.auth.getUser());
+        if (revision !== authRevisionRef.current) return;
+        if (verified.error || !verified.data.user || verified.data.user.id !== nextSession.user.id) throw new Error("invalid_session");
+        setUser(verified.data.user);
+        const result = await withTimeout(supabase.from("demo_workspaces").select("user_id").eq("user_id", nextSession.user.id).maybeSingle());
+        if (revision !== authRevisionRef.current) return;
+        if (result.error) throw result.error;
+        if (result.data) { setIsDemo(true); setIsGlobalAdmin(false); setIsSupervisor(false); }
+        else await checkAdmin(nextSession.user.id);
+      } catch {
+        if (revision !== authRevisionRef.current) return;
+        setUser(null); setSession(null); setIsGlobalAdmin(false); setIsSupervisor(false);
+      } finally { if (revision === authRevisionRef.current) setLoading(false); }
+    };
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          void checkAdmin(session.user.id);
-        } else {
-          roleCheckUserRef.current = null;
-          setIsGlobalAdmin(false);
-          setIsSupervisor(false);
-        }
-        setLoading(false);
+      (_event, nextSession) => {
+        // Avoid awaiting client queries inside the auth lock.
+        window.setTimeout(() => void hydrate(nextSession), 0);
       }
     );
 
     withTimeout(supabase.auth.getSession())
-      .then(({ data: { session } }) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) void checkAdmin(session.user.id);
-      })
+      .then(({ data: { session } }) => hydrate(session))
       .catch(() => {
         setSession(null);
         setUser(null);
       })
-      .finally(() => setLoading(false));
+      .finally(() => { if (authRevisionRef.current === 0) setLoading(false); });
 
     return () => subscription.unsubscribe();
   }, []);
@@ -97,7 +116,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, isAdmin, isGlobalAdmin, isSupervisor, loading, signOut }}>
+    <AuthContext.Provider value={{ user, session, isAdmin, isGlobalAdmin, isSupervisor, isDemo, loading, signOut }}>
       {children}
     </AuthContext.Provider>
   );
