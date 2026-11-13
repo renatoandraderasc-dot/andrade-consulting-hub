@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import {
   ArrowDown, ArrowDownRight, ArrowRight, ArrowUp, ArrowUpRight, ChevronRight, Download, GitCompare, Info, RefreshCw, Search,
@@ -94,6 +94,7 @@ export default function ComparativoProdutos() {
   const [loading, setLoading] = useState(false);
   const [progresso, setProgresso] = useState("");
   const [avisos, setAvisos] = useState<string[]>([]);
+  const cargaAtual = useRef(0);
 
   const [nivel, setNivel] = useState<Nivel>("departamento");
   const [fDep, setFDep] = useState(TODOS);
@@ -126,15 +127,19 @@ export default function ComparativoProdutos() {
   };
 
   // ---------- Carga ----------
-  async function carregarMes(mes: string, forcar: boolean, cadastro: () => Promise<Map<string, any>>, limite: number) {
+  async function carregarMes(mes: string, forcar: boolean, cadastro: () => Promise<Map<string, any>>, limite: number, apenasSalvos: boolean) {
     const { de, ate } = limitesMes(mes);
     const fimReal = mes === mesAtual() ? new Date(Date.now() - 86400000).toISOString().slice(0, 10) : ate;
     if (fimReal < de) return { linhas: [] as ProdutoMes[], aviso: null as string | null };
-    if (!forcar) {
+    // The Hub may have a corrected full month even when a compact copy was
+    // written later from an older parameter variant. Always read the Hub first.
+    const salvo = forcar ? null : await chamarRelatorio(storeId, "ranking_produtos", { inicio: de, fim: fimReal, limite: 200000 }, { apenasSalvos: true });
+    if (!forcar && (!salvo || avisoRelatorio(salvo))) {
       const guardado = await lerPeriodoCache(storeId, CACHE_REL, "", de, ate);
       if (guardado) return { linhas: (guardado as Compacto[]).map((c) => expandir(c, mes)), aviso: null };
     }
-    const r = limite > 0 && limite < 31
+    if (apenasSalvos && (!salvo || avisoRelatorio(salvo))) return { linhas: [], aviso: `${rotuloMes(mes)}: período ainda não salvo no Hub.` };
+    const r = salvo && !avisoRelatorio(salvo) ? salvo : limite > 0 && limite < 31
       ? await chamarRelatorioFatiado(storeId, "ranking_produtos", { inicio: de, fim: fimReal, limite: 200000 }, { diasPorLote: limite, forcar })
       : await chamarRelatorio(storeId, "ranking_produtos", { inicio: de, fim: fimReal, limite: 200000 }, { forcar });
     const msg = avisoRelatorio(r);
@@ -167,11 +172,11 @@ export default function ComparativoProdutos() {
   }
 
   /** Lê um relatório mensal guardado (mês encerrado) ou busca na loja e guarda. */
-  async function lerMensal(relatorio: string, mes: string, forcar: boolean): Promise<any[] | null> {
+  async function lerMensal(relatorio: string, mes: string, forcar: boolean, apenasSalvos: boolean): Promise<any[] | null> {
     const { de, ate } = limitesMes(mes);
     const guardado = forcar ? null : await lerPeriodoCache(storeId, relatorio, "", de, ate);
     if (guardado) return guardado;
-    const r = await chamarRelatorio(storeId, relatorio, { inicio: de, fim: ate }, { forcar }).catch(() => null);
+    const r = await chamarRelatorio(storeId, relatorio, { inicio: de, fim: ate }, { forcar, apenasSalvos }).catch(() => null);
     if (!r || avisoRelatorio(r)) return null;
     await gravarPeriodoCache(storeId, relatorio, "", de, ate, r.dados ?? []).catch(() => undefined);
     return r.dados ?? [];
@@ -179,10 +184,10 @@ export default function ComparativoProdutos() {
 
   // Total da loja: cupons_e_ticket (cupom único). Por departamento: diagnostico_mensal
   // (um mesmo cupom pode aparecer em vários departamentos, por isso não somamos para o total).
-  async function carregarCupons(mes: string, forcar: boolean) {
+  async function carregarCupons(mes: string, forcar: boolean, apenasSalvos: boolean) {
     const porDep = new Map<string, number>();
     let somaDiag = 0, temDiag = false;
-    for (const l of (await lerMensal("diagnostico_mensal", mes, forcar)) ?? []) {
+    for (const l of (await lerMensal("diagnostico_mensal", mes, forcar, apenasSalvos)) ?? []) {
       const c = num(pick(l, "clientes", "cupons"));
       if (!c) continue;
       temDiag = true;
@@ -190,23 +195,24 @@ export default function ComparativoProdutos() {
       const d = chaveDept(mercadologicoNivel1(l) || txt(pick(l, "setor")));
       if (d) porDep.set(d, (porDep.get(d) ?? 0) + c);
     }
-    const diarios = (await lerMensal("cupons_e_ticket", mes, forcar)) ?? [];
+    const diarios = (await lerMensal("cupons_e_ticket", mes, forcar, apenasSalvos)) ?? [];
     const somaDiaria = diarios.reduce((s, l) => s + num(pick(l, "cupons", "clientes", "qtd_cupons")), 0);
     const total = somaDiaria > 0 ? somaDiaria : !porDep.size && temDiag ? somaDiag : 0;
     if (!total && !porDep.size) return null;
     return { total, porDep };
   }
 
-  const buscar = async (forcar = false) => {
+  const buscar = async (forcar = false, apenasSalvos = false) => {
     if (!storeId) return;
     const ma = mesesEntre(aDe, aAte), mb = mesesEntre(bDe, bAte);
     const todos = [...new Set([...ma, ...mb])].filter((m) => m <= mesAtual()).sort();
     if (!todos.length) return;
+    const carga = ++cargaAtual.current;
     setLoading(true); setAvisos([]); setPage(1);
     try {
-      const limite = await maxDiasConsulta(storeId);
+      const limite = apenasSalvos ? 0 : await maxDiasConsulta(storeId);
       let cad: Promise<Map<string, any>> | null = null;
-      const cadastro = () => (cad ??= chamarRelatorio(storeId, "produtos", {}).then((r) => {
+      const cadastro = () => (cad ??= chamarRelatorio(storeId, "produtos", {}, { apenasSalvos }).then((r) => {
         const m = new Map<string, any>();
         for (const l of r.dados || []) {
           const k = chave(pick(l, "codigo", "cod", "cod_produto", "id_produto"));
@@ -219,23 +225,34 @@ export default function ComparativoProdutos() {
       const cup = new Map<string, { total: number; porDep: Map<string, number> }>();
       // Um mês por vez: pontes lentas caem com consultas em paralelo.
       for (let i = 0; i < todos.length; i++) {
+        if (carga !== cargaAtual.current) return;
         setProgresso(`${rotuloMes(todos[i])} (${i + 1}/${todos.length})`);
-        const r = await carregarMes(todos[i], forcar, cadastro, limite);
+        const r = await carregarMes(todos[i], forcar, cadastro, limite, apenasSalvos);
         linhas.push(...r.linhas);
         if (r.aviso) novosAvisos.push(r.aviso);
-        const c = await carregarCupons(todos[i], forcar);
+        const c = await carregarCupons(todos[i], forcar, apenasSalvos);
         if (c) cup.set(todos[i], c);
       }
+      if (carga !== cargaAtual.current) return;
       setProdutos(linhas);
       setCupons(cup);
       setMesesCarregados({ a: ma, b: mb });
       setAvisos(novosAvisos);
     } catch {
-      setAvisos(["A consulta não respondeu a tempo. Tente de novo ou use menos meses."]);
+      if (carga === cargaAtual.current) setAvisos(["A consulta não respondeu a tempo. Tente de novo ou use menos meses."]);
     } finally {
-      setLoading(false); setProgresso("");
+      if (carga === cargaAtual.current) { setLoading(false); setProgresso(""); }
     }
   };
+
+  // Opening or selecting months reads saved data only; no ERP auto-refresh.
+  useEffect(() => {
+    setProdutos(null); setMesesCarregados(null); setCupons(new Map());
+    setFDep(TODOS); setFGrupo(TODOS); setFSub(TODOS);
+    if (storeId) void buscar(false, true);
+    return () => { cargaAtual.current += 1; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storeId, aDe, aAte, bDe, bAte]);
 
   // ---------- Filtros ----------
   const permitidas = useMemo(() => (produtos || []).filter((p) => permiteDept(p.departamento)),
@@ -262,7 +279,7 @@ export default function ComparativoProdutos() {
       const c = cupons.get(m);
       if (!c) continue;
       if (dep === undefined) { if (c.total) { t += c.total; tem = true; } }
-      else if (c.porDep.has(chaveDept(dep))) { t += c.porDep.get(chaveDept(dep))!; tem = true; }
+      else if (c.porDep.has(chaveDept(dep))) { t += c.porDep.get(chaveDept(dep)) ?? 0; tem = true; }
     }
     return tem ? t : null;
   };
@@ -434,7 +451,7 @@ export default function ComparativoProdutos() {
   const mesInput = (v: string, set: (s: string) => void, label: string) => (
     <label className="space-y-1 block">
       <span className="block text-[11px] text-muted-foreground">{label}</span>
-      <Input type="month" className="h-9 w-[150px]" value={v} max={mesAtual()} onChange={(e) => e.target.value && set(e.target.value)} />
+      <Input type="month" className="h-9 w-full min-w-0 sm:w-[150px]" value={v} max={mesAtual()} onChange={(e) => e.target.value && set(e.target.value)} />
     </label>
   );
 
@@ -469,11 +486,11 @@ export default function ComparativoProdutos() {
                 </Select>
               </div>
             )}
-            <div className="rounded-md border border-border p-2 space-y-1">
+            <div className="w-full sm:w-auto rounded-md border border-border p-2 space-y-1">
               <div className="text-xs font-semibold text-muted-foreground">Período A (base)</div>
               <div className="flex gap-2">{mesInput(aDe, setADe, "De")}{mesInput(aAte, setAAte, "Até")}</div>
             </div>
-            <div className="rounded-md border border-primary/50 p-2 space-y-1">
+            <div className="w-full sm:w-auto rounded-md border border-primary/50 p-2 space-y-1">
               <div className="text-xs font-semibold text-primary">Período B (comparado)</div>
               <div className="flex gap-2">{mesInput(bDe, setBDe, "De")}{mesInput(bAte, setBAte, "Até")}</div>
             </div>
@@ -488,7 +505,7 @@ export default function ComparativoProdutos() {
               <Button onClick={() => buscar(false)} disabled={!storeId || loading}>Comparar</Button>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="outline" size="icon" onClick={() => buscar(true)} disabled={!storeId || loading || !produtos} aria-label="Buscar de novo na loja">
+                  <Button variant="outline" size="icon" onClick={() => buscar(true)} disabled={!storeId || loading} aria-label="Buscar de novo na loja">
                     <RefreshCw className="w-4 h-4" />
                   </Button>
                 </TooltipTrigger>
