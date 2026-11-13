@@ -20,7 +20,7 @@ import ClientLayout from "@/components/ClientLayout";
 import { useToast } from "@/hooks/use-toast";
 import BotaoFotoTela from "@/components/BotaoFotoTela";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { carregarBaseCatalogo, carregarProdutosAtivos12m } from "@/lib/catalogoProdutos";
+import { carregarBaseCatalogo } from "@/lib/catalogoProdutos";
 import { CartProgressOverlay } from "@/components/CartProgress";
 import { useAutoRefresh } from "@/hooks/useSaasConfig";
 import { mercadologicoNivel1, mercadologicoNivel2, mercadologicoNivel3 } from "@/lib/mercadologico";
@@ -765,7 +765,7 @@ const Compras = () => {
       }
     }
     const produtos = (produtosCache[chaveProdutos(cvInicio, cvFim)] || [])
-      .filter((p) => !cvExcluir.includes(chaveDep(p.departamento)))
+      .filter((p) => permiteDept(p.departamento) && (fN1 === "__all__" || p.departamento === fN1))
       .map((p) => ({
       Departamento: p.departamento, Grupo: p.secao, Subgrupo: p.subgrupo, Código: p.codigo,
       Descrição: p.descricao, EAN: p.ean,
