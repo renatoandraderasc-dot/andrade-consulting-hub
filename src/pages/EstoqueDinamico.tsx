@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ALIAS_EAN, chamarRelatorio, avisoRelatorio, pick as col, num } from "@/lib/vrReport";
 import { mercadologicoNivel1, mercadologicoNivel2, mercadologicoNivel3 } from "@/lib/mercadologico";
 import { aplicarComprasFiltradas, complementarVendasEstoque } from "@/lib/estoqueVendas";
+import { ontemIso } from "@/lib/hubDiario";
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -193,7 +194,7 @@ const EstoqueDinamico = () => {
       let r = String(sistema ?? "").toUpperCase() === "DIRECTOR"
         ? { dados: [], indisponivel: true, offline: false, erro: null }
         : await limitarEspera(chamarRelatorio(storeId, "estoque_dinamico", {
-          inicio: iso(range.from), fim: iso(subDays(new Date(), 1)),
+          inicio: iso(range.from), fim: ontemIso(),
         }), 130000).catch(() => ({ dados: [], indisponivel: false, offline: true, erro: null }));
       const usarEntradas = !!avisoRelatorio(r);
       // A bridge may time out on its combined stock report. Invoice entries
@@ -293,7 +294,7 @@ const EstoqueDinamico = () => {
     );
     base = aplicarComprasFiltradas(base, ac.dados);
     if (precisaComplemento) {
-      base = await complementarVendasEstoque(base, iso(range.from), iso(range.to), iso(subDays(new Date(), 1)),
+      base = await complementarVendasEstoque(base, iso(range.from), iso(range.to), ontemIso(),
         (relatorio, params) => chamarRelatorio(storeId, relatorio, params));
     } else {
       base = base.map(l => ({ ...l, progresso: l.qtdCompra > 0 ? l.qtdVenda / l.qtdCompra * 100 : 0,

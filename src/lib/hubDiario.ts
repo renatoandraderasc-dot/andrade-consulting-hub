@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { RELATORIOS_DIARIOS, diasEntre, juntarDias, chaveDia } from "../../supabase/functions/_shared/hubDados";
+import { RELATORIOS_DIARIOS, diasEntre, juntarDias, chaveDia, type LinhaHub } from "../../supabase/functions/_shared/hubDados";
 export { RELATORIOS_DIARIOS, diasEntre, agregarDias } from "../../supabase/functions/_shared/hubDados";
 
 // ============================================================
@@ -9,7 +9,7 @@ export { RELATORIOS_DIARIOS, diasEntre, agregarDias } from "../../supabase/funct
 // a maquina do cliente.
 // ============================================================
 
-function ontemIso() {
+export function ontemIso() {
   const hoje = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   const d = new Date(`${hoje}T12:00:00Z`); d.setUTCDate(d.getUTCDate() - 1);
   return d.toISOString().slice(0, 10);
@@ -30,7 +30,9 @@ export async function montarDoHub(storeId: string, relatorio: string, params: Re
     .eq("store_id", storeId).eq("relatorio", relatorio).in("params_chave", chaves);
   if (error || !data || data.length < dias.length) return null;
   const ordenados = [...data].sort((a, b) => a.params_chave.localeCompare(b.params_chave));
-  const linhas = ordenados.map((r) => (Array.isArray(r.dados) ? r.dados : []));
+  const linhas: LinhaHub[][] = ordenados.map(r => Array.isArray(r.dados)
+    ? r.dados.filter((v): v is Record<string, import("@/integrations/supabase/types").Json> => v !== null && typeof v === "object" && !Array.isArray(v))
+    : []);
   const atualizadoEm = (data as any[]).map((r) => r.atualizado_em).sort().pop() ?? null;
   return { dados: juntarDias(relatorio, linhas), atualizadoEm };
 }
