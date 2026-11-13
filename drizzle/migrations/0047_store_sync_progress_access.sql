@@ -1,0 +1,1 @@
+CREATE POLICY store_sync_jobs_approved_read ON public.store_sync_jobs FOR SELECT TO authenticated USING (EXISTS (SELECT 1 FROM public.user_store_access a WHERE a.user_id = auth.uid() AND a.store_id = store_sync_jobs.store_id AND a.approved = true));

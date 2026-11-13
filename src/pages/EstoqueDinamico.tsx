@@ -189,9 +189,12 @@ const EstoqueDinamico = () => {
     setLoading(true); setAviso(null); setPage(1);
     try {
       // Uma consulta por vez evita disputar a fila das pontes lentas.
-      let r = await limitarEspera(chamarRelatorio(storeId, "estoque_dinamico", {
-        inicio: iso(range.from), fim: iso(subDays(new Date(), 1)),
-      }), 130000);
+      const { data: sistema } = await supabase.rpc("store_sistema", { _store_id: storeId });
+      let r = String(sistema ?? "").toUpperCase() === "DIRECTOR"
+        ? { dados: [], indisponivel: true, offline: false, erro: null }
+        : await limitarEspera(chamarRelatorio(storeId, "estoque_dinamico", {
+          inicio: iso(range.from), fim: iso(subDays(new Date(), 1)),
+        }), 130000).catch(() => ({ dados: [], indisponivel: false, offline: true, erro: null }));
       const usarEntradas = !!avisoRelatorio(r);
       // A bridge may time out on its combined stock report. Invoice entries
       // are already fetched by day; they provide a safe product base instead.

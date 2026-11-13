@@ -91,7 +91,16 @@ const AdminConexoes = () => {
   const patchRow = (id: string, patch: Partial<Row>) => setRows(prev => prev.map(r => r.store_id === id ? { ...r, ...patch } : r));
 
   useEffect(() => {
-    if (!authLoading && (!user || !isAdmin)) navigate("/login");
+    if (authLoading) return;
+    if (!user) { navigate("/login"); return; }
+    if (isAdmin) return;
+    // Role hydration finishes after the session. Do not redirect an admin
+    // before the server's role read has resolved.
+    let active = true;
+    supabase.from("user_roles").select("role").eq("user_id", user.id).then(({ data }) => {
+      if (active && !data?.some(r => r.role === "admin")) navigate("/login");
+    });
+    return () => { active = false; };
   }, [user, isAdmin, authLoading, navigate]);
 
   useEffect(() => {

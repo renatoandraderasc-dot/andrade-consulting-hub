@@ -78,7 +78,7 @@ export function planejarSincronizacao(d1: string, existentes: TarefaSync[], soEx
   // Yesterday first; historical days are reused permanently.
   adicionarDias(d1, d1, true);
   for (const t of existentes) {
-    if (diario(t.relatorio)) continue;
+    if (diario(t.relatorio) || t.relatorio === "estoque_dinamico") continue;
     const fim = String(t.params.fim ?? t.params.data ?? "");
     if (fim && fim < inicioAnterior) continue;
     if (!fim) add(t.relatorio, t.params);

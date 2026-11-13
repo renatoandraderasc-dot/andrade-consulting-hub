@@ -136,7 +136,9 @@ Deno.serve(async req => {
         if (concurrent) jobs.push(concurrent);
       } else jobs.push(created);
     }
-    for (const job of jobs) EdgeRuntime.waitUntil(executar(job.id));
+    // Network-wide requests remain sequential to avoid saturating stores that
+    // share the same bridge; individual requests continue independently.
+    EdgeRuntime.waitUntil((async () => { for (const job of jobs) await executar(job.id); })());
     return json({ ok: true, d1, jobs, job_id: jobs[0]?.id });
   } catch (e) {
     return json({ erro: e instanceof Error ? e.message : "Erro ao iniciar sincronização" }, 500);
