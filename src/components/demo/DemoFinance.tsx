@@ -1,0 +1,27 @@
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { useDemoWorkspace } from "@/hooks/useDemoWorkspace";
+import { DataTable, EditDialog, Kpis, Status, type FormField } from "./DemoUI";
+import { cents, demoTotals, money, uid, type DemoEntry, type DemoFilters } from "@/lib/demo/model";
+import { exportDemoRows } from "@/lib/demo/export";
+import { Download, Plus } from "lucide-react";
+import { toast } from "sonner";
+
+const ACCOUNTS = ["Pagamento de Fornecedores", "Salário Líquido", "PIS", "COFINS", "ICMS", "Energia Elétrica", "Aluguel", "Manutenção", "Marketing", "Outras Despesas"];
+export default function DemoFinance({ filters }: { filters: DemoFilters }) {
+  const { state, update } = useDemoWorkspace();
+  const [tab, setTab] = useState("dre");
+  const [edit, setEdit] = useState<Record<string, string> | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const totals = demoTotals(state, filters);
+  const entries = state.entries.filter(e => Number(e.date.slice(0, 4)) === filters.year && Number(e.date.slice(5, 7)) === filters.month && `${e.name} ${e.account}`.toLowerCase().includes(filters.search.toLowerCase()));
+  const sumAccounts = (accounts: string[]) => entries.filter(e => accounts.includes(e.account)).reduce((s, e) => s + e.value, 0);
+  const tax = sumAccounts(["PIS", "COFINS", "ICMS"]);
+  const expenses = entries.filter(e => !["PIS", "COFINS", "ICMS", "Pagamento de Fornecedores"].includes(e.account)).reduce((s, e) => s + e.value, 0);
+  const result = cents(totals.profit - tax - expenses - totals.sales * 0.005 - totals.cost * 0.025);
+  const dre = [{ id: "r1", name: "Receita bruta de vendas", value: totals.sales }, { id: "r2", name: "Custo das mercadorias vendidas (CMV)", value: -totals.cost }, { id: "r3", name: "Lucro bruto", value: totals.profit }, { id: "r4", name: "Impostos sobre vendas", value: -tax }, { id: "r5", name: "Despesas operacionais", value: -expenses }, { id: "r6", name: "Depreciação (0,5%)", value: -totals.sales * 0.005 }, { id: "r7", name: "Quebras (2,5% do CMV)", value: -totals.cost * 0.025 }, { id: "r8", name: "Resultado operacional", value: result }];
+  const open = (entry?: DemoEntry) => { setEditingId(entry?.id ?? null); setEdit(entry ? Object.fromEntries(Object.entries(entry).map(([k, v]) => [k, String(v)])) : { date: `${filters.year}-${String(filters.month).padStart(2, "0")}-15`, name: "", account: "Outras Despesas", value: "0", status: "Pendente" }); };
+  const fields: FormField[] = [{ key: "date", label: "Data", type: "date", required: true }, { key: "name", label: "Descrição", required: true }, { key: "account", label: "Conta DRE", options: ACCOUNTS, required: true }, { key: "value", label: "Valor (R$)", type: "number", required: true }, { key: "status", label: "Situação", options: ["Pendente", "Pago"], required: true }];
+  return <><Kpis items={[{ label: "Receita", value: money(totals.sales) }, { label: "Impostos", value: money(tax) }, { label: "Despesas", value: money(expenses) }, { label: "Resultado operacional", value: money(result) }]} /><Tabs value={tab} onValueChange={setTab}><div className="flex flex-wrap justify-between gap-3 py-4"><TabsList><TabsTrigger value="dre">DRE Comercial</TabsTrigger><TabsTrigger value="entries">Lançamentos</TabsTrigger><TabsTrigger value="agenda">Agenda financeira</TabsTrigger></TabsList><div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => exportDemoRows("Controladoria", tab === "dre" ? ["Conta", "Valor"] : ["Data", "Descrição", "Conta", "Valor", "Situação"], tab === "dre" ? dre.map(r => [r.name, cents(r.value)]) : entries.map(e => [e.date, e.name, e.account, e.value, e.status]))}><Download /> Excel</Button><Button size="sm" onClick={() => open()}><Plus /> Lançamento</Button></div></div><TabsContent value="dre"><DataTable rows={dre} columns={[{ label: "Conta DRE", render: r => <span className={r.id === "r8" || r.id === "r3" ? "font-semibold" : ""}>{r.name}</span> }, { label: "Valor", render: r => <strong className={r.value < 0 ? "text-destructive" : "text-success"}>{money(r.value)}</strong>, numeric: true }]} /></TabsContent>{["entries", "agenda"].map(key => <TabsContent key={key} value={key}><DataTable rows={key === "agenda" ? entries.filter(e => e.status === "Pendente") : entries} columns={[{ label: "Data", render: e => e.date.split("-").reverse().join("/") }, { label: "Descrição", render: e => e.name }, { label: "Conta DRE", render: e => e.account }, { label: "Valor", render: e => money(e.value), numeric: true }, { label: "Situação", render: e => <Status good={e.status === "Pago"}>{e.status}</Status> }]} onEdit={e => open(e)} onDelete={e => { if (window.confirm(`Excluir ${e.name}?`)) update(s => ({ ...s, entries: s.entries.filter(x => x.id !== e.id) })); }} /></TabsContent>)}</Tabs>{edit && <EditDialog title="Lançamento fictício" fields={fields} values={edit} setValues={setEdit} onClose={() => setEdit(null)} onSave={() => { const value = Number(edit.value); if (!Number.isFinite(value) || value <= 0) { toast.error("Informe um valor positivo."); return; } const entry = { id: editingId ?? uid(), date: edit.date, name: edit.name, account: edit.account, value: cents(value), status: edit.status }; update(s => ({ ...s, entries: editingId ? s.entries.map(e => e.id === editingId ? entry : e) : [...s.entries, entry] })); setEdit(null); toast.success("Lançamento salvo; DRE recalculada."); }} />}</>;
+}
