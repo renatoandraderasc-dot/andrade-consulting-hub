@@ -220,7 +220,7 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="sticky top-0 z-40 bg-card/95 backdrop-blur border-b border-border">
-        <div className="flex items-stretch h-14 px-4">
+        <div className={`flex items-stretch h-14 px-4 ${isDemo ? "min-w-0" : ""}`}>
           <Link to="/" className="flex items-center gap-3 pr-4 mr-2 border-r border-border">
             <img src={andradeLogo} alt="Andrade" className="h-7" />
             {storeName && (
@@ -233,7 +233,7 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
             )}
           </Link>
 
-          <nav className="hidden md:flex items-stretch gap-1">
+          <nav className={`hidden md:flex items-stretch gap-1 ${isDemo ? "flex-1 min-w-0 overflow-x-auto" : ""}`}>
             {visibleGroups.map((group) => {
               const groupActive = group.items.some((i) => isActive(i.path));
               return (
@@ -270,9 +270,9 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
             })}
           </nav>
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-2 shrink-0">
             <UltimaAtualizacaoBadge />
-            <div className="hidden sm:block"><StoreSwitcher /></div>
+            {!isDemo && <div className="hidden sm:block"><StoreSwitcher /></div>}
             <ThemeToggle />
 
             <Link
