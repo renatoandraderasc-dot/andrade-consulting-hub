@@ -538,3 +538,31 @@
   html:has(.presentation-print), body:has(.presentation-print) { margin: 0; padding: 0; width: 1920px; background: hsl(var(--slide-background)); }
   .presentation-print-slide, .slide-content { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 }
+
+.demo-workspace { min-width: 0; letter-spacing: 0; }
+.demo-workspace h1, .demo-workspace h2, .demo-workspace h3 { letter-spacing: 0; }
+.demo-live-tv { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; background: hsl(var(--primary-foreground)); height: 560px; width: 100%; overflow: hidden; }
+.demo-live-tv:fullscreen { height: 100dvh; }
+.demo-live-tv > section { display: grid; grid-template-rows: 110px minmax(0,1fr) 34px; min-width: 0; background: hsl(var(--card)); color: hsl(var(--card-foreground)); }
+.demo-live-tv header { padding: 20px 12px; text-align: center; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+.demo-live-tv header input { color: inherit; font-size: 22px; font-weight: 700; text-align: center; border-color: transparent; background: transparent; }
+.demo-live-tv header small { font-size: 10px; }
+.demo-tv-rows { display: grid; grid-auto-rows: minmax(0,1fr); overflow: hidden; }
+.demo-tv-rows > div { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; align-items: center; padding: 12px; background: hsl(var(--secondary)); }
+.demo-tv-rows > div:nth-child(even) { background: hsl(var(--card)); }
+.demo-tv-rows span { font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
+.demo-tv-rows small { display: block; font-size: 10px; color: hsl(var(--muted-foreground)); margin-top: 4px; }
+.demo-tv-rows strong { font-size: 20px; color: hsl(var(--warning)); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.demo-live-tv footer { text-align: center; font-size: 9px; padding: 10px; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+.demo-flyer { background: hsl(var(--card)); border: 1px solid hsl(var(--border)); }
+.demo-flyer > header { padding: 28px; background: hsl(var(--primary)); color: hsl(var(--primary-foreground)); }
+.demo-flyer header h2 { font-size: 30px; margin: 12px 0; }
+.demo-flyer header span { font-size: 12px; }
+.demo-flyer > div { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); }
+.demo-flyer article { padding: 24px; border-right: 1px solid hsl(var(--border)); border-bottom: 1px solid hsl(var(--border)); }
+.demo-flyer article small { color: hsl(var(--muted-foreground)); }
+.demo-flyer article h3 { margin: 12px 0; min-height: 46px; font-size: 16px; }
+.demo-flyer article strong { display: block; font-size: 28px; color: hsl(var(--warning)); margin: 10px 0; }
+.demo-flyer article span { font-size: 12px; }
+@media (max-width: 767px) { .demo-live-tv { height: 390px; }.demo-live-tv > section { grid-template-rows: 90px minmax(0,1fr) 34px; }.demo-live-tv header { padding: 14px 2px; }.demo-live-tv header input { padding: 2px; font-size: 14px; }.demo-live-tv header small { font-size: 6px; }.demo-tv-rows > div { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 4px; padding: 8px; }.demo-tv-rows span { font-size: 11px; }.demo-tv-rows strong { font-size: 13px; }.demo-live-tv footer { font-size: 6px; }.demo-flyer > div { grid-template-columns: repeat(2,minmax(0,1fr)); }.demo-flyer article { padding: 16px; }.demo-flyer article strong { font-size: 22px; } }
+@media print { body:has(.demo-workspace) header:not(.demo-flyer header), body:has(.demo-workspace) button { display: none; }.demo-flyer { print-color-adjust: exact; -webkit-print-color-adjust: exact; } }

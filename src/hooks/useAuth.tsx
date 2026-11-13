@@ -79,6 +79,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
       try {
+        const verified = await withTimeout(supabase.auth.getUser());
+        if (revision !== authRevisionRef.current) return;
+        if (verified.error || !verified.data.user || verified.data.user.id !== nextSession.user.id) throw new Error("invalid_session");
+        setUser(verified.data.user);
         const result = await withTimeout(supabase.from("demo_workspaces").select("user_id").eq("user_id", nextSession.user.id).maybeSingle());
         if (revision !== authRevisionRef.current) return;
         if (result.error) throw result.error;

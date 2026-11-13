@@ -1,4 +1,4 @@
-import type { Alocacao } from "@/lib/escala/escala-motor";
+import { gerarEscala, type Alocacao } from "@/lib/escala/escala-motor";
 
 export const DEMO_STORE = "Supermercado Aurora";
 export const DEMO_YEAR = 2026;
@@ -48,7 +48,7 @@ export const uid = () => crypto.randomUUID();
 export function createDemoState(): DemoState {
   const names = ["Ana Costa", "Bruno Lima", "Camila Alves", "Diego Santos", "Elisa Rocha", "Felipe Dias", "Gabriela Melo", "Henrique Silva", "Isabela Pinto", "João Martins", "Larissa Souza", "Marcos Oliveira", "Nádia Ribeiro", "Otávio Pereira", "Paula Gomes", "Rafael Mendes"];
   const products = PRODUCT_SEEDS.map(([name, department, unit, cost, price], i) => ({ id: String(10001 + i), name, department, unit, cost, price, club: cents(price * 0.95), competitor: cents(price * (1.02 + (i % 4) * 0.01)), stock: 80 + i * 13, purchased: 150 + i * 19, salesQty: 900 + i * 97, lastEntry: "2026-10-" + String(2 + i % 24).padStart(2, "0"), description2: "", notes: "" }));
-  return {
+  const state: DemoState = {
     version: 1, products,
     entries: [
       { id: "e1", date: "2026-10-05", name: "Distribuidora Horizonte", account: "Pagamento de Fornecedores", value: 58420.35, status: "Pago" },
@@ -68,8 +68,22 @@ export function createDemoState(): DemoState {
     equipment: [{ id: "q1", name: "Câmara de carnes", department: "Açougue", temperature: 2.8, minimum: 0, maximum: 4, date: "2026-10-30" }, { id: "q2", name: "Balcão de laticínios", department: "Frios e Laticínios", temperature: 4.1, minimum: 0, maximum: 8, date: "2026-10-30" }, { id: "q3", name: "Freezer de congelados", department: "Mercearia", temperature: -18.5, minimum: -25, maximum: -15, date: "2026-10-30" }],
     users: [{ id: "u1", name: "Gestor Aurora", email: "gestor@aurora.example", role: "Administrador", status: "Ativo" }, { id: "u2", name: "Comprador Aurora", email: "compras@aurora.example", role: "Supervisor", status: "Ativo" }, { id: "u3", name: "Operador Aurora", email: "operacao@aurora.example", role: "Usuário", status: "Ativo" }],
     goals: Object.fromEntries(DEPARTMENTS.map((d, i) => [d, [540000, 450000, 240000, 190000, 230000, 220000, 150000, 80000][i]])),
-    checklist: {}, allocations: [], scheduleStatus: "rascunho", flyer: products.slice(0, 12).map(p => p.id), flyerTitle: "Festival de economia", tvTitles: ["Bovinos", "Suínos", "Aves"], syncAt: "2026-10-31T22:00:00.000Z",
+    checklist: Object.fromEntries(DEPARTMENTS.flatMap(d => Array.from({ length: 4 }, (_, i) => [`${d}:${i}`, true]))), allocations: [], scheduleStatus: "rascunho", flyer: products.slice(0, 12).map(p => p.id), flyerTitle: "Festival de economia", tvTitles: ["Bovinos", "Suínos", "Aves"], syncAt: "2026-10-31T22:00:00.000Z",
   };
+  // Populate every month before the first visit, using the supplied unchanged scheduling engine.
+  for (let month = 1; month <= 12; month++) {
+    const result = gerarEscala({ ano: DEMO_YEAR, mes: month, funcionarios: state.employees.map(e => ({ id: e.id, nome: e.name, departamento: e.department, ativo: true, turno_padrao_id: `turn-${e.id}`, carga_semanal_contratual: 42 })), turnos: state.employees.map(e => ({ id: `turn-${e.id}`, codigo: `${e.start} - ${e.end}`, inicio: e.start, fim: e.end, intervalo_min: e.interval })), config: { regime: "5x2", intervalo_min_minutos: 60 }, marcos: [{ vigencia_inicio: "1900-01-01", horas_semanais: 42, folgas_semanais: 2, rotulo: "Parâmetros ilustrativos Aurora" }] });
+    state.allocations.push(...result.alocacoes);
+  }
+  const baseEntries = [...state.entries], baseReceipts = [...state.receipts], baseCampaigns = [...state.campaigns];
+  const shift = (date: string, month: number) => `${DEMO_YEAR}-${String(month).padStart(2, "0")}-${String(Math.min(Number(date.slice(-2)), new Date(DEMO_YEAR, month, 0).getDate())).padStart(2, "0")}`;
+  for (let month = 1; month <= 12; month++) {
+    if (month === DEMO_DEFAULT_MONTH) continue;
+    state.entries.push(...baseEntries.map(e => ({ ...e, id: `${e.id}-${month}`, date: shift(e.date, month), value: cents(e.value * (0.85 + month * 0.015)) })));
+    state.receipts.push(...baseReceipts.map(r => ({ ...r, id: `${r.id}-${month}`, date: shift(r.date, month), number: `${r.number}-${month}` })));
+    state.campaigns.push(...baseCampaigns.map(c => ({ ...c, id: `${c.id}-${month}`, date: shift(c.date, month), end: shift(c.end, month) })));
+  }
+  return state;
 }
 export function isDemoState(value: unknown): value is DemoState {
   if (!value || typeof value !== "object") return false;
