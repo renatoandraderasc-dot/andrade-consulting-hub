@@ -146,7 +146,7 @@ const EstoqueDinamico = () => {
   useEffect(() => {
     if (!authLoading && !user) navigate("/login");
     if (user) fetchStores();
-  }, [user, authLoading]);
+  }, [user, authLoading, isAdmin]);
 
   const fetchStores = async () => {
     const sid = sessionStorage.getItem("selectedStoreId");
