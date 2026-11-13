@@ -337,6 +337,13 @@
       "when": 1794534074888,
       "tag": "0047_store_sync_progress_access",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1794542216587,
+      "tag": "0048_isolated_demo_workspace",
+      "breakpoints": true
     }
   ]
 }
