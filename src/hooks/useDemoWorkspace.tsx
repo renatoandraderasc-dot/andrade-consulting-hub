@@ -22,7 +22,8 @@ export function DemoWorkspaceProvider({ children }: { children: ReactNode }) {
     supabase.from("demo_workspaces").select("data").eq("user_id", user.id).single().then(({ data, error }) => {
       if (!active) return;
       if (error) { setSaveError(true); toast.error("Não foi possível abrir os dados salvos da demonstração."); return; }
-      setState(isDemoState(data.data) ? data.data : createDemoState());
+      if (isDemoState(data.data)) setState(data.data);
+      else { changed.current = true; revision.current += 1; setState(createDemoState()); }
       setSaveError(false); setReady(true);
     });
     return () => { active = false; };

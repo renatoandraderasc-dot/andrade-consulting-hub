@@ -70,6 +70,8 @@ const ModuleGuard = ({ module, children }: ModuleGuardProps) => {
 
   // Do not mount production page hooks, readers, ERP calls or mutations for a demo account.
   if (isDemo) return <DemoWorkspace />;
+  // The physical player continues using its original store-access RLS, not manager module permissions.
+  if (module === "tv_player") return <>{children}</>;
 
   // módulos que dão acesso à mesma rota (ex.: visualizador só de %)
   // Controladoria: a rota /controladoria abre se o usuário tiver o módulo
