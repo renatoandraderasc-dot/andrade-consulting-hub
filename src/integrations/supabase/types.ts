@@ -3900,6 +3900,74 @@ export type Database = {
           },
         ]
       }
+      store_sync_jobs: {
+        Row: {
+          current_report: string | null
+          d1: string
+          failed: number
+          finished_at: string | null
+          id: string
+          last_error: string | null
+          lease_id: string | null
+          lease_until: string | null
+          processed: number
+          started_at: string
+          status: string
+          store_id: string
+          succeeded: number
+          tasks: Json
+          total: number
+          unavailable: number
+          updated_at: string
+        }
+        Insert: {
+          current_report?: string | null
+          d1: string
+          failed?: number
+          finished_at?: string | null
+          id?: string
+          last_error?: string | null
+          lease_id?: string | null
+          lease_until?: string | null
+          processed?: number
+          started_at?: string
+          status?: string
+          store_id: string
+          succeeded?: number
+          tasks?: Json
+          total?: number
+          unavailable?: number
+          updated_at?: string
+        }
+        Update: {
+          current_report?: string | null
+          d1?: string
+          failed?: number
+          finished_at?: string | null
+          id?: string
+          last_error?: string | null
+          lease_id?: string | null
+          lease_until?: string | null
+          processed?: number
+          started_at?: string
+          status?: string
+          store_id?: string
+          succeeded?: number
+          tasks?: Json
+          total?: number
+          unavailable?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "store_sync_jobs_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       store_vr_config: {
         Row: {
           api_key: string
@@ -4736,6 +4804,15 @@ export type Database = {
       }
     }
     Functions: {
+      admin_store_sync_summary: {
+        Args: never
+        Returns: {
+          data_through: string
+          last_saved_at: string
+          saved_reports: number
+          store_id: string
+        }[]
+      }
       distribuir_metas: {
         Args: {
           p_ano: number
