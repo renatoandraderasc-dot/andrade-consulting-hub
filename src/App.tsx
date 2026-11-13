@@ -71,6 +71,7 @@ import AdminEscala from "./pages/AdminEscala";
 import AdminTv from "./pages/AdminTv";
 import TvPlayer from "./pages/TvPlayer";
 import NotFound from "./pages/NotFound";
+import Apresentacao from "./pages/Apresentacao";
 import ModuleGuard from "@/components/ModuleGuard";
 
 const queryClient = new QueryClient({
@@ -100,6 +101,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/apresentacao" element={<Apresentacao />} />
             <Route path="/login" element={<Login />} />
             <Route path="/admin/setup" element={<AdminSetup />} />
             <Route path="/admin/questions" element={g("admin_questions", <AdminQuestions />)} />

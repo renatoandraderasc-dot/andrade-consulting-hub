@@ -14,6 +14,7 @@ const Navbar = () => {
     { href: "#servicos", label: n.linkServicos, isRoute: false },
     { href: "#sobre", label: n.linkSobre, isRoute: false },
     { href: "#contato", label: n.linkContato, isRoute: false },
+    { href: "/apresentacao", label: "Demonstração", isRoute: true },
     { href: "/login", label: n.linkClientes, isRoute: true },
   ];
 
