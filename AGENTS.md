@@ -24,3 +24,4 @@ PIC TV weather uses browser-authorized location with Open-Meteo and degrades ind
 
 - Receipt screens use cached manual-refresh reads and explicit header columns; blind counting unmounts invoice views, evicts invoice detail caches, and queries only safe criterion fields so invoice quantities are not passed into counting.
 - Receipt business writes invoke the published functions; only own blind counts and global-admin configuration write directly, preserving existing RLS.
+- The public presentation uses isolated illustrative screens and a single 1920×1080 slide master; partner logos and replacement media stay in browser IndexedDB, so shared presentation links never expose store data or silently publish uploaded files.
