@@ -1,5 +1,10 @@
 # Ajustes do Painel de Compras
 
+# Conexões — sincronização individual e consultas sem 504
+- [ ] Corrigir relatórios pesados com consultas menores e sequenciais, reaproveitando dados salvos.
+- [ ] Mostrar última sincronização, situação e atualização individual de cada loja em Conexões.
+- [ ] Verificar testes e fluxo autenticado; preservar lançamentos e edições manuais.
+
 # Compras × Vendas — Cobal
 - [x] Conferir relatórios completos de setembro e outubro e departamentos cadastrados do Cobal.
 - [x] Mostrar todos os departamentos e movimentos em Compras × Vendas e realizado, sem filtros de ativação de metas ou atividade recente dos produtos; incluir departamentos sem movimento.
