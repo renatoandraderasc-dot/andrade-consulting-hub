@@ -48,6 +48,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const roleCheckUserRef = useRef<string | null>(null);
   const hydratedUserRef = useRef<string | null>(null);
+  const pendingUserRef = useRef<string | null>(null);
   const isAdmin = isGlobalAdmin || isSupervisor;
 
   const checkAdmin = async (userId: string) => {
@@ -70,11 +71,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const hydrate = async (nextSession: Session | null) => {
       // Silent revalidation: same user (tab focus / token refresh) keeps the screen mounted.
-      if (nextSession?.user && hydratedUserRef.current === nextSession.user.id) {
+      if (nextSession?.user && (hydratedUserRef.current === nextSession.user.id || pendingUserRef.current === nextSession.user.id)) {
         setSession(nextSession);
         return;
       }
       const revision = ++authRevisionRef.current;
+      pendingUserRef.current = nextSession?.user?.id ?? null;
       setLoading(true);
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
@@ -96,11 +98,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (result.data) { setIsDemo(true); setIsGlobalAdmin(false); setIsSupervisor(false); }
         else await checkAdmin(nextSession.user.id);
         if (revision === authRevisionRef.current) hydratedUserRef.current = nextSession.user.id;
-      } catch {
-        hydratedUserRef.current = null;
+      } catch (err) {
         if (revision !== authRevisionRef.current) return;
-        setUser(null); setSession(null); setIsGlobalAdmin(false); setIsSupervisor(false);
-      } finally { if (revision === authRevisionRef.current) setLoading(false); }
+        if (err instanceof Error && err.message === "invalid_session") {
+          // Only an explicit server rejection signs the user out.
+          hydratedUserRef.current = null;
+          setUser(null); setSession(null); setIsGlobalAdmin(false); setIsSupervisor(false);
+        } else {
+          // Transient failure (timeout/network): stay signed in; RLS still enforces access.
+          hydratedUserRef.current = nextSession.user.id;
+        }
+      } finally {
+        if (revision === authRevisionRef.current) { pendingUserRef.current = null; setLoading(false); }
+      }
     };
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, nextSession) => {
