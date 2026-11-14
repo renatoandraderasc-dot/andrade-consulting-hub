@@ -108,12 +108,12 @@ export function canonDept(s: string): string {
 }
 
 async function loadRaw(storeId: string, inicio: string, fim: string, forcar = false): Promise<RawResult> {
-  const { data: config, error: configError } = await supabase
-    .from("store_vr_config").select("sistema").eq("store_id", storeId).maybeSingle();
+  // store_vr_config is admin-only under RLS; store_sistema works for every user with store access.
+  const { data: sistema, error: configError } = await supabase.rpc("store_sistema", { _store_id: storeId });
   if (configError) throw new Error(configError.message);
   const [{ data: mapas }, { data: proxy, error }, posv, kpi, ranking] = await Promise.all([
     supabase.from("vr_secao_departamento").select("secao_vr, department").eq("store_id", storeId),
-    consultarVendasDiarias(config?.sistema, inicio, fim, (relatorio, params) =>
+    consultarVendasDiarias((sistema as string | null) ?? undefined, inicio, fim, (relatorio, params) =>
       supabase.functions.invoke("vr-proxy", {
         body: { store_id: storeId, relatorio, params, forcar },
       }),
