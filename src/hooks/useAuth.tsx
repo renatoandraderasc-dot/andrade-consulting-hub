@@ -47,6 +47,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const authRevisionRef = useRef(0);
   const [loading, setLoading] = useState(true);
   const roleCheckUserRef = useRef<string | null>(null);
+  const hydratedUserRef = useRef<string | null>(null);
   const isAdmin = isGlobalAdmin || isSupervisor;
 
   const checkAdmin = async (userId: string) => {
@@ -68,12 +69,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const hydrate = async (nextSession: Session | null) => {
+      // Silent revalidation: same user (tab focus / token refresh) keeps the screen mounted.
+      if (nextSession?.user && hydratedUserRef.current === nextSession.user.id) {
+        setSession(nextSession);
+        return;
+      }
       const revision = ++authRevisionRef.current;
       setLoading(true);
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
       setIsDemo(false);
       if (!nextSession?.user) {
+        hydratedUserRef.current = null;
         roleCheckUserRef.current = null;
         setIsGlobalAdmin(false); setIsSupervisor(false); setLoading(false);
         return;
@@ -88,7 +95,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (result.error) throw result.error;
         if (result.data) { setIsDemo(true); setIsGlobalAdmin(false); setIsSupervisor(false); }
         else await checkAdmin(nextSession.user.id);
+        if (revision === authRevisionRef.current) hydratedUserRef.current = nextSession.user.id;
       } catch {
+        hydratedUserRef.current = null;
         if (revision !== authRevisionRef.current) return;
         setUser(null); setSession(null); setIsGlobalAdmin(false); setIsSupervisor(false);
       } finally { if (revision === authRevisionRef.current) setLoading(false); }
