@@ -351,6 +351,13 @@
       "when": 1794542761322,
       "tag": "0049_demo_privileged_function_boundary",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1794657889652,
+      "tag": "0050_tv_midia_read_by_store",
+      "breakpoints": true
     }
   ]
 }
