@@ -233,6 +233,14 @@ Deno.serve(async (req) => {
           qtd_pedido: ped ? num(ped.quantidade) : null, preco_pedido: ped ? num(ped.preco) : null, situacao_pedido: situacao,
         };
       });
+      // itens sem código de produto (nota ainda não importada no WebSac): resolve pelo EAN, como na lista cega
+      for (const l of linhas) {
+        if (l.codproduto || !l.ean) continue;
+        try {
+          const pr = (await rel(storeId, "produto_por_ean", { ean: l.ean }))[0];
+          if (pr?.codproduto) { l.codproduto = Number(pr.codproduto); l.descricao_produto = String(pr.descricao ?? "") || null; }
+        } catch { /* segue sem código */ }
+      }
       await db.from("recebimento_itens").delete().eq("recebimento_id", rid);
       if (linhas.length) await db.from("recebimento_itens").insert(linhas);
       if (numpedido) {
@@ -290,21 +298,20 @@ Deno.serve(async (req) => {
       if (rec.estado === "ENTRADA_CONFIRMADA") return json({ erro: "esta nota já deu entrada" }, 409);
       const { data: itens } = await db.from("recebimento_itens").select("*").eq("recebimento_id", rid);
       const { data: cont } = await db.from("lista_cega_itens").select("*").eq("recebimento_id", rid).eq("rodada", rodada);
-      const porChave = new Map<string, number>();
-      for (const c of cont ?? []) { const k = c.codproduto ? `p:${c.codproduto}` : `e:${c.ean}`; porChave.set(k, (porChave.get(k) ?? 0) + num(c.qtd_contada)); }
-      const usados = new Set<string>();
+      // casa por código de produto OU por EAN (o que existir dos dois lados)
+      const eanN = (v: unknown) => String(v ?? "").replace(/\D/g, "").replace(/^0+/, "");
+      const contagem = (cont ?? []).map((c) => ({ ...c, _usado: false }));
       const resultado = (itens ?? []).map((it) => {
-        const k = it.codproduto ? `p:${it.codproduto}` : `e:${it.ean}`; usados.add(k);
-        const contada = porChave.get(k) ?? 0; const nota = num(it.qtd_unidades);
+        const casa = contagem.filter((c) => !c._usado && ((it.codproduto && c.codproduto && Number(c.codproduto) === Number(it.codproduto)) || (it.ean && c.ean && eanN(c.ean) === eanN(it.ean))));
+        casa.forEach((c) => { c._usado = true; });
+        const contada = casa.reduce((s, c) => s + num(c.qtd_contada), 0); const nota = num(it.qtd_unidades);
         const tol = nota * cfg.tolerancia_qtd / 100;
-        const situacao = !porChave.has(k) ? "NAO_CONTADO" : Math.abs(contada - nota) <= tol ? "OK" : contada < nota ? "FALTA" : "SOBRA";
+        const situacao = !casa.length ? "NAO_CONTADO" : Math.abs(contada - nota) <= tol ? "OK" : contada < nota ? "FALTA" : "SOBRA";
         return { seq: it.seq_xml, codproduto: it.codproduto, ean: it.ean, descricao: it.descricao_produto ?? it.descricao_xml, qtd_nota: nota, qtd_contada: contada, diferenca: contada - nota, situacao };
       });
-      for (const [k, q] of porChave) if (!usados.has(k)) {
-        const c = (cont ?? []).find((x) => (x.codproduto ? `p:${x.codproduto}` : `e:${x.ean}`) === k);
-        if (!c) continue;
-        resultado.push({ seq: null, codproduto: c.codproduto, ean: c.ean, descricao: c.descricao, qtd_nota: 0, qtd_contada: q, diferenca: q, situacao: "FORA_DA_NOTA" });
-      }
+      const sobras = new Map<string, { c: typeof contagem[number]; q: number }>();
+      for (const c of contagem) if (!c._usado) { const k = c.codproduto ? `p:${c.codproduto}` : `e:${eanN(c.ean)}`; const s = sobras.get(k); if (s) s.q += num(c.qtd_contada); else sobras.set(k, { c, q: num(c.qtd_contada) }); }
+      for (const { c, q } of sobras.values()) resultado.push({ seq: null, codproduto: c.codproduto, ean: c.ean, descricao: c.descricao, qtd_nota: 0, qtd_contada: q, diferenca: q, situacao: "FORA_DA_NOTA" });
       const divergentes = resultado.filter((r) => r.situacao !== "OK");
       await db.from("recebimento_criterios").upsert({ recebimento_id: rid, criterio: 5, nome: "LISTA_CEGA", resultado: divergentes.length ? "AVISO" : "OK", detalhe: { rodada, itens: resultado, resumo: { ok: resultado.length - divergentes.length, falta: divergentes.filter((d) => d.situacao === "FALTA").length, sobra: divergentes.filter((d) => d.situacao === "SOBRA").length, nao_contado: divergentes.filter((d) => d.situacao === "NAO_CONTADO").length, fora_da_nota: divergentes.filter((d) => d.situacao === "FORA_DA_NOTA").length } }, avaliado_em: new Date().toISOString() }, { onConflict: "recebimento_id,criterio" });
       await evento(rid, rodada > 1 ? "RECONTAGEM" : "CONTAGEM", { rodada, divergentes: divergentes.length });
