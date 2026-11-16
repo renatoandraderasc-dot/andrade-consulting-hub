@@ -96,6 +96,7 @@
 - [ ] Validar compilação e comportamento relevante.
 
 # Recebimento — descrições e EANs
-- [ ] Adicionar EANs cadastrados e atualizar produto_por_ean.
-- [ ] Enriquecer validação e resultado; preservar contagem cega e republicar recebimento.
-- [ ] Executar testes e conferir as telas com acesso autorizado.
+- [x] Adicionar EANs cadastrados e atualizar produto_por_ean.
+- [x] Enriquecer validação e resultado; preservar contagem cega e republicar recebimento.
+- [x] Executar 15 testes de conferência, contagem segura e criação/revalidação; compilação OK e publicação confirmada.
+- [ ] Conferir telas com nota real: a conta disponível foi redirecionada ao Dashboard por falta de acesso ao módulo; sem revalidar ou alterar a nota real.
