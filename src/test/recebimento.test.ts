@@ -74,6 +74,16 @@ function orderHarness({role='supervisor',rec={id:'rec-1',store_id:'store-1',esta
 }
 
 describe('criar pedido pelo XML',()=>{
+  it('prioriza a chave da nota antes de pedido vinculado e total aproximado',()=>{
+    const source=readFileSync('supabase/functions/recebimento/index.ts','utf8');
+    const expression=source.match(/const alvo = ([\s\S]*?)\n        if \(alvo\)/)?.[1];
+    if(!expression)throw new Error('seleção de pedido não encontrada');
+    const abertos=[{numpedido:1,totalliquido:120.5},{numpedido:2,totalliquido:120.5},{numpedido:3,chavenfe_vinculada:'chave-nota',totalliquido:120.5}];
+    const pick=(rows:typeof abertos)=>runInNewContext(`(${expression.trim().replace(/;$/,'')})`,{abertos:rows,vinculados:[2],chave:'chave-nota',num:Number,nfe:{total:120.5},xml:{vNF:120.5}});
+    expect(pick(abertos).numpedido).toBe(3);
+    expect(pick(abertos.slice(0,2)).numpedido).toBe(2);
+    expect(pick(abertos.slice(0,1)).numpedido).toBe(1);
+  });
   it.each(['supervisor','admin'])('perfil %s cria e registra pedido sem dar entrada',async role=>{
     const h=orderHarness({role});const r=await h.call();
     expect(r.status).toBe(200);expect(await r.json()).toMatchObject({ok:true,numpedido:456,itens:8,total:120.5});
