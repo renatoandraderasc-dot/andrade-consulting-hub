@@ -1,3 +1,4 @@
+import { supabase } from "@/integrations/supabase/client";
 import { ALIAS_EAN, ALIAS_ESTOQUE, chamarRelatorio, avisoRelatorio, pick as col } from "@/lib/vrReport";
 
 // ==========================================================
@@ -70,6 +71,14 @@ export function mapearLinhaCatalogo(l: any): CatalogoItem {
 
 const cache = new Map<string, CatalogoItem[]>();
 
+/** True when the store's synced product cadastro is saved in the Hub. */
+export async function temBaseSalva(storeId: string): Promise<boolean> {
+  if (!storeId) return false;
+  const { data } = await supabase.from("relatorio_cache").select("id")
+    .eq("store_id", storeId).eq("relatorio", "produtos").gt("linhas", 0).limit(1);
+  return !!data?.length;
+}
+
 /**
  * Monta a base completa da loja usando os relatorios "produtos",
  * "produtos_precos" e "estoque_atual". Usado quando a loja nao
@@ -90,14 +99,18 @@ export async function carregarBaseCatalogo(storeId: string, opts: { fresco?: boo
   const iso = (d: Date) => d.toISOString().slice(0, 10);
   const inicio90 = new Date(hoje.getTime() - 90 * 86400000);
 
+  // Synced cadastro already in the Hub opens without touching the store bridge.
+  const doHub = !opts.fresco && (await temBaseSalva(storeId));
+  const g = doHub ? { apenasSalvos: true } : f;
+  const vazio = { dados: [] as any[], indisponivel: false, offline: false, erro: null };
   const [rp, rpp, re, rc, rr] = await Promise.all([
-    chamarRelatorio(storeId, "produtos", {}, f),
-    chamarRelatorio(storeId, "produtos_precos", {}, f),
-    chamarRelatorio(storeId, "estoque_atual", {}, f),
+    chamarRelatorio(storeId, "produtos", {}, g),
+    chamarRelatorio(storeId, "produtos_precos", {}, g),
+    chamarRelatorio(storeId, "estoque_atual", {}, g),
     // O WebSac exige busca/limite/offset nesse relatorio (sem eles a ponte
     // devolve "parametro ausente" e a loja fica sem EAN/estoque).
-    chamarRelatorio(storeId, "catalogo_produtos", { busca: "", limite: 200000, offset: 0 }, f),
-    chamarRelatorio(storeId, "ranking_produtos", { inicio: iso(inicio90), fim: iso(hoje) }),
+    chamarRelatorio(storeId, "catalogo_produtos", { busca: "", limite: 200000, offset: 0 }, g),
+    doHub ? Promise.resolve(vazio) : chamarRelatorio(storeId, "ranking_produtos", { inicio: iso(inicio90), fim: iso(hoje) }),
   ]);
 
   const chaveLinha = (l: any) => normalizarCodigo(col(l, "id_produto", "codigo", "produto_id"));

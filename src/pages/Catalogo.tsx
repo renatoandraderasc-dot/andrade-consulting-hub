@@ -5,7 +5,7 @@ import * as XLSX from "xlsx";
 import { salvarWorkbook } from "@/lib/exportBranding";
 import { supabase } from "@/integrations/supabase/client";
 import { ALIAS_EAN, chamarRelatorio, avisoRelatorio, pick as col } from "@/lib/vrReport";
-import { carregarBaseCatalogo, filtrarCatalogo, type CatalogoItem } from "@/lib/catalogoProdutos";
+import { carregarBaseCatalogo, filtrarCatalogo, temBaseSalva, type CatalogoItem } from "@/lib/catalogoProdutos";
 import { useAuth } from "@/hooks/useAuth";
 import ClientLayout from "@/components/ClientLayout";
 import { useToast } from "@/hooks/use-toast";
@@ -158,6 +158,14 @@ const Catalogo = () => {
     if (!storeId) return;
     setLoading(true);
     try {
+      // Synced stores open from the Hub immediately, without querying the bridge.
+      if (!periodo && (await temBaseSalva(storeId))) {
+        const { linhas: locais, total } = await buscarLocal(pg, termo);
+        setLocalTotal(total);
+        setLinhas(locais);
+        setAviso(total ? null : "Nenhum produto encontrado.");
+        return;
+      }
       const { linhas: l, aviso: a } = await consultar(pg, termo, periodo);
       if (l.length) {
         setLocalTotal(null);
