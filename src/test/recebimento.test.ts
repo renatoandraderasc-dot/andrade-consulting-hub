@@ -107,3 +107,103 @@ describe('criar pedido pelo XML',()=>{
     expect(h.writes).toHaveLength(1);expect(h.writes[0].payload.evento).toBe('PEDIDO_FALHOU');
   });
 });
+
+const xmlNota = (ean: string, qtd: number) => `<nfe><emit><CNPJ>12345678000190</CNPJ></emit><ide><dhEmi>${new Date().toISOString().slice(0, 10)}T10:00:00-03:00</dhEmi><nNF>1</nNF><serie>1</serie></ide><ICMSTot><vNF>60</vNF></ICMSTot><det nItem="1"><prod><cProd>ARROZ</cProd><cEAN>${ean}</cEAN><xProd>ARROZ 5KG</xProd><uCom>UN</uCom><qCom>${qtd}</qCom><vUnCom>5</vUnCom><vProd>60</vProd></prod></det></nfe>`;
+
+function confernciaHarness({ itens = [], contagem = [], relatorios = {} }: { itens?: Record<string, unknown>[]; contagem?: Record<string, unknown>[]; relatorios?: Record<string, Record<string, unknown>[]> } = {}) {
+  const writes: { table: string; operation: string; payload: unknown }[] = [];
+  const tables: Record<string, Record<string, unknown>[]> = {
+    user_roles: [{ role: 'admin' }],
+    user_store_access: [{ id: 'access' }],
+    recebimentos: [{ id: 'rec-1', store_id: 'store-1', estado: 'EM_CONTAGEM', idnfeestabelec: 123 }],
+    recebimento_config: [],
+    recebimento_itens: itens,
+    lista_cega_itens: contagem,
+  };
+  const consultarRelatorioLoja = vi.fn(async ({ relatorio }: { relatorio: string }) => ({ ok: true, dados: relatorios[relatorio] ?? [] }));
+  const db = {
+    auth: { getUser: async () => ({ data: { user: { id: 'user-1' } } }) },
+    from: (table: string) => {
+      const filters: [string, unknown][] = [];
+      const rows = () => (tables[table] ?? []).filter((r) => filters.every(([k, v]) => String(r[k]) === String(v)));
+      const q: Record<string, unknown> = {
+        select: () => q,
+        eq: (k: string, v: unknown) => { filters.push([k, v]); return q; },
+        maybeSingle: async () => ({ data: rows()[0] ?? null }),
+        single: async () => ({ data: rows()[0] ?? null }),
+        upsert: (payload: unknown) => { writes.push({ table, operation: 'upsert', payload }); return q; },
+        insert: (payload: unknown) => { writes.push({ table, operation: 'insert', payload }); return q; },
+        update: (payload: unknown) => { writes.push({ table, operation: 'update', payload }); return q; },
+        delete: () => { writes.push({ table, operation: 'delete', payload: null }); return q; },
+        then: (resolve: (v: unknown) => unknown) => Promise.resolve({ data: rows() }).then(resolve),
+      };
+      return q;
+    },
+  };
+  const { handler } = loadFunction('recebimento', { createClient: () => db, consultarRelatorioLoja });
+  const call = (body: Record<string, unknown>) => handler(new Request('https://example.test', { method: 'POST', body: JSON.stringify({ store_id: 'store-1', ...body }) }));
+  const inserted = () => writes.filter((w) => w.table === 'recebimento_itens' && w.operation === 'insert').flatMap((w) => w.payload as Record<string, unknown>[]);
+  return { call, writes, consultarRelatorioLoja, inserted };
+}
+
+const notaSemProduto = {
+  nfe_recebida_por_chave: [{ idnfeestabelec: 123, numnotafiscal: 1, serie: '1', nome_emitente: 'Fornecedor X', cnpj_emitente: '12345678000190', total: 60, pedidos_vinculados: '', idnotafiscal_entrada: null, xmlnfe: xmlNota('7891000100103', 12) }],
+  fornecedor_por_cnpj: [{ codfornec: 77, status: 'A', nome: 'Fornecedor X' }],
+  pedidos_abertos_fornecedor: [],
+  nfe_recebida_itens: [{ seqitem: 1, descricao_xml: 'ARROZ 5KG', qtd_xml: 12, preco_xml: 5, totalproduto: 60 }],
+};
+
+describe('recebimento resolve produto pelo EAN na validação', () => {
+  it('grava o código do produto encontrado pelo EAN quando o WebSac não conhece a nota', async () => {
+    const h = confernciaHarness({ relatorios: { ...notaSemProduto, produto_por_ean: [{ codproduto: 4521, descricao: 'ARROZ 5KG TIPO 1' }] } });
+    const r = await h.call({ acao: 'validar', chave: chave() });
+    expect(r.status).toBe(200);
+    expect(h.consultarRelatorioLoja).toHaveBeenCalledWith(expect.objectContaining({ relatorio: 'produto_por_ean', params: { ean: '7891000100103' } }));
+    expect(h.inserted()[0]).toMatchObject({ seq_xml: 1, codproduto: 4521, descricao_produto: 'ARROZ 5KG TIPO 1' });
+  });
+  it('mantém o item sem código quando o EAN não existe no cadastro', async () => {
+    const h = confernciaHarness({ relatorios: { ...notaSemProduto, produto_por_ean: [] } });
+    await h.call({ acao: 'validar', chave: chave() });
+    expect(h.inserted()[0]).toMatchObject({ seq_xml: 1, codproduto: null });
+  });
+});
+
+const itemNota = (extra: Record<string, unknown> = {}) => ({ recebimento_id: 'rec-1', seq_xml: 1, codproduto: 4521, ean: '7891000100103', qtd_unidades: 12, descricao_produto: 'ARROZ 5KG TIPO 1', descricao_xml: 'ARROZ 5KG', ...extra });
+const contado = (extra: Record<string, unknown> = {}) => ({ recebimento_id: 'rec-1', rodada: 1, codproduto: null, ean: null, qtd_contada: 0, descricao: 'ARROZ 5KG', ...extra });
+
+describe('conferência da lista cega casa por código ou EAN', () => {
+  const conferir = (itens: Record<string, unknown>[], contagem: Record<string, unknown>[]) => confernciaHarness({ itens, contagem }).call({ acao: 'conferir', recebimento_id: 'rec-1', rodada: 1 });
+
+  it('casa item com código contra contagem só com EAN, mesmo com zeros à esquerda', async () => {
+    const r = await conferir([itemNota()], [contado({ ean: '0007891000103', qtd_contada: 12 })]);
+    const body = await r.json();
+    expect(body.itens).toHaveLength(1);
+    expect(body.itens[0]).toMatchObject({ seq: 1, qtd_nota: 12, qtd_contada: 12, diferenca: 0, situacao: 'OK' });
+    expect(body.divergentes).toBe(0);
+  });
+  it('não conta a mesma contagem duas vezes quando código e EAN batem', async () => {
+    const r = await conferir([itemNota()], [contado({ codproduto: 4521, ean: '7891000100103', qtd_contada: 12 })]);
+    const body = await r.json();
+    expect(body.itens).toHaveLength(1);
+    expect(body.itens[0].qtd_contada).toBe(12);
+    expect(body.itens[0].situacao).toBe('OK');
+  });
+  it('soma contagens do mesmo produto e marca FALTA quando falta quantidade', async () => {
+    const r = await conferir([itemNota()], [contado({ codproduto: 4521, qtd_contada: 5 }), contado({ codproduto: 4521, qtd_contada: 4 })]);
+    const body = await r.json();
+    expect(body.itens).toHaveLength(1);
+    expect(body.itens[0]).toMatchObject({ qtd_contada: 9, diferenca: -3, situacao: 'FALTA' });
+  });
+  it('junta em uma única linha a contagem fora da nota', async () => {
+    const r = await conferir([itemNota()], [contado({ codproduto: 4521, qtd_contada: 12 }), contado({ codproduto: 999, qtd_contada: 3 }), contado({ codproduto: 999, qtd_contada: 4 })]);
+    const body = await r.json();
+    expect(body.itens).toHaveLength(2);
+    expect(body.itens[1]).toMatchObject({ seq: null, codproduto: 999, qtd_nota: 0, qtd_contada: 7, diferenca: 7, situacao: 'FORA_DA_NOTA' });
+  });
+  it('marca NAO_CONTADO quando nenhum item contado casa com a nota', async () => {
+    const r = await conferir([itemNota()], [contado({ codproduto: 8888, ean: '1234567890123', qtd_contada: 2 })]);
+    const body = await r.json();
+    expect(body.itens[0]).toMatchObject({ seq: 1, qtd_contada: 0, situacao: 'NAO_CONTADO' });
+    expect(body.itens[1]).toMatchObject({ seq: null, situacao: 'FORA_DA_NOTA' });
+  });
+});
