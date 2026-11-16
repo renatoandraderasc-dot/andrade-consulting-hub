@@ -2,7 +2,7 @@
 
 # Contagem cega — apresentação da recontagem
 - [x] Manter itens da nota ocultos conforme escolha do usuário; recontagem em tabela/cards com descrição do sistema e EAN já disponíveis, sem carregar dados da nota nem alterar funções/tabelas.
-- [ ] Executar testes de preservação da contagem cega e conferir compilação.
+- [x] 12 testes aprovados e compilação OK; conferência com nota real bloqueada: a conta do solicitante foi redirecionada ao Dashboard ao abrir Recebimento.
 
 # Recebimento de NF-e — passo 4 (fase 2)
 - [x] Cadastrar hub_gerar_pedido sem alterar tabelas; aplicar somente as duas alterações solicitadas em recebimento e republicar.
