@@ -5,7 +5,7 @@ import * as XLSX from "xlsx";
 import { salvarWorkbook } from "@/lib/exportBranding";
 import { supabase } from "@/integrations/supabase/client";
 import { ALIAS_EAN, chamarRelatorio, avisoRelatorio, pick as col } from "@/lib/vrReport";
-import { carregarBaseCatalogo, filtrarCatalogo, temBaseSalva, type CatalogoItem } from "@/lib/catalogoProdutos";
+import { carregarBaseCatalogo, carregarCodigosAtivos12m, normalizarCodigo, filtrarCatalogo, temBaseSalva, type CatalogoItem } from "@/lib/catalogoProdutos";
 import { useAuth } from "@/hooks/useAuth";
 import ClientLayout from "@/components/ClientLayout";
 import { useToast } from "@/hooks/use-toast";
@@ -123,7 +123,9 @@ const Catalogo = () => {
       vistos.add(chave);
       return true;
     });
-    return { linhas: unicas, aviso: avisoRelatorio(r) };
+    const ativos = await carregarCodigosAtivos12m(storeId);
+    const comMov = ativos ? unicas.filter((l) => ativos.has(normalizarCodigo(l.codigo))) : unicas;
+    return { linhas: comMov, aviso: avisoRelatorio(r) };
   };
 
   const doItem = (p: CatalogoItem): Linha => ({
@@ -139,6 +141,12 @@ const Catalogo = () => {
     m4_familia: p.n4 || null,
   });
 
+  // Só produtos com compra ou venda nos últimos 12 meses (quando o Hub tem esse dado).
+  const baseAtiva = async () => {
+    const [base, ativos] = await Promise.all([carregarBaseCatalogo(storeId), carregarCodigosAtivos12m(storeId)]);
+    return ativos ? base.filter((p) => ativos.has(normalizarCodigo(p.codigo))) : base;
+  };
+
   // Lojas cujo conector nao publica "catalogo_produtos" (caso dos VR)
   // montam a base com produtos + produtos_precos + estoque_atual.
   const buscarLocal = async (
@@ -146,7 +154,7 @@ const Catalogo = () => {
     termo: string,
     limite = PAGE_SIZE,
   ): Promise<{ linhas: Linha[]; total: number }> => {
-    const base = await carregarBaseCatalogo(storeId);
+    const base = await baseAtiva();
     const filtradas = filtrarCatalogo(base, termo, base.length);
     return {
       linhas: filtradas.slice(pg * limite, pg * limite + limite).map(doItem),
@@ -216,7 +224,7 @@ const Catalogo = () => {
       const LOTE = 1000;
       const todas: Linha[] = [];
       if (localTotal !== null) {
-        const base = await carregarBaseCatalogo(storeId);
+        const base = await baseAtiva();
         todas.push(...filtrarCatalogo(base, buscaAtiva, base.length).map(doItem));
       } else {
         for (let pg = 0; pg < 200; pg++) {
