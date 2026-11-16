@@ -3177,6 +3177,7 @@ export type Database = {
           descricao_produto: string | null
           descricao_xml: string | null
           ean: string | null
+          eans_cadastro: string | null
           fator: number
           id: number
           preco_pedido: number | null
@@ -3195,6 +3196,7 @@ export type Database = {
           descricao_produto?: string | null
           descricao_xml?: string | null
           ean?: string | null
+          eans_cadastro?: string | null
           fator?: number
           id?: number
           preco_pedido?: number | null
@@ -3213,6 +3215,7 @@ export type Database = {
           descricao_produto?: string | null
           descricao_xml?: string | null
           ean?: string | null
+          eans_cadastro?: string | null
           fator?: number
           id?: number
           preco_pedido?: number | null

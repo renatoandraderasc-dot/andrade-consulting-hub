@@ -1,0 +1,1 @@
+ALTER TABLE public.recebimento_itens ADD COLUMN IF NOT EXISTS eans_cadastro text;
