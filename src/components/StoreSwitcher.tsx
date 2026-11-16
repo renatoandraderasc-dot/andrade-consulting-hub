@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Store as StoreIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { saveSelectedStore } from "@/lib/selectedStore";
 
 interface Store {
   id: string;
@@ -10,7 +11,7 @@ interface Store {
 
 /**
  * Seletor de loja global: um único login, filtro de loja em todas as telas.
- * Grava a loja escolhida em sessionStorage (mesma chave usada pelas páginas)
+ * Grava a loja por usuário para novas abas e em sessionStorage para as páginas
  * e recarrega para que todos os dados sejam refeitos para a loja ativa.
  */
 const StoreSwitcher = () => {
@@ -33,9 +34,12 @@ const StoreSwitcher = () => {
       setStores(list);
       const saved = sessionStorage.getItem("selectedStoreId");
       if ((!saved || !list.some((s) => s.id === saved)) && list.length) {
-        sessionStorage.setItem("selectedStoreId", list[0].id);
+        saveSelectedStore(list[0].id);
         setCurrent(list[0].id);
         window.location.reload();
+      } else if (saved && list.some((s) => s.id === saved)) {
+        saveSelectedStore(saved);
+        setCurrent(saved);
       }
     };
 
@@ -47,7 +51,7 @@ const StoreSwitcher = () => {
 
   const change = (id: string) => {
     if (!id || id === current) return;
-    sessionStorage.setItem("selectedStoreId", id);
+    saveSelectedStore(id);
     setCurrent(id);
     window.dispatchEvent(new CustomEvent("store-changed", { detail: id }));
     window.location.reload();
