@@ -1,5 +1,9 @@
 # Ajustes do Painel de Compras
 
+# Contagem — itens da nota sem quantidades/preços
+- [ ] Exibir identidades da nota e recontagem, status por rodada e Usar EAN; preservar funções/tabelas.
+- [ ] Testar projeção segura, status e visualização desktop/celular.
+
 # Contagem cega — apresentação da recontagem
 - [x] Manter itens da nota ocultos conforme escolha do usuário; recontagem em tabela/cards com descrição do sistema e EAN já disponíveis, sem carregar dados da nota nem alterar funções/tabelas.
 - [x] 12 testes aprovados e compilação OK; conferência com nota real bloqueada: a conta do solicitante foi redirecionada ao Dashboard ao abrir Recebimento.

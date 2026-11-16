@@ -22,7 +22,7 @@ PIC TV weather uses browser-authorized location with Open-Meteo and degrades ind
 - Store synchronization uses persisted store_sync_jobs queues with per-store uniqueness and worker leases; only authenticated approved-store access or trusted cron credentials can start/resume work, and Conexões polls saved progress only after an explicit request, keeping ERP refresh manual and resumable.
 - NF-e receipt validation and WebSac entry are separate edge functions using _shared/consultaLoja.ts; preserve the supplied workflow so validation stays separate from ERP writes.
 
-- Receipt screens use cached manual-refresh reads and explicit header columns; blind counting unmounts invoice views, evicts invoice detail caches, and queries only safe criterion fields so invoice quantities are not passed into counting.
+- Receipt screens use cached manual-refresh reads and explicit header columns; counting unmounts invoice detail views, evicts full detail caches, and loads item identities through an explicit quantity/price-free projection with a separate cache key, preventing invoice amounts from entering counting.
 - Receipt business writes invoke the published functions; only own blind counts and global-admin configuration write directly, preserving existing RLS.
 - XML purchase-order creation uses the receipt function and then revalidates the note while controls stay busy; keep this phase separate from invoice entry to avoid approving or entering a note implicitly.
 - The public presentation uses isolated illustrative screens and a single 1920×1080 slide master; partner logos and replacement media stay in browser IndexedDB, so shared presentation links never expose store data or silently publish uploaded files.
