@@ -13,6 +13,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { consultarRelatorioLoja } from "../_shared/consultaLoja.ts";
+import { conferirItens } from "./conferencia.ts";
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 
 const json = (b: unknown, s = 200) =>
@@ -229,16 +230,16 @@ Deno.serve(async (req) => {
         return {
           recebimento_id: rid, seq_xml: it.seq, cprod: it.cProd, ean: it.cEAN || (ws?.ean_cadastro ? String(ws.ean_cadastro) : null),
           descricao_xml: it.xProd, qtd_xml: it.qCom, un_xml: it.uCom, preco_xml: it.vUnCom,
-          codproduto, descricao_produto: ws?.descricao_produto ?? null, fator,
+          codproduto, descricao_produto: ws?.descricao_produto ?? null, eans_cadastro: null as string | null, fator,
           qtd_pedido: ped ? num(ped.quantidade) : null, preco_pedido: ped ? num(ped.preco) : null, situacao_pedido: situacao,
         };
       });
       // itens sem código de produto (nota ainda não importada no WebSac): resolve pelo EAN, como na lista cega
       for (const l of linhas) {
-        if (l.codproduto || !l.ean) continue;
+        if ((l.codproduto && l.eans_cadastro) || !l.ean) continue;
         try {
           const pr = (await rel(storeId, "produto_por_ean", { ean: l.ean }))[0];
-          if (pr?.codproduto) { l.codproduto = Number(pr.codproduto); l.descricao_produto = String(pr.descricao ?? "") || null; }
+          if (pr?.codproduto) { l.codproduto = Number(pr.codproduto); l.descricao_produto = String(pr.descricao ?? "") || null; l.eans_cadastro = String(pr.eans_cadastro ?? "") || null; }
         } catch { /* segue sem código */ }
       }
       await db.from("recebimento_itens").delete().eq("recebimento_id", rid);
@@ -298,20 +299,7 @@ Deno.serve(async (req) => {
       if (rec.estado === "ENTRADA_CONFIRMADA") return json({ erro: "esta nota já deu entrada" }, 409);
       const { data: itens } = await db.from("recebimento_itens").select("*").eq("recebimento_id", rid);
       const { data: cont } = await db.from("lista_cega_itens").select("*").eq("recebimento_id", rid).eq("rodada", rodada);
-      // casa por código de produto OU por EAN (o que existir dos dois lados)
-      const eanN = (v: unknown) => String(v ?? "").replace(/\D/g, "").replace(/^0+/, "");
-      const contagem = (cont ?? []).map((c) => ({ ...c, _usado: false }));
-      const resultado = (itens ?? []).map((it) => {
-        const casa = contagem.filter((c) => !c._usado && ((it.codproduto && c.codproduto && Number(c.codproduto) === Number(it.codproduto)) || (it.ean && c.ean && eanN(c.ean) === eanN(it.ean))));
-        casa.forEach((c) => { c._usado = true; });
-        const contada = casa.reduce((s, c) => s + num(c.qtd_contada), 0); const nota = num(it.qtd_unidades);
-        const tol = nota * cfg.tolerancia_qtd / 100;
-        const situacao = !casa.length ? "NAO_CONTADO" : Math.abs(contada - nota) <= tol ? "OK" : contada < nota ? "FALTA" : "SOBRA";
-        return { seq: it.seq_xml, codproduto: it.codproduto, ean: it.ean, descricao: it.descricao_produto ?? it.descricao_xml, qtd_nota: nota, qtd_contada: contada, diferenca: contada - nota, situacao };
-      });
-      const sobras = new Map<string, { c: typeof contagem[number]; q: number }>();
-      for (const c of contagem) if (!c._usado) { const k = c.codproduto ? `p:${c.codproduto}` : `e:${eanN(c.ean)}`; const s = sobras.get(k); if (s) s.q += num(c.qtd_contada); else sobras.set(k, { c, q: num(c.qtd_contada) }); }
-      for (const { c, q } of sobras.values()) resultado.push({ seq: null, codproduto: c.codproduto, ean: c.ean, descricao: c.descricao, qtd_nota: 0, qtd_contada: q, diferenca: q, situacao: "FORA_DA_NOTA" });
+      const resultado = conferirItens(itens ?? [], cont ?? [], cfg.tolerancia_qtd);
       const divergentes = resultado.filter((r) => r.situacao !== "OK");
       await db.from("recebimento_criterios").upsert({ recebimento_id: rid, criterio: 5, nome: "LISTA_CEGA", resultado: divergentes.length ? "AVISO" : "OK", detalhe: { rodada, itens: resultado, resumo: { ok: resultado.length - divergentes.length, falta: divergentes.filter((d) => d.situacao === "FALTA").length, sobra: divergentes.filter((d) => d.situacao === "SOBRA").length, nao_contado: divergentes.filter((d) => d.situacao === "NAO_CONTADO").length, fora_da_nota: divergentes.filter((d) => d.situacao === "FORA_DA_NOTA").length } }, avaliado_em: new Date().toISOString() }, { onConflict: "recebimento_id,criterio" });
       await evento(rid, rodada > 1 ? "RECONTAGEM" : "CONTAGEM", { rodada, divergentes: divergentes.length });

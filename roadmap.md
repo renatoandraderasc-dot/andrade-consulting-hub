@@ -94,3 +94,9 @@
 - [ ] Exibir todos os mercadológicos do Medeiros em todas as telas.
 - [ ] Exibir Compras até o nível produto no Medeiros.
 - [ ] Validar compilação e comportamento relevante.
+
+# Recebimento — descrições e EANs
+- [x] Adicionar EANs cadastrados e atualizar produto_por_ean.
+- [x] Enriquecer validação e resultado; preservar contagem cega e republicar recebimento.
+- [x] Executar 15 testes de conferência, contagem segura e criação/revalidação; compilação OK e publicação confirmada.
+- [ ] Conferir telas com nota real: a conta disponível foi redirecionada ao Dashboard por falta de acesso ao módulo; sem revalidar ou alterar a nota real.
