@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { saveSelectedStore } from "@/lib/selectedStore";
 import { useNavigate } from "react-router-dom";
 import { format, subDays, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -460,7 +461,7 @@ const EstoqueDinamico = () => {
                   onValueChange={(v) => {
                     setStoreId(v);
                     setStoreName(stores.find((s) => s.id === v)?.name || "");
-                    sessionStorage.setItem("selectedStoreId", v);
+                    saveSelectedStore(v);
                     setLinhas(null);
                   }}
                 >

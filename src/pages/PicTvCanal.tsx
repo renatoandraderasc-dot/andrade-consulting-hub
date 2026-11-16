@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { saveSelectedStore } from "@/lib/selectedStore";
 import { useNavigate } from "react-router-dom";
 import { Maximize, Pause, Play, ChevronLeft, ChevronRight, Newspaper, PackageX } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -87,7 +88,7 @@ export default function PicTvCanal() {
       const list = data || [];
       const sel = saved ? list.find((s) => s.id === saved) : list[0];
       setStore(sel || null);
-      if (sel && !saved) sessionStorage.setItem("selectedStoreId", sel.id);
+      if (sel && !saved) saveSelectedStore(sel.id);
     })();
     return () => { ativo = false; };
   }, [user]);

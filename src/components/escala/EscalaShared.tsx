@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { saveSelectedStore } from '@/lib/selectedStore';
 import { Link } from 'react-router-dom';
 import { CalendarDays, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
@@ -54,7 +55,7 @@ export function useEscala() {
     finally { if (request === serial.current) setLoading(false); }
   }, [loja, lojas, ano, mes]);
   useEffect(() => { void carregar(); return () => { serial.current++; }; }, [carregar]);
-  function mudarLoja(id: string) { sessionStorage.setItem('selectedStoreId', id); setLoja(id); }
+  function mudarLoja(id: string) { saveSelectedStore(id); setLoja(id); }
   function navegar(delta: number) {
     let next = mes + delta, year = ano;
     if (next < 1) { next = 12; year--; } if (next > 12) { next = 1; year++; }

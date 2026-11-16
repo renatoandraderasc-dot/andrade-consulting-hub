@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
+import { saveSelectedStore } from "@/lib/selectedStore";
 import { chamarRelatorio, avisoRelatorio, pick as col, num } from "@/lib/vrReport";
 import { comprasAgrupadas, detalharComprasVendas } from "@/lib/comprasDetalhe";
 import { completarDepartamentos } from "@/lib/comprasDepartamentos";
@@ -863,7 +864,7 @@ const Compras = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div>
             <label className="text-xs text-muted-foreground mb-1 block">Loja</label>
-            <select value={storeId} onChange={(e) => { setStoreId(e.target.value); setStoreName(stores.find(s => s.id === e.target.value)?.name || ""); sessionStorage.setItem("selectedStoreId", e.target.value); }} className={inputCls}>
+            <select value={storeId} onChange={(e) => { setStoreId(e.target.value); setStoreName(stores.find(s => s.id === e.target.value)?.name || ""); saveSelectedStore(e.target.value); }} className={inputCls}>
               {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
           </div>
