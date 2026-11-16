@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
+import { restoreSelectedStore } from "@/lib/selectedStore";
 
 const AUTH_QUERY_TIMEOUT_MS = 8000;
 
@@ -76,6 +77,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
       const revision = ++authRevisionRef.current;
+      if (nextSession?.user) restoreSelectedStore(nextSession.user.id);
       pendingUserRef.current = nextSession?.user?.id ?? null;
       setLoading(true);
       setSession(nextSession);

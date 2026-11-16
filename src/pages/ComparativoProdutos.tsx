@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { saveSelectedStore } from "@/lib/selectedStore";
 import * as XLSX from "xlsx";
 import {
   ArrowDown, ArrowDownRight, ArrowRight, ArrowUp, ArrowUpRight, ChevronRight, Download, GitCompare, Info, RefreshCw, Search,
@@ -503,7 +504,7 @@ export default function ComparativoProdutos() {
             {lojas.length > 1 && (
               <div className="space-y-1">
                 <span className="block text-[11px] text-muted-foreground">Loja</span>
-                <Select value={storeId} onValueChange={(v) => { setStoreId(v); sessionStorage.setItem("selectedStoreId", v); setProdutos(null); setMesesCarregados(null); }}>
+                <Select value={storeId} onValueChange={(v) => { setStoreId(v); saveSelectedStore(v); setProdutos(null); setMesesCarregados(null); }}>
                   <SelectTrigger className="h-9 w-[230px]"><SelectValue /></SelectTrigger>
                   <SelectContent className="bg-popover">
                     {lojas.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}

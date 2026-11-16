@@ -123,7 +123,6 @@ const Login = () => {
 
       // A senha válida encerra o login imediatamente. Loja, perfil e módulos
       // carregam na área interna sem manter o usuário preso nesta tela.
-      sessionStorage.removeItem("selectedStoreId");
       navigate(postLoginTarget, { replace: true });
       return;
     } catch (err) {

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { saveSelectedStore } from "@/lib/selectedStore";
 import ClientLayout from "@/components/ClientLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -112,7 +113,7 @@ const EncarteSugestao = () => {
 
   const trocarLoja = (id: string) => {
     setStoreId(id);
-    sessionStorage.setItem("selectedStoreId", id);
+    saveSelectedStore(id);
     setItens([]); setAlternativas({}); setEncarteId(null); setStatus("rascunho");
     setAviso(null); setDiagnostico(null);
   };
