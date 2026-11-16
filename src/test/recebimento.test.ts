@@ -113,8 +113,8 @@ const xmlNota = (ean: string, qtd: number) => `<nfe><emit><CNPJ>12345678000190</
 function confernciaHarness({ itens = [], contagem = [], relatorios = {} }: { itens?: Record<string, unknown>[]; contagem?: Record<string, unknown>[]; relatorios?: Record<string, Record<string, unknown>[]> } = {}) {
   const writes: { table: string; operation: string; payload: unknown }[] = [];
   const tables: Record<string, Record<string, unknown>[]> = {
-    user_roles: [{ role: 'admin' }],
-    user_store_access: [{ id: 'access' }],
+    user_roles: [{ role: 'admin', user_id: 'user-1' }],
+    user_store_access: [{ id: 'access', user_id: 'user-1', store_id: 'store-1', approved: true }],
     recebimentos: [{ id: 'rec-1', store_id: 'store-1', estado: 'EM_CONTAGEM', idnfeestabelec: 123 }],
     recebimento_config: [],
     recebimento_itens: itens,
