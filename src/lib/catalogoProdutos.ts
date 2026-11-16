@@ -360,3 +360,20 @@ export function filtrarCatalogo(base: CatalogoItem[], termo: string, limite = 20
 }
 
 export { avisoRelatorio };
+
+// Códigos com compra ou venda nos últimos 12 meses, lidos só do Hub
+// (relatório produtos_ativos_12m salvo na sincronização). null = sem dado salvo.
+const cacheAtivos = new Map<string, Set<string> | null>();
+export async function carregarCodigosAtivos12m(storeId: string): Promise<Set<string> | null> {
+  if (!storeId) return null;
+  if (cacheAtivos.has(storeId)) return cacheAtivos.get(storeId)!;
+  const r = await chamarRelatorio(storeId, "produtos_ativos_12m", {}, { apenasSalvos: true } as any);
+  const cods = new Set<string>();
+  for (const l of r.dados || []) {
+    const k = normalizarCodigo(col(l, "codigo", "cod", "cod_produto", "id_produto"));
+    if (k) cods.add(k);
+  }
+  const res = cods.size ? cods : null;
+  cacheAtivos.set(storeId, res);
+  return res;
+}
