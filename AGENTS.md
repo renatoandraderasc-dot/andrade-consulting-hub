@@ -29,3 +29,5 @@ PIC TV weather uses browser-authorized location with Open-Meteo and degrades ind
 - Presentation media pointers are imported as raw text and parsed defensively; an incomplete upload must fall back to an illustrative screen instead of failing Vite JSON transformation and blanking every route.
 - Demo membership is read from protected demo_workspaces and never grants an admin role; ModuleGuard mounts only isolated domain views, whose mutations serialize to the owner's JSON workspace, while restrictive RLS denies demo accounts access to production tables. New production tables must also carry the demo_production_isolation policy to preserve this boundary.
 - Store selectors use saveSelectedStore; auth restores the per-user persisted selection before protected pages mount so new tabs inherit the client without resetting existing tabs. Store access validation remains server-enforced.
+
+- Receipt count reconciliation lives in the receipt function directory as a pure helper, so production matching and quantity rules can be tested without invoking ERP writes.

@@ -3,6 +3,7 @@ import type { Database } from '@/integrations/supabase/types';
 import { HEADER_COLUMNS } from './recebimentoRules';
 export type Receipt = Omit<Database['public']['Tables']['recebimentos']['Row'], 'xml_resumo' | 'codfornec' | 'idnfeestabelec' | 'entrada_iniciada_em' | 'liberado_por' | 'pedido_origem'>;
 export type Criterio = Database['public']['Tables']['recebimento_criterios']['Row'];
+export type ReceiptItem = Database['public']['Tables']['recebimento_itens']['Row'];
 export type Count = Database['public']['Tables']['lista_cega_itens']['Row'];
 export const brl = (v: unknown) => Number(v || 0).toLocaleString('pt-BR', {style:'currency',currency:'BRL'});
 export const qtd = (v: unknown) => Number(v || 0).toLocaleString('pt-BR', {maximumFractionDigits:3});
