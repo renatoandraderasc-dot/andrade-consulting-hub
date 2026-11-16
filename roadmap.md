@@ -1,7 +1,12 @@
 # Ajustes do Painel de Compras
 
+# Contagem — itens da nota sem quantidades/preços
+- [x] Exibir identidades da nota e recontagem, status por rodada e Usar EAN; preservar funções/tabelas.
+- [x] 17 testes aprovados, incluindo projeção segura, status e Usar EAN com foco na quantidade; compilação OK.
+- [ ] Conferir visualmente desktop/celular com nota real: a conta do solicitante é redirecionada ao Dashboard ao abrir Recebimento, impedindo acesso à tela.
+
 # Contagem cega — apresentação da recontagem
-- [x] Manter itens da nota ocultos conforme escolha do usuário; recontagem em tabela/cards com descrição do sistema e EAN já disponíveis, sem carregar dados da nota nem alterar funções/tabelas.
+- [x] Decisão anterior substituída: itens agora visíveis por decisão explícita do dono do produto; somente quantidades e preços da nota ficam ocultos.
 - [x] 12 testes aprovados e compilação OK; conferência com nota real bloqueada: a conta do solicitante foi redirecionada ao Dashboard ao abrir Recebimento.
 
 # Recebimento de NF-e — passo 4 (fase 2)
