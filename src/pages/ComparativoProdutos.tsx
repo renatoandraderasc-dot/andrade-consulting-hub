@@ -46,6 +46,21 @@ const rotuloPeriodo = (de: string, ate: string) => {
   if (!ms.length) return "—";
   return ms.length === 1 ? rotuloMes(ms[0]) : `${rotuloMes(ms[0])} a ${rotuloMes(ms[ms.length - 1])}`;
 };
+const fmtData = (d: string) => d.split("-").reverse().join("/");
+const rotuloDatas = (de: string, ate: string) => (de === ate ? fmtData(de) : `${fmtData(de)} a ${fmtData(ate)}`);
+const ontem = () => { const d = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })); d.setDate(d.getDate() - 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+/** Divide um intervalo livre de datas em trechos por mês (tag = "de_ate"). */
+function trechos(de: string, ate: string, limiteFim: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(de) || !/^\d{4}-\d{2}-\d{2}$/.test(ate)) return [];
+  if (de > ate) [de, ate] = [ate, de];
+  if (ate > limiteFim) ate = limiteFim;
+  return mesesEntre(de.slice(0, 7), ate.slice(0, 7)).map((m) => {
+    const l = limitesMes(m);
+    const d = l.de < de ? de : l.de, a = l.ate > ate ? ate : l.ate;
+    return { mes: m, de: d, ate: a, tag: `${d}_${a}` };
+  }).filter((t) => t.de <= t.ate);
+}
 const mesAtual = () => {
   const d = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -83,14 +98,14 @@ export default function ComparativoProdutos() {
   const ultimoFechado = somarMeses(mesAtual(), -1);
   const [lojas, setLojas] = useState<LojaSimples[]>([]);
   const [storeId, setStoreId] = useState("");
-  const [aDe, setADe] = useState(somarMeses(ultimoFechado, -1));
-  const [aAte, setAAte] = useState(somarMeses(ultimoFechado, -1));
-  const [bDe, setBDe] = useState(ultimoFechado);
-  const [bAte, setBAte] = useState(ultimoFechado);
+  const [aDe, setADe] = useState(limitesMes(somarMeses(ultimoFechado, -1)).de);
+  const [aAte, setAAte] = useState(limitesMes(somarMeses(ultimoFechado, -1)).ate);
+  const [bDe, setBDe] = useState(limitesMes(ultimoFechado).de);
+  const [bAte, setBAte] = useState(limitesMes(ultimoFechado).ate);
 
   const [produtos, setProdutos] = useState<ProdutoMes[] | null>(null);
   const [cupons, setCupons] = useState<Map<string, { total: number; porDep: Map<string, number> }>>(new Map());
-  const [mesesCarregados, setMesesCarregados] = useState<{ a: string[]; b: string[] } | null>(null);
+  const [mesesCarregados, setMesesCarregados] = useState<{ a: string[]; b: string[]; rotA: string; rotB: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [progresso, setProgresso] = useState("");
   const [avisos, setAvisos] = useState<string[]>([]);
@@ -120,30 +135,37 @@ export default function ComparativoProdutos() {
 
   // ---------- Atalhos de período ----------
   const aplicarAtalho = (tipo: "anterior" | "anoAnterior") => {
-    const n = mesesEntre(bDe, bAte).length || 1;
-    const ini = mesesEntre(bDe, bAte)[0] ?? bDe;
-    if (tipo === "anterior") { setADe(somarMeses(ini, -n)); setAAte(somarMeses(ini, -1)); }
-    else { setADe(somarMeses(ini, -12)); setAAte(somarMeses(ini, n - 13)); }
+    const dia = (s: string, n: number) => { const d = new Date(`${s}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+    const [ini, fim] = bDe <= bAte ? [bDe, bAte] : [bAte, bDe];
+    const ano = (s: string) => { const [y, m, d] = s.split("-").map(Number); const ult = new Date(Date.UTC(y - 1, m, 0)).getUTCDate();
+      return `${y - 1}-${String(m).padStart(2, "0")}-${String(Math.min(d, ult)).padStart(2, "0")}`; };
+    // Meses inteiros: desloca por mês; demais casos: mesmo número de dias imediatamente antes.
+    const inteiro = ini === limitesMes(ini.slice(0, 7)).de && fim === limitesMes(fim.slice(0, 7)).ate;
+    if (tipo === "anterior") {
+      if (inteiro) { const n = mesesEntre(ini.slice(0, 7), fim.slice(0, 7)).length; setADe(limitesMes(somarMeses(ini.slice(0, 7), -n)).de); setAAte(dia(ini, -1)); }
+      else { const n = Math.round((Date.parse(fim) - Date.parse(ini)) / 86400000) + 1; setADe(dia(ini, -n)); setAAte(dia(ini, -1)); }
+    } else { setADe(ano(ini)); setAAte(inteiro ? limitesMes(ano(fim).slice(0, 7)).ate : ano(fim)); }
   };
 
   // ---------- Carga ----------
-  async function carregarMes(mes: string, forcar: boolean, cadastro: () => Promise<Map<string, any>>, limite: number, apenasSalvos: boolean) {
-    const { de, ate } = limitesMes(mes);
-    const fimReal = mes === mesAtual() ? new Date(Date.now() - 86400000).toISOString().slice(0, 10) : ate;
+  async function carregarMes(trecho: { mes: string; de: string; ate: string; tag: string }, forcar: boolean, cadastro: () => Promise<Map<string, any>>, limite: number, apenasSalvos: boolean) {
+    const { de, ate, tag } = trecho;
+    const rotuloMes = () => rotuloDatas(de, ate);
+    const fimReal = ate;
     if (fimReal < de) return { linhas: [] as ProdutoMes[], aviso: null as string | null };
     // The Hub may have a corrected full month even when a compact copy was
     // written later from an older parameter variant. Always read the Hub first.
     const salvo = forcar ? null : await chamarRelatorio(storeId, "ranking_produtos", { inicio: de, fim: fimReal, limite: 200000 }, { apenasSalvos: true });
     if (!forcar && (!salvo || avisoRelatorio(salvo))) {
       const guardado = await lerPeriodoCache(storeId, CACHE_REL, "", de, ate);
-      if (guardado) return { linhas: (guardado as Compacto[]).map((c) => expandir(c, mes)), aviso: null };
+      if (guardado) return { linhas: (guardado as Compacto[]).map((c) => expandir(c, tag)), aviso: null };
     }
-    if (apenasSalvos && (!salvo || avisoRelatorio(salvo))) return { linhas: [], aviso: `${rotuloMes(mes)}: período ainda não salvo no Hub.` };
+    if (apenasSalvos && (!salvo || avisoRelatorio(salvo))) return { linhas: [], aviso: `${rotuloMes()}: período ainda não salvo no Hub.` };
     const r = salvo && !avisoRelatorio(salvo) ? salvo : limite > 0 && limite < 31
       ? await chamarRelatorioFatiado(storeId, "ranking_produtos", { inicio: de, fim: fimReal, limite: 200000 }, { diasPorLote: limite, forcar })
       : await chamarRelatorio(storeId, "ranking_produtos", { inicio: de, fim: fimReal, limite: 200000 }, { forcar });
     const msg = avisoRelatorio(r);
-    if (msg) return { linhas: [], aviso: `${rotuloMes(mes)}: ${msg}` };
+    if (msg) return { linhas: [], aviso: `${rotuloMes()}: ${msg}` };
     const cad = await cadastro();
     const agg = new Map<string, Compacto>();
     for (const l of r.dados || []) {
@@ -170,12 +192,11 @@ export default function ComparativoProdutos() {
     // calculated, otherwise thousands of rounded products change the profit.
     const compactos = [...agg.values()];
     if (!r.aviso) await gravarPeriodoCache(storeId, CACHE_REL, "", de, ate, compactos).catch(() => undefined);
-    return { linhas: compactos.map((c) => expandir(c, mes)), aviso: r.aviso ? `${rotuloMes(mes)}: ${r.aviso}` : null };
+    return { linhas: compactos.map((c) => expandir(c, tag)), aviso: r.aviso ? `${rotuloMes()}: ${r.aviso}` : null };
   }
 
   /** Lê um relatório mensal guardado (mês encerrado) ou busca na loja e guarda. */
-  async function lerMensal(relatorio: string, mes: string, forcar: boolean, apenasSalvos: boolean): Promise<any[] | null> {
-    const { de, ate } = limitesMes(mes);
+  async function lerMensal(relatorio: string, de: string, ate: string, forcar: boolean, apenasSalvos: boolean): Promise<any[] | null> {
     const guardado = forcar ? null : await lerPeriodoCache(storeId, relatorio, "", de, ate);
     if (guardado) return guardado;
     const r = await chamarRelatorio(storeId, relatorio, { inicio: de, fim: ate }, { forcar, apenasSalvos }).catch(() => null);
@@ -186,10 +207,10 @@ export default function ComparativoProdutos() {
 
   // Total da loja: cupons_e_ticket (cupom único). Por departamento: diagnostico_mensal
   // (um mesmo cupom pode aparecer em vários departamentos, por isso não somamos para o total).
-  async function carregarCupons(mes: string, forcar: boolean, apenasSalvos: boolean) {
+  async function carregarCupons(de: string, ate: string, forcar: boolean, apenasSalvos: boolean) {
     const porDep = new Map<string, number>();
     let somaDiag = 0, temDiag = false;
-    for (const l of (await lerMensal("diagnostico_mensal", mes, forcar, apenasSalvos)) ?? []) {
+    for (const l of (await lerMensal("diagnostico_mensal", de, ate, forcar, apenasSalvos)) ?? []) {
       const c = num(pick(l, "clientes", "cupons"));
       if (!c) continue;
       temDiag = true;
@@ -197,7 +218,7 @@ export default function ComparativoProdutos() {
       const d = chaveDept(mercadologicoNivel1(l) || txt(pick(l, "setor")));
       if (d) porDep.set(d, (porDep.get(d) ?? 0) + c);
     }
-    const diarios = (await lerMensal("cupons_e_ticket", mes, forcar, apenasSalvos)) ?? [];
+    const diarios = (await lerMensal("cupons_e_ticket", de, ate, forcar, apenasSalvos)) ?? [];
     const somaDiaria = diarios.reduce((s, l) => s + num(pick(l, "cupons", "clientes", "qtd_cupons")), 0);
     const total = somaDiaria > 0 ? somaDiaria : !porDep.size && temDiag ? somaDiag : 0;
     if (!total && !porDep.size) return null;
@@ -206,8 +227,9 @@ export default function ComparativoProdutos() {
 
   const buscar = async (forcar = false, apenasSalvos = false) => {
     if (!storeId) return;
-    const ma = mesesEntre(aDe, aAte), mb = mesesEntre(bDe, bAte);
-    const todos = [...new Set([...ma, ...mb])].filter((m) => m <= mesAtual()).sort();
+    const ta = trechos(aDe, aAte, ontem()), tb = trechos(bDe, bAte, ontem());
+    const ma = ta.map((t) => t.tag), mb = tb.map((t) => t.tag);
+    const todos = [...new Map([...ta, ...tb].map((t) => [t.tag, t])).values()].sort((x, y) => x.tag.localeCompare(y.tag));
     if (!todos.length) return;
     const carga = ++cargaAtual.current;
     setLoading(true); setAvisos([]); setPage(1);
@@ -228,17 +250,18 @@ export default function ComparativoProdutos() {
       // Um mês por vez: pontes lentas caem com consultas em paralelo.
       for (let i = 0; i < todos.length; i++) {
         if (carga !== cargaAtual.current) return;
-        setProgresso(`${rotuloMes(todos[i])} (${i + 1}/${todos.length})`);
+        setProgresso(`${rotuloDatas(todos[i].de, todos[i].ate)} (${i + 1}/${todos.length})`);
         const r = await carregarMes(todos[i], forcar, cadastro, limite, apenasSalvos);
         linhas.push(...r.linhas);
         if (r.aviso) novosAvisos.push(r.aviso);
-        const c = await carregarCupons(todos[i], forcar, apenasSalvos);
-        if (c) cup.set(todos[i], c);
+        const c = await carregarCupons(todos[i].de, todos[i].ate, forcar, apenasSalvos);
+        if (c) cup.set(todos[i].tag, c);
       }
       if (carga !== cargaAtual.current) return;
       setProdutos(linhas);
       setCupons(cup);
-      setMesesCarregados({ a: ma, b: mb });
+      const rot = (t: typeof ta) => (t.length ? rotuloDatas(t[0].de, t[t.length - 1].ate) : "—");
+      setMesesCarregados({ a: ma, b: mb, rotA: rot(ta), rotB: rot(tb) });
       setAvisos(novosAvisos);
     } catch {
       if (carga === cargaAtual.current) setAvisos(["A consulta não respondeu a tempo. Tente de novo ou use menos meses."]);
@@ -364,8 +387,8 @@ export default function ComparativoProdutos() {
   ];
 
   // ---------- Exportação ----------
-  const rotA = mesesCarregados ? rotuloPeriodo(mesesCarregados.a[0], mesesCarregados.a.at(-1)!) : rotuloPeriodo(aDe, aAte);
-  const rotB = mesesCarregados ? rotuloPeriodo(mesesCarregados.b[0], mesesCarregados.b.at(-1)!) : rotuloPeriodo(bDe, bAte);
+  const rotA = mesesCarregados ? mesesCarregados.rotA : rotuloDatas(aDe, aAte);
+  const rotB = mesesCarregados ? mesesCarregados.rotB : rotuloDatas(bDe, bAte);
 
   const exportar = () => {
     const rows = ordenadas.map((l) => {
@@ -453,7 +476,7 @@ export default function ComparativoProdutos() {
   const mesInput = (v: string, set: (s: string) => void, label: string) => (
     <label className="space-y-1 block min-w-0">
       <span className="block text-[11px] text-muted-foreground">{label}</span>
-      <Input type="month" className="h-9 w-full min-w-0 sm:w-[150px]" value={v} max={mesAtual()} onChange={(e) => e.target.value && set(e.target.value)} />
+      <Input type="date" className="h-9 w-full min-w-0 sm:w-[160px]" value={v} max={ontem()} onChange={(e) => e.target.value && set(e.target.value)} />
     </label>
   );
 
@@ -468,7 +491,7 @@ export default function ComparativoProdutos() {
               <button className="text-muted-foreground hover:text-foreground" aria-label="Como funciona"><Info className="w-4 h-4" /></button>
             </TooltipTrigger>
             <TooltipContent className="max-w-xs">
-              Compara dois intervalos de meses livres. Clique numa linha para descer: Departamento → Grupo → Subgrupo → Produto.
+              Compara dois intervalos de datas livres (dia, mês e ano). Clique numa linha para descer: Departamento → Grupo → Subgrupo → Produto.
               Meses já encerrados ficam salvos e abrem na hora; o mês atual vai até ontem. Cupons vêm do sistema da loja por
               departamento, por isso não aparecem por grupo ou produto.
             </TooltipContent>
