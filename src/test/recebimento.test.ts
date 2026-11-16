@@ -175,7 +175,7 @@ describe('conferência da lista cega casa por código ou EAN', () => {
   const conferir = (itens: Record<string, unknown>[], contagem: Record<string, unknown>[]) => confernciaHarness({ itens, contagem }).call({ acao: 'conferir', recebimento_id: 'rec-1', rodada: 1 });
 
   it('casa item com código contra contagem só com EAN, mesmo com zeros à esquerda', async () => {
-    const r = await conferir([itemNota()], [contado({ ean: '0007891000103', qtd_contada: 12 })]);
+    const r = await conferir([itemNota()], [contado({ ean: '0007891000100103', qtd_contada: 12 })]);
     const body = await r.json();
     expect(body.itens).toHaveLength(1);
     expect(body.itens[0]).toMatchObject({ seq: 1, qtd_nota: 12, qtd_contada: 12, diferenca: 0, situacao: 'OK' });
