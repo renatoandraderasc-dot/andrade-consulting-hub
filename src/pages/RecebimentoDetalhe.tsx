@@ -10,7 +10,7 @@ import { Dialog,DialogContent,DialogTitle,DialogDescription } from '@/components
 import { ReceiptShell,useReceiptStore,Status,Justification,TabelaResponsiva } from '@/components/recebimento/Shared';
 import ListaCega from '@/components/recebimento/ListaCega';
 import Validacao from '@/components/recebimento/Validacao';
-import { readHeaders,invokeReceipt,brl,dataBR,cnpjBR,type Criterio } from '@/lib/recebimento';
+import { readHeaders,invokeReceipt,criarPedidoERevalidar,brl,dataBR,cnpjBR,type Criterio } from '@/lib/recebimento';
 import { SAFE_CRITERIA_COLUMNS,podeContar,podeAprovar,podeEntrar } from '@/lib/recebimentoRules';
 export default function RecebimentoDetalhe(){
  const {id=''}=useParams();const {data:store}=useReceiptStore();const {user,isAdmin,isGlobalAdmin}=useAuth();const nav=useNavigate();const qc=useQueryClient();
@@ -26,6 +26,7 @@ export default function RecebimentoDetalhe(){
  const config=useQuery({queryKey:['receipt-config',store?.id],enabled:!!store?.websac,queryFn:async()=>{const {data,error}=await supabase.from('recebimento_config').select('*').eq('store_id',store?.id||'').maybeSingle();if(error)throw error;return data;}});
  // No buyer role exists in the published role model; store-scoped supervisor and admin are the management profiles.
  const buyer=isAdmin;
+ const [creatingOrder,setCreatingOrder]=useState(false);
  useEffect(()=>{if(rec&&['APROVADA','APROVADA_COM_RESSALVA','ENTRADA_CONFIRMADA','ENTRADA_PENDENTE_SUPERVISOR','CANCELADA'].includes(rec.estado))setStep('resultado');},[rec?.estado]);
  async function refresh(){await header.refetch();await criteria.refetch();if(step!=='contagem'){await items.refetch();await events.refetch();}}
  async function action(acao:string,just?:string,criterio?:number,entrada=false,modo='gravar'){
@@ -46,6 +47,15 @@ export default function RecebimentoDetalhe(){
    qc.removeQueries({queryKey:['receipt-criteria',user?.id,store?.id,id,'full']});
    setStep('contagem');
  }
+ async function createOrder(){
+  if(!store||!rec||busy||!isAdmin)return;
+  setBusy(true);setCreatingOrder(true);
+  try{
+   const r=await criarPedidoERevalidar(store.id,id,rec.chave,pedido=>toast.success(`Pedido ${pedido.numpedido} criado (${pedido.itens} itens, ${brl(pedido.total)})`));
+   if(r.nota)setXmlRead(r.nota.xml_lido);
+   await refresh();qc.invalidateQueries({queryKey:['receipt-queue',store.id]});
+  }catch(e){toast.error((e as Error).message);}finally{setCreatingOrder(false);setBusy(false);}
+ }
  const cs=step==='contagem' ? [] : criteria.data||[], c5=cs.find(c=>c.criterio===5), detail=(c5?.detalhe||{}) as any;
  const resultRows=(detail.itens||[]).slice().sort((a:any,b:any)=>Number(a.situacao==='OK')-Number(b.situacao==='OK'));
  const warnings=cs.some(c=>c.resultado==='AVISO');
@@ -56,7 +66,7 @@ export default function RecebimentoDetalhe(){
   <div className="flex gap-3 text-sm border-b border-border pb-3">{['Validação','Contagem','Resultado'].map((s,i)=><span key={s} className={step===['validacao','contagem','resultado'][i]?'font-semibold text-primary':'text-muted-foreground'}>{i+1} · {s}</span>)}</div>
   {step!=='contagem'&&(xmlRead===false||sessionStorage.getItem(`receipt-xml:${id}`)==='false')&&<p className="p-3 bg-warning/10 text-warning rounded-md">XML não lido — prazos da nota indisponíveis</p>}
   {rec.estado==='AGUARDANDO_NFE'?<Card className="p-5 bg-warning/10 border-warning/30"><h2>NF-e ainda não chegou da SEFAZ</h2><Button onClick={()=>action('validar')} disabled={busy} className="mt-3">Tentar de novo</Button></Card>:step==='contagem'?<ListaCega key={`${id}-${round}`} id={id} store={store?.id||''} round={round} targets={targets} onRefresh={()=>{}} onClosed={r=>{setRecount(r);setStep('resultado');qc.invalidateQueries({queryKey:['receipt-criteria']});}}/>:step==='validacao'?<>
-   <Validacao criterios={cs} busy={busy} canBuyer={buyer} canSupervisor={isAdmin} cnpj={rec.cnpj_emitente||''} nome={rec.nome_emitente||''} onCiente={n=>setModal({acao:'ciente',criterio:n})} onRevalidate={()=>action('validar')}/>
+   <Validacao criterios={cs} busy={busy} creatingOrder={creatingOrder} canBuyer={buyer} canSupervisor={isAdmin} cnpj={rec.cnpj_emitente||''} nome={rec.nome_emitente||''} onCiente={n=>setModal({acao:'ciente',criterio:n})} onCreateOrder={()=>void createOrder()} onRevalidate={()=>action('validar')}/>
    {criteria.error&&<p role="alert">{criteria.error.message}</p>}
    {rec.estado==='BLOQUEADA'&&<div className="p-4 bg-destructive/10 text-destructive rounded-md"><p>{cs.filter(c=>c.resultado==='BLOQUEIO').map(c=>(c.detalhe as any)?.motivo).join(' · ')}</p>{isAdmin&&<Button variant="destructive" className="mt-3" disabled={busy} onClick={()=>setModal({acao:'cancelar'})}>Cancelar recebimento</Button>}</div>}
    <footer className="fixed bottom-0 left-0 right-0 border-t border-border bg-background p-4 z-30"><Button size="lg" className="w-full sm:w-auto" disabled={busy||!podeContar(cs)} onClick={()=>{const previous=Number(((cs.find(c=>c.criterio===5)?.detalhe||{}) as any).rodada||1);void startCount(previous);}}>Ir para contagem</Button>{c5&&c5.resultado!=='PENDENTE'&&<Button variant="outline" className="ml-2" onClick={()=>setStep('resultado')}>Ver resultado</Button>}</footer>

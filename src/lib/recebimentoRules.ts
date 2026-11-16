@@ -11,6 +11,10 @@ export function podeEntrar(estado: string, supervisor: boolean) {
 }
 export const HEADER_COLUMNS = 'id,store_id,chave,numero_nf,serie,cnpj_emitente,nome_emitente,data_emissao,total_nf,estado,iniciado_em,iniciado_por,atualizado_em,idnotafiscal_entrada,entrada_confirmada_em,liberado_em,justificativa,numpedido';
 export const SAFE_CRITERIA_COLUMNS = 'criterio,resultado,ciente_por';
+export function podeCriarPedido(criterio: Criterion & { detalhe?: unknown }, supervisor: boolean) {
+  const detalhe = criterio.detalhe as { acao?: string } | null;
+  return supervisor && criterio.criterio === 3 && criterio.resultado === 'BLOQUEIO' && detalhe?.acao === 'criar_pedido';
+}
 export function recontagemSegura(itens: { ean?: string | null; descricao?: string | null; situacao: string }[]) {
   return itens.filter(i => i.situacao !== 'OK').map(i => ({ ean: i.ean || '', descricao: i.descricao || '' }));
 }

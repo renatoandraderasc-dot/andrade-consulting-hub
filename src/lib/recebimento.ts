@@ -24,3 +24,13 @@ export async function readHeaders(store: string, id?: string) {
   if(error) throw error;
   return (data || []) as unknown as Receipt[];
 }
+
+export async function criarPedidoERevalidar(store_id: string, recebimento_id: string, chave: string, onCreated: (pedido: { numpedido: number; itens: unknown; total: unknown }) => void) {
+  const pedido = await invokeReceipt(store_id, 'criar_pedido', { recebimento_id });
+  if (pedido?.erro) throw new Error(pedido.erro);
+  if (!pedido?.ok || !pedido.numpedido) throw new Error('O WebSac não confirmou a criação do pedido.');
+  onCreated(pedido);
+  const validacao = await invokeReceipt(store_id, 'validar', { recebimento_id, chave });
+  if (validacao?.erro) throw new Error(validacao.erro);
+  return validacao;
+}

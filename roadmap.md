@@ -1,5 +1,10 @@
 # Ajustes do Painel de Compras
 
+# Recebimento de NF-e — passo 4 (fase 2)
+- [ ] Cadastrar hub_gerar_pedido sem alterar tabelas; aplicar somente as duas alterações solicitadas em recebimento e republicar.
+- [ ] Ativar criação por supervisor/admin no bloqueio sem pedido, com espera, erros do WebSac e revalidação automática.
+- [ ] Executar testes de criação/permissões/revalidação e conferir publicação; não gerar pedidos reais sem uma nota indicada.
+
 # Acesso de demonstração — supermercado fictício
 - [x] Criar conta com e-mail e senha, sem perfil pessoal novo nem permissões de lojas reais; espaço fictício protegido no Cloud e instruções privadas em Files.
 - [x] Preencher 59 telas demonstrativas em sete áreas, com 36 produtos, 16 funcionários, 12 meses e 5.840 marcações; edições salvas, exportações e ações simuladas sem ERP ou e-mails reais.
