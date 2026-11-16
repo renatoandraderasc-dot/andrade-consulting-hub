@@ -24,6 +24,7 @@ PIC TV weather uses browser-authorized location with Open-Meteo and degrades ind
 
 - Receipt screens use cached manual-refresh reads and explicit header columns; blind counting unmounts invoice views, evicts invoice detail caches, and queries only safe criterion fields so invoice quantities are not passed into counting.
 - Receipt business writes invoke the published functions; only own blind counts and global-admin configuration write directly, preserving existing RLS.
+- XML purchase-order creation uses the receipt function and then revalidates the note while controls stay busy; keep this phase separate from invoice entry to avoid approving or entering a note implicitly.
 - The public presentation uses isolated illustrative screens and a single 1920×1080 slide master; partner logos and replacement media stay in browser IndexedDB, so shared presentation links never expose store data or silently publish uploaded files.
 - Presentation media pointers are imported as raw text and parsed defensively; an incomplete upload must fall back to an illustrative screen instead of failing Vite JSON transformation and blanking every route.
 - Demo membership is read from protected demo_workspaces and never grants an admin role; ModuleGuard mounts only isolated domain views, whose mutations serialize to the owner's JSON workspace, while restrictive RLS denies demo accounts access to production tables. New production tables must also carry the demo_production_isolation policy to preserve this boundary.

@@ -192,7 +192,8 @@ Deno.serve(async (req) => {
         const vinculados = String(nfe.pedidos_vinculados ?? "").split(",").map((s) => Number(s)).filter(Boolean);
         const abertos = await rel(storeId, "pedidos_abertos_fornecedor", { codfornec });
         // prioridade: pedido que o WebSac já vinculou à NF-e; senão, pedido aberto cujo total bate (±5%); senão o mais recente
-        const alvo = abertos.find((p) => vinculados.includes(Number(p.numpedido)))
+        const alvo = abertos.find((p) => String(p.chavenfe_vinculada ?? "") === chave)
+          ?? abertos.find((p) => vinculados.includes(Number(p.numpedido)))
           ?? abertos.find((p) => Math.abs(num(p.totalliquido) - (num(nfe.total) || xml.vNF)) / Math.max(1, num(p.totalliquido)) <= 0.05)
           ?? null;
         if (alvo) {
@@ -350,6 +351,26 @@ Deno.serve(async (req) => {
     }
 
     // =====================================================================
+    if (acao === "criar_pedido") {
+      // FASE 2: gera o pedido no WebSac a partir do XML (função hub_gerar_pedido_xml) e revalida
+      const rid = String(body.recebimento_id);
+      const rec = await recebimentoDaLoja(rid);
+      if (!rec) return json({ erro: "recebimento não encontrado nesta loja" }, 404);
+      if (rec.estado === "ENTRADA_CONFIRMADA" || rec.idnotafiscal_entrada) return json({ erro: "esta nota já deu entrada" }, 409);
+      if (rec.numpedido) return json({ erro: `a nota já tem o pedido ${rec.numpedido}` }, 409);
+      if (!rec.idnfeestabelec) return json({ erro: "NF-e ainda não chegou da SEFAZ" }, 409);
+      if (!ehSupervisor && !(cfg as Record<string, unknown>).criar_pedido_conferente) return json({ erro: "criar pedido exige perfil supervisor/admin" }, 403);
+      const r = await consultarRelatorioLoja({ supabaseUrl: SUPABASE_URL, serviceKey: SERVICE_KEY, storeId, relatorio: "hub_gerar_pedido", params: { idnfe: rec.idnfeestabelec }, timeoutMs: 90000 });
+      if (!r.ok || !r.dados?.[0]) {
+        await evento(rid, "PEDIDO_FALHOU", { erro: r.erro });
+        return json({ erro: `WebSac não gerou o pedido: ${String(r.erro ?? "").replace(/^WebSac:\s*/, "").slice(0, 400)}` }, 409);
+      }
+      const ped = r.dados[0] as Record<string, unknown>;
+      await db.from("recebimentos").update({ numpedido: Number(ped.numpedido), pedido_origem: "criado_hub", atualizado_em: new Date().toISOString() }).eq("id", rid);
+      await evento(rid, "PEDIDO_CRIADO", { numpedido: ped.numpedido, itens: ped.itens, total: ped.total, natoperacao: ped.natoperacao, origem_param: ped.origem_param });
+      return json({ ok: true, numpedido: Number(ped.numpedido), itens: ped.itens, total: ped.total, mensagem: `Pedido ${ped.numpedido} criado no WebSac a partir do XML. Revalide a nota.` });
+    }
+
     if (acao === "cancelar") {
       const rid = String(body.recebimento_id);
       const rec = await recebimentoDaLoja(rid);
