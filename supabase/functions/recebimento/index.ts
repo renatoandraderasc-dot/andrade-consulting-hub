@@ -14,6 +14,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { consultarRelatorioLoja } from "../_shared/consultaLoja.ts";
 import { conferirItens } from "./conferencia.ts";
+import { identificarProdutos } from "./identificacao.ts";
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 
 const json = (b: unknown, s = 200) =>
@@ -230,18 +231,12 @@ Deno.serve(async (req) => {
         return {
           recebimento_id: rid, seq_xml: it.seq, cprod: it.cProd, ean: it.cEAN || (ws?.ean_cadastro ? String(ws.ean_cadastro) : null),
           descricao_xml: it.xProd, qtd_xml: it.qCom, un_xml: it.uCom, preco_xml: it.vUnCom,
-          codproduto, descricao_produto: ws?.descricao_produto ?? null, eans_cadastro: null as string | null, fator,
+          codproduto, descricao_produto: ws?.descricao_produto ?? null, eans_cadastro: null as string | null, ref_cadastro: null as string | null, fator,
           qtd_pedido: ped ? num(ped.quantidade) : null, preco_pedido: ped ? num(ped.preco) : null, situacao_pedido: situacao,
         };
       });
-      // itens sem código de produto (nota ainda não importada no WebSac): resolve pelo EAN, como na lista cega
-      for (const l of linhas) {
-        if ((l.codproduto && l.eans_cadastro) || !l.ean) continue;
-        try {
-          const pr = (await rel(storeId, "produto_por_ean", { ean: l.ean }))[0];
-          if (pr?.codproduto) { l.codproduto = Number(pr.codproduto); l.descricao_produto = String(pr.descricao ?? "") || null; l.eans_cadastro = String(pr.eans_cadastro ?? "") || null; }
-        } catch { /* segue sem código */ }
-      }
+      // EAN tem prioridade; referência é restrita ao fornecedor da nota.
+      await identificarProdutos(linhas, storeId, codfornec, rel);
       await db.from("recebimento_itens").delete().eq("recebimento_id", rid);
       if (linhas.length) await db.from("recebimento_itens").insert(linhas);
       if (numpedido) {

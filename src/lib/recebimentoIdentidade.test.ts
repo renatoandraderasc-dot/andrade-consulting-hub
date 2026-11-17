@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { RECEIPT_IDENTITY_COLUMNS, identityCounted, type ReceiptIdentity } from './recebimentoIdentidade';
-const item: ReceiptIdentity = { id:'item',seq_xml:1,codproduto:42,descricao_xml:'Nota',descricao_produto:'Cadastro',ean:'07890001',eans_cadastro:'07890001, 7890002;7890003' };
+const item: ReceiptIdentity = { id:'item',seq_xml:1,codproduto:42,descricao_xml:'Nota',descricao_produto:'Cadastro',ean:'07890001',eans_cadastro:'07890001, 7890002;7890003',cprod:'00042',ref_cadastro:'42' };
 describe('identidades na contagem', () => {
   it('carrega somente identidade, nunca quantidade ou preço', () => {
-    expect(RECEIPT_IDENTITY_COLUMNS.split(',')).toEqual(['id','seq_xml','codproduto','descricao_xml','descricao_produto','ean','eans_cadastro']);
+    expect(RECEIPT_IDENTITY_COLUMNS.split(',')).toEqual(['id','seq_xml','codproduto','descricao_xml','descricao_produto','ean','eans_cadastro','cprod','ref_cadastro']);
   });
   it('marca contado pelo código do produto na rodada atual', () => {
     expect(identityCounted(item,[{codproduto:42,ean:'outro',rodada:2}],2)).toBe(true);

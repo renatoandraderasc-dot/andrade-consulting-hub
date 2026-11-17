@@ -1,3 +1,8 @@
+# Recebimento — referência do fornecedor
+- [x] Referência e consulta cadastradas e verificadas no Cloud; recebimento republicado com prioridade EAN → referência por fornecedor.
+- [x] Referências nas três etapas com projeção sem valores na contagem; 14 testes aprovados e compilação OK.
+- [ ] Conferência com nota real bloqueada: conta disponível redireciona /recebimento para /dashboard; necessário acesso autorizado e nota indicada.
+
 # Ajustes do Painel de Compras
 
 # Contagem — itens da nota sem quantidades/preços

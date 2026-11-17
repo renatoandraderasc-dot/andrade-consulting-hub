@@ -1,9 +1,10 @@
 // Explicit projection: never load invoice quantities or prices into counting.
-export const RECEIPT_IDENTITY_COLUMNS = 'id,seq_xml,codproduto,descricao_xml,descricao_produto,ean,eans_cadastro';
+export const RECEIPT_IDENTITY_COLUMNS = 'id,seq_xml,codproduto,descricao_xml,descricao_produto,ean,eans_cadastro,cprod,ref_cadastro';
 export type ReceiptIdentity = {
   id: string; seq_xml: number; codproduto: number | null;
   descricao_xml: string | null; descricao_produto: string | null;
   ean: string | null; eans_cadastro: string | null;
+  cprod: string | null; ref_cadastro: string | null;
 };
 export type IdentityCount = { codproduto: number | null; ean: string | null; rodada: number };
 export function identityEans(item: Pick<ReceiptIdentity, 'ean' | 'eans_cadastro'>) {

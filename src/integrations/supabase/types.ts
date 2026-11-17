@@ -3186,6 +3186,7 @@ export type Database = {
           qtd_unidades: number | null
           qtd_xml: number
           recebimento_id: string
+          ref_cadastro: string | null
           seq_xml: number
           situacao_pedido: string | null
           un_xml: string | null
@@ -3205,6 +3206,7 @@ export type Database = {
           qtd_unidades?: number | null
           qtd_xml: number
           recebimento_id: string
+          ref_cadastro?: string | null
           seq_xml: number
           situacao_pedido?: string | null
           un_xml?: string | null
@@ -3224,6 +3226,7 @@ export type Database = {
           qtd_unidades?: number | null
           qtd_xml?: number
           recebimento_id?: string
+          ref_cadastro?: string | null
           seq_xml?: number
           situacao_pedido?: string | null
           un_xml?: string | null

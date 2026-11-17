@@ -31,3 +31,4 @@ PIC TV weather uses browser-authorized location with Open-Meteo and degrades ind
 - Store selectors use saveSelectedStore; auth restores the per-user persisted selection before protected pages mount so new tabs inherit the client without resetting existing tabs. Store access validation remains server-enforced.
 
 - Receipt count reconciliation lives in the receipt function directory as a pure helper, so production matching and quantity rules can be tested without invoking ERP writes.
+- Receipt product identification uses a tested helper inside the receipt function, prioritizing EAN and falling back to supplier-scoped references without coupling identification to ERP writes.

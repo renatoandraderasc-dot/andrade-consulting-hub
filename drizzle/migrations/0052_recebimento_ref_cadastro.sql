@@ -1,0 +1,1 @@
+ALTER TABLE public.recebimento_itens ADD COLUMN IF NOT EXISTS ref_cadastro text;
