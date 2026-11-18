@@ -1,3 +1,8 @@
+# Recebimento — vínculo manual de EAN
+- [x] Colunas e chamada WebSac verificadas; recebimento publicado, com validação de entrada, estado EM_CONTAGEM e autoria antes de gravar no ERP.
+- [x] Seletor nas duas etapas, cadastro opcional, ocorrências e preservação na recontagem; 18 testes aprovados e compilação OK.
+- [ ] Conferir fluxo real e gravação WebSac: conta disponível redireciona /recebimento para /dashboard; função hub_vincular_ean no ERP não foi executada para não alterar cadastros reais sem item indicado.
+
 # Recebimento — referência do fornecedor
 - [x] Referência e consulta cadastradas e verificadas no Cloud; recebimento republicado com prioridade EAN → referência por fornecedor.
 - [x] Referências nas três etapas com projeção sem valores na contagem; 14 testes aprovados e compilação OK.

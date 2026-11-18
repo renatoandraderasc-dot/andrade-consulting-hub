@@ -2492,6 +2492,8 @@ export type Database = {
           qtd_contada: number
           recebimento_id: string
           rodada: number
+          seq_vinculado: number | null
+          vinculo_websac: string | null
         }
         Insert: {
           codproduto?: number | null
@@ -2503,6 +2505,8 @@ export type Database = {
           qtd_contada: number
           recebimento_id: string
           rodada?: number
+          seq_vinculado?: number | null
+          vinculo_websac?: string | null
         }
         Update: {
           codproduto?: number | null
@@ -2514,6 +2518,8 @@ export type Database = {
           qtd_contada?: number
           recebimento_id?: string
           rodada?: number
+          seq_vinculado?: number | null
+          vinculo_websac?: string | null
         }
         Relationships: [
           {

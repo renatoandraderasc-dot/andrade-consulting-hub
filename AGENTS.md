@@ -32,3 +32,5 @@ PIC TV weather uses browser-authorized location with Open-Meteo and degrades ind
 
 - Receipt count reconciliation lives in the receipt function directory as a pure helper, so production matching and quantity rules can be tested without invoking ERP writes.
 - Receipt product identification uses a tested helper inside the receipt function, prioritizing EAN and falling back to supplier-scoped references without coupling identification to ERP writes.
+
+- Manual EAN links use a shared identity-only selector and authenticated receipt action; verify own counts and counting state before optional ERP writes, and preserve links when carrying counts forward.

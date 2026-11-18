@@ -15,6 +15,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { consultarRelatorioLoja } from "../_shared/consultaLoja.ts";
 import { conferirItens } from "./conferencia.ts";
 import { identificarProdutos } from "./identificacao.ts";
+import { VinculoSchema, normalizarEan, podeVincular } from "./vinculo.ts";
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 
 const json = (b: unknown, s = 200) =>
@@ -296,12 +297,42 @@ Deno.serve(async (req) => {
       const { data: cont } = await db.from("lista_cega_itens").select("*").eq("recebimento_id", rid).eq("rodada", rodada);
       const resultado = conferirItens(itens ?? [], cont ?? [], cfg.tolerancia_qtd);
       const divergentes = resultado.filter((r) => r.situacao !== "OK");
-      await db.from("recebimento_criterios").upsert({ recebimento_id: rid, criterio: 5, nome: "LISTA_CEGA", resultado: divergentes.length ? "AVISO" : "OK", detalhe: { rodada, itens: resultado, resumo: { ok: resultado.length - divergentes.length, falta: divergentes.filter((d) => d.situacao === "FALTA").length, sobra: divergentes.filter((d) => d.situacao === "SOBRA").length, nao_contado: divergentes.filter((d) => d.situacao === "NAO_CONTADO").length, fora_da_nota: divergentes.filter((d) => d.situacao === "FORA_DA_NOTA").length } }, avaliado_em: new Date().toISOString() }, { onConflict: "recebimento_id,criterio" });
+      const ocorrencias_ean = resultado.filter(r => r.vinculo_manual).map(r => ({seq:r.seq,codproduto:r.codproduto,descricao:r.descricao,ean_nota:r.ean,eans_bipados:r.vinculo_manual}));
+      await db.from("recebimento_criterios").upsert({ recebimento_id: rid, criterio: 5, nome: "LISTA_CEGA", resultado: divergentes.length ? "AVISO" : "OK", detalhe: { rodada, itens: resultado, ocorrencias_ean, resumo: { ok: resultado.length - divergentes.length, falta: divergentes.filter((d) => d.situacao === "FALTA").length, sobra: divergentes.filter((d) => d.situacao === "SOBRA").length, nao_contado: divergentes.filter((d) => d.situacao === "NAO_CONTADO").length, fora_da_nota: divergentes.filter((d) => d.situacao === "FORA_DA_NOTA").length } }, avaliado_em: new Date().toISOString() }, { onConflict: "recebimento_id,criterio" });
       await evento(rid, rodada > 1 ? "RECONTAGEM" : "CONTAGEM", { rodada, divergentes: divergentes.length });
       return json({ rodada, pode_recontar: divergentes.length > 0 && rodada <= cfg.recontagens, itens: resultado, divergentes: divergentes.length });
     }
 
     // =====================================================================
+    if (acao === "vincular_ean") {
+      const parsed = VinculoSchema.safeParse(body);
+      if (!parsed.success) return json({erro:'Dados do vínculo inválidos',detalhe:parsed.error.flatten().fieldErrors},400);
+      const {recebimento_id:rid,rodada,ean,seq_xml:seq,gravar_websac:gravar} = parsed.data;
+      const rec = await recebimentoDaLoja(rid);
+      if (!rec) return json({erro:'recebimento não encontrado nesta loja'},404);
+      if (!podeVincular(rec.estado)) return json({erro:'vínculo permitido somente enquanto EM_CONTAGEM'},409);
+      const {data:item,error:itemError} = await db.from('recebimento_itens').select('seq_xml,codproduto,descricao_produto,descricao_xml,ean').eq('recebimento_id',rid).eq('seq_xml',seq).maybeSingle();
+      if (itemError) throw itemError;
+      if (!item) return json({erro:'item da nota não encontrado'},404);
+      // Confere autoria e existência antes de qualquer alteração no ERP.
+      const {data:linhas,error:readError} = await db.from('lista_cega_itens').select('id,ean').eq('recebimento_id',rid).eq('rodada',rodada).eq('contado_por',user.id);
+      if (readError) throw readError;
+      const ids = (linhas ?? []).filter(l => normalizarEan(l.ean) === normalizarEan(ean)).map(l => l.id);
+      if (!ids.length) return json({erro:'nenhuma linha própria contada com esse EAN nesta rodada'},404);
+      let websac: string | null = null;
+      if (gravar) {
+        if (!item.codproduto) websac = 'SEM_CODPRODUTO';
+        else try {
+          const r = (await rel(storeId,'hub_vincular_ean',{codproduto:item.codproduto,ean}))[0];
+          websac = String(r?.resultado ?? 'SEM_RETORNO');
+        } catch(e) { websac = 'ERRO: ' + String((e as Error)?.message ?? e).slice(0,200); }
+      }
+      const {error:writeError} = await db.from('lista_cega_itens').update({seq_vinculado:seq,vinculo_websac:websac}).in('id',ids).eq('contado_por',user.id);
+      if (writeError) throw writeError;
+      await evento(rid,'EAN_VINCULADO',{rodada,ean,seq_xml:seq,codproduto:item.codproduto,descricao:item.descricao_produto ?? item.descricao_xml,websac});
+      return json({ok:true,linhas:ids.length,websac,item:{seq_xml:seq,codproduto:item.codproduto,descricao:item.descricao_produto ?? item.descricao_xml,ean_nota:item.ean}});
+    }
+
     if (acao === "aprovar" || acao === "liberar") {
       const rid = String(body.recebimento_id);
       const recAtual = await recebimentoDaLoja(rid);

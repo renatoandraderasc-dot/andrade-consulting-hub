@@ -12,7 +12,7 @@ describe('descrições e EANs no recebimento', () => {
     expect(conferirItens([item], [{...count, qtd_contada: 4}, {...count, ean: '07890001', qtd_contada: 6}], 0)[0]).toMatchObject({ qtd_contada: 10, diferenca: 0, situacao: 'OK' });
   });
   it('agrupa sobras fora da nota sem inventar descrição da nota ou EANs cadastrados', () => {
-    expect(conferirItens([], [{...count, qtd_contada: 4}, {...count, qtd_contada: 6}], 0)).toEqual([{ seq: null, codproduto: 42, ean: '7890002', descricao: 'Descrição do cadastro', descricao_nota: null, descricao_sistema: 'Descrição do cadastro', eans_cadastro: null, ref_nota: null, ref_cadastro: null, qtd_nota: 0, qtd_contada: 10, diferenca: 10, situacao: 'FORA_DA_NOTA' }]);
+    expect(conferirItens([], [{...count, qtd_contada: 4}, {...count, qtd_contada: 6}], 0)).toEqual([{ seq: null, codproduto: 42, ean: '7890002', descricao: 'Descrição do cadastro', descricao_nota: null, descricao_sistema: 'Descrição do cadastro', eans_cadastro: null, ref_nota: null, ref_cadastro: null, qtd_nota: 0, qtd_contada: 10, diferenca: 10, situacao: 'FORA_DA_NOTA', vinculo_manual:null }]);
   });
   it('casa EAN normalizado quando o código do produto não está disponível', () => {
     expect(conferirItens([{...item, codproduto:null}], [{...count, codproduto:null, ean:'7890001'}], 0)[0].situacao).toBe('OK');

@@ -372,6 +372,13 @@
       "when": 1794923040590,
       "tag": "0052_recebimento_ref_cadastro",
       "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1795006676837,
+      "tag": "0053_recebimento_vinculo_manual",
+      "breakpoints": true
     }
   ]
 }
