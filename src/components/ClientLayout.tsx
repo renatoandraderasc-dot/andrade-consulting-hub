@@ -117,6 +117,7 @@ const navGroups: NavGroup[] = [
     items: [
       { key: "escala", path: "/escala", label: "Escala do Mês", icon: CalendarDays },
       { key: "escala_funcionarios", path: "/escala/funcionarios", label: "Funcionários", icon: Users },
+      { key: "escala_dimensionamento", path: "/escala/dimensionamento", label: "Dimensionamento", icon: Users },
       { key: "admin_escala", path: "/admin/escala", label: "Regras e Turnos", icon: Settings },
     ],
   },

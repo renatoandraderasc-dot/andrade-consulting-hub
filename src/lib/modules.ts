@@ -54,6 +54,7 @@ export const APP_MODULES = [
   { key: "jornada", label: "Jornada", path: "/jornada" },
   { key: "escala", label: "Escala de Funcionários", path: "/escala" },
   { key: "escala_funcionarios", label: "Escala: Funcionários", path: "/escala/funcionarios" },
+  { key: "escala_dimensionamento", label: "Escala: Dimensionamento do Quadro", path: "/escala/dimensionamento" },
   { key: "admin_escala", label: "Admin: Escala (regras, turnos, cobertura)", path: "/admin/escala" },
   { key: "jornada_execucoes", label: "Jornada: Execuções", path: "/jornada/execucoes" },
   { key: "admin_tv", label: "Admin: Gerenciador de TV", path: "/admin/tv" },

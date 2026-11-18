@@ -69,6 +69,7 @@ import AdminJornada from "./pages/AdminJornada";
 import Escala from "./pages/Escala";
 import EscalaFuncionarios from "./pages/EscalaFuncionarios";
 import AdminEscala from "./pages/AdminEscala";
+import EscalaDimensionamento from "./pages/EscalaDimensionamento";
 import AdminTv from "./pages/AdminTv";
 import TvPlayer from "./pages/TvPlayer";
 import NotFound from "./pages/NotFound";
@@ -165,6 +166,7 @@ const App = () => (
             <Route path="/jornada" element={g("jornada", <Jornada />)} />
             <Route path="/escala" element={g("escala", <Escala />)} />
             <Route path="/escala/funcionarios" element={g("escala_funcionarios", <EscalaFuncionarios />)} />
+            <Route path="/escala/dimensionamento" element={g("escala_dimensionamento", <EscalaDimensionamento />)} />
             <Route path="/admin/escala" element={g("admin_escala", <AdminEscala />)} />
             <Route path="/jornada/execucoes" element={g("jornada_execucoes", <JornadaExecucoes />)} />
             <Route path="/admin/jornada" element={g("jornada", <AdminJornada />)} />
