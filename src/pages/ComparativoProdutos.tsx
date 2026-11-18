@@ -271,11 +271,10 @@ export default function ComparativoProdutos() {
     }
   };
 
-  // Opening or selecting months reads saved data only; no ERP auto-refresh.
+  // Nothing loads until the user clicks Comparar; changing store/dates only clears results.
   useEffect(() => {
     setProdutos(null); setMesesCarregados(null); setCupons(new Map());
     setFDep(TODOS); setFGrupo(TODOS); setFSub(TODOS);
-    if (storeId) void buscar(false, true);
     return () => { cargaAtual.current += 1; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storeId, aDe, aAte, bDe, bAte]);
