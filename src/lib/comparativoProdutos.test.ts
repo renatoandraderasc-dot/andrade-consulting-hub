@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { agregar, mesesEntre, situacao, somarMeses, variacaoPct, type ProdutoMes } from "./comparativoProdutos";
+import { agregar, casaProduto, mesesEntre, situacao, somarMeses, variacaoPct, type ProdutoMes } from "./comparativoProdutos";
 
 const p = (mes: string, codigo: string, dep: string, venda: number, custo: number, volume = 1): ProdutoMes => ({
   mes, codigo, descricao: `P${codigo}`, barras: "", departamento: dep, grupo: "G", subgrupo: "S", venda, custo, volume,
@@ -47,5 +47,31 @@ describe("comparativo de produtos", () => {
     const [l] = agregar([p("2026-10", "198", "LOJA", 750582.34, 513537.0294415, 81088.881)], "departamento", new Set(), new Set(["2026-10"]));
     expect(l.b.custo).toBe(513537.0294415);
     expect(Number(l.b.lucro.toFixed(2))).toBe(237045.31);
+  });
+
+  it("filtra por descrição sem acento e por código", () => {
+    const prod: ProdutoMes = { mes: "2026-10", codigo: "270410", descricao: "Feijão Carioca Tipo 1 Premium", barras: "7896002100129",
+      departamento: "MERCEARIA", grupo: "G", subgrupo: "S", volume: 1, venda: 10, custo: 5 };
+    expect(casaProduto(prod, "feijao carioca")).toBe(true);
+    expect(casaProduto(prod, "PREMIUM")).toBe(true);
+    expect(casaProduto(prod, "270410")).toBe(true);
+    expect(casaProduto(prod, "arroz")).toBe(false);
+  });
+
+  it("filtra por EAN 13 com ou sem zeros à esquerda", () => {
+    const prod: ProdutoMes = { mes: "2026-10", codigo: "198", descricao: "Azeite", barras: "007896002100129",
+      departamento: "MERCEARIA", grupo: "G", subgrupo: "S", volume: 1, venda: 10, custo: 5 };
+    expect(casaProduto(prod, "7896002100129")).toBe(true);
+    expect(casaProduto(prod, "007896002100129")).toBe(true);
+    expect(casaProduto(prod, "789 6002 10012 9")).toBe(true);
+    expect(casaProduto(prod, "7896002100128")).toBe(false);
+  });
+
+  it("não deixa um dígito isolado casar com o EAN, mas ainda casa com o código", () => {
+    const prod: ProdutoMes = { mes: "2026-10", codigo: "1977", descricao: "Azeite", barras: "7896002100129",
+      departamento: "MERCEARIA", grupo: "G", subgrupo: "S", volume: 1, venda: 10, custo: 5 };
+    expect(casaProduto(prod, "8")).toBe(false);
+    expect(casaProduto(prod, "197")).toBe(true);
+    expect(casaProduto(prod, "")).toBe(true);
   });
 });

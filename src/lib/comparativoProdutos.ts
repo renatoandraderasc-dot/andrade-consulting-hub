@@ -136,6 +136,29 @@ export function agregar(
   return [...mapa.values()];
 }
 
+/** Sem acentos e em minúsculas, para comparar texto digitado pelo usuário. */
+const textoNormal = (v: string) => (v || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+/** Só dígitos, sem zeros à esquerda: 07896002100129 e 7896002100129 são o mesmo EAN. */
+const digitos = (v: string) => (v || "").replace(/\D/g, "").replace(/^0+/, "");
+/** Igualdade de códigos, ou um dentro do outro quando o menor tem ao menos 6 dígitos. */
+const casaDigitos = (a: string, b: string) =>
+  !!a && !!b && (a === b || (Math.min(a.length, b.length) >= 6 && (a.includes(b) || b.includes(a))));
+
+/**
+ * Filtro de produto por descrição, código ou EAN. Vale para qualquer nível
+ * (departamento, grupo, subgrupo, produto), porque é aplicado nas linhas de
+ * produto antes de agregar.
+ */
+export function casaProduto(p: ProdutoMes, termo: string): boolean {
+  const q = textoNormal(termo);
+  if (!q) return true;
+  if (textoNormal(p.descricao).includes(q)) return true;
+  if (textoNormal(p.codigo).includes(q)) return true;
+  const alvo = digitos(q);
+  if (!alvo) return false;
+  return casaDigitos(alvo, digitos(p.barras)) || casaDigitos(alvo, digitos(p.codigo));
+}
+
 /** Situação do item entre os períodos. */
 export type Situacao = "novo" | "perdido" | "cresceu" | "caiu" | "estavel";
 export function situacao(l: LinhaComparativo, toleranciaPct = 0.5): Situacao {

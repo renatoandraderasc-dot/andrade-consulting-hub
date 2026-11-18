@@ -17,7 +17,7 @@ import { chaveDept } from "@/lib/departamentosPermitidos";
 import { lerPeriodoCache, gravarPeriodoCache } from "@/lib/relatorioCache";
 import { salvarWorkbook } from "@/lib/exportBranding";
 import {
-  agregar, limitesMes, margemPct, mesesEntre, precoMedio, situacao, somarMeses, variacaoPct,
+  agregar, casaProduto, limitesMes, margemPct, mesesEntre, precoMedio, situacao, somarMeses, variacaoPct,
   type LinhaComparativo, type Metricas, type Nivel, type ProdutoMes, type Situacao,
 } from "@/lib/comparativoProdutos";
 
@@ -325,11 +325,10 @@ export default function ComparativoProdutos() {
 
   const linhas = useMemo(() => {
     const base = fAbc.length ? escopo.filter((p) => fAbc.includes(abcProduto.get(p.codigo) ?? "D")) : escopo;
-    const q = busca.trim().toLowerCase();
-    return agregar(base, nivel, setA, setB).filter((l) => {
+    const filtrada = busca.trim() ? base.filter((p) => casaProduto(p, busca)) : base;
+    return agregar(filtrada, nivel, setA, setB).filter((l) => {
       if (Math.max(l.a.venda, l.b.venda) < vendaMin) return false;
       if (fSit.length && !fSit.includes(situacao(l))) return false;
-      if (q && ![l.rotulo, l.codigo ?? "", l.barras ?? ""].some((v) => v.toLowerCase().includes(q))) return false;
       return true;
     });
   }, [escopo, nivel, setA, setB, busca, fSit, fAbc, abcProduto, vendaMin]);
@@ -594,10 +593,10 @@ export default function ComparativoProdutos() {
               <Input type="number" className="h-8 text-xs" min={0} step={100} value={vendaMin} onChange={(e) => setVendaMin(Math.max(0, Number(e.target.value) || 0))} />
             </div>
             <div className="space-y-1">
-              <div className="text-[11px] text-muted-foreground">Buscar</div>
+              <div className="text-[11px] text-muted-foreground">Buscar produto</div>
               <div className="relative">
                 <Search className="w-3.5 h-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                <Input className="h-8 pl-7 text-xs" placeholder="Nome, código ou barras" value={busca} onChange={(e) => setBusca(e.target.value)} />
+                <Input className="h-8 pl-7 text-xs" placeholder="Descrição, código ou EAN 13" value={busca} onChange={(e) => setBusca(e.target.value)} />
               </div>
             </div>
           </div>
