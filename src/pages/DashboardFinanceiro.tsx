@@ -16,6 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { chamarRelatorio, num, pick } from "@/lib/vrReport";
 import { formatBRL } from "@/lib/formatters";
 import { somarMetasDepartamento } from "@/lib/metaCompraDepartamento";
+import { mercadologicoNivel1 } from "@/lib/mercadologico";
+import { chaveDepartamento } from "@/lib/comprasDepartamentos";
 
 const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
@@ -102,7 +104,7 @@ const DashboardFinanceiro = () => {
     const anterior = monthRange(anoAnt, mesAnt);
 
     try {
-      const [l, la, meta, cv, cvAnt, vs, rec, recAnt] = await Promise.all([
+      const [l, la, meta, cv, cvAnt, vs, rec, recAnt, inativos] = await Promise.all([
         somaLanc(ano, mes),
         somaLanc(anoAnt, mesAnt),
         supabase.from("compras_meta").select("departamento, meta_compra").eq("store_id", storeId).eq("ano", ano).eq("mes", mes),
@@ -111,14 +113,20 @@ const DashboardFinanceiro = () => {
         chamarRelatorio(storeId, "vendas_secao_periodo", { inicio: atual.inicio, fim: atual.fim }),
         chamarRelatorio(storeId, "receber_periodo", { inicio: atual.inicio, fim: atual.fim }),
         chamarRelatorio(storeId, "receber_periodo", { inicio: anterior.inicio, fim: anterior.fim }),
+        // Departamentos desmarcados como "Ativo" na Configuracao de Compras ficam fora de compra e meta.
+        supabase.from("compras_departamento").select("departamento").eq("store_id", storeId).eq("ativo", false),
       ]);
+      const foraDaApuracao = new Set(((inativos.data as any[]) || []).map((d) => chaveDepartamento(String(d.departamento ?? ""))));
+      const ativo = (nome: unknown) => !foraDaApuracao.has(chaveDepartamento(String(nome ?? "")));
 
       setLanc(l);
       setLancAnt(la);
-      setMetaCompra(somarMetasDepartamento(meta.data || []));
+      setMetaCompra(somarMetasDepartamento(((meta.data as any[]) || []).filter((m) => ativo(m.departamento))));
 
       const somaCompra = (r: any) =>
-        (r.dados || []).reduce((s: number, x: any) => s + num(pick(x, "valor_compra", "total_compra", "compra")), 0);
+        (r.dados || [])
+          .filter((x: any) => ativo(mercadologicoNivel1(x)))
+          .reduce((s: number, x: any) => s + num(pick(x, "valor_compra", "total_compra", "compra")), 0);
       setComprado(somaCompra(cv));
       setCompradoAnt(somaCompra(cvAnt));
 

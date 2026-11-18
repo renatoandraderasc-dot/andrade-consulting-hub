@@ -487,6 +487,9 @@ const Compras = () => {
     () => new Set(deptos.filter((d: any) => d.ativo === false).map((d: any) => chaveDep(d.departamento))),
     [deptos],
   );
+  // Departamento entra na apuracao (Painel, Compras x Vendas, totais e abertura ate produto)
+  // so se o usuario pode ve-lo E ele nao foi desmarcado como "Ativo" na Configuracao.
+  const contaDept = (nome: string) => permiteDept(nome) && !deptosInativos.has(chaveDep(nome));
 
   const painelRows = useMemo(() => {
     const indice = new Map<string, { compra: number; venda: number; cmv: number }>();
@@ -499,13 +502,13 @@ const Compras = () => {
     for (const meta of metas) metasPorDep.set(chaveDep(meta.departamento), meta);
     const departamentos = new Map<string, string>();
     for (const d of deptos) {
-      if (permiteDept(d.departamento)) departamentos.set(chaveDep(d.departamento), d.departamento);
+      if (contaDept(d.departamento)) departamentos.set(chaveDep(d.departamento), d.departamento);
     }
     for (const nome of mercadologicos1) {
-      if (permiteDept(nome)) departamentos.set(chaveDep(nome), nome);
+      if (contaDept(nome)) departamentos.set(chaveDep(nome), nome);
     }
     for (const nome of Object.keys(realizadoDep)) {
-      if (permiteDept(nome)) departamentos.set(chaveDep(nome), nome);
+      if (contaDept(nome)) departamentos.set(chaveDep(nome), nome);
     }
     return [...departamentos.entries()].map(([chave, departamento]) => {
       const m = metasPorDep.get(chave) ?? {};
@@ -548,7 +551,7 @@ const Compras = () => {
   const cvItens = useMemo(() => {
     return completarDepartamentos(cvLinhas, [
       ...mercadologicos1, ...deptos.map((d) => d.departamento),
-    ], permiteDept)
+    ], contaDept)
       .map((l: any) => ({
       // Mercadológico 1: WebSac/Oracle mandam "nivel1"/"departamento";
       // no VR o nível 1 é a própria "secao" do relatório.
@@ -569,7 +572,7 @@ const Compras = () => {
       compra: num(col(l, "total_compra", "compra", "compras")),
       }))
       ;
-  }, [cvLinhas, restrito, mercadologicos1, deptos]);
+  }, [cvLinhas, restrito, mercadologicos1, deptos, deptosInativos]);
 
 
   // percentuais SEMPRE recalculados sobre os totais somados
@@ -592,7 +595,7 @@ const Compras = () => {
 
   const cvOpcoes = useMemo(() => {
     const n1 = new Set<string>(cvItens
-      .filter((i) => permiteDept(i.departamento))
+      .filter((i) => contaDept(i.departamento))
       .map((i) => i.departamento));
     return { n1: [...n1].sort((a, b) => a.localeCompare(b, "pt-BR")) };
   }, [cvItens, deptosInativos]);
@@ -766,7 +769,7 @@ const Compras = () => {
       }
     }
     const produtos = (produtosCache[chaveProdutos(cvInicio, cvFim)] || [])
-      .filter((p) => permiteDept(p.departamento) && (fN1 === "__all__" || p.departamento === fN1))
+      .filter((p) => contaDept(p.departamento) && (fN1 === "__all__" || p.departamento === fN1))
       .map((p) => ({
       Departamento: p.departamento, Grupo: p.secao, Subgrupo: p.subgrupo, Código: p.codigo,
       Descrição: p.descricao, EAN: p.ean,

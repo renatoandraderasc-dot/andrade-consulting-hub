@@ -94,9 +94,17 @@ const MetasPremiacaoCompradores = () => {
       }
 
       // Meta de compra do mês
-      const { data: cm } = await supabase.from("compras_meta").select("departamento, meta_compra")
-        .eq("store_id", storeId).eq("ano", ano).eq("mes", mes);
-      let metaCompra = (cm ?? []).filter((r) => !["LOJA", "GERAL"].includes(String(r.departamento).toUpperCase()))
+      const [{ data: cmTodos }, { data: inativos }] = await Promise.all([
+        supabase.from("compras_meta").select("departamento, meta_compra")
+          .eq("store_id", storeId).eq("ano", ano).eq("mes", mes),
+        // Departamentos desmarcados como "Ativo" na Configuracao de Compras ficam fora da apuracao.
+        supabase.from("compras_departamento").select("departamento").eq("store_id", storeId).eq("ativo", false),
+      ]);
+      const foraDaApuracao = new Set((inativos ?? []).map((d: any) =>
+        canonDept(String(d.departamento)) || String(d.departamento).toUpperCase()));
+      const cm = (cmTodos ?? []).filter((r) =>
+        !foraDaApuracao.has(canonDept(String(r.departamento)) || String(r.departamento).toUpperCase()));
+      let metaCompra = cm.filter((r) => !["LOJA", "GERAL"].includes(String(r.departamento).toUpperCase()))
         .reduce((s, r) => s + (Number(r.meta_compra) || 0), 0);
 
       // Metas configuradas na tela "Configuração de Metas — Compradores" têm prioridade
@@ -133,6 +141,7 @@ const MetasPremiacaoCompradores = () => {
       };
       const compra = linhasCompra
         .filter((l: any) => {
+          if (foraDaApuracao.has(deptDaLinha(l)[0] ?? "")) return false;
           if (depsComMeta.size === 0) return true;
           return deptDaLinha(l).some((d) => depsComMeta.has(d));
         })
