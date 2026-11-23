@@ -23,3 +23,21 @@ export function custoMaior(itens: { codproduto: number | null; descricao: string
     .filter((i) => i.codproduto && ultimo.get(i.codproduto)! > 0 && i.custo > ultimo.get(i.codproduto)! * 1.005)
     .map((i) => ({ ...i, anterior: ultimo.get(i.codproduto!)!, alta: i.custo / ultimo.get(i.codproduto!)! - 1 }));
 }
+
+/** Produtos com venda em pelo menos `minimo` (ex.: 85%) dos dias analisados. */
+export function produtosFrequentes(dias: Record<string, unknown>[][], minimo = 0.85) {
+  const cont = new Map<number, { codigo: number; descricao: string; dias: number }>();
+  for (const d of dias) {
+    const vistos = new Set<number>();
+    for (const r of d) {
+      const c = num(r.codigo ?? r.id_produto);
+      if (!c || num(r.vendas) <= 0 || vistos.has(c)) continue;
+      vistos.add(c);
+      const x = cont.get(c) ?? { codigo: c, descricao: String(r.produto ?? r.descricao ?? ""), dias: 0 };
+      x.dias++; cont.set(c, x);
+    }
+  }
+  const total = dias.length;
+  if (!total) return [];
+  return [...cont.values()].filter((x) => x.dias / total >= minimo).map((x) => ({ ...x, pct: x.dias / total })).sort((a, b) => b.dias - a.dias || a.codigo - b.codigo);
+}

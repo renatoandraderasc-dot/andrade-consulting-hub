@@ -11,3 +11,11 @@ Deno.test("item mais caro que a última compra é listado", () => {
   const r = custoMaior([{ codproduto: 1, descricao: "A", custo: 11 }, { codproduto: 2, descricao: "B", custo: 10 }], new Map([[1, 10], [2, 10]]));
   assertEquals(r.map((x) => x.codproduto), [1]);
 });
+
+import { produtosFrequentes as pf } from "./resumo.ts";
+Deno.test("produtosFrequentes: só quem vendeu em pelo menos 85% dos dias", () => {
+  const v = (c: number) => ({ codigo: c, produto: `P${c}`, vendas: 1 });
+  const dias = Array.from({ length: 20 }, (_, i) => [v(1), ...(i < 17 ? [v(2)] : []), ...(i < 16 ? [v(3)] : [])]);
+  const r = pf(dias, 0.85).map((x) => x.codigo);
+  if (JSON.stringify(r) !== "[1,2]") throw new Error(JSON.stringify(r));
+});

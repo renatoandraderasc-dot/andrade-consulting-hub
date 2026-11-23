@@ -26,6 +26,8 @@ export default function StatusDiarioTab({ lojas }: { lojas: LojaSimples[] }) {
   const [loja, setLoja] = useState("");
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [novo, setNovo] = useState({ codigo: "", descricao: "" });
+  const [auto, setAuto] = useState<{ dias: number; produtos: { codigo: number; descricao: string; dias: number; pct: number }[] } | null>(null);
+  const [carregandoAuto, setCarregandoAuto] = useState(false);
   const [testando, setTestando] = useState<string | null>(null);
 
   const carregar = async () => {
@@ -40,6 +42,18 @@ export default function StatusDiarioTab({ lojas }: { lojas: LojaSimples[] }) {
     setProdutos((data as Produto[]) || []);
   };
   useEffect(() => { carregarProdutos(); }, [loja]);
+  useEffect(() => {
+    if (!loja) return;
+    let vivo = true;
+    setAuto(null); setCarregandoAuto(true);
+    supabase.functions.invoke("whatsapp-status", { body: { modo: "frequentes", store_id: loja } }).then(({ data, error }) => {
+      if (!vivo) return;
+      setCarregandoAuto(false);
+      if (error || !data?.ok) { toast.error("Não foi possível analisar os últimos 60 dias"); return; }
+      setAuto({ dias: data.dias, produtos: data.produtos });
+    });
+    return () => { vivo = false; };
+  }, [loja]);
 
   const salvar = async (id: string, campos: Partial<Contato>) => {
     setContatos((cs) => cs.map((c) => (c.id === id ? { ...c, ...campos } : c)));
@@ -94,13 +108,30 @@ export default function StatusDiarioTab({ lojas }: { lojas: LojaSimples[] }) {
       </Card>
       <Card>
         <CardHeader><CardTitle>Produtos de venda diária</CardTitle>
-          <p className="text-sm text-muted-foreground">Produtos que sempre vendem. O resumo avisa quando algum não vendeu no dia.</p>
+          <p className="text-sm text-muted-foreground">Lista automática: produtos que venderam em pelo menos 85% dos últimos 60 dias. O resumo avisa quando algum não vendeu no dia.</p>
         </CardHeader>
         <CardContent className="space-y-3">
           <Select value={loja} onValueChange={setLoja}>
             <SelectTrigger><SelectValue placeholder="Loja" /></SelectTrigger>
             <SelectContent>{lojas.map((l) => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent>
           </Select>
+          <div className="rounded-md border">
+            <div className="flex items-center justify-between border-b px-3 py-2 text-sm">
+              <span className="font-medium">Automáticos ({auto?.produtos.length ?? 0})</span>
+              <span className="text-xs text-muted-foreground">{carregandoAuto ? "Analisando 60 dias…" : auto ? `${auto.dias} dias analisados` : ""}</span>
+            </div>
+            <div className="max-h-80 divide-y overflow-y-auto text-sm">
+              {auto?.produtos.map((p) => (
+                <div key={p.codigo} className="flex items-center gap-2 px-3 py-1.5">
+                  <span className="w-16 tabular-nums text-muted-foreground">{p.codigo}</span>
+                  <span className="flex-1">{p.descricao}</span>
+                  <span className="tabular-nums text-xs text-muted-foreground">{p.dias}/{auto.dias} dias · {Math.round(p.pct * 100)}%</span>
+                </div>
+              ))}
+              {auto && !auto.produtos.length && <p className="px-3 py-2 text-muted-foreground">Nenhum produto vendeu em 85% dos dias salvos.</p>}
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">Extras (opcional): adicione produtos que devem entrar mesmo fora da lista automática.</p>
           <div className="flex gap-2">
             <Input className="w-28" placeholder="Código" inputMode="numeric" value={novo.codigo} onChange={(e) => setNovo({ ...novo, codigo: e.target.value.replace(/\D/g, "") })} />
             <Input placeholder="Descrição" value={novo.descricao} onChange={(e) => setNovo({ ...novo, descricao: e.target.value })} onKeyDown={(e) => e.key === "Enter" && addProduto()} />
@@ -114,7 +145,7 @@ export default function StatusDiarioTab({ lojas }: { lojas: LojaSimples[] }) {
                 <Button size="icon" variant="ghost" aria-label="Remover produto" onClick={async () => { await supabase.from("whatsapp_produtos_diarios").delete().eq("id", p.id); carregarProdutos(); }}><Trash2 className="h-4 w-4" /></Button>
               </div>
             ))}
-            {!produtos.length && <p className="py-2 text-muted-foreground">Nenhum produto escolhido.</p>}
+            {!produtos.length && <p className="py-2 text-muted-foreground">Nenhum extra.</p>}
           </div>
         </CardContent>
       </Card>

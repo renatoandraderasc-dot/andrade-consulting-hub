@@ -2,12 +2,13 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { z } from "npm:zod@3";
 import { authenticateCronRequest } from "../_shared/cron-auth.ts";
-import { brl, custoMaior, margemNegativa, naoVendidos, num, pct } from "./resumo.ts";
+import { brl, custoMaior, margemNegativa, naoVendidos, num, pct, produtosFrequentes } from "./resumo.ts";
 
 const Body = z.object({
-  modo: z.enum(["diario", "nota"]),
+  modo: z.enum(["diario", "nota", "frequentes"]),
   recebimento_id: z.string().uuid().optional(),
   contato_id: z.string().uuid().optional(), // envio de teste para um contato
+  store_id: z.string().uuid().optional(),
   data: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 });
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -62,6 +63,23 @@ Deno.serve(async (req) => {
       }
       return porDia;
     };
+    // Produtos que venderam em >= 85% dos últimos 60 dias salvos no Hub (antes de `ate`).
+    const frequentes = async (store: string, ate: string) => {
+      const ini = addDias(ate, -60), fim = addDias(ate, -1);
+      const { data } = await db.from("relatorio_cache").select("dados,params,atualizado_em").eq("store_id", store).eq("relatorio", "ranking_produtos").gte("fim", ini).lte("fim", fim).order("atualizado_em", { ascending: false }).limit(1000);
+      const porDia = new Map<string, Record<string, unknown>[]>();
+      for (const r of data || []) {
+        const pr = (r.params || {}) as Record<string, string>;
+        if (pr.inicio !== pr.fim || porDia.has(pr.fim)) continue;
+        porDia.set(pr.fim, (r.dados as Record<string, unknown>[]) || []);
+      }
+      return { dias: porDia.size, produtos: produtosFrequentes([...porDia.values()], 0.85) };
+    };
+
+    if (modo === "frequentes") {
+      if (!p.data.store_id) return json({ error: "store_id obrigatório" }, 400);
+      return json({ ok: true, ...(await frequentes(p.data.store_id, p.data.data || addDias(ontemSP(), 1))) });
+    }
 
     if (modo === "nota") {
       if (!recebimento_id) return json({ error: "recebimento_id obrigatório" }, 400);
@@ -134,7 +152,11 @@ Deno.serve(async (req) => {
         b.margem_negativa = neg.length
           ? `📉 *Vendidos com prejuízo (${neg.length})*\n` + neg.slice(0, 15).map((x) => `• ${x.produto}: margem ${pct(x.margem)} (${brl(x.lucro)})`).join("\n") + (neg.length > 15 ? `\n…e mais ${neg.length - 15}` : "")
           : "📉 Nenhum produto vendido com prejuízo.";
-        const { data: lista } = await db.from("whatsapp_produtos_diarios").select("codigo,descricao").eq("store_id", store);
+        const { data: manual } = await db.from("whatsapp_produtos_diarios").select("codigo,descricao").eq("store_id", store);
+        const auto = (await frequentes(store, dia)).produtos;
+        const mapa = new Map<number, { codigo: number; descricao: string | null }>();
+        for (const x of [...auto, ...(manual || [])]) mapa.set(Number(x.codigo), { codigo: Number(x.codigo), descricao: x.descricao });
+        const lista = [...mapa.values()];
         const nv = naoVendidos(lista || [], rk);
         b.nao_vendidos = !lista?.length ? "Produtos de venda diária: nenhum produto escolhido."
           : nv.length ? `🚫 *Não venderam no dia (${nv.length})*\n` + nv.map((x) => `• ${x.codigo} ${x.descricao ?? ""}`).join("\n") : "✅ Todos os produtos de venda diária venderam.";
