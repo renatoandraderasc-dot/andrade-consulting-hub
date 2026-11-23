@@ -10,8 +10,9 @@ const LOTE = 8;
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
-    const inst = Deno.env.get("ZAPI_INSTANCE_ID")?.trim(), tok = Deno.env.get("ZAPI_TOKEN")?.trim(), ct = Deno.env.get("ZAPI_CLIENT_TOKEN")?.trim();
-    if (!inst || !tok) return json({ error: "Credenciais da Z-API não configuradas" }, 500);
+    const canal = Deno.env.get("ZAPI_INSTANCE_ID")?.trim();
+    const secret = (Deno.env.get("ZAPI_OMNI_SECRET") || Deno.env.get("STRIPE_LIVE_API_KEY"))?.trim();
+    if (!canal || !secret) return json({ error: "Credenciais da Z-API Omni não configuradas" }, 500);
     const url = Deno.env.get("SUPABASE_URL")!;
     const auth = req.headers.get("Authorization") || "";
     const userClient = createClient(url, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: auth } } });
@@ -34,25 +35,24 @@ Deno.serve(async (req) => {
       const { data } = await db.storage.from("whatsapp-midia").createSignedUrl(path, 3600);
       if (data?.signedUrl) imagens.push(data.signedUrl);
     }
-    const base = `https://api.z-api.io/instances/${inst}/token/${tok}`;
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    if (ct) headers["Client-Token"] = ct;
+    const endpoint = `https://api.omni.z-api.io/v1/channels/${canal}/messages`;
+    const headers = { "Content-Type": "application/json", Authorization: `Bearer ${secret}` };
     const enviar = async (phone: string) => {
-      const chamadas: [string, unknown][] = [];
-      imagens.forEach((img, i) => chamadas.push(["send-image", { phone, image: img, caption: i === 0 && imagens.length === 1 ? camp.mensagem : undefined }]));
-      if (camp.mensagem && imagens.length !== 1) chamadas.push(["send-text", { phone, message: camp.mensagem }]);
-      for (const [rota, body] of chamadas) {
-        const r = await fetch(`${base}/${rota}`, { method: "POST", headers, body: JSON.stringify(body) });
+      const chamadas: unknown[] = [];
+      imagens.forEach((img, i) => chamadas.push({ recipient: { identifier: phone }, content: { type: "IMAGE", attachments: [{ url: img, ...(i === 0 && imagens.length === 1 && camp.mensagem ? { caption: camp.mensagem } : {}) }] } }));
+      if (camp.mensagem && imagens.length !== 1) chamadas.push({ recipient: { identifier: phone }, content: { type: "TEXT", body: { message: camp.mensagem } } });
+      for (const body of chamadas) {
+        const r = await fetch(endpoint, { method: "POST", headers, body: JSON.stringify(body) });
         if (!r.ok) throw new Error(`[${r.status}] ${(await r.text()).slice(0, 300)}`);
         await sleep(800);
       }
     };
 
-    const MSG_INST = "A Z-API não encontrou a instância: confira o ID e o Token da instância no painel da Z-API.";
-    const falhaConta = (m: string) => m.includes("Instance not found") || /^\[(401|403)\]/.test(m);
+    const MSG_INST = "A Z-API Omni recusou a conta: confira o ID do canal, a Secret Key e se o canal está conectado.";
+    const falhaConta = (m: string) => /^\[(401|403)\]/.test(m) || m.includes("CHANNEL_DISCONNECTED");
     if (teste_telefone) {
       const tel = teste_telefone.replace(/\D/g, "");
-      try { await enviar(tel); return json({ ok: true }); } catch (e) { const m = String((e as Error).message); return json({ ok: false, error: m.includes("Instance not found") ? MSG_INST : m }); }
+      try { await enviar(tel); return json({ ok: true }); } catch (e) { const m = String((e as Error).message); return json({ ok: false, error: falhaConta(m) ? MSG_INST + " " + m : m }); }
     }
 
     const { count } = await db.from("whatsapp_envios").select("id", { count: "exact", head: true }).eq("campanha_id", campanha_id);
@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
         await db.from("whatsapp_envios").update({ status: "enviado", enviado_em: new Date().toISOString(), erro: null }).eq("id", e.id);
       } catch (err) {
         const m = String((err as Error).message);
-        if (falhaConta(m)) return json({ ok: false, error: m.includes("Instance not found") ? MSG_INST : "A Z-API recusou as credenciais: " + m });
+        if (falhaConta(m)) return json({ ok: false, error: MSG_INST + " " + m });
         await db.from("whatsapp_envios").update({ status: "erro", erro: String((err as Error).message) }).eq("id", e.id);
       }
       await sleep(3000 + Math.random() * 4000);
