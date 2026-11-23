@@ -23,7 +23,9 @@ type Contato = { id: string; nome: string; telefone: string; grupo: string | nul
 type Campanha = { id: string; titulo: string; mensagem: string; imagens: string[]; contato_ids: string[]; status: string; created_at: string };
 type Envio = { id: string; telefone: string; status: string; erro: string | null; enviado_em: string | null };
 
+export const ehGrupo = (t: string) => /@g\.us$|-group$|@/.test(t.trim());
 export const normalizarTelefone = (t: string) => {
+  if (ehGrupo(t)) return t.trim().replace(/\s+/g, "");
   const d = t.replace(/\D/g, "");
   if (d.length === 10 || d.length === 11) return "55" + d;
   return d;
@@ -74,7 +76,7 @@ const AdminWhatsapp = () => {
 
   const addContato = async () => {
     const tel = normalizarTelefone(novo.telefone);
-    if (!novo.nome.trim() || tel.length < 12) return toast.error("Informe nome e WhatsApp com DDD");
+    if (!novo.nome.trim() || tel.length < 12) return toast.error("Informe nome e WhatsApp com DDD ou o ID do grupo (termina em @g.us)");
     const { error } = await supabase.from("whatsapp_contatos").insert({ nome: novo.nome.trim(), telefone: tel, grupo: novo.grupo.trim() || null });
     if (error) return toast.error(error.message);
     setNovo({ nome: "", telefone: "", grupo: "" });
@@ -258,7 +260,7 @@ const AdminWhatsapp = () => {
               <CardContent className="space-y-4 pt-6">
                 <div className="grid gap-2 md:grid-cols-4">
                   <Input placeholder="Nome" value={novo.nome} onChange={(e) => setNovo({ ...novo, nome: e.target.value })} />
-                  <Input placeholder="WhatsApp com DDD" value={novo.telefone} onChange={(e) => setNovo({ ...novo, telefone: e.target.value })} />
+                  <Input placeholder="WhatsApp com DDD ou ID do grupo (…@g.us)" value={novo.telefone} onChange={(e) => setNovo({ ...novo, telefone: e.target.value })} />
                   <Input placeholder="Grupo (ex.: Diretoria)" value={novo.grupo} onChange={(e) => setNovo({ ...novo, grupo: e.target.value })} />
                   <Button onClick={addContato}><UserPlus className="mr-2 h-4 w-4" />Adicionar</Button>
                 </div>
