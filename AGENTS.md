@@ -34,3 +34,4 @@ PIC TV weather uses browser-authorized location with Open-Meteo and degrades ind
 - Receipt product identification uses a tested helper inside the receipt function, prioritizing EAN and falling back to supplier-scoped references without coupling identification to ERP writes.
 
 - Manual EAN links use a shared identity-only selector and authenticated receipt action; verify own counts and counting state before optional ERP writes, and preserve links when carrying counts forward.
+- WhatsApp status messages are composed server-side by the whatsapp-status function from saved Hub data only (never ERP calls), deduplicated in whatsapp_status_envios; note-entry alerts fire from recebimento sincronizar without affecting the entry.

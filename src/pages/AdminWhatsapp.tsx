@@ -16,6 +16,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { carregarLojasPermitidas, type LojaSimples } from "@/lib/lojasPermitidas";
 import { RELATORIOS_WHATSAPP, nomeRelatorio } from "@/lib/whatsappRelatorios";
 import { capturarTela } from "@/lib/capturarTela";
+import StatusDiarioTab from "@/components/whatsapp/StatusDiarioTab";
 
 type Contato = { id: string; nome: string; telefone: string; grupo: string | null; ativo: boolean; store_id: string | null; relatorios: string[] };
 type Campanha = { id: string; titulo: string; mensagem: string; imagens: string[]; contato_ids: string[]; status: string; created_at: string };
@@ -181,6 +182,7 @@ const AdminWhatsapp = () => {
           <TabsList>
             <TabsTrigger value="nova">Nova mensagem</TabsTrigger>
             <TabsTrigger value="contatos">Contatos ({contatos.length})</TabsTrigger>
+            <TabsTrigger value="status">Status diário</TabsTrigger>
             <TabsTrigger value="historico">Histórico</TabsTrigger>
           </TabsList>
 
@@ -276,6 +278,8 @@ const AdminWhatsapp = () => {
               </CardContent>
             </Card>
           </TabsContent>
+
+          <TabsContent value="status"><StatusDiarioTab lojas={lojas} /></TabsContent>
 
           <TabsContent value="historico" className="grid gap-4 lg:grid-cols-2">
             <Card>

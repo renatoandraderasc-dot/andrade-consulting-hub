@@ -415,6 +415,8 @@ Deno.serve(async (req) => {
         if (nfe?.idnotafiscal_entrada) {
           await db.from("recebimentos").update({ estado: "ENTRADA_CONFIRMADA", idnotafiscal_entrada: Number(nfe.idnotafiscal_entrada), entrada_confirmada_em: new Date().toISOString() }).eq("id", r.id);
           await evento(r.id, "ENTRADA_CONFIRMADA", { idnotafiscal: nfe.idnotafiscal_entrada, dtentrada: nfe.dtentrada });
+          // Aviso opcional por WhatsApp (contatos com "aviso de entrada de nota"); falha não afeta a entrada.
+          fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/whatsapp-status`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` }, body: JSON.stringify({ modo: "nota", recebimento_id: r.id }) }).catch((e) => console.error("aviso whatsapp", e));
           confirmadas++;
         }
       }

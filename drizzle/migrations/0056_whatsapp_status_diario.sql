@@ -1,0 +1,13 @@
+ALTER TABLE public.whatsapp_contatos ADD COLUMN IF NOT EXISTS status_itens text[] NOT NULL DEFAULT '{}', ADD COLUMN IF NOT EXISTS aviso_nota boolean NOT NULL DEFAULT false;
+CREATE TABLE public.whatsapp_produtos_diarios (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), store_id uuid NOT NULL REFERENCES public.stores(id) ON DELETE CASCADE, codigo integer NOT NULL, descricao text, created_at timestamptz NOT NULL DEFAULT now(), UNIQUE(store_id, codigo));
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.whatsapp_produtos_diarios TO authenticated;
+GRANT ALL ON public.whatsapp_produtos_diarios TO service_role;
+ALTER TABLE public.whatsapp_produtos_diarios ENABLE ROW LEVEL SECURITY;
+CREATE POLICY admin_all ON public.whatsapp_produtos_diarios FOR ALL TO authenticated USING (public.has_role(auth.uid(),'admin')) WITH CHECK (public.has_role(auth.uid(),'admin'));
+CREATE POLICY demo_production_isolation ON public.whatsapp_produtos_diarios AS RESTRICTIVE FOR ALL TO authenticated USING (NOT public.is_demo_account()) WITH CHECK (NOT public.is_demo_account());
+CREATE TABLE public.whatsapp_status_envios (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), chave text NOT NULL UNIQUE, tipo text NOT NULL, contato_id uuid, status text NOT NULL DEFAULT 'enviado', erro text, mensagem text, created_at timestamptz NOT NULL DEFAULT now());
+GRANT SELECT ON public.whatsapp_status_envios TO authenticated;
+GRANT ALL ON public.whatsapp_status_envios TO service_role;
+ALTER TABLE public.whatsapp_status_envios ENABLE ROW LEVEL SECURITY;
+CREATE POLICY admin_read ON public.whatsapp_status_envios FOR SELECT TO authenticated USING (public.has_role(auth.uid(),'admin'));
+CREATE POLICY demo_production_isolation ON public.whatsapp_status_envios AS RESTRICTIVE FOR ALL TO authenticated USING (NOT public.is_demo_account()) WITH CHECK (NOT public.is_demo_account());

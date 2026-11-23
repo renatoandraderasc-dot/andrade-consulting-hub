@@ -4707,31 +4707,37 @@ export type Database = {
       whatsapp_contatos: {
         Row: {
           ativo: boolean
+          aviso_nota: boolean
           created_at: string
           grupo: string | null
           id: string
           nome: string
           relatorios: string[]
+          status_itens: string[]
           store_id: string | null
           telefone: string
         }
         Insert: {
           ativo?: boolean
+          aviso_nota?: boolean
           created_at?: string
           grupo?: string | null
           id?: string
           nome: string
           relatorios?: string[]
+          status_itens?: string[]
           store_id?: string | null
           telefone: string
         }
         Update: {
           ativo?: boolean
+          aviso_nota?: boolean
           created_at?: string
           grupo?: string | null
           id?: string
           nome?: string
           relatorios?: string[]
+          status_itens?: string[]
           store_id?: string | null
           telefone?: string
         }
@@ -4780,6 +4786,71 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      whatsapp_produtos_diarios: {
+        Row: {
+          codigo: number
+          created_at: string
+          descricao: string | null
+          id: string
+          store_id: string
+        }
+        Insert: {
+          codigo: number
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          store_id: string
+        }
+        Update: {
+          codigo?: number
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_produtos_diarios_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_status_envios: {
+        Row: {
+          chave: string
+          contato_id: string | null
+          created_at: string
+          erro: string | null
+          id: string
+          mensagem: string | null
+          status: string
+          tipo: string
+        }
+        Insert: {
+          chave: string
+          contato_id?: string | null
+          created_at?: string
+          erro?: string | null
+          id?: string
+          mensagem?: string | null
+          status?: string
+          tipo: string
+        }
+        Update: {
+          chave?: string
+          contato_id?: string | null
+          created_at?: string
+          erro?: string | null
+          id?: string
+          mensagem?: string | null
+          status?: string
+          tipo?: string
+        }
+        Relationships: []
       }
     }
     Views: {
