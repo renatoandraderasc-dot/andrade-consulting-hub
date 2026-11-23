@@ -134,6 +134,13 @@ export default function ProdutosSemVenda() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ref, atual, restrito]);
 
+  const vendaMes = useMemo(() => {
+    const m = new Map<string, number[]>();
+    (ref ?? []).forEach((lista, i) => { for (const p of lista) { const a = m.get(p.codigo) ?? [0, 0, 0]; a[i] += p.venda; m.set(p.codigo, a); } });
+    return m;
+  }, [ref]);
+  const mesLongo = (m: string) => { const t = new Date(`${m}-15T12:00:00`).toLocaleDateString("pt-BR", { month: "long" }); return t[0].toUpperCase() + t.slice(1); };
+
   const departamentos = useMemo(() => [...new Set(linhas.map((l) => l.departamento))].sort(), [linhas]);
 
   const semFiltroCap = useMemo(() => {
@@ -180,7 +187,7 @@ export default function ProdutosSemVenda() {
   const exportar = () => {
     const rows = ordenadas.map((l) => ({
       "Cód.": l.codigo, "Descrição": l.descricao, "Barras": l.barras, "Departamento": l.departamento, "ABC": l.abc,
-      "Meses com venda (de 3)": l.mesesComVenda, "Qtd. 3 meses": l.volume, "Venda 3 meses": l.venda,
+      "Meses com venda (de 3)": l.mesesComVenda, ...Object.fromEntries(mesesRef.map((m, i) => [mesLongo(m), vendaMes.get(l.codigo)?.[i] ?? 0])), "Venda 3 meses": l.venda,
     }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Sem venda no mês");
@@ -310,7 +317,7 @@ export default function ProdutosSemVenda() {
             <Card className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-muted/50 text-muted-foreground">
-                  <tr>{th("codigo", "Cód.")}{th("descricao", "Descrição")}{th("departamento", "Departamento")}{th("abc", "ABC")}{th("mesesComVenda", "Meses c/ venda", "center")}{th("volume", "Qtd. 3 meses", "right")}{th("venda", "Venda 3 meses", "right")}</tr>
+                  <tr>{th("codigo", "Cód.")}{th("descricao", "Descrição")}{th("departamento", "Departamento")}{th("abc", "ABC")}{th("mesesComVenda", "Meses c/ venda", "center")}{mesesRef.map((m) => <th key={m} className="px-3 py-2 text-right font-medium">{mesLongo(m)}</th>)}{th("venda", "Venda 3 meses", "right")}</tr>
                 </thead>
                 <tbody>
                   {pagina.map((l) => (
@@ -320,11 +327,11 @@ export default function ProdutosSemVenda() {
                       <td className="px-3 py-1.5">{l.departamento}</td>
                       <td className="px-3 py-1.5"><Badge variant="outline" className={badgeAbc(l.abc)}>{l.abc}</Badge></td>
                       <td className="px-3 py-1.5 text-center">{l.mesesComVenda}/3</td>
-                      <td className="px-3 py-1.5 text-right tabular-nums">{qtd(l.volume)}</td>
+                      {mesesRef.map((m, i) => <td key={m} className="px-3 py-1.5 text-right tabular-nums">{brl(vendaMes.get(l.codigo)?.[i] ?? 0)}</td>)}
                       <td className="px-3 py-1.5 text-right tabular-nums">{brl(l.venda)}</td>
                     </tr>
                   ))}
-                  {!pagina.length && <tr><td colSpan={7} className="px-3 py-6 text-center text-muted-foreground">Nenhum produto com esses filtros.</td></tr>}
+                  {!pagina.length && <tr><td colSpan={9} className="px-3 py-6 text-center text-muted-foreground">Nenhum produto com esses filtros.</td></tr>}
                 </tbody>
               </table>
               {totalPages > 1 && (
