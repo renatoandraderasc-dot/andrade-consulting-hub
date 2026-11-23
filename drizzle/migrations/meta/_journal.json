@@ -407,6 +407,13 @@
       "when": 1795443991209,
       "tag": "0057_whatsapp_print_config",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1795445582644,
+      "tag": "0058_whatsapp_print_personalizado",
+      "breakpoints": true
     }
   ]
 }

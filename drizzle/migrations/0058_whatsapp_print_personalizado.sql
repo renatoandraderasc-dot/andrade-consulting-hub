@@ -1,0 +1,6 @@
+ALTER TABLE public.whatsapp_print_config
+  ADD COLUMN IF NOT EXISTS nome text,
+  ADD COLUMN IF NOT EXISTS rota text,
+  ADD COLUMN IF NOT EXISTS aba text,
+  ADD COLUMN IF NOT EXISTS corte_esq int NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS corte_dir int NOT NULL DEFAULT 0;

@@ -1,8 +1,8 @@
 import type { RelatorioWhatsapp } from "@/lib/whatsappRelatorios";
 
 /** Corte e formato do print de cada tela (aba Configurar prints). */
-export interface ConfigPrint { largura: number; corte_topo: number; corte_base: number; altura_pagina: number; formato: "png" | "jpeg"; qualidade: number }
-export const CONFIG_PRINT_PADRAO: ConfigPrint = { largura: 1400, corte_topo: 0, corte_base: 0, altura_pagina: 0, formato: "png", qualidade: 0.9 };
+export interface ConfigPrint { largura: number; corte_topo: number; corte_base: number; altura_pagina: number; formato: "png" | "jpeg"; qualidade: number; corte_esq?: number; corte_dir?: number }
+export const CONFIG_PRINT_PADRAO: ConfigPrint = { largura: 1400, corte_topo: 0, corte_base: 0, altura_pagina: 0, formato: "png", qualidade: 0.9, corte_esq: 0, corte_dir: 0 };
 
 /** Corta topo/base (em px da tela) e divide em páginas da altura escolhida. */
 export async function cortarPrint(dataUrl: string, cfg: ConfigPrint, escala: number): Promise<Blob[]> {
@@ -10,15 +10,17 @@ export async function cortarPrint(dataUrl: string, cfg: ConfigPrint, escala: num
   await new Promise((r, j) => { img.onload = r; img.onerror = j; img.src = dataUrl; });
   const topo = Math.max(0, cfg.corte_topo * escala);
   const util = Math.max(1, img.height - topo - Math.max(0, cfg.corte_base * escala));
+  const esq = Math.max(0, (cfg.corte_esq || 0) * escala);
+  const larg = Math.max(1, img.width - esq - Math.max(0, (cfg.corte_dir || 0) * escala));
   const pag = cfg.altura_pagina > 0 ? cfg.altura_pagina * escala : util;
   const blobs: Blob[] = [];
   for (let y = 0; y < util && blobs.length < 10; y += pag) {
     const h = Math.min(pag, util - y);
     const c = document.createElement("canvas");
-    c.width = img.width; c.height = h;
+    c.width = larg; c.height = h;
     const ctx = c.getContext("2d")!;
     if (cfg.formato === "jpeg") { ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, c.width, h); }
-    ctx.drawImage(img, 0, topo + y, img.width, h, 0, 0, img.width, h);
+    ctx.drawImage(img, esq, topo + y, larg, h, 0, 0, larg, h);
     blobs.push(await new Promise<Blob>((r) => c.toBlob((b) => r(b!), `image/${cfg.formato}`, cfg.qualidade)));
   }
   return blobs;

@@ -4789,33 +4789,48 @@ export type Database = {
       }
       whatsapp_print_config: {
         Row: {
+          aba: string | null
           altura_pagina: number
           corte_base: number
+          corte_dir: number
+          corte_esq: number
           corte_topo: number
           formato: string
           largura: number
+          nome: string | null
           qualidade: number
           relatorio_id: string
+          rota: string | null
           updated_at: string
         }
         Insert: {
+          aba?: string | null
           altura_pagina?: number
           corte_base?: number
+          corte_dir?: number
+          corte_esq?: number
           corte_topo?: number
           formato?: string
           largura?: number
+          nome?: string | null
           qualidade?: number
           relatorio_id: string
+          rota?: string | null
           updated_at?: string
         }
         Update: {
+          aba?: string | null
           altura_pagina?: number
           corte_base?: number
+          corte_dir?: number
+          corte_esq?: number
           corte_topo?: number
           formato?: string
           largura?: number
+          nome?: string | null
           qualidade?: number
           relatorio_id?: string
+          rota?: string | null
           updated_at?: string
         }
         Relationships: []

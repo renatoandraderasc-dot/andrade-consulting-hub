@@ -14,7 +14,7 @@ import { ImagePlus, Send, Trash2, UserPlus, X } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
 import { carregarLojasPermitidas, type LojaSimples } from "@/lib/lojasPermitidas";
-import { RELATORIOS_WHATSAPP, nomeRelatorio } from "@/lib/whatsappRelatorios";
+import { RELATORIOS_WHATSAPP, catalogoPrints } from "@/lib/whatsappRelatorios";
 import { capturarTela, CONFIG_PRINT_PADRAO, type ConfigPrint } from "@/lib/capturarTela";
 import ConfigPrintsTab from "@/components/whatsapp/ConfigPrintsTab";
 import StatusDiarioTab from "@/components/whatsapp/StatusDiarioTab";
@@ -47,6 +47,8 @@ const AdminWhatsapp = () => {
   const [lojas, setLojas] = useState<LojaSimples[]>([]);
   const [comPrints, setComPrints] = useState(true);
   const [progresso, setProgresso] = useState("");
+  const [catalogo, setCatalogo] = useState(RELATORIOS_WHATSAPP);
+  useEffect(() => { supabase.from("whatsapp_print_config").select("*").then(({ data }) => setCatalogo(catalogoPrints(data))); }, []);
   useEffect(() => { carregarLojasPermitidas(user?.id, !!isGlobalAdmin).then(setLojas); }, [user?.id, isGlobalAdmin]);
   const atualizarContato = async (id: string, campos: Partial<Contato>) => {
     setContatos((cs) => cs.map((c) => (c.id === id ? { ...c, ...campos } : c)));
@@ -144,7 +146,7 @@ const AdminWhatsapp = () => {
         for (const c of alvo) {
           const paths: string[] = [];
           for (const rid of c.relatorios || []) {
-            const rel = RELATORIOS_WHATSAPP.find((r) => r.id === rid);
+            const rel = catalogoPrints(cfgs).find((r) => r.id === rid);
             if (!rel || !c.store_id || !user) continue;
             const k = `${c.store_id}:${rid}`;
             if (!cache.has(k)) {
@@ -275,10 +277,10 @@ const AdminWhatsapp = () => {
                         <SelectTrigger className="h-8 w-56"><SelectValue placeholder="Loja dos prints" /></SelectTrigger>
                         <SelectContent>{lojas.map((l) => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent>
                       </Select>
-                      {RELATORIOS_WHATSAPP.map((r) => (
+                      {catalogo.map((r) => (
                         <label key={r.id} className="flex items-center gap-1.5">
                           <Checkbox checked={c.relatorios?.includes(r.id)} onCheckedChange={(v) => atualizarContato(c.id, { relatorios: v ? [...(c.relatorios || []), r.id] : (c.relatorios || []).filter((x) => x !== r.id) })} />
-                          {nomeRelatorio(r.id)}
+                          {r.nome}
                         </label>
                       ))}
                     </div>
