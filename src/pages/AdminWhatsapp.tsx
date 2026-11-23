@@ -11,8 +11,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { FunctionsHttpError } from "@supabase/supabase-js";
 import { ImagePlus, Send, Trash2, UserPlus, X } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAuth } from "@/hooks/useAuth";
+import { carregarLojasPermitidas, type LojaSimples } from "@/lib/lojasPermitidas";
+import { RELATORIOS_WHATSAPP, nomeRelatorio } from "@/lib/whatsappRelatorios";
+import { capturarTela } from "@/lib/capturarTela";
 
-type Contato = { id: string; nome: string; telefone: string; grupo: string | null; ativo: boolean };
+type Contato = { id: string; nome: string; telefone: string; grupo: string | null; ativo: boolean; store_id: string | null; relatorios: string[] };
 type Campanha = { id: string; titulo: string; mensagem: string; imagens: string[]; contato_ids: string[]; status: string; created_at: string };
 type Envio = { id: string; telefone: string; status: string; erro: string | null; enviado_em: string | null };
 
@@ -36,6 +41,16 @@ const AdminWhatsapp = () => {
   const [ocupado, setOcupado] = useState(false);
   const [aberta, setAberta] = useState<string | null>(null);
   const [envios, setEnvios] = useState<Envio[]>([]);
+  const { user, isGlobalAdmin } = useAuth();
+  const [lojas, setLojas] = useState<LojaSimples[]>([]);
+  const [comPrints, setComPrints] = useState(true);
+  const [progresso, setProgresso] = useState("");
+  useEffect(() => { carregarLojasPermitidas(user?.id, !!isGlobalAdmin).then(setLojas); }, [user?.id, isGlobalAdmin]);
+  const atualizarContato = async (id: string, campos: Partial<Contato>) => {
+    setContatos((cs) => cs.map((c) => (c.id === id ? { ...c, ...campos } : c)));
+    const { error } = await supabase.from("whatsapp_contatos").update(campos).eq("id", id);
+    if (error) toast.error(error.message);
+  };
 
   const carregar = async () => {
     const [c, k] = await Promise.all([
@@ -66,7 +81,8 @@ const AdminWhatsapp = () => {
   const toggle = (id: string) => setSelecionados((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
 
   const salvarCampanha = async () => {
-    if (!titulo.trim() || (!mensagem.trim() && !arquivos.length)) { toast.error("Informe título e mensagem ou imagem"); return null; }
+    const temPrints = comPrints && contatos.some((c) => selecionados.includes(c.id) && c.relatorios?.length);
+    if (!titulo.trim() || (!mensagem.trim() && !arquivos.length && !temPrints)) { toast.error("Informe título e mensagem, imagem ou prints"); return null; }
     const paths: string[] = [];
     for (const f of arquivos) {
       const path = `${crypto.randomUUID()}-${f.name.replace(/[^\w.-]/g, "_")}`;
@@ -114,6 +130,40 @@ const AdminWhatsapp = () => {
     const camp = await salvarCampanha();
     setOcupado(false);
     if (!camp) return;
+    const alvo = contatos.filter((c) => selecionados.includes(c.id) && c.ativo);
+    if (comPrints && alvo.some((c) => c.relatorios?.length)) {
+      if (alvo.some((c) => c.relatorios?.length && !c.store_id)) { toast.error("Escolha a loja dos contatos que recebem prints (aba Contatos)"); return; }
+      setOcupado(true);
+      try {
+        const cache = new Map<string, string>();
+        const linhas = [];
+        for (const c of alvo) {
+          const paths: string[] = [];
+          for (const rid of c.relatorios || []) {
+            const rel = RELATORIOS_WHATSAPP.find((r) => r.id === rid);
+            if (!rel || !c.store_id || !user) continue;
+            const k = `${c.store_id}:${rid}`;
+            if (!cache.has(k)) {
+              setProgresso(`Tirando print: ${rel.nome} · ${lojas.find((l) => l.id === c.store_id)?.name ?? ""}`);
+              const blob = await capturarTela(rel, c.store_id, user.id);
+              const path = `prints/${camp.id}/${c.store_id}-${rid}.png`;
+              const { error } = await supabase.storage.from("whatsapp-midia").upload(path, blob, { contentType: "image/png", upsert: true });
+              if (error) throw error;
+              cache.set(k, path);
+            }
+            paths.push(cache.get(k)!);
+          }
+          linhas.push({ campanha_id: camp.id, contato_id: c.id, telefone: normalizarTelefone(c.telefone), imagens: paths });
+        }
+        const { error } = await supabase.from("whatsapp_envios").insert(linhas);
+        if (error) throw error;
+        await supabase.from("whatsapp_campanhas").update({ status: "enviando" }).eq("id", camp.id);
+      } catch (e) {
+        toast.error("Falha ao preparar os prints: " + String((e as Error)?.message || e));
+        setOcupado(false); setProgresso(""); return;
+      }
+      setProgresso("");
+    }
     setTitulo(""); setMensagem(""); setArquivos([]); setSelecionados([]);
     processar(camp.id);
   };
@@ -176,11 +226,14 @@ const AdminWhatsapp = () => {
                     <span className="flex-1">{c.nome}</span>
                     <span className="text-xs text-muted-foreground">{c.telefone}</span>
                     {c.grupo && <Badge variant="secondary">{c.grupo}</Badge>}
+                    {comPrints && (c.relatorios?.length ?? 0) > 0 && <Badge variant="outline">{c.relatorios.length} prints</Badge>}
                   </label>
                 ))}
                 {!contatos.length && <p className="text-sm text-muted-foreground">Cadastre contatos na aba Contatos.</p>}
               </CardContent>
-              <div className="p-4 pt-0">
+              <div className="space-y-2 p-4 pt-0">
+                <label className="flex items-center gap-2 text-sm"><Checkbox checked={comPrints} onCheckedChange={(v) => setComPrints(!!v)} />Incluir os prints escolhidos para cada contato</label>
+                {progresso && <p className="text-sm text-muted-foreground">{progresso}</p>}
                 <Button className="w-full" disabled={ocupado} onClick={disparar}><Send className="mr-2 h-4 w-4" />{ocupado ? "Enviando..." : "Enviar agora"}</Button>
               </div>
             </Card>
@@ -197,12 +250,26 @@ const AdminWhatsapp = () => {
                 </div>
                 <div className="divide-y">
                   {contatos.map((c) => (
-                    <div key={c.id} className="flex items-center gap-3 py-2">
+                    <div key={c.id} className="space-y-2 py-3">
+                    <div className="flex items-center gap-3">
                       <Checkbox checked={c.ativo} onCheckedChange={async (v) => { await supabase.from("whatsapp_contatos").update({ ativo: !!v }).eq("id", c.id); carregar(); }} />
                       <span className="flex-1">{c.nome}</span>
                       <span className="text-sm text-muted-foreground">{c.telefone}</span>
                       {c.grupo && <Badge variant="secondary">{c.grupo}</Badge>}
                       <Button size="icon" variant="ghost" aria-label="Excluir contato" onClick={async () => { if (confirm(`Excluir ${c.nome}?`)) { await supabase.from("whatsapp_contatos").delete().eq("id", c.id); carregar(); } }}><Trash2 className="h-4 w-4" /></Button>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3 pl-7 text-sm">
+                      <Select value={c.store_id ?? ""} onValueChange={(v) => atualizarContato(c.id, { store_id: v })}>
+                        <SelectTrigger className="h-8 w-56"><SelectValue placeholder="Loja dos prints" /></SelectTrigger>
+                        <SelectContent>{lojas.map((l) => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent>
+                      </Select>
+                      {RELATORIOS_WHATSAPP.map((r) => (
+                        <label key={r.id} className="flex items-center gap-1.5">
+                          <Checkbox checked={c.relatorios?.includes(r.id)} onCheckedChange={(v) => atualizarContato(c.id, { relatorios: v ? [...(c.relatorios || []), r.id] : (c.relatorios || []).filter((x) => x !== r.id) })} />
+                          {nomeRelatorio(r.id)}
+                        </label>
+                      ))}
+                    </div>
                     </div>
                   ))}
                 </div>

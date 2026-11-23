@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toPng } from "html-to-image";
 import { useQuery } from "@tanstack/react-query";
 import PrintTelaButton from "@/components/PrintTelaButton";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -77,6 +78,7 @@ const navGroups: NavGroup[] = [
       { key: "recebimento", path: "/recebimento", label: "Recebimento de NF-e", icon: ScanLine },
       { key: "estoque_dinamico", path: "/estoque-dinamico", label: "Estoque Dinâmico", icon: Package },
       { key: "margem_baixa", path: "/margem-baixa", label: "Margem Baixa", icon: TrendingDown },
+      { key: "produtos_sem_venda", path: "/produtos-sem-venda", label: "Produtos sem venda", icon: Package },
       { key: "repricing", path: "/repricing", label: "Re-Pricing", icon: DollarSign },
       { key: "pricing", path: "/precificacao/pricing", label: "Pricing", icon: Tags },
       { key: "catalogo", path: "/catalogo", label: "Catálogo", icon: Package },
@@ -347,9 +349,22 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
       {!isDemo && <ChangePasswordDialog open={pwdOpen} onOpenChange={setPwdOpen} />}
 
       <main id="area-print" className="flex-1">{children}</main>
+      <CapturaWhatsapp />
       <PrintTelaButton targetId="area-print" />
     </div>
   );
 };
+
+/** Quando aberta para print do WhatsApp, expõe a captura da área principal para a tela que enviou. */
+function CapturaWhatsapp() {
+  useEffect(() => {
+    if (!new URLSearchParams(window.location.search).has("whatsapp_print")) return;
+    (window as any).__capturarArea = () => {
+      const el = document.getElementById("area-print")!;
+      return toPng(el, { backgroundColor: getComputedStyle(document.body).backgroundColor, pixelRatio: 1.5, cacheBust: true, filter: (n) => !(n instanceof HTMLElement && n.dataset?.noPrint === "true") });
+    };
+  }, []);
+  return null;
+}
 
 export default ClientLayout;

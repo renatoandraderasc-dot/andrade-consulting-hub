@@ -4711,6 +4711,7 @@ export type Database = {
           grupo: string | null
           id: string
           nome: string
+          relatorios: string[]
           store_id: string | null
           telefone: string
         }
@@ -4720,6 +4721,7 @@ export type Database = {
           grupo?: string | null
           id?: string
           nome: string
+          relatorios?: string[]
           store_id?: string | null
           telefone: string
         }
@@ -4729,6 +4731,7 @@ export type Database = {
           grupo?: string | null
           id?: string
           nome?: string
+          relatorios?: string[]
           store_id?: string | null
           telefone?: string
         }
@@ -4742,6 +4745,7 @@ export type Database = {
           enviado_em: string | null
           erro: string | null
           id: string
+          imagens: string[]
           status: string
           telefone: string
         }
@@ -4752,6 +4756,7 @@ export type Database = {
           enviado_em?: string | null
           erro?: string | null
           id?: string
+          imagens?: string[]
           status?: string
           telefone: string
         }
@@ -4762,6 +4767,7 @@ export type Database = {
           enviado_em?: string | null
           erro?: string | null
           id?: string
+          imagens?: string[]
           status?: string
           telefone?: string
         }

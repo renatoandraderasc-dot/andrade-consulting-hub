@@ -18,6 +18,7 @@ export const APP_MODULES = [
   { key: "recebimento", label: "Recebimento de NF-e", path: "/recebimento" },
   { key: "estoque_dinamico", label: "Estoque Dinâmico", path: "/estoque-dinamico" },
   { key: "margem_baixa", label: "Produtos com Margem Baixa", path: "/margem-baixa" },
+  { key: "produtos_sem_venda", label: "Produtos sem venda no mês", path: "/produtos-sem-venda" },
   { key: "capilaridade_mix", label: "Capilaridade de Mix", path: "/capilaridade-mix" },
   { key: "relatorios", label: "Relatórios", path: "/relatorios" },
   { key: "painel_analitico", label: "Painel Analítico", path: "/painel-analitico" },

@@ -37,8 +37,17 @@ Deno.serve(async (req) => {
     }
     const endpoint = `https://api.omni.z-api.io/v1/channels/${canal}/messages`;
     const headers = { "Content-Type": "application/json", Authorization: `Bearer ${secret}` };
-    const enviar = async (phone: string) => {
+    const assinar = async (paths: string[]) => {
+      const out: string[] = [];
+      for (const path of paths) {
+        const { data } = await db.storage.from("whatsapp-midia").createSignedUrl(path, 3600);
+        if (data?.signedUrl) out.push(data.signedUrl);
+      }
+      return out;
+    };
+    const enviar = async (phone: string, prints: string[] = []) => {
       const chamadas: unknown[] = [];
+      prints.forEach((img) => chamadas.push({ recipient: { identifier: phone }, content: { type: "IMAGE", attachments: [{ url: img }] } }));
       imagens.forEach((img, i) => chamadas.push({ recipient: { identifier: phone }, content: { type: "IMAGE", attachments: [{ url: img, ...(i === 0 && imagens.length === 1 && camp.mensagem ? { caption: camp.mensagem } : {}) }] } }));
       if (camp.mensagem && imagens.length !== 1) chamadas.push({ recipient: { identifier: phone }, content: { type: "TEXT", body: { message: camp.mensagem } } });
       for (const body of chamadas) {
@@ -62,10 +71,10 @@ Deno.serve(async (req) => {
       if (linhas.length) await db.from("whatsapp_envios").insert(linhas);
       await db.from("whatsapp_campanhas").update({ status: "enviando" }).eq("id", campanha_id);
     }
-    const { data: pend } = await db.from("whatsapp_envios").select("id,telefone").eq("campanha_id", campanha_id).eq("status", "pendente").limit(LOTE);
+    const { data: pend } = await db.from("whatsapp_envios").select("id,telefone,imagens").eq("campanha_id", campanha_id).eq("status", "pendente").limit(LOTE);
     for (const e of pend || []) {
       try {
-        await enviar(e.telefone);
+        await enviar(e.telefone, await assinar(e.imagens || []));
         await db.from("whatsapp_envios").update({ status: "enviado", enviado_em: new Date().toISOString(), erro: null }).eq("id", e.id);
       } catch (err) {
         const m = String((err as Error).message);
