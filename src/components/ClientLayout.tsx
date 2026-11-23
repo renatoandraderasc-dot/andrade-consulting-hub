@@ -8,7 +8,7 @@ import {
   BarChart3, CheckSquare, Settings, Settings2, Users, LogOut, Menu, X, ArrowLeft,
   Activity, Target, ClipboardList, DollarSign, Database, RefreshCw, Trophy, Store, ShoppingCart, LayoutTemplate, TrendingUp, Package, KeyRound, Plug, ScanLine, Tags, ChevronDown, Globe, Network,
   Thermometer, LayoutDashboard, FileSpreadsheet, Layers,
-  ShoppingBag, CalendarDays, TrendingDown, GitCompare,
+  ShoppingBag, CalendarDays, TrendingDown, GitCompare, Send,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -139,6 +139,7 @@ const navGroups: NavGroup[] = [
       { key: "admin_metas_premiacao", path: "/metas/compradores/config", label: "Metas Compradores", icon: Target },
       { key: "admin_pic_departamentos", path: "/admin/pic-departamentos", label: "Parametrizações Pic", icon: Trophy },
       { key: "admin_questions", path: "/admin/questions", label: "Perguntas", icon: Settings },
+      { key: "admin_whatsapp", path: "/admin/whatsapp", label: "Mensagens WhatsApp", icon: Send, globalAdmin: true },
       { key: "admin_tv", path: "/admin/tv", label: "Gerenciador de TV", icon: LayoutTemplate, globalAdmin: true },
       { key: "admin_site", path: "/admin/site", label: "Página Inicial", icon: LayoutTemplate, globalAdmin: true },
     ],

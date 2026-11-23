@@ -16,6 +16,7 @@ import Catalogo from "./pages/Catalogo";
 import ConsultaPreco from "./pages/ConsultaPreco";
 import Dashboard from "./pages/Dashboard";
 import AdminMetas from "./pages/AdminMetas";
+import AdminWhatsapp from "./pages/AdminWhatsapp";
 import MetasGerador from "./pages/MetasGerador";
 import MetasSugestao from "./pages/MetasSugestao";
 import MetasRealizado from "./pages/MetasRealizado";
@@ -170,6 +171,7 @@ const App = () => (
             <Route path="/admin/escala" element={g("admin_escala", <AdminEscala />)} />
             <Route path="/jornada/execucoes" element={g("jornada_execucoes", <JornadaExecucoes />)} />
             <Route path="/admin/jornada" element={g("jornada", <AdminJornada />)} />
+            <Route path="/admin/whatsapp" element={g("admin_whatsapp", <AdminWhatsapp />)} />
             <Route path="/admin/tv" element={g("admin_tv", <AdminTv />)} />
             <Route path="/tv/:id" element={g("tv_player", <TvPlayer />)} />
             <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />

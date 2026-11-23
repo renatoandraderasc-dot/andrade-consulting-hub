@@ -1,0 +1,1 @@
+CREATE POLICY "whatsapp_midia_admin" ON storage.objects FOR ALL TO authenticated USING (bucket_id='whatsapp-midia' AND has_role(auth.uid(),'admin'::app_role) AND NOT is_demo_account()) WITH CHECK (bucket_id='whatsapp-midia' AND has_role(auth.uid(),'admin'::app_role) AND NOT is_demo_account());

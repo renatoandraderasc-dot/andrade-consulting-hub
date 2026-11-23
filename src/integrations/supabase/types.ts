@@ -4668,6 +4668,113 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_campanhas: {
+        Row: {
+          agendado_para: string | null
+          contato_ids: string[]
+          created_at: string
+          created_by: string | null
+          id: string
+          imagens: string[]
+          mensagem: string
+          status: string
+          titulo: string
+        }
+        Insert: {
+          agendado_para?: string | null
+          contato_ids?: string[]
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          imagens?: string[]
+          mensagem?: string
+          status?: string
+          titulo: string
+        }
+        Update: {
+          agendado_para?: string | null
+          contato_ids?: string[]
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          imagens?: string[]
+          mensagem?: string
+          status?: string
+          titulo?: string
+        }
+        Relationships: []
+      }
+      whatsapp_contatos: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          grupo: string | null
+          id: string
+          nome: string
+          store_id: string | null
+          telefone: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          grupo?: string | null
+          id?: string
+          nome: string
+          store_id?: string | null
+          telefone: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          grupo?: string | null
+          id?: string
+          nome?: string
+          store_id?: string | null
+          telefone?: string
+        }
+        Relationships: []
+      }
+      whatsapp_envios: {
+        Row: {
+          campanha_id: string
+          contato_id: string | null
+          created_at: string
+          enviado_em: string | null
+          erro: string | null
+          id: string
+          status: string
+          telefone: string
+        }
+        Insert: {
+          campanha_id: string
+          contato_id?: string | null
+          created_at?: string
+          enviado_em?: string | null
+          erro?: string | null
+          id?: string
+          status?: string
+          telefone: string
+        }
+        Update: {
+          campanha_id?: string
+          contato_id?: string | null
+          created_at?: string
+          enviado_em?: string | null
+          erro?: string | null
+          id?: string
+          status?: string
+          telefone?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_envios_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_campanhas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       encarte_historico_itens: {
