@@ -10,7 +10,7 @@ const LOTE = 8;
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
-    const inst = Deno.env.get("ZAPI_INSTANCE_ID"), tok = Deno.env.get("ZAPI_TOKEN"), ct = Deno.env.get("ZAPI_CLIENT_TOKEN");
+    const inst = Deno.env.get("ZAPI_INSTANCE_ID")?.trim(), tok = Deno.env.get("ZAPI_TOKEN")?.trim(), ct = Deno.env.get("ZAPI_CLIENT_TOKEN")?.trim();
     if (!inst || !tok) return json({ error: "Credenciais da Z-API não configuradas" }, 500);
     const url = Deno.env.get("SUPABASE_URL")!;
     const auth = req.headers.get("Authorization") || "";
@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
 
     if (teste_telefone) {
       const tel = teste_telefone.replace(/\D/g, "");
-      try { await enviar(tel); return json({ ok: true }); } catch (e) { return json({ error: String((e as Error).message) }, 502); }
+      try { await enviar(tel); return json({ ok: true }); } catch (e) { const m = String((e as Error).message); return json({ ok: false, error: m.includes("Instance not found") ? "A Z-API não encontrou a instância: confira o ID e o Token da instância no painel da Z-API." : m }); }
     }
 
     const { count } = await db.from("whatsapp_envios").select("id", { count: "exact", head: true }).eq("campanha_id", campanha_id);

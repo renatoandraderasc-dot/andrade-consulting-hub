@@ -85,8 +85,10 @@ const AdminWhatsapp = () => {
     setOcupado(true);
     const camp = await salvarCampanha();
     if (camp) {
-      const { error } = await supabase.functions.invoke("whatsapp-enviar", { body: { campanha_id: camp.id, teste_telefone: normalizarTelefone(teste) } });
-      if (error) toast.error("Falha no teste: " + (await erroFn(error))); else toast.success("Teste enviado");
+      const { data, error } = await supabase.functions.invoke("whatsapp-enviar", { body: { campanha_id: camp.id, teste_telefone: normalizarTelefone(teste) } });
+      if (error) toast.error("Falha no teste: " + (await erroFn(error)));
+      else if (data?.ok === false) toast.error("Falha no teste: " + data.error);
+      else toast.success("Teste enviado");
       await supabase.from("whatsapp_campanhas").update({ status: "teste" }).eq("id", camp.id);
     }
     setOcupado(false);
