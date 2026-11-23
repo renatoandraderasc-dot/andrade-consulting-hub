@@ -41,6 +41,15 @@ export async function capturarTela(rel: RelatorioWhatsapp, storeId: string, user
       await sleep(800);
       await esperarPronto(doc, 90000);
     }
+    // Telas que só mostram dados após clicar em Atualizar/Comparar: carrega antes do print.
+    const botao = [...doc.querySelectorAll<HTMLButtonElement>("#area-print button, main button")].find(
+      (b) => !b.disabled && /^\s*(Atualizar|Comparar|Buscar|Consultar|Carregar|Gerar)/i.test(b.innerText),
+    );
+    if (botao) {
+      botao.click();
+      await sleep(1500);
+      await esperarPronto(doc, 240000);
+    }
     const capturar = (frame.contentWindow as any)?.__capturarArea as (() => Promise<string>) | undefined;
     if (!capturar) throw new Error(`Não foi possível abrir a tela ${rel.nome}`);
     const url = await capturar();
