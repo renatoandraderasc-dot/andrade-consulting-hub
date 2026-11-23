@@ -63,6 +63,10 @@ interface CacheEntry {
   promise: Promise<RawResult>;
 }
 
+// So a loja SEM conexao cadastrada vira tela vazia. "sem conexao VR (servidor
+// respondeu 404)" e a ponte fora do ar e precisa aparecer como aviso, nao zero.
+export const SEM_CADASTRO = /sem conexao( vr)? cadastrada/i;
+
 const TTL_MS = 60_000;
 const cache = new Map<string, CacheEntry>();
 
@@ -152,12 +156,12 @@ async function loadRaw(storeId: string, inicio: string, fim: string, forcar = fa
       corpo = null;
     }
     const msg = String(corpo?.erro ?? "");
-    if (/sem conexao vr/i.test(msg)) return { linhas: [], mixLinhas: [], mapa };
+    if (SEM_CADASTRO.test(msg)) return { linhas: [], mixLinhas: [], mapa };
     throw new Error(msg || error.message);
   }
   if (!proxy || (proxy as any).erro) {
     const msg = String((proxy as any)?.erro ?? "");
-    if (/sem conexao vr/i.test(msg)) return { linhas: [], mixLinhas: [], mapa };
+    if (SEM_CADASTRO.test(msg)) return { linhas: [], mixLinhas: [], mapa };
     throw new Error(msg || "Sem resposta do VR");
   }
 
@@ -421,7 +425,10 @@ export function useVrRealizado(
       .sort((a, b) => b.total - a.total);
   }, [raw, permitidos]);
 
-  return { data, categorias, loading, offline, errorMsg, updatedAt, refresh };
+  /** true quando a loja nao respondeu e a tela mostra a ultima leitura salva */
+  const deCache = !!raw?.deCache;
+
+  return { data, categorias, loading, offline, errorMsg, updatedAt, deCache, refresh };
 }
 
 export function VrOfflineMessage(): string {

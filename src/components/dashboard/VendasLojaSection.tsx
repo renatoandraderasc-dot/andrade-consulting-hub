@@ -59,7 +59,7 @@ export default function VendasLojaSection({ storeId, startDate, endDate, categor
 
 
   // Realizado sempre ao vivo, direto do VR (nada vem do banco)
-  const { data: vr, loading: loadingVr, offline, errorMsg, updatedAt, refresh } = useVrRealizado(
+  const { data: vr, loading: loadingVr, offline, errorMsg, updatedAt, deCache, refresh } = useVrRealizado(
     storeId,
     startDate,
     endDate,
@@ -317,9 +317,11 @@ export default function VendasLojaSection({ storeId, startDate, endDate, categor
             Metas totais do mês
           </h2>
           {!offline && (
-            <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
-              <span className="w-1.5 h-1.5 rounded-full bg-success animate-live-pulse" />
-              Ao vivo{updatedAt ? ` · ${updatedAt.toLocaleTimeString("pt-BR")}` : ""}
+            <span className={`inline-flex items-center gap-1.5 text-[11px] ${deCache ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${deCache ? "bg-amber-500" : "bg-success animate-live-pulse"}`} />
+              {deCache
+                ? `Última leitura salva${updatedAt ? ` · ${updatedAt.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}` : ""}`
+                : `Ao vivo${updatedAt ? ` · ${updatedAt.toLocaleTimeString("pt-BR")}` : ""}`}
             </span>
           )}
         </div>

@@ -69,6 +69,7 @@ const Dashboard = () => {
     offline,
     errorMsg,
     updatedAt,
+    deCache,
     refresh,
   } = useVrRealizado(storeId, periodStart, periodEnd, catFiltro);
 
@@ -484,8 +485,10 @@ const Dashboard = () => {
             <div className="flex flex-wrap items-center gap-2">
               <BotaoFotoTela alvoId="print-dashboard" nome="dashboard" />
               {!offline && updatedAt && (
-                <span className="text-[11px] text-muted-foreground">
-                  VR ao vivo · {updatedAt.toLocaleTimeString("pt-BR")}
+                <span className={`text-[11px] ${deCache ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}`}>
+                  {deCache
+                    ? `Loja sem conexão · última leitura salva em ${updatedAt.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}`
+                    : `VR ao vivo · ${updatedAt.toLocaleTimeString("pt-BR")}`}
                 </span>
               )}
             </div>

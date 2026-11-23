@@ -59,6 +59,32 @@ export function chaveDia(params: Record<string, unknown>): string {
     .map(k => [k, String(params[k])])));
 }
 
+export interface LeituraSalva { params: unknown; fim?: unknown; atualizado_em: string; linhas?: number | null }
+
+/**
+ * Loja fora do ar: escolhe a leitura salva mais recente do MESMO periodo em
+ * aberto. No modo D-1 o fim gravado e sempre "ontem" e muda todo dia, entao a
+ * chave exata do pedido (ex.: mes inteiro) nunca existe. So vale para periodos
+ * que chegam ate ontem/hoje; um periodo ja fechado nunca recebe leitura parcial.
+ */
+export function escolherLeituraAnterior<T extends LeituraSalva>(registros: T[], params: Record<string, unknown>, ontem: string): T | null {
+  const iso = (v: unknown) => { const s = String(v ?? "").slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : ""; };
+  const inicio = iso(params.inicio), fim = iso(params.fim);
+  if (!inicio || !fim || fim < ontem) return null;
+  const semFim = (p: Record<string, unknown>) => chaveDia(Object.fromEntries(Object.entries(p).filter(([k]) => k !== "fim")));
+  const alvo = semFim(params);
+  let melhor: T | null = null, melhorFim = "";
+  for (const r of registros) {
+    if (!r.params || typeof r.params !== "object" || Array.isArray(r.params)) continue;
+    const p = r.params as Record<string, unknown>;
+    const f = iso(p.fim);
+    if (!f || f < inicio || f > fim || f > ontem || semFim(p) !== alvo) continue;
+    if (r.linhas !== undefined && r.linhas !== null && r.linhas <= 0) continue;
+    if (!melhor || f > melhorFim || (f === melhorFim && r.atualizado_em > melhor.atualizado_em)) { melhor = r; melhorFim = f; }
+  }
+  return melhor;
+}
+
 export interface TarefaSync { relatorio: string; params: Record<string, unknown> }
 export function planejarSincronizacao(d1: string, existentes: TarefaSync[], soExistentes = false, backfill?: { inicio: string; fim: string }): TarefaSync[] {
   const tarefas = new Map<string, TarefaSync>();

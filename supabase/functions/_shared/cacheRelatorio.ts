@@ -10,7 +10,7 @@
 // ============================================================
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { consultarRelatorioLoja, type ConfigLoja, type ResultadoConsulta } from "./consultaLoja.ts";
-import { diario, diasEntre, juntarDias } from "./hubDados.ts";
+import { diario, diasEntre, escolherLeituraAnterior, juntarDias } from "./hubDados.ts";
 
 export interface ConfigLojaCache extends ConfigLoja {
   modo_sync?: string | null;
@@ -183,10 +183,43 @@ export async function lerUltimaLeitura(opts: {
     .eq("relatorio", opts.relatorio)
     .eq("params_chave", chave)
     .maybeSingle();
-  if (!data) return null;
+  if (data) {
+    return {
+      dados: (data.dados as Record<string, unknown>[]) ?? [],
+      atualizado_em: data.atualizado_em as string,
+    };
+  }
+
+  // Sem leitura com a chave exata: no modo D-1 o periodo em aberto e gravado
+  // com fim = ontem, que muda todo dia. Usa a leitura salva mais recente do
+  // mesmo periodo. Relatorios diarios ficam de fora (sao gravados dia a dia).
+  const params = opts.params ?? {};
+  const inicio = normalizarData(params.inicio);
+  if (!inicio || diario(opts.relatorio)) return null;
+  const { data: salvos } = await service
+    .from("relatorio_cache")
+    .select("id, params, fim, linhas, atualizado_em")
+    .eq("store_id", opts.storeId)
+    .eq("relatorio", opts.relatorio)
+    .eq("params->>inicio", inicio)
+    .gt("linhas", 0)
+    .order("fim", { ascending: false })
+    .limit(60);
+  const escolhida = escolherLeituraAnterior(
+    (salvos ?? []) as { id: number; params: unknown; fim: unknown; linhas: number; atualizado_em: string }[],
+    { ...params, inicio, fim: normalizarData(params.fim) },
+    ontemBrasilia(),
+  );
+  if (!escolhida) return null;
+  const { data: anterior } = await service
+    .from("relatorio_cache")
+    .select("dados, atualizado_em")
+    .eq("id", escolhida.id)
+    .maybeSingle();
+  if (!anterior || !Array.isArray(anterior.dados) || anterior.dados.length === 0) return null;
   return {
-    dados: (data.dados as Record<string, unknown>[]) ?? [],
-    atualizado_em: data.atualizado_em as string,
+    dados: anterior.dados as Record<string, unknown>[],
+    atualizado_em: anterior.atualizado_em as string,
   };
 }
 
