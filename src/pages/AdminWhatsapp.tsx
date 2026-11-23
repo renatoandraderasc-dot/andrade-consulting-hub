@@ -15,7 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAuth } from "@/hooks/useAuth";
 import { carregarLojasPermitidas, type LojaSimples } from "@/lib/lojasPermitidas";
 import { RELATORIOS_WHATSAPP, nomeRelatorio } from "@/lib/whatsappRelatorios";
-import { capturarTela } from "@/lib/capturarTela";
+import { capturarTela, CONFIG_PRINT_PADRAO, type ConfigPrint } from "@/lib/capturarTela";
+import ConfigPrintsTab from "@/components/whatsapp/ConfigPrintsTab";
 import StatusDiarioTab from "@/components/whatsapp/StatusDiarioTab";
 
 type Contato = { id: string; nome: string; telefone: string; grupo: string | null; ativo: boolean; store_id: string | null; relatorios: string[] };
@@ -136,7 +137,9 @@ const AdminWhatsapp = () => {
       if (alvo.some((c) => c.relatorios?.length && !c.store_id)) { toast.error("Escolha a loja dos contatos que recebem prints (aba Contatos)"); return; }
       setOcupado(true);
       try {
-        const cache = new Map<string, string>();
+        const { data: cfgs } = await supabase.from("whatsapp_print_config").select("*");
+        const cfgDe = (rid: string) => ({ ...CONFIG_PRINT_PADRAO, ...((cfgs || []).find((x: any) => x.relatorio_id === rid) as Partial<ConfigPrint> | undefined) }) as ConfigPrint;
+        const cache = new Map<string, string[]>();
         const linhas = [];
         for (const c of alvo) {
           const paths: string[] = [];
@@ -146,13 +149,19 @@ const AdminWhatsapp = () => {
             const k = `${c.store_id}:${rid}`;
             if (!cache.has(k)) {
               setProgresso(`Tirando print: ${rel.nome} · ${lojas.find((l) => l.id === c.store_id)?.name ?? ""}`);
-              const blob = await capturarTela(rel, c.store_id, user.id);
-              const path = `prints/${camp.id}/${c.store_id}-${rid}.png`;
-              const { error } = await supabase.storage.from("whatsapp-midia").upload(path, blob, { contentType: "image/png", upsert: true });
-              if (error) throw error;
-              cache.set(k, path);
+              const cfg = cfgDe(rid);
+              const blobs = await capturarTela(rel, c.store_id, user.id, cfg);
+              const ext = cfg.formato === "jpeg" ? "jpg" : "png";
+              const ps: string[] = [];
+              for (let i = 0; i < blobs.length; i++) {
+                const path = `prints/${camp.id}/${c.store_id}-${rid}-${i + 1}.${ext}`;
+                const { error } = await supabase.storage.from("whatsapp-midia").upload(path, blobs[i], { contentType: `image/${cfg.formato}`, upsert: true });
+                if (error) throw error;
+                ps.push(path);
+              }
+              cache.set(k, ps);
             }
-            paths.push(cache.get(k)!);
+            paths.push(...cache.get(k)!);
           }
           linhas.push({ campanha_id: camp.id, contato_id: c.id, telefone: normalizarTelefone(c.telefone), imagens: paths });
         }
@@ -184,6 +193,7 @@ const AdminWhatsapp = () => {
             <TabsTrigger value="contatos">Contatos ({contatos.length})</TabsTrigger>
             <TabsTrigger value="status">Status diário</TabsTrigger>
             <TabsTrigger value="historico">Histórico</TabsTrigger>
+            <TabsTrigger value="prints">Configurar prints</TabsTrigger>
           </TabsList>
 
           <TabsContent value="nova" className="grid gap-4 lg:grid-cols-2">
@@ -280,6 +290,8 @@ const AdminWhatsapp = () => {
           </TabsContent>
 
           <TabsContent value="status"><StatusDiarioTab lojas={lojas} /></TabsContent>
+
+          <TabsContent value="prints"><ConfigPrintsTab lojas={lojas} /></TabsContent>
 
           <TabsContent value="historico" className="grid gap-4 lg:grid-cols-2">
             <Card>

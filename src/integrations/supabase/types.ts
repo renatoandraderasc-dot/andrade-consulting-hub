@@ -4787,6 +4787,39 @@ export type Database = {
           },
         ]
       }
+      whatsapp_print_config: {
+        Row: {
+          altura_pagina: number
+          corte_base: number
+          corte_topo: number
+          formato: string
+          largura: number
+          qualidade: number
+          relatorio_id: string
+          updated_at: string
+        }
+        Insert: {
+          altura_pagina?: number
+          corte_base?: number
+          corte_topo?: number
+          formato?: string
+          largura?: number
+          qualidade?: number
+          relatorio_id: string
+          updated_at?: string
+        }
+        Update: {
+          altura_pagina?: number
+          corte_base?: number
+          corte_topo?: number
+          formato?: string
+          largura?: number
+          qualidade?: number
+          relatorio_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       whatsapp_produtos_diarios: {
         Row: {
           codigo: number

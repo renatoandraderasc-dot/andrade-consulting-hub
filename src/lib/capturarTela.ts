@@ -1,5 +1,29 @@
 import type { RelatorioWhatsapp } from "@/lib/whatsappRelatorios";
 
+/** Corte e formato do print de cada tela (aba Configurar prints). */
+export interface ConfigPrint { largura: number; corte_topo: number; corte_base: number; altura_pagina: number; formato: "png" | "jpeg"; qualidade: number }
+export const CONFIG_PRINT_PADRAO: ConfigPrint = { largura: 1400, corte_topo: 0, corte_base: 0, altura_pagina: 0, formato: "png", qualidade: 0.9 };
+
+/** Corta topo/base (em px da tela) e divide em páginas da altura escolhida. */
+export async function cortarPrint(dataUrl: string, cfg: ConfigPrint, escala: number): Promise<Blob[]> {
+  const img = new Image();
+  await new Promise((r, j) => { img.onload = r; img.onerror = j; img.src = dataUrl; });
+  const topo = Math.max(0, cfg.corte_topo * escala);
+  const util = Math.max(1, img.height - topo - Math.max(0, cfg.corte_base * escala));
+  const pag = cfg.altura_pagina > 0 ? cfg.altura_pagina * escala : util;
+  const blobs: Blob[] = [];
+  for (let y = 0; y < util && blobs.length < 10; y += pag) {
+    const h = Math.min(pag, util - y);
+    const c = document.createElement("canvas");
+    c.width = img.width; c.height = h;
+    const ctx = c.getContext("2d")!;
+    if (cfg.formato === "jpeg") { ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, c.width, h); }
+    ctx.drawImage(img, 0, topo + y, img.width, h, 0, 0, img.width, h);
+    blobs.push(await new Promise<Blob>((r) => c.toBlob((b) => r(b!), `image/${cfg.formato}`, cfg.qualidade)));
+  }
+  return blobs;
+}
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** Espera a tela terminar de carregar (sem indicadores de carregamento por alguns segundos). */
@@ -21,14 +45,14 @@ async function esperarPronto(doc: Document, limiteMs: number) {
  * Abre a tela num quadro escondido com a loja indicada, espera carregar e devolve o print (PNG).
  * A loja escolhida pelo usuário é restaurada ao final.
  */
-export async function capturarTela(rel: RelatorioWhatsapp, storeId: string, userId: string): Promise<Blob> {
+export async function capturarTela(rel: RelatorioWhatsapp, storeId: string, userId: string, cfg: ConfigPrint = CONFIG_PRINT_PADRAO): Promise<Blob[]> {
   const chaveLocal = `selectedStoreId:${userId}`;
   const antesSessao = sessionStorage.getItem("selectedStoreId");
   const antesLocal = localStorage.getItem(chaveLocal);
   sessionStorage.setItem("selectedStoreId", storeId);
   localStorage.setItem(chaveLocal, storeId);
   const frame = document.createElement("iframe");
-  frame.style.cssText = "position:fixed;left:-20000px;top:0;width:1400px;height:1800px;border:0;";
+  frame.style.cssText = `position:fixed;left:-20000px;top:0;width:${cfg.largura}px;height:1800px;border:0;`;
   frame.src = `${rel.rota}?whatsapp_print=1`;
   document.body.appendChild(frame);
   try {
@@ -53,7 +77,7 @@ export async function capturarTela(rel: RelatorioWhatsapp, storeId: string, user
     const capturar = (frame.contentWindow as any)?.__capturarArea as (() => Promise<string>) | undefined;
     if (!capturar) throw new Error(`Não foi possível abrir a tela ${rel.nome}`);
     const url = await capturar();
-    return await (await fetch(url)).blob();
+    return await cortarPrint(url, cfg, 1.5);
   } finally {
     frame.remove();
     if (antesSessao) sessionStorage.setItem("selectedStoreId", antesSessao); else sessionStorage.removeItem("selectedStoreId");
