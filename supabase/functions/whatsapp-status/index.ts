@@ -1,6 +1,8 @@
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { z } from "npm:zod@3";
+import { carregarConfigLoja } from "../_shared/consultaLoja.ts";
+import { consultarComCache } from "../_shared/cacheRelatorio.ts";
 import { authenticateCronRequest } from "../_shared/cron-auth.ts";
 import { brl, custoMaior, margemNegativa, naoVendidos, num, pct, produtosFrequentes } from "./resumo.ts";
 
@@ -123,22 +125,39 @@ Deno.serve(async (req) => {
     const blocos = async (store: string) => {
       if (textos.has(store)) return textos.get(store)!;
       const b: Record<string, string> = {};
-      const { data: met } = await db.from("store_daily_metrics").select("date,meta_vendas,realizado_vendas").eq("store_id", store).eq("department", "LOJA").gte("date", inicioMes).lte("date", addDias(inicioMes, 31));
-      const doMes = (met || []).filter((m) => m.date.slice(0, 7) === dia.slice(0, 7));
-      const d = doMes.find((m) => m.date === dia);
-      if (d && num(d.meta_vendas) > 0) {
-        const r = num(d.realizado_vendas), m = num(d.meta_vendas);
-        b.meta_dia = `${r >= m ? "✅ *Bateu a meta do dia*" : "❌ *Não bateu a meta do dia*"}\nVendido ${brl(r)} de ${brl(m)} (${pct(r / m)})`;
-      } else b.meta_dia = "Meta do dia: sem meta ou venda registrada.";
-      const metaMes = doMes.reduce((s, m) => s + num(m.meta_vendas), 0);
-      const metaAte = doMes.filter((m) => m.date <= dia).reduce((s, m) => s + num(m.meta_vendas), 0);
-      const realMes = doMes.filter((m) => m.date <= dia).reduce((s, m) => s + num(m.realizado_vendas), 0);
-      b.meta_mes = metaMes > 0
-        ? `🎯 *Meta do mês*\nRealizado ${brl(realMes)} de ${brl(metaMes)} (${pct(realMes / metaMes)})\nAté hoje deveria ter ${brl(metaAte)} → ${realMes >= metaAte ? "à frente" : "atrás"} em ${brl(Math.abs(realMes - metaAte))}`
-        : "Meta do mês: não cadastrada.";
-      const cv = await cache(store, "compras_vendas_periodo", inicioMes, dia);
+      const diasDoMes: string[] = []; for (let x = inicioMes; x <= dia; x = addDias(x, 1)) diasDoMes.push(x);
+      // Compras × Vendas: consulta a loja antes de enviar os dias do mês que ainda estão vazios no Hub.
+      let cv = await cache(store, "compras_vendas_periodo", inicioMes, dia);
+      const vazios = diasDoMes.filter((x) => !(cv.get(x) || []).length).slice(-2);
+      if (vazios.length) {
+        const cfg = await carregarConfigLoja(url, service, store).catch(() => null);
+        if (cfg) {
+          for (const x of vazios) {
+            try { await consultarComCache({ supabaseUrl: url, serviceKey: service, storeId: store, relatorio: "compras_vendas_periodo", params: { inicio: x, fim: x }, cfg, forcar: true, origem: "job", timeoutMs: 60000 }); } catch (e) { console.error("consulta", x, e); }
+          }
+          cv = await cache(store, "compras_vendas_periodo", inicioMes, dia);
+        }
+      }
       const soma = (dias: string[], k: string) => dias.reduce((s, x) => s + (cv.get(x) || []).reduce((t, l) => t + num(l[k]), 0), 0);
       const todos = [...cv.keys()];
+      const { data: met } = await db.from("store_daily_metrics").select("date,meta_vendas,realizado_vendas").eq("store_id", store).eq("department", "LOJA").gte("date", inicioMes).lte("date", addDias(inicioMes, 31));
+      const doMes = (met || []).filter((m) => m.date.slice(0, 7) === dia.slice(0, 7));
+      // Realizado do dia: métrica salva ou, se zerada, a venda do Compras × Vendas.
+      const realDe = (x: string) => { const r = num(doMes.find((m) => m.date === x)?.realizado_vendas); return r > 0 ? r : soma([x], "venda"); };
+      const metaDe = (x: string) => num(doMes.find((m) => m.date === x)?.meta_vendas);
+      const comVenda = diasDoMes.filter((x) => realDe(x) > 0);
+      b.__sem_venda = realDe(dia) > 0 ? "" : "1";
+      const rDia = realDe(dia), mDia = metaDe(dia);
+      b.meta_dia = mDia > 0 && rDia > 0
+        ? `${rDia >= mDia ? "✅ *Bateu a meta do dia*" : "❌ *Não bateu a meta do dia*"}\nVendido ${brl(rDia)} de ${brl(mDia)} (${pct(rDia / mDia)})`
+        : "Meta do dia: sem meta ou venda registrada.";
+      const metaMes = doMes.reduce((s, m) => s + num(m.meta_vendas), 0);
+      const ultimo = comVenda[comVenda.length - 1];
+      const metaAte = ultimo ? diasDoMes.filter((x) => x <= ultimo).reduce((s, x) => s + metaDe(x), 0) : 0;
+      const realMes = comVenda.reduce((s, x) => s + realDe(x), 0);
+      b.meta_mes = metaMes > 0
+        ? `🎯 *Meta do mês*\nRealizado ${brl(realMes)} de ${brl(metaMes)} (${pct(realMes / metaMes)})\nMeta acumulada até ${ultimo ? dataBR(ultimo) : "-"}: ${brl(metaAte)} → ${realMes >= metaAte ? "à frente" : "atrás"} em ${brl(Math.abs(realMes - metaAte))}`
+        : "Meta do mês: não cadastrada.";
       const cDia = soma([dia], "compra"), vDia = soma([dia], "venda");
       b.compras = cv.has(dia)
         ? `🛒 *Compras*\nDia: ${brl(cDia)}\nSemana: ${brl(soma(todos.filter((x) => x >= inicioSemana), "compra"))}\nMês: ${brl(soma(todos, "compra"))}`
@@ -169,6 +188,7 @@ Deno.serve(async (req) => {
     let n = 0;
     for (const c of alvo) {
       const b = await blocos(c.store_id!);
+      if (b.__sem_venda) continue; // sem venda registrada no dia anterior: não envia
       const msg = [`📊 *Resumo de ${dataBR(dia)} — ${await lojaNome(c.store_id!)}*`, ...ITENS.filter((i) => c.status_itens.includes(i)).map((i) => b[i])].join("\n\n");
       const chave = `diario:${dia}:${c.id}`;
       if (!(await registrar(chave, "diario", c.id, msg, !!contato_id))) continue;
