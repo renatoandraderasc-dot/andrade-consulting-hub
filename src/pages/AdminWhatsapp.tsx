@@ -101,6 +101,7 @@ const AdminWhatsapp = () => {
       for (let i = 0; i < 200; i++) {
         const { data, error } = await supabase.functions.invoke("whatsapp-enviar", { body: { campanha_id: id } });
         if (error) { toast.error(await erroFn(error)); break; }
+        if (data?.ok === false) { toast.error(data.error); break; }
         await verEnvios(id);
         if (!data?.pendentes) { toast.success("Envio concluído"); break; }
       }

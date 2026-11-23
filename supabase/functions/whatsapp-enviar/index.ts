@@ -48,9 +48,11 @@ Deno.serve(async (req) => {
       }
     };
 
+    const MSG_INST = "A Z-API não encontrou a instância: confira o ID e o Token da instância no painel da Z-API.";
+    const falhaConta = (m: string) => m.includes("Instance not found") || /^\[(401|403)\]/.test(m);
     if (teste_telefone) {
       const tel = teste_telefone.replace(/\D/g, "");
-      try { await enviar(tel); return json({ ok: true }); } catch (e) { const m = String((e as Error).message); return json({ ok: false, error: m.includes("Instance not found") ? "A Z-API não encontrou a instância: confira o ID e o Token da instância no painel da Z-API." : m }); }
+      try { await enviar(tel); return json({ ok: true }); } catch (e) { const m = String((e as Error).message); return json({ ok: false, error: m.includes("Instance not found") ? MSG_INST : m }); }
     }
 
     const { count } = await db.from("whatsapp_envios").select("id", { count: "exact", head: true }).eq("campanha_id", campanha_id);
@@ -66,6 +68,8 @@ Deno.serve(async (req) => {
         await enviar(e.telefone);
         await db.from("whatsapp_envios").update({ status: "enviado", enviado_em: new Date().toISOString(), erro: null }).eq("id", e.id);
       } catch (err) {
+        const m = String((err as Error).message);
+        if (falhaConta(m)) return json({ ok: false, error: m.includes("Instance not found") ? MSG_INST : "A Z-API recusou as credenciais: " + m });
         await db.from("whatsapp_envios").update({ status: "erro", erro: String((err as Error).message) }).eq("id", e.id);
       }
       await sleep(3000 + Math.random() * 4000);
