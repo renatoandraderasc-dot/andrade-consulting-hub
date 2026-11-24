@@ -125,8 +125,8 @@ const SugestaoMix = () => {
     setErro(null);
 
     const [sugestoes, resumo] = await Promise.all([
-      (supabase as any).rpc("mix_sugestoes", { p_store_id: storeId, p_presenca_min: presencaMin, p_top: top }),
-      (supabase as any).rpc("mix_base_resumo"),
+      supabase.rpc("mix_sugestoes", { p_store_id: storeId, p_presenca_min: presencaMin, p_top: top }),
+      supabase.rpc("mix_base_resumo"),
     ]);
     if (sequencia !== sequenciaRef.current) return;
 
@@ -145,14 +145,14 @@ const SugestaoMix = () => {
         ? "A base da Sugestão de Mix ainda não está disponível. Aguarde a conclusão da instalação."
         : "Não foi possível carregar as sugestões salvas no Hub.");
     } else {
-      setLinhas(((sugestoes.data ?? []) as Record<string, unknown>[]).map(normalizarSugestao));
+      setLinhas((sugestoes.data ?? []).map((linha) => normalizarSugestao({ ...linha })));
     }
 
     if (resumo.error) {
       setBaseResumo([]);
       if (!sugestoes.error) setErro("As sugestões foram carregadas, mas o resumo das lojas da base está indisponível.");
     } else {
-      setBaseResumo(((resumo.data ?? []) as Record<string, unknown>[]).map(normalizarBaseResumo));
+      setBaseResumo((resumo.data ?? []).map((linha) => normalizarBaseResumo({ ...linha })));
     }
     setLoading(false);
   };
@@ -222,24 +222,29 @@ const SugestaoMix = () => {
     }));
   };
 
-  const cabecalho = (key: MixSortKey, label: string, dica?: string, direita = false) => (
-    <th className={`px-3 py-2 font-medium whitespace-nowrap ${direita ? "text-right" : "text-left"}`}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            onClick={() => ordenar(key)}
-            className={`inline-flex items-center gap-1 hover:text-foreground ${direita ? "justify-end w-full" : ""}`}
-            aria-label={`Ordenar por ${label}`}
-          >
-            {label}
-            {sort.key === key && (sort.dir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)}
-          </button>
-        </TooltipTrigger>
-        {dica && <TooltipContent className="max-w-xs">{dica}</TooltipContent>}
-      </Tooltip>
-    </th>
-  );
+  const cabecalho = (key: MixSortKey, label: string, dica?: string, direita = false) => {
+    const botao = (
+      <button
+        type="button"
+        onClick={() => ordenar(key)}
+        className={`inline-flex items-center gap-1 hover:text-foreground ${direita ? "justify-end w-full" : ""}`}
+        aria-label={`Ordenar por ${label}`}
+      >
+        {label}
+        {sort.key === key && (sort.dir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)}
+      </button>
+    );
+    return (
+      <th className={`px-3 py-2 font-medium whitespace-nowrap ${direita ? "text-right" : "text-left"}`}>
+        {dica ? (
+          <Tooltip>
+            <TooltipTrigger asChild>{botao}</TooltipTrigger>
+            <TooltipContent className="max-w-xs">{dica}</TooltipContent>
+          </Tooltip>
+        ) : botao}
+      </th>
+    );
+  };
 
   const exportar = () => {
     if (!filtradas.length) return;
@@ -301,43 +306,45 @@ const SugestaoMix = () => {
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="text-xs text-muted-foreground mr-2">
+          <div className="flex flex-col items-start xl:items-end gap-2 shrink-0">
+            <div className="text-xs text-muted-foreground">
               Base atualizada em <span className="font-medium text-foreground">{dataBase ? format(new Date(dataBase), "dd/MM/yyyy 'às' HH:mm") : "—"}</span>
             </div>
-            <Button variant="outline" onClick={exportar} disabled={!filtradas.length || loading} className="gap-2">
-              <Download className="h-4 w-4" /> Exportar Excel
-            </Button>
-            <Button onClick={() => void buscar(true)} disabled={!storeId || loading} className="gap-2">
-              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Atualizar
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" onClick={exportar} disabled={!filtradas.length || loading} className="gap-2">
+                <Download className="h-4 w-4" /> Exportar Excel
+              </Button>
+              <Button onClick={() => void buscar(true)} disabled={!storeId || loading} className="gap-2">
+                <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Atualizar
+              </Button>
+            </div>
           </div>
         </div>
 
         <Card className="p-4 space-y-4">
           <div className="flex flex-wrap items-end gap-3">
             <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Loja</label>
+              <label htmlFor="mix-loja" className="text-xs text-muted-foreground">Loja</label>
               <Select value={storeId} onValueChange={alterarLoja} disabled={!stores.length || loading}>
-                <SelectTrigger className="w-[240px]"><SelectValue placeholder="Selecione a loja" /></SelectTrigger>
+                <SelectTrigger id="mix-loja" className="w-[240px]"><SelectValue placeholder="Selecione a loja" /></SelectTrigger>
                 <SelectContent className="bg-popover">
                   {stores.map((store) => <SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Presença mínima</label>
+              <label htmlFor="mix-presenca" className="text-xs text-muted-foreground">Presença mínima</label>
               <Select value={String(presencaMin)} onValueChange={(v) => setPresencaMin(Number(v))}>
-                <SelectTrigger className="w-[130px]"><SelectValue /></SelectTrigger>
+                <SelectTrigger id="mix-presenca" className="w-[130px]"><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-popover">
                   {[25, 35, 50, 70].map((v) => <SelectItem key={v} value={String(v)}>{v}%</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Itens por categoria</label>
+              <label htmlFor="mix-top" className="text-xs text-muted-foreground">Itens por categoria</label>
               <Select value={String(top)} onValueChange={(v) => setTop(Number(v))}>
-                <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+                <SelectTrigger id="mix-top" className="w-[150px]"><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-popover">
                   {[20, 40, 80].map((v) => <SelectItem key={v} value={String(v)}>{v}</SelectItem>)}
                 </SelectContent>
@@ -374,9 +381,9 @@ const SugestaoMix = () => {
               </Popover>
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Situação</label>
+              <label htmlFor="mix-situacao" className="text-xs text-muted-foreground">Situação</label>
               <Select value={situacao} onValueChange={setSituacao}>
-                <SelectTrigger className="w-[210px]"><SelectValue /></SelectTrigger>
+                <SelectTrigger id="mix-situacao" className="w-[210px]"><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-popover">
                   <SelectItem value="todas">Todas as situações</SelectItem>
                   <SelectItem value="Não cadastrado">Não cadastrado</SelectItem>

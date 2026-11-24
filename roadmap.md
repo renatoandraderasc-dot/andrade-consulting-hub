@@ -1,7 +1,7 @@
 # Sugestão de Mix
-- [ ] Criar página administrativa alimentada somente por `mix_sugestoes` e `mix_base_resumo`, sem pontes nem `relatorio_cache`.
-- [ ] Adicionar rota, módulo e menu; filtros em memória, agrupamento, gráfico, estados e exportação Excel.
-- [ ] Instalar a base enviada, autorizada pelo Renato em 24/11/2026; concluir carga inicial, testar regras e fluxo autenticado.
+- [x] Criar página administrativa alimentada somente por `mix_sugestoes` e `mix_base_resumo`, sem pontes nem `relatorio_cache`.
+- [x] Adicionar rota, módulo e menu; filtros em memória, agrupamento, gráfico, estados e exportação Excel.
+- [x] Instalar a base autorizada, concluir carga com 25 lojas e 125.855 EANs; seis testes aprovados, RPCs 200, filtros sem nova chamada, Excel com 15 abas e celular sem transbordamento.
 
 # Recebimento — vínculo manual de EAN
 - [x] Colunas e chamada WebSac verificadas; recebimento publicado, com validação de entrada, estado EM_CONTAGEM e autoria antes de gravar no ERP.

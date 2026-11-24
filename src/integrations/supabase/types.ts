@@ -2666,6 +2666,94 @@ export type Database = {
           },
         ]
       }
+      mix_base_12m: {
+        Row: {
+          atualizado_em: string
+          descricao: string | null
+          dias: number
+          ean: string
+          grupo: string
+          ini_acum: number
+          lucro: number
+          secao: string
+          store_id: string
+          venda_secao: number
+          vendas: number
+          volume: number
+        }
+        Insert: {
+          atualizado_em?: string
+          descricao?: string | null
+          dias: number
+          ean: string
+          grupo?: string
+          ini_acum: number
+          lucro: number
+          secao?: string
+          store_id: string
+          venda_secao: number
+          vendas: number
+          volume: number
+        }
+        Update: {
+          atualizado_em?: string
+          descricao?: string | null
+          dias?: number
+          ean?: string
+          grupo?: string
+          ini_acum?: number
+          lucro?: number
+          secao?: string
+          store_id?: string
+          venda_secao?: number
+          vendas?: number
+          volume?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mix_base_12m_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mix_cadastro: {
+        Row: {
+          codigo: string
+          descricao: string | null
+          ean: string
+          grupo: string
+          secao: string
+          store_id: string
+        }
+        Insert: {
+          codigo: string
+          descricao?: string | null
+          ean: string
+          grupo?: string
+          secao?: string
+          store_id: string
+        }
+        Update: {
+          codigo?: string
+          descricao?: string | null
+          ean?: string
+          grupo?: string
+          secao?: string
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mix_cadastro_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       painel_mensal: {
         Row: {
           ano: number
@@ -5246,6 +5334,40 @@ export type Database = {
         Returns: number
       }
       minutos_para_cron: { Args: { minutos: number }; Returns: string }
+      mix_atualizar_base: { Args: never; Returns: undefined }
+      mix_base_resumo: {
+        Args: never
+        Returns: {
+          atualizado_em: string
+          dias: number
+          eans: number
+          loja: string
+          store_id: string
+          vendas: number
+        }[]
+      }
+      mix_ean: { Args: { v: string }; Returns: string }
+      mix_sugestoes: {
+        Args: { p_presenca_min?: number; p_store_id: string; p_top?: number }
+        Returns: {
+          categoria: string
+          descricao: string
+          ean: string
+          grupo: string
+          lojas_base: number
+          lojas_curva_a: number
+          lojas_curva_ab: number
+          lojas_vendem: number
+          margem_pct: number
+          part_secao_pct: number
+          preco_medio: number
+          presenca_pct: number
+          prioridade: number
+          situacao: string
+          unid_mes_loja: number
+          venda_mes_loja: number
+        }[]
+      }
       pode_gerenciar_loja: { Args: { _store_id: string }; Returns: boolean }
       redistribuir_metas: {
         Args: {
