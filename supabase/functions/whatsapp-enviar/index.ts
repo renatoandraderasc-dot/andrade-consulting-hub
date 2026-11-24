@@ -1,6 +1,7 @@
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { z } from "npm:zod@3";
+const destino = (t: string) => { const v = String(t || "").trim().replace(/\s+/g, ""); if (/@g\.us$/i.test(v)) return v.replace(/@g\.us$/i, "-group"); if (/-group$/i.test(v)) return v; return v.replace(/\D/g, ""); };
 
 const Body = z.object({ campanha_id: z.string().uuid(), teste_telefone: z.string().optional() });
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -47,9 +48,9 @@ Deno.serve(async (req) => {
     };
     const enviar = async (phone: string, prints: string[] = []) => {
       const chamadas: unknown[] = [];
-      prints.forEach((img) => chamadas.push({ recipient: { identifier: phone }, content: { type: "IMAGE", attachments: [{ url: img }] } }));
-      imagens.forEach((img, i) => chamadas.push({ recipient: { identifier: phone }, content: { type: "IMAGE", attachments: [{ url: img, ...(i === 0 && imagens.length === 1 && camp.mensagem ? { caption: camp.mensagem } : {}) }] } }));
-      if (camp.mensagem && imagens.length !== 1) chamadas.push({ recipient: { identifier: phone }, content: { type: "TEXT", body: { message: camp.mensagem } } });
+      prints.forEach((img) => chamadas.push({ recipient: { identifier: destino(phone) }, content: { type: "IMAGE", attachments: [{ url: img }] } }));
+      imagens.forEach((img, i) => chamadas.push({ recipient: { identifier: destino(phone) }, content: { type: "IMAGE", attachments: [{ url: img, ...(i === 0 && imagens.length === 1 && camp.mensagem ? { caption: camp.mensagem } : {}) }] } }));
+      if (camp.mensagem && imagens.length !== 1) chamadas.push({ recipient: { identifier: destino(phone) }, content: { type: "TEXT", body: { message: camp.mensagem } } });
       for (const body of chamadas) {
         const r = await fetch(endpoint, { method: "POST", headers, body: JSON.stringify(body) });
         if (!r.ok) throw new Error(`[${r.status}] ${(await r.text()).slice(0, 300)}`);
@@ -60,14 +61,14 @@ Deno.serve(async (req) => {
     const MSG_INST = "A Z-API Omni recusou a conta: confira o ID do canal, a Secret Key e se o canal está conectado.";
     const falhaConta = (m: string) => /^\[(401|403)\]/.test(m) || m.includes("CHANNEL_DISCONNECTED");
     if (teste_telefone) {
-      const tel = teste_telefone.replace(/\D/g, "");
+      const tel = destino(teste_telefone);
       try { await enviar(tel); return json({ ok: true }); } catch (e) { const m = String((e as Error).message); return json({ ok: false, error: falhaConta(m) ? MSG_INST + " " + m : m }); }
     }
 
     const { count } = await db.from("whatsapp_envios").select("id", { count: "exact", head: true }).eq("campanha_id", campanha_id);
     if (!count) {
       const { data: cts } = await db.from("whatsapp_contatos").select("id,telefone").in("id", camp.contato_ids || []).eq("ativo", true);
-      const linhas = (cts || []).map((c) => ({ campanha_id, contato_id: c.id, telefone: c.telefone.replace(/\D/g, "") }));
+      const linhas = (cts || []).map((c) => ({ campanha_id, contato_id: c.id, telefone: destino(c.telefone) }));
       if (linhas.length) await db.from("whatsapp_envios").insert(linhas);
       await db.from("whatsapp_campanhas").update({ status: "enviando" }).eq("id", campanha_id);
     }

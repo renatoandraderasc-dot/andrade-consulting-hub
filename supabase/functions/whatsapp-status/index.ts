@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
     const secret = (Deno.env.get("ZAPI_OMNI_SECRET") || Deno.env.get("STRIPE_LIVE_API_KEY"))?.trim();
     if (!canal || !secret) return json({ error: "Credenciais da Z-API Omni não configuradas" }, 500);
     const enviarTexto = async (phone: string, message: string) => {
-      const r = await fetch(`https://api.omni.z-api.io/v1/channels/${canal}/messages`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${secret}` }, body: JSON.stringify({ recipient: { identifier: phone.includes("@") || phone.endsWith("-group") ? phone.trim() : phone.replace(/\D/g, "") }, content: { type: "TEXT", body: { message } } }) });
+      const r = await fetch(`https://api.omni.z-api.io/v1/channels/${canal}/messages`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${secret}` }, body: JSON.stringify({ recipient: { identifier: /@g\.us$/i.test(phone.trim()) ? phone.trim().replace(/@g\.us$/i, "-group") : phone.endsWith("-group") ? phone.trim() : phone.replace(/\D/g, "") }, content: { type: "TEXT", body: { message } } }) });
       if (!r.ok) throw new Error(`[${r.status}] ${(await r.text()).slice(0, 300)}`);
     };
     const registrar = async (chave: string, tipo: string, contato: string, mensagem: string, teste: boolean) => {
