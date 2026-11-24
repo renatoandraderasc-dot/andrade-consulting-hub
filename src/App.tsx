@@ -38,6 +38,7 @@ import EstoqueDinamico from "./pages/EstoqueDinamico";
 import MargemBaixa from "./pages/MargemBaixa";
 import ProdutosSemVenda from "./pages/ProdutosSemVenda";
 import CapilaridadeMix from "./pages/CapilaridadeMix";
+import SugestaoMix from "./pages/SugestaoMix";
 import Relatorios from "./pages/Relatorios";
 import PainelAnalitico from "./pages/PainelAnalitico";
 import PainelComparativo from "./pages/PainelComparativo";
@@ -139,6 +140,7 @@ const App = () => (
             <Route path="/margem-baixa" element={g("margem_baixa", <MargemBaixa />)} />
             <Route path="/produtos-sem-venda" element={g("produtos_sem_venda", <ProdutosSemVenda />)} />
             <Route path="/capilaridade-mix" element={g("capilaridade_mix", <CapilaridadeMix />)} />
+            <Route path="/sugestao-mix" element={g("sugestao_mix", <SugestaoMix />)} />
             <Route path="/relatorios" element={g("relatorios", <Relatorios />)} />
             <Route path="/painel-analitico" element={g("painel_analitico", <PainelAnalitico />)} />
             <Route path="/painel-comparativo" element={g("painel_comparativo", <PainelComparativo />)} />

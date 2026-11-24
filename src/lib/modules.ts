@@ -20,6 +20,7 @@ export const APP_MODULES = [
   { key: "margem_baixa", label: "Produtos com Margem Baixa", path: "/margem-baixa" },
   { key: "produtos_sem_venda", label: "Produtos sem venda no mês", path: "/produtos-sem-venda" },
   { key: "capilaridade_mix", label: "Capilaridade de Mix", path: "/capilaridade-mix" },
+  { key: "sugestao_mix", label: "Sugestão de Mix", path: "/sugestao-mix" },
   { key: "relatorios", label: "Relatórios", path: "/relatorios" },
   { key: "painel_analitico", label: "Painel Analítico", path: "/painel-analitico" },
   { key: "painel_comparativo", label: "Comparativo de Indicadores", path: "/painel-comparativo" },

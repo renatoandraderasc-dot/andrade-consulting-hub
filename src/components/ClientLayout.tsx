@@ -9,7 +9,7 @@ import {
   BarChart3, CheckSquare, Settings, Settings2, Users, LogOut, Menu, X, ArrowLeft,
   Activity, Target, ClipboardList, DollarSign, Database, RefreshCw, Trophy, Store, ShoppingCart, LayoutTemplate, TrendingUp, Package, KeyRound, Plug, ScanLine, Tags, ChevronDown, Globe, Network,
   Thermometer, LayoutDashboard, FileSpreadsheet, Layers,
-  ShoppingBag, CalendarDays, TrendingDown, GitCompare, Send,
+  ShoppingBag, CalendarDays, TrendingDown, GitCompare, Send, Lightbulb,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -57,6 +57,7 @@ const navGroups: NavGroup[] = [
       { key: "painel_comparativo", path: "/painel-comparativo", label: "Comparativo", icon: TrendingUp },
       { key: "comparativo_produtos", path: "/comparativo-produtos", label: "Comparativo por Produto", icon: GitCompare },
       { key: "capilaridade_mix", path: "/capilaridade-mix", label: "Capilaridade de Mix", icon: Layers },
+      { key: "sugestao_mix", path: "/sugestao-mix", label: "Sugestão de Mix", icon: Lightbulb, globalAdmin: true },
     ],
   },
   {
