@@ -23,6 +23,7 @@ import CouponDivider from "@/components/poster/CouponDivider";
 import { carregarDepartamentosLoja } from "@/lib/departamentosLoja";
 import BotaoFotoTela from "@/components/BotaoFotoTela";
 import { mercadologicoNivel1, abrirDepartamentoOutros } from "@/lib/mercadologico";
+import { buscarMetasDashboard } from "@/lib/dashboardMetas";
 
 const MONTHS = ["", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
@@ -31,7 +32,7 @@ const CATEGORIA_KEY = "dashboardCategoria";
 
 const Dashboard = () => {
   const { user, loading: authLoading } = useAuth();
-  const { permitidos, restrito, filtrarDepts, permiteDept, chaveDept } = useDepartamentosPermitidos();
+  const { permitidos, restrito, filtrarDepts, permiteDept } = useDepartamentosPermitidos();
   const navigate = useNavigate();
   const [storeName, setStoreName] = useState("");
   const [storeId, setStoreId] = useState("");
@@ -163,52 +164,19 @@ const Dashboard = () => {
   };
 
   const fetchDailyData = async () => {
-    const porDepto = !!selectedDept && chaveDept(selectedDept) !== "LOJA";
-    let q = supabase
-      .from("store_daily_metrics")
-      .select("date, tipo_dia, meta_vendas, meta_lucro, meta_margem_pct, meta_volume, projecao_vendas, projecao_lucro, projecao_margem_pct, projecao_volume, department")
-      .eq("store_id", storeId);
-    // Departamento: busca todas as linhas e agrupa pela mesma chave usada no PIC
-    q = selectedDept && !porDepto ? q.eq("department", selectedDept) : q;
-    const { data } = await q
-      .gte("date", periodStart)
-      .lte("date", periodEnd)
-      .order("date");
-
-    let linhas = data || [];
-    if (porDepto) {
-      const alvo = canonDept(selectedDept);
-      linhas = linhas.filter((l: any) => canonDept(String(l.department || "")) === alvo);
+    try {
+      const resultado = await buscarMetasDashboard({
+        storeId,
+        inicio: periodStart,
+        fim: periodEnd,
+        departamento: selectedDept,
+        restrito,
+        permiteDept,
+      });
+      setMetaRows(resultado.linhas);
+    } catch {
+      setMetaRows([]);
     }
-    if (restrito) {
-      const porDept = linhas.filter((l: any) => permiteDept(String(l.department || "")));
-      // Loja que só tem meta lançada no total ("LOJA"): usa esse total como referência.
-      linhas = porDept.length
-        ? porDept
-        : linhas.filter((l: any) => chaveDept(String(l.department || "")) === "LOJA");
-    }
-    if ((restrito && !selectedDept) || porDepto) {
-      {
-        // soma as metas dos departamentos liberados, por dia
-        const porDia = new Map<string, any>();
-        for (const l of linhas as any[]) {
-          const cur = porDia.get(l.date) || { date: l.date, tipo_dia: l.tipo_dia, meta_vendas: 0, meta_lucro: 0, meta_volume: 0, projecao_vendas: 0, projecao_lucro: 0, projecao_volume: 0 };
-          cur.meta_vendas += Number(l.meta_vendas) || 0;
-          cur.meta_lucro += Number(l.meta_lucro) || 0;
-          cur.meta_volume += Number(l.meta_volume) || 0;
-          cur.projecao_vendas += Number(l.projecao_vendas) || 0;
-          cur.projecao_lucro += Number(l.projecao_lucro) || 0;
-          cur.projecao_volume += Number(l.projecao_volume) || 0;
-          porDia.set(l.date, cur);
-        }
-        linhas = [...porDia.values()].map((d) => ({
-          ...d,
-          meta_margem_pct: d.meta_vendas > 0 ? (d.meta_lucro / d.meta_vendas) * 100 : 0,
-          projecao_margem_pct: d.projecao_vendas > 0 ? (d.projecao_lucro / d.projecao_vendas) * 100 : 0,
-        }));
-      }
-    }
-    setMetaRows(linhas);
   };
 
   // Metas (banco) + realizado ao vivo (VR)

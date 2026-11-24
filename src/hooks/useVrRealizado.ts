@@ -80,7 +80,7 @@ const norm = (s: string) =>
 
 // Fallback: quando nao existe mapeamento cadastrado para a loja,
 // deduz o departamento pelo texto da secao/categoria.
-function inferirDepartamento(secao: string, categoria: string): string | null {
+export function inferirDepartamento(secao: string, categoria: string): string | null {
   const t = `${norm(categoria)} ${norm(secao)}`;
   if (/\bACOUGUE\b|CARNE|AVES|SUINO|BOVIN|FRIGORIFIC/.test(t)) return "AÇOUGUE";
   if (/HORTIFRUTI|HORTI|FLV|FRUTA|VERDURA|LEGUME/.test(t)) return "HORTIFRUTI";

@@ -1,12 +1,12 @@
 import { useEffect, useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Store, TrendingUp, DollarSign, Percent, BarChart3, RefreshCw } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import PriceTagCard from "@/components/poster/PriceTagCard";
 import CouponDivider from "@/components/poster/CouponDivider";
 import StatusStamp from "@/components/poster/StatusStamp";
 import VrOfflineNotice from "@/components/VrOfflineNotice";
 import { useVrRealizado, LOJA, canonDept } from "@/hooks/useVrRealizado";
+import { buscarMetasDashboard } from "@/lib/dashboardMetas";
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -56,6 +56,8 @@ const fmtShort = (v: number) =>
 export default function VendasLojaSection({ storeId, startDate, endDate, categoria, departamento }: Props) {
   const [metas, setMetas] = useState<any[]>([]);
   const [loadingMetas, setLoadingMetas] = useState(false);
+  const [metaRateada, setMetaRateada] = useState(false);
+  const [mesesBase, setMesesBase] = useState(0);
 
 
   // Realizado sempre ao vivo, direto do VR (nada vem do banco)
@@ -69,31 +71,23 @@ export default function VendasLojaSection({ storeId, startDate, endDate, categor
   const fetchMetas = async () => {
     if (!storeId) return;
     setLoadingMetas(true);
-    const alvo = departamento ? canonDept(departamento) : LOJA;
-    let q = supabase
-      .from("store_daily_metrics")
-      .select("date, department, meta_vendas, meta_lucro, meta_margem_pct, meta_volume")
-      .eq("store_id", storeId);
-    if (alvo === LOJA) q = q.eq("department", LOJA);
-    const { data } = await q.gte("date", startDate).lte("date", endDate).order("date");
-    let linhas: any[] = data || [];
-    if (alvo !== LOJA) {
-      const porDia = new Map<string, any>();
-      for (const l of linhas) {
-        if (canonDept(String(l.department || "")) !== alvo) continue;
-        const c = porDia.get(l.date) || { date: l.date, meta_vendas: 0, meta_lucro: 0, meta_volume: 0 };
-        c.meta_vendas += Number(l.meta_vendas) || 0;
-        c.meta_lucro += Number(l.meta_lucro) || 0;
-        c.meta_volume += Number(l.meta_volume) || 0;
-        porDia.set(l.date, c);
-      }
-      linhas = [...porDia.values()].map((d) => ({
-        ...d,
-        meta_margem_pct: d.meta_vendas > 0 ? (d.meta_lucro / d.meta_vendas) * 100 : 0,
-      }));
+    try {
+      const resultado = await buscarMetasDashboard({
+        storeId,
+        inicio: startDate,
+        fim: endDate,
+        departamento,
+      });
+      setMetas(resultado.linhas);
+      setMetaRateada(resultado.rateada);
+      setMesesBase(resultado.mesesBase);
+    } catch {
+      setMetas([]);
+      setMetaRateada(false);
+      setMesesBase(0);
+    } finally {
+      setLoadingMetas(false);
     }
-    setMetas(linhas);
-    setLoadingMetas(false);
   };
 
   useEffect(() => {
@@ -316,6 +310,11 @@ export default function VendasLojaSection({ storeId, startDate, endDate, categor
           <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">
             Metas totais do mês
           </h2>
+          {metaRateada && (
+            <span className="text-[11px] text-muted-foreground">
+              Rateio visual pelas vendas salvas de {mesesBase} dos últimos 12 meses fechados · não altera o PIC
+            </span>
+          )}
           {!offline && (
             <span className={`inline-flex items-center gap-1.5 text-[11px] ${deCache ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"}`}>
               <span className={`w-1.5 h-1.5 rounded-full ${deCache ? "bg-amber-500" : "bg-success animate-live-pulse"}`} />

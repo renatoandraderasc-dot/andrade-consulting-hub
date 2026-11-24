@@ -124,3 +124,7 @@
 - [x] Enriquecer validação e resultado; preservar contagem cega e republicar recebimento.
 - [x] Executar 15 testes de conferência, contagem segura e criação/revalidação; compilação OK e publicação confirmada.
 - [ ] Conferir telas com nota real: a conta disponível foi redirecionada ao Dashboard por falta de acesso ao módulo; sem revalidar ou alterar a nota real.
+
+# Dashboard — sugestão de meta da loja
+- [x] Usar a participação de vendas dos últimos 12 meses fechados somente quando não houver metas por departamento; preservar PIC e todas as metas já criadas.
+- [x] Seis testes do rateio e 26 testes relacionados aprovados; compilação OK e Oliveira conferido com rateio visual, sem escritas nas metas.
