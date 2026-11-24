@@ -68,7 +68,30 @@ export const txt = (v: unknown, fallback = "") => {
 };
 
 /** Consulta um relatorio sem lancar excecao. */
+// Session memory: returning to a screen reuses results already read in this tab
+// instead of re-reading the Hub/ERP. Forced refreshes bypass and replace it.
+const MEMORIA_TTL_MS = 30 * 60 * 1000;
+const memoria = new Map<string, { at: number; r: RelatorioResultado }>();
+
+export function limparMemoriaRelatorios() { memoria.clear(); }
+
 export async function chamarRelatorio(
+  storeId: string,
+  relatorio: string,
+  params: Record<string, unknown> = {},
+  opts: { forcar?: boolean; apenasSalvos?: boolean } = {},
+): Promise<RelatorioResultado> {
+  const chave = `${storeId}|${relatorio}|${JSON.stringify(params)}`;
+  if (!opts.forcar) {
+    const m = memoria.get(chave);
+    if (m && Date.now() - m.at < MEMORIA_TTL_MS) return { ...m.r, dados: [...m.r.dados] };
+  }
+  const r = await chamarRelatorioBase(storeId, relatorio, params, opts);
+  if (!r.erro && !r.offline && !r.indisponivel) memoria.set(chave, { at: Date.now(), r: { ...r, dados: [...r.dados] } });
+  return r;
+}
+
+async function chamarRelatorioBase(
   storeId: string,
   relatorio: string,
   params: Record<string, unknown> = {},

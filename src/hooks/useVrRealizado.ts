@@ -67,7 +67,7 @@ interface CacheEntry {
 // respondeu 404)" e a ponte fora do ar e precisa aparecer como aviso, nao zero.
 export const SEM_CADASTRO = /sem conexao( vr)? cadastrada/i;
 
-const TTL_MS = 60_000;
+const TTL_MS = 30 * 60 * 1000;
 const cache = new Map<string, CacheEntry>();
 
 const norm = (s: string) =>
