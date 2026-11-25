@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { RefreshCw, Download, Search, ArrowUp, ArrowDown, Info } from "lucide-react";
 import * as XLSX from "xlsx";
 import ClientLayout from "@/components/ClientLayout";
@@ -42,7 +42,7 @@ const badgeAbc = (abc: string) => {
 };
 
 type Linha = ProdutoParado & { abc: string };
-type SortKey = "codigo" | "descricao" | "departamento" | "abc" | "mesesComVenda" | "volume" | "venda";
+type SortKey = "codigo" | "descricao" | "departamento" | "abc" | "mesesComVenda" | "volume" | "venda" | "m0" | "m1" | "m2";
 const PAGE_SIZE = 50;
 
 export default function ProdutosSemVenda() {
@@ -59,6 +59,7 @@ export default function ProdutosSemVenda() {
   const [fAbc2, setFAbc2] = useState("__all__");
   const [fCap, setFCap] = useState<number[]>([]);
   const [busca, setBusca] = useState("");
+  const [soMesVigente, setSoMesVigente] = useState(false);
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({ key: "venda", dir: "desc" });
   const [page, setPage] = useState(1);
   const carga = useRef(0);
@@ -149,23 +150,26 @@ export default function ProdutosSemVenda() {
       if (fDep !== "__all__" && l.departamento !== fDep) return false;
       if (fAbc1.length && !fAbc1.includes(l.abc[0])) return false;
       if (fAbc2 !== "__all__" && l.abc !== fAbc2) return false;
+      // Só o mês vigente: vendeu no mês anterior e parou neste mês.
+      if (soMesVigente && !((vendaMes.get(l.codigo)?.[2] ?? 0) > 0)) return false;
       if (q && ![l.codigo, l.descricao, l.barras].some((v) => String(v ?? "").toLowerCase().includes(q))) return false;
       return true;
     });
-  }, [linhas, fDep, fAbc1, fAbc2, busca]);
+  }, [linhas, fDep, fAbc1, fAbc2, busca, soMesVigente, vendaMes]);
   const filtradas = useMemo(() => (fCap.length ? semFiltroCap.filter((l) => fCap.includes(l.mesesComVenda)) : semFiltroCap), [semFiltroCap, fCap]);
 
   const ordenadas = useMemo(() => {
     const { key, dir } = sort;
     return [...filtradas].sort((a, b) => {
-      const va = (a as any)[key], vb = (b as any)[key];
+      const valor = (l: Linha) => key[0] === "m" && key.length === 2 ? (vendaMes.get(l.codigo)?.[Number(key[1])] ?? 0) : (l as any)[key];
+      const va = valor(a), vb = valor(b);
       let cmp = typeof va === "number" ? va - vb : String(va).localeCompare(String(vb), "pt-BR");
       if (cmp === 0) cmp = a.venda - b.venda;
       return dir === "asc" ? cmp : -cmp;
     });
-  }, [filtradas, sort]);
+  }, [filtradas, sort, vendaMes]);
 
-  useEffect(() => { setPage(1); }, [fDep, fAbc1, fAbc2, fCap, busca, storeId]);
+  useEffect(() => { setPage(1); }, [fDep, fAbc1, fAbc2, fCap, busca, storeId, soMesVigente]);
   const totalPages = Math.max(1, Math.ceil(ordenadas.length / PAGE_SIZE));
   const pagina = ordenadas.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
@@ -278,6 +282,12 @@ export default function ProdutosSemVenda() {
                 ))}
               </div>
             </div>
+            <div className="space-y-1">
+              <div className="text-xs text-muted-foreground">Período</div>
+              <Button size="sm" variant={soMesVigente ? "default" : "secondary"} className="h-7 px-2 text-[11px]"
+                title="Venderam no mês anterior e não venderam no mês vigente"
+                onClick={() => setSoMesVigente((v) => !v)}>Sem venda só no mês vigente</Button>
+            </div>
           </div>
         </Card>
 
@@ -317,7 +327,7 @@ export default function ProdutosSemVenda() {
             <Card className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-muted/50 text-muted-foreground">
-                  <tr>{th("codigo", "Cód.")}{th("descricao", "Descrição")}{th("departamento", "Departamento")}{th("abc", "ABC")}{th("mesesComVenda", "Meses c/ venda", "center")}{mesesRef.map((m) => <th key={m} className="px-3 py-2 text-right font-medium">{mesLongo(m)}</th>)}{th("venda", "Venda 3 meses", "right")}</tr>
+                  <tr>{th("codigo", "Cód.")}{th("descricao", "Descrição")}{th("departamento", "Departamento")}{th("abc", "ABC")}{th("mesesComVenda", "Meses c/ venda", "center")}{mesesRef.map((m, i) => <Fragment key={m}>{th(`m${i}` as SortKey, mesLongo(m), "right")}</Fragment>)}{th("venda", "Venda 3 meses", "right")}</tr>
                 </thead>
                 <tbody>
                   {pagina.map((l) => (
