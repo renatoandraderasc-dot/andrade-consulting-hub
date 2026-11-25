@@ -41,6 +41,8 @@ const fmtPct = (v: number) =>
   `${(Number(v) || 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`;
 const fmtDate = (v: string | undefined | null) => {
   if (!v || v === "0000-00-00") return "";
+  const m = /^(\d{4})-(\d{2})-(\d{2})(?:$|T00:00:00(?:\.000)?Z?$)/.exec(String(v));
+  if (m) return `${m[3]}/${m[2]}/${m[1]}`;
   const d = new Date(v);
   if (isNaN(d.getTime())) return String(v);
   return format(d, "dd/MM/yyyy");
@@ -201,13 +203,13 @@ const EstoqueDinamico = () => {
         ? { dados: [], indisponivel: true, offline: false, erro: null }
         : await limitarEspera(chamarRelatorio(storeId, "estoque_dinamico", {
           inicio: iso(range.from), fim: ontemIso(),
-        }), 130000).catch(() => ({ dados: [], indisponivel: false, offline: true, erro: null }));
+        }, { forcar: true }), 130000).catch(() => ({ dados: [], indisponivel: false, offline: true, erro: null }));
       const usarEntradas = !!avisoRelatorio(r);
       // A bridge may time out on its combined stock report. Invoice entries
       // are already fetched by day; they provide a safe product base instead.
       const ac = await chamarRelatorio(storeId, "analise_compras", {
         inicio: iso(range.from), fim: iso(range.to),
-      });
+      }, { forcar: true });
       const avisoCompra = avisoRelatorio(ac);
       if (avisoCompra || ac.aviso) throw new Error(avisoCompra || ac.aviso);
       if (usarEntradas) {
@@ -218,9 +220,9 @@ const EstoqueDinamico = () => {
         }
         r = { ...ac, dados: [...produtos.values()] };
       }
-      const cadastro = await limitarEspera(chamarRelatorio(storeId, "produtos", {}), 130000).catch(() => null);
-      const estoqueAtual = await limitarEspera(chamarRelatorio(storeId, "estoque_atual", {}), 130000).catch(() => null);
-      const produtosAtivos = await limitarEspera(chamarRelatorio(storeId, "produtos_ativos_12m", {}), 130000).catch(() => null);
+      const cadastro = await limitarEspera(chamarRelatorio(storeId, "produtos", {}, { forcar: true }), 130000).catch(() => null);
+      const estoqueAtual = await limitarEspera(chamarRelatorio(storeId, "estoque_atual", {}, { forcar: true }), 130000).catch(() => null);
+      const produtosAtivos = await limitarEspera(chamarRelatorio(storeId, "produtos_ativos_12m", {}, { forcar: true }), 130000).catch(() => null);
 
       const porCodigo = new Map<string, any>();
       for (const l of cadastro?.dados || []) {
@@ -303,7 +305,7 @@ const EstoqueDinamico = () => {
     base = aplicarComprasFiltradas(base, ac.dados);
     if (precisaComplemento) {
       base = await complementarVendasEstoque(base, iso(range.from), iso(range.to), ontemIso(),
-        (relatorio, params) => chamarRelatorio(storeId, relatorio, params));
+        (relatorio, params) => chamarRelatorio(storeId, relatorio, params, { forcar: true }));
     } else {
       base = base.map(l => ({ ...l, progresso: l.qtdCompra > 0 ? l.qtdVenda / l.qtdCompra * 100 : 0,
         estoqueDinamico: l.qtdCompra - l.qtdVenda }));
