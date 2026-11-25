@@ -19,6 +19,7 @@ export const APP_MODULES = [
   { key: "estoque_dinamico", label: "Estoque Dinâmico", path: "/estoque-dinamico" },
   { key: "margem_baixa", label: "Produtos com Margem Baixa", path: "/margem-baixa" },
   { key: "produtos_sem_venda", label: "Produtos sem venda no mês", path: "/produtos-sem-venda" },
+  { key: "gestao_produtos", label: "Gestão Produtos sem giro e em queda", path: "/gestao-produtos" },
   { key: "capilaridade_mix", label: "Capilaridade de Mix", path: "/capilaridade-mix" },
   { key: "sugestao_mix", label: "Sugestão de Mix", path: "/sugestao-mix" },
   { key: "relatorios", label: "Relatórios", path: "/relatorios" },

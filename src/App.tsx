@@ -37,6 +37,7 @@ import AdminRecebimento from "./pages/AdminRecebimento";
 import EstoqueDinamico from "./pages/EstoqueDinamico";
 import MargemBaixa from "./pages/MargemBaixa";
 import ProdutosSemVenda from "./pages/ProdutosSemVenda";
+import GestaoProdutos from "./pages/GestaoProdutos";
 import CapilaridadeMix from "./pages/CapilaridadeMix";
 import SugestaoMix from "./pages/SugestaoMix";
 import Relatorios from "./pages/Relatorios";
@@ -139,6 +140,7 @@ const App = () => (
             <Route path="/estoque-dinamico" element={g("estoque_dinamico", <EstoqueDinamico />)} />
             <Route path="/margem-baixa" element={g("margem_baixa", <MargemBaixa />)} />
             <Route path="/produtos-sem-venda" element={g("produtos_sem_venda", <ProdutosSemVenda />)} />
+            <Route path="/gestao-produtos" element={g("gestao_produtos", <GestaoProdutos />)} />
             <Route path="/capilaridade-mix" element={g("capilaridade_mix", <CapilaridadeMix />)} />
             <Route path="/sugestao-mix" element={g("sugestao_mix", <SugestaoMix />)} />
             <Route path="/relatorios" element={g("relatorios", <Relatorios />)} />

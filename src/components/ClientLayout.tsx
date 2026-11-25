@@ -51,6 +51,7 @@ const navGroups: NavGroup[] = [
     items: [
       { key: "dashboard", path: "/dashboard", label: "Dashboard", icon: BarChart3 },
       { key: "pic", path: "/pic", label: "PIC", icon: Trophy },
+      { key: "gestao_produtos", path: "/gestao-produtos", label: "Gestão Produtos sem giro e em queda", icon: CheckSquare },
       { key: "analise_anual", path: "/analise-anual", label: "Análise Anual", icon: TrendingUp },
       { key: "relatorios", path: "/relatorios", label: "Relatórios", icon: FileSpreadsheet },
       { key: "painel_analitico", path: "/painel-analitico", label: "Painel Analítico", icon: BarChart3 },
@@ -197,6 +198,7 @@ const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
   ];
   const canSee = (key: string) => {
     if (isAdmin || allowedModules === null || allowedModules.size === 0 || allowedModules.has(key)) return true;
+    if (key === "gestao_produtos") return allowedModules.has("pic") || allowedModules.has("pic_percentual");
     // Controladoria aparece no menu se o usuário tiver qualquer aba liberada.
     if (key === "controladoria") return CONTROLADORIA_TAB_KEYS.some((k) => allowedModules?.has(k));
     return false;

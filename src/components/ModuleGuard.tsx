@@ -83,6 +83,7 @@ const ModuleGuard = ({ module, children }: ModuleGuardProps) => {
     "controladoria_dados_vr", "controladoria_classificacao_vr",
   ];
   const ALIASES: Record<string, string[]> = {
+    gestao_produtos: ["gestao_produtos", "pic", "pic_percentual"],
     pic: ["pic", "pic_percentual"],
     pic_percentual: ["pic", "pic_percentual"],
     ...Object.fromEntries(

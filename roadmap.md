@@ -1,3 +1,7 @@
+# Gestão Produtos sem giro e em queda
+- [x] Criar checklist mensal por loja com Ciente persistido, pendências e opção de desfazer; acesso para quem já tem PIC ou módulo próprio, sem alterar o PIC.
+- [x] Seis testes aprovados; produto 864 do Nascimento Embu removido das pendências, ciência persistida após reabrir, outubro sem marcação de novembro, desfazer conferido e teste removido; celular sem transbordamento e compilação OK.
+
 # Sugestão de Mix
 - [x] Criar página administrativa alimentada somente por `mix_sugestoes` e `mix_base_resumo`, sem pontes nem `relatorio_cache`.
 - [x] Adicionar rota, módulo e menu; filtros em memória, agrupamento, gráfico, estados e exportação Excel.

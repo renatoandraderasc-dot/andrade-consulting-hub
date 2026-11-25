@@ -3117,6 +3117,56 @@ export type Database = {
         }
         Relationships: []
       }
+      produtos_gestao_cientes: {
+        Row: {
+          categoria: string
+          codigo: string
+          created_at: string
+          descricao: string
+          ean: string
+          id: string
+          mes: string
+          produto_chave: string
+          store_id: string
+          tipo: string
+          user_id: string
+        }
+        Insert: {
+          categoria?: string
+          codigo?: string
+          created_at?: string
+          descricao: string
+          ean?: string
+          id?: string
+          mes: string
+          produto_chave: string
+          store_id: string
+          tipo: string
+          user_id?: string
+        }
+        Update: {
+          categoria?: string
+          codigo?: string
+          created_at?: string
+          descricao?: string
+          ean?: string
+          id?: string
+          mes?: string
+          produto_chave?: string
+          store_id?: string
+          tipo?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "produtos_gestao_cientes_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           blocked: boolean
