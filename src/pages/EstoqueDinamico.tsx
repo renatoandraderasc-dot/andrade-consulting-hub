@@ -186,6 +186,11 @@ const EstoqueDinamico = () => {
     } else if (tipo === "90") setRange({ from: subDays(hoje, 89), to: hoje });
   };
 
+  const vendeuAposEntrada = (venda: string, compra: string) => {
+    const v = String(venda || "").slice(0, 10), c = String(compra || "").slice(0, 10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(v) && /^\d{4}-\d{2}-\d{2}$/.test(c) && v >= c;
+  };
+
   const buscar = async () => {
     if (!storeId || !range?.from || !range?.to) return;
     setLoading(true); setAviso(null); setPage(1);
@@ -291,7 +296,9 @@ const EstoqueDinamico = () => {
     const precisaComplemento = base.length > 0 && (
       usarEntradas ||
       base.every(l => l.qtdVenda === 0 && l.valorVenda === 0) ||
-      base.some(l => !l.ultimaCompra)
+      base.some(l => !l.ultimaCompra) ||
+      // Venda registrada depois da última entrada com quantidade zerada é inconsistente.
+      base.some(l => l.qtdVenda === 0 && vendeuAposEntrada(l.ultimaVenda, l.ultimaCompra))
     );
     base = aplicarComprasFiltradas(base, ac.dados);
     if (precisaComplemento) {
