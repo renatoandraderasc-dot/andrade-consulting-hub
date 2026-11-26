@@ -2022,6 +2022,318 @@ export type Database = {
           },
         ]
       }
+      escala2_ausencias: {
+        Row: {
+          created_at: string
+          fim: string
+          id: string
+          inicio: string
+          observacao: string | null
+          pessoa_id: string
+          store_id: string
+          tipo: string
+        }
+        Insert: {
+          created_at?: string
+          fim: string
+          id?: string
+          inicio: string
+          observacao?: string | null
+          pessoa_id: string
+          store_id: string
+          tipo: string
+        }
+        Update: {
+          created_at?: string
+          fim?: string
+          id?: string
+          inicio?: string
+          observacao?: string | null
+          pessoa_id?: string
+          store_id?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escala2_ausencias_pessoa_id_fkey"
+            columns: ["pessoa_id"]
+            isOneToOne: false
+            referencedRelation: "escala2_pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escala2_ausencias_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      escala2_dias: {
+        Row: {
+          data: string
+          fim: string | null
+          id: string
+          inicio: string | null
+          intervalo_min: number | null
+          manual: boolean
+          mes_id: string
+          pessoa_id: string
+          store_id: string
+          tipo: string
+          travado: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          data: string
+          fim?: string | null
+          id?: string
+          inicio?: string | null
+          intervalo_min?: number | null
+          manual?: boolean
+          mes_id: string
+          pessoa_id: string
+          store_id: string
+          tipo: string
+          travado?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          data?: string
+          fim?: string | null
+          id?: string
+          inicio?: string | null
+          intervalo_min?: number | null
+          manual?: boolean
+          mes_id?: string
+          pessoa_id?: string
+          store_id?: string
+          tipo?: string
+          travado?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escala2_dias_mes_id_fkey"
+            columns: ["mes_id"]
+            isOneToOne: false
+            referencedRelation: "escala2_meses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escala2_dias_pessoa_id_fkey"
+            columns: ["pessoa_id"]
+            isOneToOne: false
+            referencedRelation: "escala2_pessoas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "escala2_dias_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      escala2_feriados: {
+        Row: {
+          created_at: string
+          data: string
+          id: string
+          loja_abre: boolean
+          nome: string
+          store_id: string
+        }
+        Insert: {
+          created_at?: string
+          data: string
+          id?: string
+          loja_abre?: boolean
+          nome: string
+          store_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: string
+          id?: string
+          loja_abre?: boolean
+          nome?: string
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escala2_feriados_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      escala2_meses: {
+        Row: {
+          alertas: number
+          ano: number
+          created_at: string
+          erros: number
+          gerada_em: string | null
+          gerada_por: string | null
+          id: string
+          justificativa: string | null
+          mes: number
+          parecer_ia: string | null
+          publicada_em: string | null
+          publicada_por: string | null
+          status: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          alertas?: number
+          ano: number
+          created_at?: string
+          erros?: number
+          gerada_em?: string | null
+          gerada_por?: string | null
+          id?: string
+          justificativa?: string | null
+          mes: number
+          parecer_ia?: string | null
+          publicada_em?: string | null
+          publicada_por?: string | null
+          status?: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          alertas?: number
+          ano?: number
+          created_at?: string
+          erros?: number
+          gerada_em?: string | null
+          gerada_por?: string | null
+          id?: string
+          justificativa?: string | null
+          mes?: number
+          parecer_ia?: string | null
+          publicada_em?: string | null
+          publicada_por?: string | null
+          status?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escala2_meses_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      escala2_pessoas: {
+        Row: {
+          admissao: string | null
+          aprendiz: boolean
+          ativo: boolean
+          carga_semanal: number | null
+          cargo: string | null
+          created_at: string
+          desligamento: string | null
+          domingo_quinzenal: boolean
+          folga_fixa: number | null
+          id: string
+          nascimento: string | null
+          nome: string
+          setor: string
+          store_id: string
+          turno: string
+          updated_at: string
+        }
+        Insert: {
+          admissao?: string | null
+          aprendiz?: boolean
+          ativo?: boolean
+          carga_semanal?: number | null
+          cargo?: string | null
+          created_at?: string
+          desligamento?: string | null
+          domingo_quinzenal?: boolean
+          folga_fixa?: number | null
+          id?: string
+          nascimento?: string | null
+          nome: string
+          setor: string
+          store_id: string
+          turno?: string
+          updated_at?: string
+        }
+        Update: {
+          admissao?: string | null
+          aprendiz?: boolean
+          ativo?: boolean
+          carga_semanal?: number | null
+          cargo?: string | null
+          created_at?: string
+          desligamento?: string | null
+          domingo_quinzenal?: boolean
+          folga_fixa?: number | null
+          id?: string
+          nascimento?: string | null
+          nome?: string
+          setor?: string
+          store_id?: string
+          turno?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escala2_pessoas_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      escala2_regras: {
+        Row: {
+          instrucoes_ia: string | null
+          regras: Json
+          store_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          instrucoes_ia?: string | null
+          regras?: Json
+          store_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          instrucoes_ia?: string | null
+          regras?: Json
+          store_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "escala2_regras_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: true
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       historico_aplicacao_preco: {
         Row: {
           applied_at: string
@@ -5248,6 +5560,20 @@ export type Database = {
         Returns: string
       }
       escala_tem_acesso_loja: { Args: { p_store: string }; Returns: boolean }
+      escala2_pode_gerir: { Args: { p_store: string }; Returns: boolean }
+      escala2_salvar: {
+        Args: {
+          p_alertas: number
+          p_ano: number
+          p_dias: Json
+          p_erros: number
+          p_mes: number
+          p_parecer?: string
+          p_store: string
+        }
+        Returns: string
+      }
+      escala2_tem_acesso: { Args: { p_store: string }; Returns: boolean }
       fn_classificar_conta: {
         Args: { p_nome: string }
         Returns: {

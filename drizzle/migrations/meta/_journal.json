@@ -428,6 +428,13 @@
       "when": 1795632144997,
       "tag": "0060_gestao_produtos_cientes_mensais",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1795699304790,
+      "tag": "0061_escala_v2",
+      "breakpoints": true
     }
   ]
 }
