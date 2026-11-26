@@ -193,12 +193,17 @@ const EstoqueDinamico = () => {
     return /^\d{4}-\d{2}-\d{2}$/.test(v) && /^\d{4}-\d{2}-\d{2}$/.test(c) && v >= c;
   };
 
+  const [etapa, setEtapa] = useState({ pct: 0, status: "" });
+
   const buscar = async () => {
     if (!storeId || !range?.from || !range?.to) return;
+    const passo = (pct: number, status: string) => setEtapa({ pct, status });
+    passo(2, "Identificando o sistema da loja...");
     setLoading(true); setAviso(null); setPage(1);
     try {
       // Uma consulta por vez evita disputar a fila das pontes lentas.
       const { data: sistema } = await supabase.rpc("store_sistema", { _store_id: storeId });
+      passo(8, "Consultando estoque dinâmico no sistema da loja...");
       let r = String(sistema ?? "").toUpperCase() === "DIRECTOR"
         ? { dados: [], indisponivel: true, offline: false, erro: null }
         : await limitarEspera(chamarRelatorio(storeId, "estoque_dinamico", {
@@ -207,6 +212,7 @@ const EstoqueDinamico = () => {
       const usarEntradas = !!avisoRelatorio(r);
       // A bridge may time out on its combined stock report. Invoice entries
       // are already fetched by day; they provide a safe product base instead.
+      passo(30, "Buscando entradas de notas (compras) do período...");
       const ac = await chamarRelatorio(storeId, "analise_compras", {
         inicio: iso(range.from), fim: iso(range.to),
       }, { forcar: true });
@@ -220,8 +226,11 @@ const EstoqueDinamico = () => {
         }
         r = { ...ac, dados: [...produtos.values()] };
       }
+      passo(45, "Carregando cadastro de produtos...");
       const cadastro = await limitarEspera(chamarRelatorio(storeId, "produtos", {}, { forcar: true }), 130000).catch(() => null);
+      passo(55, "Consultando estoque atual...");
       const estoqueAtual = await limitarEspera(chamarRelatorio(storeId, "estoque_atual", {}, { forcar: true }), 130000).catch(() => null);
+      passo(65, "Verificando produtos ativos nos últimos 12 meses...");
       const produtosAtivos = await limitarEspera(chamarRelatorio(storeId, "produtos_ativos_12m", {}, { forcar: true }), 130000).catch(() => null);
 
       const porCodigo = new Map<string, any>();
@@ -304,13 +313,22 @@ const EstoqueDinamico = () => {
     );
     base = aplicarComprasFiltradas(base, ac.dados);
     if (precisaComplemento) {
+      let n = 0;
       base = await complementarVendasEstoque(base, iso(range.from), iso(range.to), ontemIso(),
-        (relatorio, params) => chamarRelatorio(storeId, relatorio, params, { forcar: true }));
+        (relatorio, params) => {
+          n++;
+          const desde = typeof params.inicio === "string" ? fmtDate(params.inicio) : "";
+          passo(Math.min(96, 72 + n * 3), relatorio === "analise_compras"
+            ? "Localizando a última entrada de cada produto..."
+            : `Somando vendas desde a entrada de ${desde} até ontem (consulta ${n})...`);
+          return chamarRelatorio(storeId, relatorio, params, { forcar: true });
+        });
     } else {
       base = base.map(l => ({ ...l, progresso: l.qtdCompra > 0 ? l.qtdVenda / l.qtdCompra * 100 : 0,
         estoqueDinamico: l.qtdCompra - l.qtdVenda }));
     }
 
+    passo(98, "Calculando curva ABC e montando a tabela...");
     // Classificacao ABC sobre o resultado inteiro (antes dos filtros)
     const totalVenda = base.reduce((s, l) => s + l.valorVenda, 0);
     const ordenado = [...base].sort((a, b) => b.valorVenda - a.valorVenda);
@@ -603,7 +621,7 @@ const EstoqueDinamico = () => {
         <Card className="overflow-hidden">
           {loading ? (
             <div className="p-4 space-y-2">
-              <CartProgressOverlay label="Consultando estoque dinâmico..." />
+              <CartProgressOverlay label="Consultando estoque dinâmico..." value={etapa.pct} detail={etapa.status} />
               {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
             </div>
           ) : linhas === null ? (

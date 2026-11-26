@@ -126,7 +126,6 @@ export function CartProgressOverlay({ value, label, detail }: CartProgressProps)
 
       <div className="w-[min(520px,86vw)] text-center">
         <p className="text-lg font-semibold text-foreground">{label ?? "Atualizando dados..."}</p>
-        {detail && <p className="mt-1 text-sm text-muted-foreground">{detail}</p>}
         <div className="mt-5 h-3 w-full overflow-hidden rounded-full bg-muted">
           <div
             className="h-full rounded-full bg-gradient-to-r from-primary to-accent transition-[width] duration-500 ease-out"
@@ -134,6 +133,7 @@ export function CartProgressOverlay({ value, label, detail }: CartProgressProps)
           />
         </div>
         <p className="mt-3 text-3xl font-bold tabular-nums text-primary">{pct}%</p>
+        {detail && <p className="mt-2 text-sm text-muted-foreground">{detail}</p>}
       </div>
 
       <style>{`
