@@ -3,6 +3,7 @@ import { saveSelectedStore } from "@/lib/selectedStore";
 import { chamarRelatorio, avisoRelatorio, pick as col, num } from "@/lib/vrReport";
 import { comprasAgrupadas, detalharComprasVendas } from "@/lib/comprasDetalhe";
 import { completarDepartamentos } from "@/lib/comprasDepartamentos";
+import { totalizarHistoricoCompras } from "@/lib/comprasHistorico";
 import { useNavigate } from "react-router-dom";
 import {
   ShoppingCart, TrendingUp, TrendingDown, Wallet, Target, Download, Wand2, Save, RefreshCw, Info,
@@ -803,6 +804,8 @@ const Compras = () => {
     return (rows as any[]).sort((a, b) => a.ano - b.ano || a.mes - b.mes);
   }, [historico, historicoDep, deptosInativos]);
 
+  const historicoTotais = useMemo(() => totalizarHistoricoCompras(historicoFiltrado), [historicoFiltrado]);
+
   const deptOptions = useMemo(() => {
     const set = new Set<string>([
       ...historico.filter((r: any) => !deptosInativos.has(chaveDep(r.departamento))).map((r: any) => r.departamento),
@@ -1532,6 +1535,20 @@ const Compras = () => {
                     );
                   })}
                 </tbody>
+                {historicoFiltrado.length > 0 && (
+                  <tfoot className="border-t-2 border-border bg-muted/40 font-semibold">
+                    <tr>
+                      <th scope="row" colSpan={2} className="py-3 px-2 text-left">Total</th>
+                      <td className="py-3 px-2 text-right tabular-nums whitespace-nowrap">{fmtBRL(historicoTotais.venda)}</td>
+                      <td className="py-3 px-2 text-right tabular-nums whitespace-nowrap">{fmtBRL(historicoTotais.cmv)}</td>
+                      <td className="py-3 px-2 text-right tabular-nums whitespace-nowrap">{fmtBRL(historicoTotais.compra)}</td>
+                      <td className="py-3 px-2 text-right tabular-nums">{fmtPct(historicoTotais.cmvv)}</td>
+                      <td className="py-3 px-2 text-right tabular-nums">{fmtPct(historicoTotais.cv)}</td>
+                      <td className={`py-3 px-2 text-right tabular-nums whitespace-nowrap ${historicoTotais.saldo < 0 ? "text-destructive" : "text-success"}`}>{fmtBRL(historicoTotais.saldo)}</td>
+                      <td className={`py-3 px-2 text-right tabular-nums whitespace-nowrap ${historicoTotais.excesso > 0 ? "text-destructive" : ""}`}>{fmtBRL(historicoTotais.excesso)}</td>
+                    </tr>
+                  </tfoot>
+                )}
               </table>
             </div>
 

@@ -36,3 +36,4 @@ PIC TV weather uses browser-authorized location with Open-Meteo and degrades ind
 - Manual EAN links use a shared identity-only selector and authenticated receipt action; verify own counts and counting state before optional ERP writes, and preserve links when carrying counts forward.
 - WhatsApp status messages are composed server-side by the whatsapp-status function from saved Hub data only (never ERP calls), deduplicated in whatsapp_status_envios; note-entry alerts fire from recebimento sincronizar without affecting the entry.
 - Product acknowledgements are scoped to store/month in an isolated management page; PIC never reads checklist state, preserving its full report.
+- Purchase history totals use displayed rows and weighted ratios via comprasHistorico; filters and monthly excesses stay consistent.
