@@ -1,0 +1,52 @@
+diff --git a/src/App.tsx b/src/App.tsx
+index 21f7b13..6cdb227 100644
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -74,6 +74,7 @@ import Escala from "./pages/Escala";
+ import EscalaFuncionarios from "./pages/EscalaFuncionarios";
+ import AdminEscala from "./pages/AdminEscala";
+ import EscalaDimensionamento from "./pages/EscalaDimensionamento";
++import EscalaIA from "./pages/EscalaIA";
+ import AdminTv from "./pages/AdminTv";
+ import TvPlayer from "./pages/TvPlayer";
+ import NotFound from "./pages/NotFound";
+@@ -174,6 +175,7 @@ const App = () => (
+             <Route path="/escala" element={g("escala", <Escala />)} />
+             <Route path="/escala/funcionarios" element={g("escala_funcionarios", <EscalaFuncionarios />)} />
+             <Route path="/escala/dimensionamento" element={g("escala_dimensionamento", <EscalaDimensionamento />)} />
++            <Route path="/escala-ia" element={g("escala_v2", <EscalaIA />)} />
+             <Route path="/admin/escala" element={g("admin_escala", <AdminEscala />)} />
+             <Route path="/jornada/execucoes" element={g("jornada_execucoes", <JornadaExecucoes />)} />
+             <Route path="/admin/jornada" element={g("jornada", <AdminJornada />)} />
+diff --git a/src/components/ClientLayout.tsx b/src/components/ClientLayout.tsx
+index 7531c26..fd37d9d 100644
+--- a/src/components/ClientLayout.tsx
++++ b/src/components/ClientLayout.tsx
+@@ -11,6 +11,7 @@ import {
+   Thermometer, LayoutDashboard, FileSpreadsheet, Layers,
+   ShoppingBag, CalendarDays, TrendingDown, GitCompare, Send, Lightbulb,
+ } from "lucide-react";
++import { Sparkles } from "lucide-react";
+ import {
+   DropdownMenu,
+   DropdownMenuContent,
+@@ -123,6 +124,7 @@ const navGroups: NavGroup[] = [
+       { key: "escala_funcionarios", path: "/escala/funcionarios", label: "Funcionários", icon: Users },
+       { key: "escala_dimensionamento", path: "/escala/dimensionamento", label: "Dimensionamento", icon: Users },
+       { key: "admin_escala", path: "/admin/escala", label: "Regras e Turnos", icon: Settings },
++      { key: "escala_v2", path: "/escala-ia", label: "Escala IA (v2)", icon: Sparkles },
+     ],
+   },
+   {
+diff --git a/src/lib/modules.ts b/src/lib/modules.ts
+index 67528cd..f00bc16 100644
+--- a/src/lib/modules.ts
++++ b/src/lib/modules.ts
+@@ -59,6 +59,7 @@ export const APP_MODULES = [
+   { key: "escala_funcionarios", label: "Escala: Funcionários", path: "/escala/funcionarios" },
+   { key: "escala_dimensionamento", label: "Escala: Dimensionamento do Quadro", path: "/escala/dimensionamento" },
+   { key: "admin_escala", label: "Admin: Escala (regras, turnos, cobertura)", path: "/admin/escala" },
++  { key: "escala_v2", label: "Escala IA (versão 2)", path: "/escala-ia" },
+   { key: "jornada_execucoes", label: "Jornada: Execuções", path: "/jornada/execucoes" },
+   { key: "admin_tv", label: "Admin: Gerenciador de TV", path: "/admin/tv" },
+   { key: "admin_jornada", label: "Admin: Jornada", path: "/admin/jornada" },

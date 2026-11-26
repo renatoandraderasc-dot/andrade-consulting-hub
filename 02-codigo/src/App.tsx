@@ -1,0 +1,196 @@
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/hooks/useAuth";
+import { DemoWorkspaceProvider } from "@/hooks/useDemoWorkspace";
+import Index from "./pages/Index";
+import Login from "./pages/Login";
+import AdminSetup from "./pages/AdminSetup";
+import AdminQuestions from "./pages/AdminQuestions";
+import AdminUsers from "./pages/AdminUsers";
+import Checklist from "./pages/Checklist";
+import ChecklistTemperatura from "./pages/ChecklistTemperatura";
+import Catalogo from "./pages/Catalogo";
+import ConsultaPreco from "./pages/ConsultaPreco";
+import Dashboard from "./pages/Dashboard";
+import AdminMetas from "./pages/AdminMetas";
+import AdminWhatsapp from "./pages/AdminWhatsapp";
+import MetasGerador from "./pages/MetasGerador";
+import MetasSugestao from "./pages/MetasSugestao";
+import MetasRealizado from "./pages/MetasRealizado";
+import MetasPremiacao from "./pages/MetasPremiacao";
+import MetasPremiacaoConfig from "./pages/MetasPremiacaoConfig";
+import MetasPremiacaoCompradores from "./pages/MetasPremiacaoCompradores";
+import MetasCompradoresConfig from "./pages/MetasCompradoresConfig";
+import MetasCadastradas from "./pages/MetasCadastradas";
+import Controladoria from "./pages/Controladoria";
+import DashboardFinanceiro from "./pages/DashboardFinanceiro";
+import AnaliseAnual from "./pages/AnaliseAnual";
+import Compras from "./pages/Compras";
+import AnaliseCompras from "./pages/AnaliseCompras";
+import RecebimentoFila from "./pages/RecebimentoFila";
+import RecebimentoDetalhe from "./pages/RecebimentoDetalhe";
+import RecebimentoPainel from "./pages/RecebimentoPainel";
+import AdminRecebimento from "./pages/AdminRecebimento";
+import EstoqueDinamico from "./pages/EstoqueDinamico";
+import MargemBaixa from "./pages/MargemBaixa";
+import ProdutosSemVenda from "./pages/ProdutosSemVenda";
+import GestaoProdutos from "./pages/GestaoProdutos";
+import CapilaridadeMix from "./pages/CapilaridadeMix";
+import SugestaoMix from "./pages/SugestaoMix";
+import Relatorios from "./pages/Relatorios";
+import PainelAnalitico from "./pages/PainelAnalitico";
+import PainelComparativo from "./pages/PainelComparativo";
+import ComparativoProdutos from "./pages/ComparativoProdutos";
+import Repricing from "./pages/Repricing";
+import Pricing from "./pages/Pricing";
+import VtexCollector from "./pages/VtexCollector";
+import WebSacSync from "./pages/WebSacSync";
+import PIC from "./pages/PIC";
+import PicTv from "./pages/PicTv";
+import PicTvCanal from "./pages/PicTvCanal";
+import DashboardPadaria from "./pages/DashboardPadaria";
+import AdminPadariaImport from "./pages/AdminPadariaImport";
+import AdminStores from "./pages/AdminStores";
+import AdminPicDepartments from "./pages/AdminPicDepartments";
+import Produtos from "./pages/Produtos";
+import EncarteEditor from "./pages/EncarteEditor";
+import MeusEncartes from "./pages/MeusEncartes";
+import CalendarioPromocional from "./pages/CalendarioPromocional";
+import EncarteSugestao from "./pages/EncarteSugestao";
+import OAuthConsent from "./pages/OAuthConsent";
+import AdminSite from "./pages/AdminSite";
+import AdminSitesConcorrentes from "./pages/AdminSitesConcorrentes";
+import AdminConexoes from "./pages/AdminConexoes";
+import Diagnostico from "./pages/Diagnostico";
+import AdminRede from "./pages/AdminRede";
+import AdminParametrizacoes from "./pages/AdminParametrizacoes";
+import Jornada from "./pages/Jornada";
+import JornadaExecucoes from "./pages/JornadaExecucoes";
+import AdminJornada from "./pages/AdminJornada";
+import Escala from "./pages/Escala";
+import EscalaFuncionarios from "./pages/EscalaFuncionarios";
+import AdminEscala from "./pages/AdminEscala";
+import EscalaDimensionamento from "./pages/EscalaDimensionamento";
+import EscalaIA from "./pages/EscalaIA";
+import AdminTv from "./pages/AdminTv";
+import TvPlayer from "./pages/TvPlayer";
+import NotFound from "./pages/NotFound";
+import Apresentacao from "./pages/Apresentacao";
+import ModuleGuard from "@/components/ModuleGuard";
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: Infinity,          // nunca considera "velho" sozinho
+      gcTime: 30 * 60 * 1000,       // mantem em memoria 30 min
+      refetchOnWindowFocus: false,  // trocar de aba nao refaz consulta
+      refetchOnReconnect: false,    // voltar a rede nao refaz consulta
+      refetchOnMount: false,        // remontar a tela nao refaz consulta
+      refetchInterval: false,       // nada de polling
+      retry: 0,                     // ponte fora do ar = 1 tentativa, nao 4
+    },
+  },
+});
+
+const g = (module: string, el: React.ReactNode) => (
+  <ModuleGuard module={module}>{el}</ModuleGuard>
+);
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <AuthProvider>
+          <DemoWorkspaceProvider>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/apresentacao" element={<Apresentacao />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/admin/setup" element={<AdminSetup />} />
+            <Route path="/admin/questions" element={g("admin_questions", <AdminQuestions />)} />
+            <Route path="/admin/users" element={g("admin_users", <AdminUsers />)} />
+            <Route path="/checklist" element={g("checklist", <Checklist />)} />
+            <Route path="/checklist-temperatura" element={g("checklist_temperatura", <ChecklistTemperatura />)} />
+            <Route path="/catalogo" element={g("catalogo", <Catalogo />)} />
+            <Route path="/consulta-preco" element={g("consulta_preco", <ConsultaPreco />)} />
+            <Route path="/dashboard" element={g("dashboard", <Dashboard />)} />
+            <Route path="/admin/metas" element={g("admin_metas", <AdminMetas />)} />
+            <Route path="/metas/sugestao" element={g("admin_metas", <MetasSugestao />)} />
+            <Route path="/metas/premiacao" element={g("admin_metas", <MetasPremiacao />)} />
+            <Route path="/metas/premiacao/config" element={g("admin_metas", <MetasPremiacaoConfig />)} />
+            <Route path="/metas/premiacao/compradores" element={g("admin_metas", <MetasPremiacaoCompradores />)} />
+            <Route path="/metas/compradores/config" element={g("admin_metas", <MetasCompradoresConfig />)} />
+            <Route path="/metas/realizado" element={g("admin_metas", <MetasRealizado />)} />
+            <Route path="/metas/cadastradas" element={g("metas_cadastradas", <MetasCadastradas />)} />
+            <Route path="/metas-gerador" element={g("metas_gerador", <MetasGerador />)} />
+            <Route path="/dashboard-financeiro" element={g("dashboard_financeiro", <DashboardFinanceiro />)} />
+            <Route path="/controladoria" element={g("controladoria", <Controladoria />)} />
+            <Route path="/analise-anual" element={g("analise_anual", <AnaliseAnual />)} />
+
+            <Route path="/compras" element={g("compras", <Compras />)} />
+            <Route path="/compras/analise" element={g("compras_analise", <AnaliseCompras />)} />
+            <Route path="/recebimento" element={g("recebimento", <RecebimentoFila />)} />
+            <Route path="/recebimento/painel" element={g("recebimento", <RecebimentoPainel />)} />
+            <Route path="/recebimento/:id" element={g("recebimento", <RecebimentoDetalhe />)} />
+            <Route path="/admin/recebimento" element={g("recebimento", <AdminRecebimento />)} />
+            <Route path="/estoque-dinamico" element={g("estoque_dinamico", <EstoqueDinamico />)} />
+            <Route path="/margem-baixa" element={g("margem_baixa", <MargemBaixa />)} />
+            <Route path="/produtos-sem-venda" element={g("produtos_sem_venda", <ProdutosSemVenda />)} />
+            <Route path="/gestao-produtos" element={g("gestao_produtos", <GestaoProdutos />)} />
+            <Route path="/capilaridade-mix" element={g("capilaridade_mix", <CapilaridadeMix />)} />
+            <Route path="/sugestao-mix" element={g("sugestao_mix", <SugestaoMix />)} />
+            <Route path="/relatorios" element={g("relatorios", <Relatorios />)} />
+            <Route path="/painel-analitico" element={g("painel_analitico", <PainelAnalitico />)} />
+            <Route path="/painel-comparativo" element={g("painel_comparativo", <PainelComparativo />)} />
+            <Route path="/comparativo-produtos" element={g("comparativo_produtos", <ComparativoProdutos />)} />
+            <Route path="/precificacao/pricing" element={g("pricing", <Pricing />)} />
+            <Route path="/repricing" element={g("repricing", <Repricing />)} />
+            <Route path="/vtex-collector" element={g("vtex_collector", <VtexCollector />)} />
+            <Route path="/websac-sync" element={g("websac_sync", <WebSacSync />)} />
+            <Route path="/pic" element={g("pic", <PIC />)} />
+            <Route path="/pic/padaria" element={g("pic_padaria", <DashboardPadaria />)} />
+            <Route path="/pic/tv" element={g("pic", <PicTv />)} />
+            <Route path="/pic/tv-canal" element={g("pic", <PicTvCanal />)} />
+            <Route path="/admin/padaria-import" element={g("admin_padaria_import", <AdminPadariaImport />)} />
+            <Route path="/admin/pic-departamentos" element={g("admin_pic_departamentos", <AdminPicDepartments />)} />
+            <Route path="/admin/stores" element={g("admin_stores", <AdminStores />)} />
+            <Route path="/admin/rede" element={g("admin_rede", <AdminRede />)} />
+            <Route path="/admin/parametrizacoes" element={g("admin_parametrizacoes", <AdminParametrizacoes />)} />
+            <Route path="/admin/conexoes" element={g("admin_conexoes", <AdminConexoes />)} />
+            <Route path="/admin/diagnostico" element={g("admin_diagnostico", <Diagnostico />)} />
+            <Route path="/admin/site" element={g("admin_site", <AdminSite />)} />
+            <Route path="/admin/sites-concorrentes" element={g("admin_sites_concorrentes", <AdminSitesConcorrentes />)} />
+            <Route path="/produtos" element={g("produtos", <Produtos />)} />
+            <Route path="/encartes" element={g("encartes", <MeusEncartes />)} />
+            <Route path="/calendario-promocional" element={g("calendario_promocional", <CalendarioPromocional />)} />
+            <Route path="/encarte-sugestao" element={g("encarte_sugestao", <EncarteSugestao />)} />
+            <Route path="/encartes/editor" element={g("encarte_editor", <EncarteEditor />)} />
+            <Route path="/encartes/editor/:id" element={g("encarte_editor", <EncarteEditor />)} />
+            <Route path="/jornada" element={g("jornada", <Jornada />)} />
+            <Route path="/escala" element={g("escala", <Escala />)} />
+            <Route path="/escala/funcionarios" element={g("escala_funcionarios", <EscalaFuncionarios />)} />
+            <Route path="/escala/dimensionamento" element={g("escala_dimensionamento", <EscalaDimensionamento />)} />
+            <Route path="/escala-ia" element={g("escala_v2", <EscalaIA />)} />
+            <Route path="/admin/escala" element={g("admin_escala", <AdminEscala />)} />
+            <Route path="/jornada/execucoes" element={g("jornada_execucoes", <JornadaExecucoes />)} />
+            <Route path="/admin/jornada" element={g("jornada", <AdminJornada />)} />
+            <Route path="/admin/whatsapp" element={g("admin_whatsapp", <AdminWhatsapp />)} />
+            <Route path="/admin/tv" element={g("admin_tv", <AdminTv />)} />
+            <Route path="/tv/:id" element={g("tv_player", <TvPlayer />)} />
+            <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
+
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+          </DemoWorkspaceProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
+
+export default App;

@@ -1,0 +1,375 @@
+import { useState, useEffect } from "react";
+import { toPng } from "html-to-image";
+import { useQuery } from "@tanstack/react-query";
+import PrintTelaButton from "@/components/PrintTelaButton";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  BarChart3, CheckSquare, Settings, Settings2, Users, LogOut, Menu, X, ArrowLeft,
+  Activity, Target, ClipboardList, DollarSign, Database, RefreshCw, Trophy, Store, ShoppingCart, LayoutTemplate, TrendingUp, Package, KeyRound, Plug, ScanLine, Tags, ChevronDown, Globe, Network,
+  Thermometer, LayoutDashboard, FileSpreadsheet, Layers,
+  ShoppingBag, CalendarDays, TrendingDown, GitCompare, Send, Lightbulb,
+} from "lucide-react";
+import { Sparkles } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import ChangePasswordDialog from "@/components/ChangePasswordDialog";
+import StoreSwitcher from "@/components/StoreSwitcher";
+import UltimaAtualizacaoBadge from "@/components/UltimaAtualizacaoBadge";
+import { limparAtualizacao } from "@/lib/ultimaAtualizacao";
+import andradeLogo from "@/assets/andrade-logo.png";
+
+
+interface ClientLayoutProps {
+  children: React.ReactNode;
+  storeName?: string;
+}
+
+type NavItem = { key: string; path: string; label: string; icon: any; globalAdmin?: boolean; admin?: boolean };
+type NavGroup = { id: string; label: string; icon: any; admin?: boolean; globalAdmin?: boolean; items: NavItem[] };
+
+const navGroups: NavGroup[] = [
+  {
+    id: "rede",
+    label: "Rede",
+    icon: Network,
+    admin: true,
+    globalAdmin: true,
+    items: [
+      { key: "admin_rede", path: "/admin/rede", label: "Visão da Rede", icon: Network },
+    ],
+  },
+  {
+    id: "gestao",
+    label: "Gestão",
+    icon: BarChart3,
+    items: [
+      { key: "dashboard", path: "/dashboard", label: "Dashboard", icon: BarChart3 },
+      { key: "pic", path: "/pic", label: "PIC", icon: Trophy },
+      { key: "gestao_produtos", path: "/gestao-produtos", label: "Gestão Produtos sem giro e em queda", icon: CheckSquare },
+      { key: "analise_anual", path: "/analise-anual", label: "Análise Anual", icon: TrendingUp },
+      { key: "relatorios", path: "/relatorios", label: "Relatórios", icon: FileSpreadsheet },
+      { key: "painel_analitico", path: "/painel-analitico", label: "Painel Analítico", icon: BarChart3 },
+      { key: "painel_comparativo", path: "/painel-comparativo", label: "Comparativo", icon: TrendingUp },
+      { key: "comparativo_produtos", path: "/comparativo-produtos", label: "Comparativo por Produto", icon: GitCompare },
+      { key: "capilaridade_mix", path: "/capilaridade-mix", label: "Capilaridade de Mix", icon: Layers },
+      { key: "sugestao_mix", path: "/sugestao-mix", label: "Sugestão de Mix", icon: Lightbulb, globalAdmin: true },
+    ],
+  },
+  {
+    id: "financeiro",
+    label: "Financeiro",
+    icon: ClipboardList,
+    items: [
+      { key: "dashboard_financeiro", path: "/dashboard-financeiro", label: "Dashboard", icon: LayoutDashboard },
+      { key: "controladoria", path: "/controladoria", label: "Controladoria", icon: ClipboardList },
+    ],
+  },
+  {
+    id: "comercial",
+    label: "Comercial",
+    icon: ShoppingCart,
+    items: [
+      { key: "compras", path: "/compras", label: "Compras", icon: ShoppingCart },
+      { key: "compras_analise", path: "/compras/analise", label: "Análise de Compras", icon: ShoppingCart },
+      { key: "recebimento", path: "/recebimento", label: "Recebimento de NF-e", icon: ScanLine },
+      { key: "estoque_dinamico", path: "/estoque-dinamico", label: "Estoque Dinâmico", icon: Package },
+      { key: "margem_baixa", path: "/margem-baixa", label: "Margem Baixa", icon: TrendingDown },
+      { key: "produtos_sem_venda", path: "/produtos-sem-venda", label: "Produtos sem venda", icon: Package },
+      { key: "repricing", path: "/repricing", label: "Re-Pricing", icon: DollarSign },
+      { key: "pricing", path: "/precificacao/pricing", label: "Pricing", icon: Tags },
+      { key: "catalogo", path: "/catalogo", label: "Catálogo", icon: Package },
+      { key: "consulta_preco", path: "/consulta-preco", label: "Consulta de Preços", icon: ScanLine },
+    ],
+  },
+  {
+    id: "encartes",
+    label: "Encartes",
+    icon: Tags,
+    items: [
+      { key: "encarte_sugestao", path: "/encarte-sugestao", label: "Sugestão de Encarte", icon: Tags },
+      { key: "encartes", path: "/encartes", label: "Meus Encartes", icon: LayoutTemplate },
+      { key: "calendario_promocional", path: "/calendario-promocional", label: "Calendário Promocional", icon: CalendarDays },
+    ],
+  },
+  {
+    id: "operacao",
+    label: "Operação",
+    icon: CheckSquare,
+    items: [
+      { key: "checklist", path: "/checklist", label: "Checklist", icon: CheckSquare },
+      { key: "checklist_temperatura", path: "/checklist-temperatura", label: "Temperaturas", icon: Thermometer },
+    ],
+  },
+  {
+    id: "jornada",
+    label: "Jornada",
+    icon: ClipboardList,
+    items: [
+      { key: "jornada", path: "/jornada", label: "Minha Jornada", icon: ClipboardList },
+      { key: "jornada_execucoes", path: "/jornada/execucoes", label: "Execuções", icon: CheckSquare },
+      { key: "admin_jornada", path: "/admin/jornada", label: "Admin da Jornada", icon: Settings, admin: true },
+    ],
+  },
+  {
+    id: "escala", label: "Escala", icon: CalendarDays,
+    items: [
+      { key: "escala", path: "/escala", label: "Escala do Mês", icon: CalendarDays },
+      { key: "escala_funcionarios", path: "/escala/funcionarios", label: "Funcionários", icon: Users },
+      { key: "escala_dimensionamento", path: "/escala/dimensionamento", label: "Dimensionamento", icon: Users },
+      { key: "admin_escala", path: "/admin/escala", label: "Regras e Turnos", icon: Settings },
+      { key: "escala_v2", path: "/escala-ia", label: "Escala IA (v2)", icon: Sparkles },
+    ],
+  },
+  {
+    id: "cadastros",
+    label: "Cadastros",
+    icon: Settings,
+    admin: true,
+    items: [
+      { key: "admin_stores", path: "/admin/stores", label: "Lojas", icon: Store, globalAdmin: true },
+      { key: "admin_users", path: "/admin/users", label: "Usuários", icon: Users, globalAdmin: true },
+      { key: "admin_metas", path: "/admin/metas", label: "Metas", icon: Target },
+      { key: "admin_metas_sugestao", path: "/metas/sugestao", label: "Sugestão Analítica", icon: Target },
+      { key: "admin_metas_realizado", path: "/metas/realizado", label: "Metas vs Realizado", icon: Target },
+      { key: "metas_cadastradas", path: "/metas/cadastradas", label: "Metas Cadastradas", icon: ClipboardList },
+      { key: "admin_metas_premiacao", path: "/metas/premiacao", label: "Pagamento de Metas", icon: Trophy },
+      { key: "admin_metas_premiacao", path: "/metas/premiacao/config", label: "Parametrização Pagamento", icon: Settings },
+      { key: "admin_metas_premiacao", path: "/metas/premiacao/compradores", label: "Pagamento Compradores", icon: ShoppingBag },
+      { key: "admin_metas_premiacao", path: "/metas/compradores/config", label: "Metas Compradores", icon: Target },
+      { key: "admin_pic_departamentos", path: "/admin/pic-departamentos", label: "Parametrizações Pic", icon: Trophy },
+      { key: "admin_questions", path: "/admin/questions", label: "Perguntas", icon: Settings },
+      { key: "admin_whatsapp", path: "/admin/whatsapp", label: "Mensagens WhatsApp", icon: Send, globalAdmin: true },
+      { key: "admin_tv", path: "/admin/tv", label: "Gerenciador de TV", icon: LayoutTemplate, globalAdmin: true },
+      { key: "admin_site", path: "/admin/site", label: "Página Inicial", icon: LayoutTemplate, globalAdmin: true },
+    ],
+  },
+  {
+    id: "integracoes",
+    label: "Integrações",
+    icon: Plug,
+    admin: true,
+    globalAdmin: true,
+    items: [
+      { key: "admin_parametrizacoes", path: "/admin/parametrizacoes", label: "Parametrizações Gerais", icon: Settings2 },
+      { key: "admin_conexoes", path: "/admin/conexoes", label: "Conexões", icon: Plug },
+      { key: "admin_diagnostico", path: "/admin/diagnostico", label: "Diagnóstico do Sistema", icon: Activity },
+      { key: "admin_sites_concorrentes", path: "/admin/sites-concorrentes", label: "Catálogo de Sites", icon: Globe },
+      { key: "vtex_collector", path: "/vtex-collector", label: "Coletor de Preços", icon: Database },
+      { key: "websac_sync", path: "/websac-sync", label: "Sync WebSac", icon: RefreshCw },
+    ],
+  },
+];
+
+const ClientLayout = ({ children, storeName }: ClientLayoutProps) => {
+  const { user, isAdmin, isGlobalAdmin, isDemo, signOut } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const selectedStoreId = sessionStorage.getItem("selectedStoreId") || "";
+  const receiptSystem = useQuery({ queryKey: ["nav-receipt-system", selectedStoreId], enabled: !!user && !!selectedStoreId && !isDemo, queryFn: async () => { const { data } = await supabase.from("store_vr_config").select("sistema").eq("store_id", selectedStoreId).maybeSingle(); return data?.sistema === "WEBSAC"; } });
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [pwdOpen, setPwdOpen] = useState(false);
+  const [allowedModules, setAllowedModules] = useState<Set<string> | null>(null);
+
+  // Gerenciador de TV: fora o admin geral, só aparece para quem tem o módulo liberado explicitamente.
+  const [tvLiberada, setTvLiberada] = useState(false);
+  useEffect(() => {
+    if (!user || isGlobalAdmin || isDemo) { setTvLiberada(false); return; }
+    supabase.from("user_module_access").select("allowed").eq("user_id", user.id).eq("module", "admin_tv").maybeSingle()
+      .then(({ data }) => setTvLiberada(!!data?.allowed));
+  }, [user, isGlobalAdmin, isDemo]);
+
+  useEffect(() => {
+    if (!user || isAdmin || isDemo) { setAllowedModules(null); return; }
+    supabase.from("user_module_access").select("module, allowed").eq("user_id", user.id).then(({ data }) => {
+      setAllowedModules(new Set((data || []).filter((r) => r.allowed).map((r) => r.module)));
+    });
+  }, [user, isAdmin, isDemo]);
+
+  const CONTROLADORIA_TAB_KEYS = [
+    "controladoria_contrede", "controladoria_lancamentos", "controladoria_historico",
+    "controladoria_classificacoes", "controladoria_categorias", "controladoria_agenda",
+    "controladoria_analise_financeira", "controladoria_agenda_analise",
+    "controladoria_dados_vr", "controladoria_classificacao_vr",
+  ];
+  const canSee = (key: string) => {
+    if (isAdmin || allowedModules === null || allowedModules.size === 0 || allowedModules.has(key)) return true;
+    if (key === "gestao_produtos") return allowedModules.has("pic") || allowedModules.has("pic_percentual");
+    // Controladoria aparece no menu se o usuário tiver qualquer aba liberada.
+    if (key === "controladoria") return CONTROLADORIA_TAB_KEYS.some((k) => allowedModules?.has(k));
+    return false;
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
+
+  // cada tela mostra a data dos proprios dados
+  useEffect(() => { limparAtualizacao(); }, [location.pathname]);
+
+  const isActive = (path: string) => location.pathname === path;
+
+  const visibleGroups = navGroups
+    .filter((g) => isDemo || (g.globalAdmin ? isGlobalAdmin : g.admin ? isAdmin : true))
+    .map((g) => ({
+      ...g,
+      items: g.items.filter((i) => isDemo || i.key !== "recebimento" || receiptSystem.data === true).filter((i) =>
+        isDemo ? true : i.key === "admin_tv" && !isGlobalAdmin ? tvLiberada
+          : i.globalAdmin && !isGlobalAdmin ? false : i.admin && !isAdmin ? false : canSee(i.key)),
+    }))
+    .filter((g) => g.items.length > 0);
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      <header className="sticky top-0 z-40 bg-card/95 backdrop-blur border-b border-border">
+        <div className={`flex items-stretch h-14 px-4 ${isDemo ? "min-w-0" : ""}`}>
+          <Link to="/" className="flex items-center gap-3 pr-4 mr-2 border-r border-border">
+            <img src={andradeLogo} alt="Andrade" className="h-7" />
+            {storeName && (
+              <div className="hidden md:flex flex-col leading-tight">
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Loja</span>
+                <span className="text-xs font-semibold text-foreground truncate max-w-[180px]">
+                  {storeName}
+                </span>
+              </div>
+            )}
+          </Link>
+
+          <nav className={`hidden md:flex items-stretch gap-1 ${isDemo ? "flex-1 min-w-0 overflow-x-auto" : ""}`}>
+            {visibleGroups.map((group) => {
+              const groupActive = group.items.some((i) => isActive(i.path));
+              return (
+                <DropdownMenu key={group.id}>
+                  <DropdownMenuTrigger
+                    className={`relative flex items-center gap-1.5 px-3 h-full text-[13px] font-medium outline-none transition-colors ${
+                      groupActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <group.icon className="w-4 h-4" strokeWidth={2} />
+                    <span translate="no">{group.label}</span>
+                    <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+                    {groupActive && (
+                      <span className="absolute left-3 right-3 -bottom-px h-0.5 bg-primary" />
+                    )}
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="min-w-[200px] bg-popover">
+                    {group.items.map((item) => (
+                      <DropdownMenuItem key={item.path} asChild>
+                        <Link
+                          to={item.path}
+                          className={`flex items-center gap-2 cursor-pointer ${
+                            isActive(item.path) ? "text-primary font-medium" : ""
+                          }`}
+                        >
+                          <item.icon className="w-4 h-4" strokeWidth={2} />
+                          <span translate="no">{item.label}</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              );
+            })}
+          </nav>
+
+          <div className="ml-auto flex items-center gap-2 shrink-0">
+            <UltimaAtualizacaoBadge />
+            {!isDemo && <div className="hidden sm:block"><StoreSwitcher /></div>}
+            <ThemeToggle />
+
+            <Link
+              to="/"
+              className="hidden lg:inline-flex items-center gap-1 px-2 py-1 text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" /> Site
+            </Link>
+            {!isDemo && <button
+              onClick={() => setPwdOpen(true)}
+              className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-secondary text-foreground text-[12px] font-medium hover:bg-secondary/70 transition-colors"
+            >
+              <KeyRound className="w-3.5 h-3.5" /> Senha
+            </button>}
+            <button
+              onClick={handleSignOut}
+              className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-secondary text-foreground text-[12px] font-medium hover:bg-secondary/70 transition-colors"
+            >
+              <LogOut className="w-3.5 h-3.5" /> Sair
+            </button>
+            <button
+              onClick={() => setMenuOpen((v) => !v)}
+              className="md:hidden text-foreground p-2"
+              aria-label="Menu"
+            >
+              {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
+        </div>
+
+        {menuOpen && (
+          <div className="md:hidden bg-card border-t border-border max-h-[70vh] overflow-y-auto">
+            <div className="p-3 border-b border-border sm:hidden"><StoreSwitcher /></div>
+            {visibleGroups.map((group) => (
+              <div key={group.id}>
+                <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-muted-foreground bg-muted/40">
+                  {group.label}
+                </div>
+                {group.items.map((item) => (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setMenuOpen(false)}
+                    className={`flex items-center gap-2 px-4 py-3 text-[13px] border-b border-border ${
+                      isActive(item.path) ? "text-primary font-medium" : "text-foreground"
+                    }`}
+                  >
+                    <item.icon className="w-4 h-4" strokeWidth={2} />
+                    <span translate="no">{item.label}</span>
+                  </Link>
+                ))}
+              </div>
+            ))}
+            {!isDemo && <button
+              onClick={() => { setMenuOpen(false); setPwdOpen(true); }}
+              className="w-full flex items-center gap-2 px-3 py-3 text-sm text-foreground border-t border-border"
+            >
+              <KeyRound className="w-4 h-4" /> Alterar senha
+            </button>}
+            <button
+              onClick={handleSignOut}
+              className="w-full flex items-center gap-2 px-3 py-3 text-sm text-foreground border-t border-border"
+            >
+              <LogOut className="w-4 h-4" /> Sair
+            </button>
+          </div>
+        )}
+      </header>
+
+      {!isDemo && <ChangePasswordDialog open={pwdOpen} onOpenChange={setPwdOpen} />}
+
+      <main id="area-print" className="flex-1">{children}</main>
+      <CapturaWhatsapp />
+      <PrintTelaButton targetId="area-print" />
+    </div>
+  );
+};
+
+/** Quando aberta para print do WhatsApp, expõe a captura da área principal para a tela que enviou. */
+function CapturaWhatsapp() {
+  useEffect(() => {
+    if (!new URLSearchParams(window.location.search).has("whatsapp_print")) return;
+    (window as any).__capturarArea = () => {
+      const el = document.getElementById("area-print")!;
+      return toPng(el, { backgroundColor: getComputedStyle(document.body).backgroundColor, pixelRatio: 1.5, cacheBust: true, filter: (n) => !(n instanceof HTMLElement && n.dataset?.noPrint === "true") });
+    };
+  }, []);
+  return null;
+}
+
+export default ClientLayout;

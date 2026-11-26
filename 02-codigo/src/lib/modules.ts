@@ -1,0 +1,98 @@
+export const APP_MODULES = [
+  { key: "dashboard", label: "Dashboard", path: "/dashboard" },
+  { key: "dashboard_financeiro", label: "Dashboard Financeiro", path: "/dashboard-financeiro" },
+  { key: "controladoria", label: "Controladoria Supermercado", path: "/controladoria" },
+  { key: "controladoria_contrede", label: "Controladoria Supermercado: Cont Rede", path: "/controladoria" },
+  { key: "controladoria_lancamentos", label: "Controladoria Supermercado: Lançamentos", path: "/controladoria" },
+  { key: "controladoria_historico", label: "Controladoria Supermercado: Histórico", path: "/controladoria" },
+  { key: "controladoria_classificacoes", label: "Controladoria Supermercado: Classificações", path: "/controladoria" },
+  { key: "controladoria_categorias", label: "Controladoria Supermercado: Categorias", path: "/controladoria" },
+  { key: "controladoria_agenda", label: "Controladoria Supermercado: Agenda Financeira", path: "/controladoria" },
+  { key: "controladoria_analise_financeira", label: "Controladoria Supermercado: Análise Financeira", path: "/controladoria" },
+  { key: "controladoria_agenda_analise", label: "Controladoria Supermercado: Análise Agenda", path: "/controladoria" },
+  { key: "controladoria_dados_vr", label: "Controladoria Supermercado: Dados do VR", path: "/controladoria" },
+  { key: "controladoria_classificacao_vr", label: "Controladoria Supermercado: Classificação VR", path: "/controladoria" },
+  { key: "analise_anual", label: "Análise Anual", path: "/analise-anual" },
+  { key: "compras", label: "Compras", path: "/compras" },
+  { key: "compras_analise", label: "Análise de Compras", path: "/compras/analise" },
+  { key: "recebimento", label: "Recebimento de NF-e", path: "/recebimento" },
+  { key: "estoque_dinamico", label: "Estoque Dinâmico", path: "/estoque-dinamico" },
+  { key: "margem_baixa", label: "Produtos com Margem Baixa", path: "/margem-baixa" },
+  { key: "produtos_sem_venda", label: "Produtos sem venda no mês", path: "/produtos-sem-venda" },
+  { key: "gestao_produtos", label: "Gestão Produtos sem giro e em queda", path: "/gestao-produtos" },
+  { key: "capilaridade_mix", label: "Capilaridade de Mix", path: "/capilaridade-mix" },
+  { key: "sugestao_mix", label: "Sugestão de Mix", path: "/sugestao-mix" },
+  { key: "relatorios", label: "Relatórios", path: "/relatorios" },
+  { key: "painel_analitico", label: "Painel Analítico", path: "/painel-analitico" },
+  { key: "painel_comparativo", label: "Comparativo de Indicadores", path: "/painel-comparativo" },
+  { key: "comparativo_produtos", label: "Comparativo de Departamentos e Produtos", path: "/comparativo-produtos" },
+  { key: "pic", label: "PIC", path: "/pic" },
+  { key: "pic_percentual", label: "PIC: somente % (visualizador)", path: "/pic" },
+  { key: "pic_padaria", label: "Dashboard Padaria", path: "/pic/padaria" },
+  { key: "admin_padaria_import", label: "Admin: Import Padaria", path: "/admin/padaria-import" },
+  { key: "repricing", label: "Re-PRICING", path: "/repricing" },
+  { key: "pricing", label: "Pricing", path: "/precificacao/pricing" },
+  { key: "checklist", label: "Checklist", path: "/checklist" },
+  { key: "checklist_temperatura", label: "Checklist de Temperaturas", path: "/checklist-temperatura" },
+  { key: "catalogo", label: "Catálogo de Produtos", path: "/catalogo" },
+  { key: "consulta_preco", label: "Consulta de Preços", path: "/consulta-preco" },
+  { key: "admin_rede", label: "Admin: Visão da Rede", path: "/admin/rede" },
+  { key: "admin_stores", label: "Admin: Lojas", path: "/admin/stores" },
+  { key: "admin_pic_departamentos", label: "Admin: Departamentos do PIC", path: "/admin/pic-departamentos" },
+  { key: "admin_metas", label: "Admin: Metas", path: "/admin/metas" },
+  { key: "metas_gerador", label: "Gerador de Metas", path: "/metas-gerador" },
+  { key: "metas_cadastradas", label: "Metas Cadastradas", path: "/metas/cadastradas" },
+  { key: "admin_questions", label: "Admin: Perguntas", path: "/admin/questions" },
+  { key: "admin_users", label: "Admin: Usuários", path: "/admin/users" },
+  { key: "admin_conexoes", label: "Admin: Gestão de Conexão", path: "/admin/conexoes" },
+  { key: "admin_diagnostico", label: "Admin: Diagnóstico do Sistema", path: "/admin/diagnostico" },
+  { key: "admin_site", label: "Admin: Página Inicial", path: "/admin/site" },
+  { key: "vtex_collector", label: "Coletor de Preços", path: "/vtex-collector" },
+  { key: "websac_sync", label: "Sync WebSac", path: "/websac-sync" },
+  { key: "produtos", label: "Produtos", path: "/produtos" },
+  { key: "encartes", label: "Meus Encartes", path: "/encartes" },
+  { key: "calendario_promocional", label: "Calendário Promocional", path: "/calendario-promocional" },
+  { key: "encarte_editor", label: "Editor de Encarte", path: "/encartes/editor" },
+  { key: "encarte_sugestao", label: "Sugestão de Encarte", path: "/encarte-sugestao" },
+  { key: "jornada", label: "Jornada", path: "/jornada" },
+  { key: "escala", label: "Escala de Funcionários", path: "/escala" },
+  { key: "escala_funcionarios", label: "Escala: Funcionários", path: "/escala/funcionarios" },
+  { key: "escala_dimensionamento", label: "Escala: Dimensionamento do Quadro", path: "/escala/dimensionamento" },
+  { key: "admin_escala", label: "Admin: Escala (regras, turnos, cobertura)", path: "/admin/escala" },
+  { key: "escala_v2", label: "Escala IA (versão 2)", path: "/escala-ia" },
+  { key: "jornada_execucoes", label: "Jornada: Execuções", path: "/jornada/execucoes" },
+  { key: "admin_tv", label: "Admin: Gerenciador de TV", path: "/admin/tv" },
+  { key: "admin_jornada", label: "Admin: Jornada", path: "/admin/jornada" },
+] as const;
+
+export type ModuleKey = typeof APP_MODULES[number]["key"];
+
+import { supabase } from "@/integrations/supabase/client";
+
+// Returns the set of allowed modules, or null when the user has no restrictions.
+export async function getAllowedModules(userId: string): Promise<Set<string> | null> {
+  const { data } = await supabase
+    .from("user_module_access")
+    .select("module, allowed")
+    .eq("user_id", userId);
+
+  const rows = data || [];
+  if (rows.length === 0) return null;
+  return new Set(rows.filter((r) => r.allowed).map((r) => r.module));
+}
+
+// Distinct routes the user can reach.
+export function allowedPaths(allowed: Set<string>): string[] {
+  return Array.from(new Set(APP_MODULES.filter((m) => allowed.has(m.key)).map((m) => m.path)));
+}
+
+// Returns the first module the user is allowed to see, following APP_MODULES order.
+// Falls back to /dashboard when the user has no explicit restrictions.
+export async function getLandingPath(userId: string): Promise<string> {
+  const allowed = await getAllowedModules(userId);
+  if (allowed === null || allowed.size === 0) return "/dashboard";
+  const paths = allowedPaths(allowed);
+  return paths[0] ?? "/dashboard";
+}
+
+
